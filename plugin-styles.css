@@ -263,7 +263,7 @@ th[sortable-style="sortable-desc"]::after {
     animation: toggle-expand-left 0.2s ease-in-out normal both;
 }
 
-/* handle icon default */
+/* sun moon icon icon default */
 .toggle__fill::after
 {
     content: "";
@@ -278,7 +278,7 @@ th[sortable-style="sortable-desc"]::after {
     background: url('https://api.iconify.design/lucide/moon.svg?color=white') no-repeat center center;
 }
 
-/* handle icon light */
+/* sun moon icon icon light */
 .toggle__input:checked ~ .toggle__fill::after
 {
     transform: translate3d(calc(var(--handle-translation) * -1), 0, 0);

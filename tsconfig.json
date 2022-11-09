@@ -10,6 +10,7 @@
     "moduleResolution": "node",
     "importHelpers": true,
     "isolatedModules": true,
+    "esModuleInterop":true,
 	"strictNullChecks": true,
     "lib": [
       "DOM",

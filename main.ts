@@ -5,6 +5,9 @@ import {  ExportSettings } from './settings';
 import { saveAs, FileSaverOptions } from 'file-saver';
 import { NewWindowEvent } from 'electron';
 
+import jQuery from 'jquery';
+const $ = jQuery;
+
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;
 declare const window: any;
@@ -18,6 +21,8 @@ export default class HTMLExportPlugin extends Plugin {
 	async onload() 
 	{
 		console.log('loading obsidian-webpage-export plugin');
+
+		
 
 		new ExportSettings(this);
 		ExportSettings.loadSettings();
@@ -35,6 +40,8 @@ export default class HTMLExportPlugin extends Plugin {
 			})
 		);
 	}
+
+
 
 	async export(file: TAbstractFile)
 	{
@@ -108,12 +115,22 @@ export default class HTMLExportPlugin extends Plugin {
 		var header = await this.generateHeader(view);
 
 		var html = this.generateBodyHTML();
+
+		console.log("HTML: " + html);
+
+		html = this.fixLinks(html);
 	
 		// inject darkmode toggle
 		if (ExportSettings.settings.addDarkModeToggle)
 		{
 			html = await this.injectToggle(html);
 		}
+
+		// var headers = this.getHeaderList(html);
+		// if (headers)
+		// {
+		// 	this.generateOutline(headers);
+		// }
 
 		// combine header and body
 		html = header + html;
@@ -122,6 +139,105 @@ export default class HTMLExportPlugin extends Plugin {
 		html = "<!DOCTYPE html>\n<html>\n" + html + "\n</html>";
 
 		return html;
+	}
+
+	generateBodyHTML() : string
+	{
+		var bodyClasses = document.body.getAttribute("class") ?? "";
+		var bodyStyle = document.body.getAttribute("style") ?? "";
+		/*@ts-ignore*/
+		bodyClasses = bodyClasses.replaceAll("\"", "'");
+		/*@ts-ignore*/
+		bodyStyle = bodyStyle.replaceAll("\"", "'");
+		var html = (document.querySelector(".workspace-leaf.mod-active .markdown-reading-view") as HTMLElement).outerHTML;
+		
+		html = "\n<body class=\"" + bodyClasses + "\" style=\"" + bodyStyle + "\">\n" + html + "\n</body>\n";
+
+		return html;
+	}
+
+	fixLinks(html: string): string
+	{
+		let el = document.createElement('html');
+		el.innerHTML = html;
+
+		let query = jQuery(el);
+		query.find("a.internal-link").each(function () 
+		{
+			$(this).attr("target", "_self");
+			
+			let finalHref = "";
+			let href = $(this).attr("href")?.split("#");
+
+			if(!href) return;
+
+			// if the file doesn't start with #, then it links to a file, or a header in another file.
+			if(!(href[0] == ""))
+			{
+				if(href.length == 1)
+				{
+					finalHref = href[0] + ".html";
+					console.log("len 1");
+				}
+
+				if(href.length == 2)
+				{
+					var filePath = "";
+					if(!href[0].contains("/") && !href[0].contains("\\"))
+					{
+						filePath = Utils.getDirectoryFromFilePath(Utils.getFirstFileByName(href[0])?.path ?? "") + "/";
+					}
+
+					finalHref = filePath + href[0] + ".html#" + href[1].replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
+
+					console.log("len 2");
+				}
+
+				if(href.length > 2)
+				{
+					let first = href.shift() ?? "";
+
+					var filePath = "";
+					if(!first.contains("/") && !first.contains("\\"))
+					{
+						filePath = Utils.getDirectoryFromFilePath(Utils.getFirstFileByName(first)?.path ?? "") + "/";
+					}
+
+					finalHref = filePath + first + ".html#" + href.join("#").replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
+					console.log("len > 2");
+				}
+			}
+			else // if the file starts with #, then it links to an internal header.
+			{
+				href.shift();
+				if(href.length == 1)
+				{
+					finalHref = "#"+href[0].replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
+					console.log("#len 1");
+				}
+
+				if(href.length > 1)
+				{
+					finalHref = href.join("#").replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
+					console.log("#len > 1");
+				}
+			}
+
+			$(this).attr("href", finalHref);
+			console.log("fixed link: " + finalHref);
+			
+		});
+
+		query.find("h1, h2, h3, h4, h5, h6").each(function ()
+		{
+			// use the headers inner text as the id
+			$(this).attr("id", $(this).text().replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_"));
+			console.log("Fixed id: " + $(this).attr("id"));
+		});
+
+		let result = el.innerHTML;
+		el.remove();
+		return result;
 	}
 
 	async generateHeader(view: MarkdownView) : Promise<string>
@@ -197,21 +313,6 @@ export default class HTMLExportPlugin extends Plugin {
 		return header;
 	}
 
-	generateBodyHTML() : string
-	{
-		var bodyClasses = document.body.getAttribute("class") ?? "";
-		var bodyStyle = document.body.getAttribute("style") ?? "";
-		/*@ts-ignore*/
-		bodyClasses = bodyClasses.replaceAll("\"", "'");
-		/*@ts-ignore*/
-		bodyStyle = bodyStyle.replaceAll("\"", "'");
-		var html = document.getElementsByClassName("markdown-reading-view")[0].outerHTML;
-		
-		html = "\n<body class=\"" + bodyClasses + "\" style=\"" + bodyStyle + "\">\n" + html + "\n</body>\n";
-
-		return html;
-	}
-
 	async injectToggle(html: string) : Promise<string>
 	{
 		var darkModeToggle =
@@ -237,6 +338,94 @@ export default class HTMLExportPlugin extends Plugin {
 		}
 
 		return html;
+	}
+
+	getHeaderList(html: string) : {size: number, title: string}[] | null
+	{
+		var headers = [];
+
+		var el = document.createElement( 'html' );
+		el.innerHTML = html;
+
+		var headerElements = el.querySelectorAll("h1, h2, h3, h4, h5, h6");
+
+		for (var i = 0; i < headerElements.length; i++)
+		{
+			var header = headerElements[i];
+			var size = parseInt(header.tagName[1]);
+			var title = (header as HTMLElement).innerText;
+			headers.push({size, title});
+		}
+
+		el.remove();
+
+		console.log(headers);
+
+		return headers;
+	}
+
+	generateOutline(headers: {size: number, title: string}[]) : string
+	{
+		var outline = 
+		`
+		<div class="outline">
+			<div class="tree-item">
+			
+			<div class="tree-item-self is-clickable">${headers[0]}</div>
+			<div class="tree-item-children">
+			
+			</div>
+		</div>
+		`;
+
+		var outlineEl = document.createElement( 'html' );
+		outlineEl.innerHTML = outline;
+		
+		var headerStack = [headers[0]];
+		var childDivStack = [outlineEl.getElementsByClassName("tree-item-children")[0]];
+		var lastDepth = 0;
+		for (var i = 1; i < headers.length; i++)
+		{
+			var header = headers[i];
+
+			let headerIndex = Math.max(headerStack.length - 1 - (header.size - headerStack[lastDepth].size), 0);
+			
+			var itemDiv = document.createElement('div');
+			var itemSelfDiv = document.createElement('div');
+			var childrenDiv = document.createElement('div');
+
+			itemDiv.classList.add("tree-item");
+			itemSelfDiv.classList.add("tree-item-self", "is-clickable");
+			childrenDiv.classList.add("tree-item-children");
+
+			itemSelfDiv.innerText = header.title;
+			itemDiv.appendChild(itemSelfDiv);
+			itemDiv.appendChild(childrenDiv);
+
+			console.log(childDivStack);
+
+			if (header.size > headerStack[headerStack.length - 1].size)
+			{
+				for (var j = headerStack[headerStack.length - 1].size; j >= header.size - 1; j--)
+				{
+					childDivStack.push(childDivStack[childDivStack.length - 1]);
+					headerStack.push(headerStack[headerStack.length - 1]);
+				}
+
+				childDivStack[childDivStack.length - 1].appendChild(itemDiv);
+				headerStack[headerStack.length - 1] = header;
+			}
+
+			childDivStack[headerIndex].appendChild(itemDiv);
+
+			headerStack[headerIndex] = header;
+
+			lastDepth = headerIndex;
+		}
+
+		console.log(outlineEl.innerHTML);
+
+		return outlineEl.innerHTML;
 	}
 
 	onunload() 
@@ -323,8 +512,6 @@ export class Utils
 			});
 		}
 
-		console.log(defaultPath + "/" + defaultFileName);
-
 		let picker = await dialog.showSaveDialog({
 			defaultPath: (defaultPath + "/" + defaultFileName).replaceAll("\\", "/").replaceAll("//", "/"),
 			filters: filters,
@@ -406,7 +593,7 @@ export class Utils
 		
 		var index = forwardIndex > backwardIndex ? forwardIndex : backwardIndex;
 
-		if (index == -1) return path;
+		if (index == -1) return "";
 
 		return path.substring(0, index);
 	}
@@ -490,9 +677,9 @@ export class Utils
 		Utils.changeViewMode(view, "preview");
 		await this.delay(200);
 		/*@ts-ignore*/
-		view.currentMode.renderer.showAll = true;
+		view.previewMode.renderer.showAll = true;
 		/*@ts-ignore*/
-		await Utils.waitUntil(() => view ? view.currentMode.renderer.parsing == false : false, 5000, 100); 
+		await Utils.waitUntil(() => view ? view.previewMode.renderer.parsing == false : false, 5000, 100); 
 	}
 
 	static async getActiveView(): Promise<MarkdownView | null>
@@ -507,6 +694,15 @@ export class Utils
 		return view;
 	}
 
+	static getFirstFileByName(name: string): TFile | undefined
+	{
+		return app.vault.getFiles().find(file =>
+		{
+			if(!name) return false;
+			return file.basename == name;
+		});
+	}
+
 	static setLineWidth(width: number) : void
 	{
 		if (width != 0)
@@ -514,6 +710,8 @@ export class Utils
 			document.getElementsByClassName("markdown-preview-sizer markdown-preview-section")[0].setAttribute("style", "max-width: " + width + "px");
 		}
 	}
+
+	
 }
 
 export class LeafHandler
