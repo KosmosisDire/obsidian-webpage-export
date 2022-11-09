@@ -1,6 +1,6 @@
 import { createWriteStream, open, readdirSync, readFile, write, writeFile, WriteFileOptions } from 'fs';
 var JSZip = require("jszip");
-import { MarkdownView, Plugin, TAbstractFile, TFile, PaneType, OpenViewState, SplitDirection, FileSystemAdapter, WorkspaceLeaf } from 'obsidian';
+import { MarkdownView, Plugin, TAbstractFile, TFile, PaneType, OpenViewState, SplitDirection, FileSystemAdapter, WorkspaceLeaf, Notice } from 'obsidian';
 import {  ExportSettings } from './settings';
 import { saveAs, FileSaverOptions } from 'file-saver';
 import { NewWindowEvent } from 'electron';
@@ -115,10 +115,8 @@ export default class HTMLExportPlugin extends Plugin {
 		var header = await this.generateHeader(view);
 
 		var html = this.generateBodyHTML();
-
-		console.log("HTML: " + html);
-
 		html = this.fixLinks(html);
+		html = await this.inlineImages(html);
 	
 		// inject darkmode toggle
 		if (ExportSettings.settings.addDarkModeToggle)
@@ -234,6 +232,46 @@ export default class HTMLExportPlugin extends Plugin {
 			$(this).attr("id", $(this).text().replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_"));
 			console.log("Fixed id: " + $(this).attr("id"));
 		});
+
+		let result = el.innerHTML;
+		el.remove();
+		return result;
+	}
+
+	async inlineImages(html: string): Promise<string>
+	{
+		let el = document.createElement('html');
+		el.innerHTML = html;
+
+		let query = jQuery(el);
+		let images = query.find("img").toArray();
+		
+		for (let i = 0; i < images.length; i++)
+		{
+			let img = images[i];
+			if ($(img).attr("src")?.startsWith("app://local/"))
+			{
+				let path = $(img).attr("src")?.replace("app://local/", "").replaceAll("%20", " ").split("?")[0];
+
+				if (path)
+				{
+					var base64 = "";
+					try
+					{
+						base64 = await Utils.getTextBase64(path);
+					}
+					catch (e)
+					{
+						console.error(e);
+						console.warn("Failed to inline image: " + path);
+						new Notice("Failed to inline image: " + path, 5000);
+						continue;
+					}
+
+					$(img).attr("src", "data:image/png;base64," + base64);
+				}
+			}
+		}
 
 		let result = el.innerHTML;
 		el.remove();
@@ -450,6 +488,25 @@ export class Utils
 					reject(err);
 				} else {
 					readFile(fd, { encoding: 'utf8' }, (err, data) => {
+						if (err) {
+							reject(err);
+						} else {
+							resolve(data);
+						}
+					});
+				}
+			});
+		});
+	}
+
+	static async getTextBase64(path: string): Promise<string>
+	{
+		return new Promise((resolve, reject) => {
+			open(path, 'r', (err, fd) => {
+				if (err) {
+					reject(err);
+				} else {
+					readFile(fd, { encoding: 'base64' }, (err, data) => {
 						if (err) {
 							reject(err);
 						} else {
