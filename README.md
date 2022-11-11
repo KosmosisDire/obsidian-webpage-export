@@ -15,7 +15,7 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 
 ![image](https://user-images.githubusercontent.com/39423700/201362684-3287506e-5457-429e-bdd5-09fefeb4b5d9.png)
 
-![image](https://user-images.githubusercontent.com/39423700/201344257-3de6e781-f577-47d3-a1aa-c14a82ca8428.png)
+![image](https://user-images.githubusercontent.com/39423700/201362844-d64e0d03-3c8c-4f98-a5b1-45e530181f6f.png)
 
 ![image](https://user-images.githubusercontent.com/39423700/201350548-bafd781e-3687-4012-b818-65a7b7033a78.png)
 
