@@ -38,8 +38,9 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 ![image](https://user-images.githubusercontent.com/39423700/201350548-bafd781e-3687-4012-b818-65a7b7033a78.png)
 
 ## To Do:
-- Add scrolling to the outline.
 - Fix printing not showing all pages when outline is enabled.
+- Fix button elements not being clickable.
+- Add scrolling to the outline.
 - Make the theme not change to light automatically when printing.
 - Add mobile support for the outline (mdeia queries and popout menu)
 - Improve outline HTML layout so it can be more easily styled.
