@@ -38,16 +38,17 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 ![image](https://user-images.githubusercontent.com/39423700/201350548-bafd781e-3687-4012-b818-65a7b7033a78.png)
 
 ## To Do:
-- Fix extra `<head>` tags, and move flex container and sidebars inside the body.
 - Add scrolling to the outline.
+- Fix printing not showing all pages when outline is enabled.
+- Make the theme not change to light automatically when printing.
 - Add mobile support for the outline (mdeia queries and popout menu)
-- Support custom css and js only for export
-- Enable embedding css per plugin
-- Add an export-current button to the sidebar
-- Export folders or whole vaults at once
 - Improve outline HTML layout so it can be more easily styled.
+- Export folders or whole vaults at once
 
 # Future
+- Add an export-current button to the sidebar
+- Enable embedding 3rd party plugin css
+- Support custom css and js only for export
 - Add way to share this webpage online with all features enabled.
 
 # Credits
