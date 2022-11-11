@@ -46,7 +46,7 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 - Improve outline HTML layout so it can be more easily styled.
 - Export folders or whole vaults at once
 
-##Future
+## Future
 - Add an export-current button to the sidebar
 - Enable embedding 3rd party plugin css
 - Support custom css and js only for export
