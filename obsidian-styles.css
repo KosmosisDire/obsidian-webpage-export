@@ -1,11 +1,19 @@
-@media print {
-    html body> :not(.print) {
+@media print 
+{
+    
+    html body> :not(.print) 
+    {
         display: unset !important;
     }
 
-    .is-collapsed + element + .heading-collapse-indicator.collapse-indicator.collapse-icon
+    .collapse-indicator
     {
         display: none !important;
+    }
+
+    .is-collapsed > element > .collapse-indicator
+    {
+        display: unset !important;
     }
 }
 
