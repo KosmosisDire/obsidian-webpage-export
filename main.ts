@@ -22,6 +22,9 @@ export default class HTMLExportPlugin extends Plugin {
 
 	appStyles :string = "";
 	
+
+	autoDownloadExtras = false;
+
 	webpagejsURL : string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/webpage.js";
 	pluginStylesURL : string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/plugin-styles.css";
 	obsidianStylesURL : string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/obsidian-styles.css";
@@ -83,7 +86,8 @@ export default class HTMLExportPlugin extends Plugin {
 
 		console.log("loaded app styles");
 
-		await this.downloadExtras();
+		if(this.autoDownloadExtras)
+			await this.downloadExtras();
 
 
 		new ExportSettings(this);
