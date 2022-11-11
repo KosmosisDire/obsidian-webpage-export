@@ -17,6 +17,11 @@
     }
 }
 
+.list-collapse-indicator
+{
+    display: none !important;
+}
+
 @font-face
 
 /* 0 */
