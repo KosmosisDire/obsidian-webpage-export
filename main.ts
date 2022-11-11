@@ -114,9 +114,9 @@ export default class HTMLExportPlugin extends Plugin {
 
 		if(!ExportSettings.settings.inlineJS)
 		{
-			var togglejs = await Utils.getText(this.pluginPath + "/toggle.js");
-			var togglejsDownload = { filename: "toggle.js", data: togglejs, type: "text/javascript" };
-			toDownload.push(togglejsDownload);
+			var webpagejs = await Utils.getText(this.pluginPath + "/webpage.js");
+			var webpagejsDownload = { filename: "webpage.js", data: webpagejs, type: "text/javascript" };
+			toDownload.push(webpagejsDownload);
 		}
 
 		// let imagesDownload : {path: string, data: string}[] = [];
@@ -230,8 +230,8 @@ export default class HTMLExportPlugin extends Plugin {
 		let theme = await Utils.getThemeContent(Utils.getCurrentTheme());
 
 		let scripts = "\n\n<script src='https://code.jquery.com/jquery-3.6.0.js'></script>"
-					+ ((ExportSettings.settings.inlineJS ? ("<script>\n" + await Utils.getText(this.pluginPath + "/toggle.js"))
-					: "<script src='toggle.js'></script>\n") + "\n</script>\n");
+					+ ((ExportSettings.settings.inlineJS ? ("<script>\n" + await Utils.getText(this.pluginPath + "/webpage.js"))
+					: "<script src='webpage.js'></script>\n") + "\n</script>\n");
 
 		var height = 0;
 		// @ts-ignore
