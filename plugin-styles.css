@@ -35,7 +35,7 @@
 
 @media print 
 {
-    #sidebar, #sideabr-right, #sidebar-left, .outline-container, .theme_toggle
+    #sidebar, #sideabr-right, #sidebar-left, .outline-container, .toggle, .toggle_inline, .toggle__fill, .toggle__input
     {
         display: none !important;
     }
