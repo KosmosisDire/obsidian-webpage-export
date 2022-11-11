@@ -49,3 +49,5 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 # Future
 - Add way to share this webpage online with all features enabled.
 
+# Credits
+Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for switching between tabs.
