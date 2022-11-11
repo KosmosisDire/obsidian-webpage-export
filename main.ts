@@ -107,6 +107,11 @@ export default class HTMLExportPlugin extends Plugin {
 		);
 	}
 
+	onunload() 
+	{
+		console.log('unloading obsidian-webpage-export plugin');
+	}
+
 	async export(file: TAbstractFile)
 	{
 		this.leafHandler.switchToLeafWithFile(file as TFile, true);
@@ -599,10 +604,7 @@ export default class HTMLExportPlugin extends Plugin {
 
 	//#endregion
 
-	onunload() 
-	{
-		console.log('unloading obsidian-webpage-export plugin');
-	}
+	
 }
 
 export class Utils
