@@ -82,7 +82,7 @@ export default class HTMLExportPlugin extends Plugin {
 			}
 		}
 
-		this.appStyles += Utils.getText(this.pluginPath + "/obsidian-styles.css");
+		this.appStyles += await Utils.getText(this.pluginPath + "/obsidian-styles.css");
 
 		console.log("loaded app styles");
 
