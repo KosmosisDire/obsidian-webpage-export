@@ -229,7 +229,21 @@ export default class HTMLExportPlugin extends Plugin {
 		{
 			var outline = this.generateOutline(headers);
 			// put side bars on either side of content and put them in a flex container
-			html = `<div class="flex-container"><div id="sidebar sidebar-left"></div>${html}<div id="sidebar sidebar-right">${outline}</div></div>`;
+			let el = document.createElement("html");
+			el.innerHTML = html;
+			let body = el.querySelector("body");
+			if (body)
+			{
+				html = `<div class="flex-container"><div id="sidebar sidebar-left"></div>${body.innerHTML}<div id="sidebar sidebar-right">${outline}</div></div>`;
+				body.innerHTML = html;
+				html = body?.outerHTML;
+			}
+			else
+			{
+				console.error("Could not find body element in html");
+			}
+			
+			el.remove();
 		}
 
 
