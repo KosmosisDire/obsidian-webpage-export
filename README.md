@@ -16,6 +16,9 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 
 ![image](https://user-images.githubusercontent.com/39423700/201344257-3de6e781-f577-47d3-a1aa-c14a82ca8428.png)
 
+![image](https://user-images.githubusercontent.com/39423700/201350548-bafd781e-3687-4012-b818-65a7b7033a78.png)
+
+
 ## Installation
 
 Currently you must manually download the .zip from releases and extract it into your plugins folder.
