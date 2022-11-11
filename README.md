@@ -3,12 +3,13 @@
 Exports an obsidian document as an HTML document / webpage / website, **(correctly!)** including all styling and formatting.
 
 ## Features:
-- Generates a document outline with your page and embeds it onto the site.
+- Generates an interactive document outline with your page and embeds it onto the site.
 - Color theme toggle can be embedded anywhere on the page.
 - Supports images, with automatic base64 inlining, or by exporting the images seperately.
 - Supports inline CSS, or exporting seperately.
 - Supports inline JS, or exporting JS seperately.
 - Supports snippets, and custom themes (both light and dark).
+- Interactivaly collapse and unfold headers
 
 ## Screenshots:
 
