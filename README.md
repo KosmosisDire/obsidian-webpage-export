@@ -39,6 +39,7 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 
 ## To Do:
 - Add scrolling to the outline.
+- Add mobile support for the outline (mdeia queries and popout menu)
 - Support custom css and js only for export
 - Enable embedding css per plugin
 - Add an export-current button to the sidebar
