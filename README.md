@@ -17,6 +17,7 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 ![image](https://user-images.githubusercontent.com/39423700/201341459-ba0cee92-897e-4cc7-82c5-47f1b36b210a.png)
 
 ## To Do:
+- Add scrolling to the outline.
 - Support custom css and js only for export
 - Enable embedding css per plugin
 - Add an export-current button to the sidebar
