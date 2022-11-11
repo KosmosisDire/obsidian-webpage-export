@@ -388,10 +388,10 @@ th[sortable-style="sortable-desc"]::after {
 }
 
 /* Fill in light mode */
-.toggle__input:checked ~ .toggle__fill 
+/* .toggle__input:checked ~ .toggle__fill 
 {
 
-}
+} */
 
 /* Handle default */
 .toggle__fill::before 
