@@ -23,7 +23,7 @@ export default class HTMLExportPlugin extends Plugin {
 	appStyles :string = "";
 	
 
-	autoDownloadExtras = false;
+	autoDownloadExtras = true;
 
 	webpagejsURL : string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/webpage.js";
 	pluginStylesURL : string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/plugin-styles.css";
