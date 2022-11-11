@@ -57,7 +57,7 @@
     margin-top: 20px;
     height: min-content;
     white-space: nowrap;
-    line-height: 2.7em;
+    line-height: 1.6em;
 }
 
 .theme-dark .outline-control
@@ -168,9 +168,9 @@
     content: attr(data-content);
     display: inherit;
     width: auto;
-    height: 1.4em;
-    padding: 0.4em;
-    padding-bottom: 1.05em;
+    height: 1em;
+    padding: 1em;
+    padding-bottom: 0.5em;
     padding-top: 0;
     background-color: var(--interactive-normal);
     border-radius: 0.4em;
