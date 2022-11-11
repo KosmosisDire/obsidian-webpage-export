@@ -22,9 +22,40 @@ export default class HTMLExportPlugin extends Plugin {
 
 	appStyles :string = "";
 	
-
+	webpagejsURL : string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/webpage.js";
+	pluginStylesURL : string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/plugin-styles.css";
+	obsidianStylesURL : string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/obsidian-styles.css";
 	async downloadExtras()
 	{
+		//Download webpage.js
+		let webpagejs = await fetch(this.webpagejsURL);
+		let webpagejsText = await webpagejs.text();
+		await writeFile(this.pluginPath + "/webpage.js", webpagejsText, function(err) {
+			if(err) {
+				return console.log(err);
+			}
+			console.log("webpage.js file downloaded successfully");
+		});
+
+		//Download plugin-styles.css
+		let pluginStyles = await fetch(this.pluginStylesURL);
+		let pluginStylesText = await pluginStyles.text();
+		await writeFile(this.pluginPath + "/plugin-styles.css", pluginStylesText, function(err) {
+			if(err) {
+				return console.log(err);
+			}
+			console.log("plugin-styles.css file downloaded successfully");
+		});
+
+		//Download obsidian-styles.css
+		let obsidianStyles = await fetch(this.obsidianStylesURL);
+		let obsidianStylesText = await obsidianStyles.text();
+		await writeFile(this.pluginPath + "/obsidian-styles.css", obsidianStylesText, function(err) {
+			if(err) {
+				return console.log(err);
+			}
+			console.log("obsidian-styles.css file downloaded successfully");
+		});
 
 	}
 
@@ -52,8 +83,7 @@ export default class HTMLExportPlugin extends Plugin {
 
 		console.log("loaded app styles");
 
-
-
+		await this.downloadExtras();
 
 
 		new ExportSettings(this);
@@ -524,8 +554,6 @@ export default class HTMLExportPlugin extends Plugin {
 		}
 
 		el.remove();
-
-		console.log(headers);
 
 		return headers;
 	}
