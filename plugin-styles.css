@@ -35,17 +35,17 @@
 
 @media print 
 {
-    #sidebar, .outline-container
+    #sidebar, #sideabr-right, #sidebar-left, .outline-container, .theme_toggle
     {
-        display: none;
+        display: none !important;
     }
 }
 
 @media screen and (max-width: 900px)
 {
-    #sidebar, .outline-container
+    #sidebar, #sideabr-right, #sidebar-left, .outline-container
     {
-        display: none;
+        display: none !important;
     }
 }
 
