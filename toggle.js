@@ -133,33 +133,121 @@ jQuery(function()
     // Make button with id="#save-to-pdf" save the current page to a PDF file
     $("#save-pdf").on("click", function()
     {
-        $.ajax('/', function(list) {
-            $.ajax({
-                type: 'POST',
-                url: '/save-pdf',
-                body: 
+        window.print();
+
+
+
+        // $.ajax('/', function(list) {
+        //     $.ajax({
+        //         type: 'POST',
+        //         url: '/save-pdf',
+        //         body: 
+        //         {
+        //             html: document.documentElement.innerHTML,
+        //             width: document.querySelector('meta[name="data-width"]').getAttribute("data-width"),
+        //             height: document.querySelector('meta[name="data-height"]').getAttribute("data-height")
+        //         },
+        //         success: function(result) 
+        //         {
+        //             // result is the buffer of the PDF file
+        //             console.log('Response:', result);
+
+        //             // download the file
+        //             var blob = new Blob([result], {type: 'application/pdf'});
+        //             var link = document.createElement('a');
+        //             link.href = window.URL.createObjectURL(blob);
+        //             link.download = 'file.pdf';
+        //             link.click();
+
+        //             link.remove();
+
+        //         }
+        //     });
+        // });
+    });
+
+
+    // MAKE OUTLINE COLLAPSIBLE
+    // if "outline-header" is clicked, toggle the display of every div until the next heading of the same or lower level
+
+    function getOutlineHeaderContentSelector(header)
+    {
+        let headingLevel = header.attr("data-size");
+        let headingNumber = parseInt(headingLevel) ?? 6;
+
+        let endingHeadings = [1, 2, 3, 4, 5, 6].filter(function(item)
+        {
+            return item <= headingNumber;
+        }).map(function(item)
+        {
+            return `div.outline-control[data-size="${item}"]`;
+        });
+
+        let endingHeadingsSelector = endingHeadings.join(", ");
+
+        return endingHeadingsSelector;
+    }
+    
+    var outline_width = 0;
+
+    $("div.outline-control").on("click", function()
+    {
+        var isCollapsed = $(this).hasClass("is-collapsed");
+        
+        $(this).toggleClass("is-collapsed");
+
+        let selector = getOutlineHeaderContentSelector($(this));
+
+        if(isCollapsed)
+        {
+            $(this).nextUntil(selector).each(function()
+            {
+                $(this).show();
+            });
+            
+            $(this).nextUntil(selector).each(function()
+            {
+                if ($(this).hasClass("is-collapsed"))
                 {
-                    html: document.documentElement.innerHTML,
-                    width: document.querySelector('meta[name="data-width"]').getAttribute("data-width"),
-                    height: document.querySelector('meta[name="data-height"]').getAttribute("data-height")
-                },
-                success: function(result) 
-                {
-                    // result is the buffer of the PDF file
-                    console.log('Response:', result);
+                    let s = getOutlineHeaderContentSelector($(this));
 
-                    // download the file
-                    var blob = new Blob([result], {type: 'application/pdf'});
-                    var link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
-                    link.download = 'file.pdf';
-                    link.click();
+                    let array = $(this).nextUntil(s).toArray();
 
-                    link.remove();
-
+                    for (let i = 1; i < array.length; i++)
+                    {
+                        $(array[i]).hide();
+                    }
                 }
             });
-        });
+        }
+        else
+        {
+            let s = getOutlineHeaderContentSelector($(this));
+
+            let array = $(this).nextUntil(s).toArray();
+
+            for (let i = 1; i < array.length; i++)
+            {
+                $(array[i]).hide();
+            }
+        }
+
+        $(".outline-container").width(outline_width);
+
+    });
+
+    // hide the control button if the header has no children
+    $("div.outline-control").each(function()
+    {
+        let selector = getOutlineHeaderContentSelector($(this));
+
+        if ($(this).nextUntil(selector).length == 1)
+        {
+            this.style.visibility = "hidden";
+        }
+
+        outline_width = $(".outline-container").width();
+        $(".outline-container").width(outline_width);
     });
 
 });

@@ -134,6 +134,8 @@ export default class HTMLExportPlugin extends Plugin {
 		
 	}
 
+	//#region General HTML
+	
 	async GetCurrentFileHTML(): Promise<string | null>
 	{
 		await Utils.delay(200);
@@ -143,9 +145,8 @@ export default class HTMLExportPlugin extends Plugin {
 
 		Utils.setLineWidth(ExportSettings.settings.customLineWidth);
 		await Utils.viewEnableFullRender(view);
-		var header = await this.generateHeader(view);
+		var head = await this.generateHead(view);
 		var html = this.generateBodyHTML();
-		html = header + html;
 		html = this.fixLinks(html);
 
 		if (ExportSettings.settings.inlineImages) 
@@ -159,13 +160,17 @@ export default class HTMLExportPlugin extends Plugin {
 			html = await this.injectToggle(html);
 		}
 
-		// var headers = this.getHeaderList(html);
-		// if (headers)
-		// {
-		// 	this.generateOutline(headers);
-		// }
 
-		
+		var headers = this.getHeaderList(html);
+		if (headers)
+		{
+			var outline = this.generateOutline(headers);
+			// put side bars on either side of content and put them in a flex container
+			html = `<div class="flex-container"><div id="sidebar sidebar-left"></div>${html}<div id="sidebar sidebar-right">${outline}</div></div>`;
+		}
+
+
+		html = head + html;
 
 		// enclose in <html> tags
 		html = "<!DOCTYPE html>\n<html>\n" + html + "\n</html>";
@@ -181,12 +186,108 @@ export default class HTMLExportPlugin extends Plugin {
 		bodyClasses = bodyClasses.replaceAll("\"", "'");
 		/*@ts-ignore*/
 		bodyStyle = bodyStyle.replaceAll("\"", "'");
-		var html = (document.querySelector(".workspace-leaf.mod-active .markdown-reading-view") as HTMLElement).outerHTML;
-		
+
+		var htmlEl = (document.querySelector(".workspace-leaf.mod-active .markdown-reading-view") as HTMLElement);
+		htmlEl.style.flexBasis = (htmlEl.querySelector("markdown-preview-sizer markdown-preview-section") as HTMLElement)?.style.width ?? "1000px";
+		// htmlEl.style.marginLeft = "calc(50% - " + parseInt(htmlEl.style.flexBasis.replace("px", ""))/2 + "px)";
+		var html = htmlEl.outerHTML;
+
 		html = "\n<body class=\"" + bodyClasses + "\" style=\"" + bodyStyle + "\">\n" + html + "\n</body>\n";
 
 		return html;
 	}
+
+	async generateHead(view: MarkdownView) : Promise<string>
+	{
+		let appStyles = await Utils.getText(this.pluginPath + "/app.css");
+		let pluginStyles = await Utils.getText(this.pluginPath +"/plugin-styles.css");
+		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
+		let snippets = await Utils.getStyleSnippetsContent();
+		let snippetNames = Utils.getEnabledSnippets();
+		let theme = await Utils.getThemeContent(Utils.getCurrentTheme());
+
+		let scripts = "\n\n<script src='https://code.jquery.com/jquery-3.6.0.js'></script>"
+					+ ((ExportSettings.settings.inlineJS ? ("<script>\n" + await Utils.getText(this.pluginPath + "/toggle.js"))
+					: "<script src='toggle.js'></script>\n") + "\n</script>\n");
+
+		var height = 0;
+		// @ts-ignore
+		let sections = view.currentMode.renderer.sections;
+		for (let i = 0; i < sections.length; i++)
+		{
+			height += sections[i].height;
+		}
+
+		var width = (document.getElementsByClassName("markdown-preview-sizer markdown-preview-section")[0] as HTMLElement).style.maxWidth.replace("px", "");
+		
+					
+		let meta = 
+		`
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black">
+		<meta name="mobile-web-app-capable" content="yes">
+		<title>${view.file.basename}</title>
+		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
+		<meta name="data-width" data-width="${width}"></meta>
+		<meta name="data-height" data-height="${height}"></meta>
+		`
+
+		
+
+		if (ExportSettings.settings.inlineCSS)
+		{
+			var header = 
+			`
+			<head>
+
+			${meta}
+			
+			<!-- Theme Styles ( ${Utils.getCurrentTheme()} ) -->
+			<style> ${theme} </style>
+
+			<!-- Snippets: ${snippetNames.join(", ")} -->
+			<style> ${snippets.join("</style><style>")} </style>
+		
+			<!-- Web Export Plugin Styles (light/dark toggle, outline) -->
+			<style> ${pluginStyles} </style>
+
+			<!-- Obsidian App Styles / Other Built-in Styles -->
+			<style> ${appStyles} </style>
+			<style> ${cssSettings} </style>
+
+			${scripts}
+
+			</head>
+			`;
+		}
+		else
+		{
+			header = 
+			`
+			<head>
+
+			${meta}
+
+			<link rel="stylesheet" href="app.css">
+			<link rel="stylesheet" href="plugin-styles.css">
+			<link rel="stylesheet" href="theme.css">
+			<link rel="stylesheet" href="snippets.css">
+
+			<style> ${cssSettings} </style>
+
+			${scripts}
+
+			</head>
+			`;
+		}
+
+		return header;
+	}
+
+	//#endregion
+
+	//#region Links and Images
 
 	fixLinks(html: string): string
 	{
@@ -350,94 +451,10 @@ export default class HTMLExportPlugin extends Plugin {
 		return result;
 	}
 
-	async generateHeader(view: MarkdownView) : Promise<string>
-	{
-		let appStyles = await Utils.getText(this.pluginPath + "/app.css");
-		let pluginStyles = await Utils.getText(this.pluginPath +"/plugin-styles.css");
-		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
-		let snippets = await Utils.getStyleSnippetsContent();
-		let snippetNames = Utils.getEnabledSnippets();
-		let theme = await Utils.getThemeContent(Utils.getCurrentTheme());
+	//#endregion
 
-		let scripts = "\n\n<script src='https://code.jquery.com/jquery-3.6.0.js'></script>"
-					+ ((ExportSettings.settings.inlineJS ? ("<script>\n" + await Utils.getText(this.pluginPath + "/toggle.js"))
-					: "<script src='toggle.js'></script>\n") + "\n</script>\n");
-
-		var height = 0;
-		// @ts-ignore
-		let sections = view.currentMode.renderer.sections;
-		for (let i = 0; i < sections.length; i++)
-		{
-			height += sections[i].height;
-		}
-
-		var width = (document.getElementsByClassName("markdown-preview-sizer markdown-preview-section")[0] as HTMLElement).style.maxWidth.replace("px", "");
-		
-					
-		let meta = 
-		`
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-		<meta name="apple-mobile-web-app-capable" content="yes">
-		<meta name="apple-mobile-web-app-status-bar-style" content="black">
-		<meta name="mobile-web-app-capable" content="yes">
-		<title>${view.file.basename}</title>
-		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
-		<meta name="data-width" data-width="${width}"></meta>
-		<meta name="data-height" data-height="${height}"></meta>
-		`
-
-		
-
-		if (ExportSettings.settings.inlineCSS)
-		{
-			var header = 
-			`
-			<head>
-
-			${meta}
-			
-			<!-- Theme Styles ( ${Utils.getCurrentTheme()} ) -->
-			<style> ${theme} </style>
-
-			<!-- Snippets: ${snippetNames.join(", ")} -->
-			<style> ${snippets.join("</style><style>")} </style>
-		
-			<!-- Web Export Plugin Styles (light/dark toggle, outline) -->
-			<style> ${pluginStyles} </style>
-
-			<!-- Obsidian App Styles / Other Built-in Styles -->
-			<style> ${appStyles} </style>
-			<style> ${cssSettings} </style>
-
-			${scripts}
-
-			</head>
-			`;
-		}
-		else
-		{
-			header = 
-			`
-			<head>
-
-			${meta}
-
-			<link rel="stylesheet" href="app.css">
-			<link rel="stylesheet" href="plugin-styles.css">
-			<link rel="stylesheet" href="theme.css">
-			<link rel="stylesheet" href="snippets.css">
-
-			<style> ${cssSettings} </style>
-
-			${scripts}
-
-			</head>
-			`;
-		}
-
-		return header;
-	}
-
+	//#region Special Features
+	
 	async injectToggle(html: string) : Promise<string>
 	{
 		var darkModeToggle =
@@ -465,7 +482,7 @@ export default class HTMLExportPlugin extends Plugin {
 		return html;
 	}
 
-	getHeaderList(html: string) : {size: number, title: string}[] | null
+	getHeaderList(html: string) : {size: number, title: string, href: string}[] | null
 	{
 		var headers = [];
 
@@ -479,7 +496,8 @@ export default class HTMLExportPlugin extends Plugin {
 			var header = headerElements[i];
 			var size = parseInt(header.tagName[1]);
 			var title = (header as HTMLElement).innerText;
-			headers.push({size, title});
+			var href = (header as HTMLHeadingElement).id;
+			headers.push({size, title, href});
 		}
 
 		el.remove();
@@ -489,69 +507,42 @@ export default class HTMLExportPlugin extends Plugin {
 		return headers;
 	}
 
-	generateOutline(headers: {size: number, title: string}[]) : string
+	generateOutline(headers: {size: number, title: string, href:string}[]) : string
 	{
 		var outline = 
 		`
-		<div class="outline">
-			<div class="tree-item">
-			
-			<div class="tree-item-self is-clickable">${headers[0]}</div>
-			<div class="tree-item-children">
-			
-			</div>
+		<div class="outline-container">
+		
 		</div>
 		`;
 
 		var outlineEl = document.createElement( 'html' );
 		outlineEl.innerHTML = outline;
-		
-		var headerStack = [headers[0]];
-		var childDivStack = [outlineEl.getElementsByClassName("tree-item-children")[0]];
-		var lastDepth = 0;
-		for (var i = 1; i < headers.length; i++)
+
+		var outlineContainer = outlineEl.querySelector(".outline-container");
+
+		if (!outlineContainer) return "";
+
+		for (var i = 0; i < headers.length; i++)
 		{
 			var header = headers[i];
+			var controlEl = document.createElement("div");
+			controlEl.classList.add("outline-control");
+			controlEl.setAttribute("data-size", header.size.toString());
+			outlineContainer.appendChild(controlEl);
 
-			let headerIndex = Math.max(headerStack.length - 1 - (header.size - headerStack[lastDepth].size), 0);
-			
-			var itemDiv = document.createElement('div');
-			var itemSelfDiv = document.createElement('div');
-			var childrenDiv = document.createElement('div');
-
-			itemDiv.classList.add("tree-item");
-			itemSelfDiv.classList.add("tree-item-self", "is-clickable");
-			childrenDiv.classList.add("tree-item-children");
-
-			itemSelfDiv.innerText = header.title;
-			itemDiv.appendChild(itemSelfDiv);
-			itemDiv.appendChild(childrenDiv);
-
-			console.log(childDivStack);
-
-			if (header.size > headerStack[headerStack.length - 1].size)
-			{
-				for (var j = headerStack[headerStack.length - 1].size; j >= header.size - 1; j--)
-				{
-					childDivStack.push(childDivStack[childDivStack.length - 1]);
-					headerStack.push(headerStack[headerStack.length - 1]);
-				}
-
-				childDivStack[childDivStack.length - 1].appendChild(itemDiv);
-				headerStack[headerStack.length - 1] = header;
-			}
-
-			childDivStack[headerIndex].appendChild(itemDiv);
-
-			headerStack[headerIndex] = header;
-
-			lastDepth = headerIndex;
+			let title = outlineContainer.createEl("a", {text: header.title});
+			title.setAttribute("href", "#" + header.href);
+			title.setAttribute("data-content", header.title);
+			title.classList.add("outline-header");
 		}
 
-		console.log(outlineEl.innerHTML);
-
-		return outlineEl.innerHTML;
+		var result = outlineEl.innerHTML;
+		outlineEl.remove();
+		return result;
 	}
+
+	//#endregion
 
 	onunload() 
 	{

@@ -1,3 +1,203 @@
+/* sidebars */
+#sidebar
+{
+    background-color: var(--background-secondary);
+    display: flex;
+    width: max-content;
+}
+
+#sidebar-left
+{
+    border-right: 1px dashed var(--border-color);
+}
+
+#sidebar-right
+{
+    border-left: 1px dashed var(--border-color);
+}
+
+.flex-container
+{
+    background-color: var(--background-color);
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+}
+
+.markdown-reading-view
+{
+    align-self: center;
+    -ms-flex-align: center;
+    width: 100%;
+}
+
+@media print 
+{
+    #sidebar, .outline-container
+    {
+        display: none;
+    }
+}
+
+@media screen and (max-width: 900px)
+{
+    #sidebar, .outline-container
+    {
+        display: none;
+    }
+}
+
+/* outline style */
+.outline-container
+{
+    width: 100%;
+    margin: 10px;
+    margin-top: 20px;
+    height: min-content;
+    white-space: nowrap;
+    line-height: 2.7em;
+}
+
+.theme-dark .outline-control
+{
+    background: url('https://api.iconify.design/lucide/chevron-down.svg?color=white') no-repeat center center / contain;
+}
+
+.theme-light .outline-control
+{
+    background: url('https://api.iconify.design/lucide/chevron-down.svg?color=black') no-repeat center center / contain;
+}
+
+.outline-control
+{
+    transition: transform 0.2s;
+    transform: rotate(0deg) translateY(2px);
+    width: 1em;
+    height: 1em;
+    display: inline-block;
+    white-space: nowrap;
+}
+
+.is-collapsed.outline-control
+{
+    transform: rotate(-90deg) translateX(-2px);
+}
+
+.outline-control[data-size="1"]
+{
+    margin-left: 0;
+}
+
+.outline-control[data-size="2"]
+{
+    margin-left: 1em;
+}
+
+.outline-control[data-size="3"]
+{
+    margin-left: 2em;
+}
+
+.outline-control[data-size="4"]
+{
+    margin-left: 3em;
+}
+
+.outline-control[data-size="5"]
+{
+    margin-left: 4em;
+}
+
+.outline-control[data-size="6"]
+{
+    margin-left: 5em;
+}
+
+.outline-control[data-size="1"] + .outline-header
+{
+    color: var(--h1-color);
+    font-family: var(--h1-font);
+}
+
+.outline-control[data-size="2"] + .outline-header
+{
+    color: var(--h2-color);
+    font-family: var(--h2-font);
+}
+
+.outline-control[data-size="3"] + .outline-header
+{
+    color: var(--h3-color);
+    font-family: var(--h3-font);
+}
+
+.outline-control[data-size="4"] + .outline-header
+{
+    color: var(--h4-color);
+    font-family: var(--h4-font);
+}
+
+.outline-control[data-size="5"] + .outline-header
+{
+    color: var(--h5-color);
+    font-family: var(--h5-font);
+}
+
+.outline-control[data-size="6"] + .outline-header
+{
+    color: var(--h6-color);
+    font-family: var(--h6-font);
+}
+
+.outline-header
+{
+    width: max-content;
+    margin-left: 1em;
+    box-sizing: content-box;
+    text-decoration: none;
+    font-weight: bold;
+    text-rendering: optimizeLegibility;
+    white-space: nowrap;
+    display: inline;
+}
+
+.outline-header::before
+{
+    content: attr(data-content);
+    display: inherit;
+    width: auto;
+    height: 1.4em;
+    padding: 0.4em;
+    padding-bottom: 1.05em;
+    padding-top: 0;
+    background-color: var(--interactive-normal);
+    border-radius: 0.4em;
+    position: absolute;
+}
+
+.outline-header::after
+{
+    content: '';
+    display: block;
+    clear: both;
+}
+
+.outline-header:hover::before
+{
+    cursor: pointer;
+    background-color: var(--interactive-hover);
+    text-decoration: underline;
+}
+
+.outline-header:active::before
+{
+    background-color: var(--background-primary-alt);
+}
+
+
+
 
 /* mobile support for obsidian columns plugin */
 .columnParent {
