@@ -696,89 +696,89 @@ iframe {
   font-weight: normal;
   font-style: normal;
   font-display: swap;
-  src: url(public/fonts/94f2f163d4b698242fef.otf);
+  src: url(https://publish.obsidian.md/public/fonts/94f2f163d4b698242fef.otf);
 }
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 200;
   font-display: swap;
-  src: url(public/fonts/72505e6a122c6acd5471.woff2) format('woff2');
+  src: url(https://publish.obsidian.md/public/fonts/72505e6a122c6acd5471.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Inter';
   font-style: normal;
   font-weight: 300;
   font-display: swap;
-  src: url(public/fonts/2d5198822ab091ce4305.woff2) format('woff2');
+  src: url(https://publish.obsidian.md/public/fonts/2d5198822ab091ce4305.woff2) format('woff2');
 }
 @font-face {
   font-family: 'Inter';
   font-weight: 400;
   font-style: normal;
   font-display: swap;
-  src: url(public/fonts/c8ba52b05a9ef10f4758.woff2);
+  src: url(https://publish.obsidian.md/public/fonts/c8ba52b05a9ef10f4758.woff2);
 }
 @font-face {
   font-family: 'Inter';
   font-weight: 400;
   font-style: italic;
   font-display: swap;
-  src: url(public/fonts/cb10ffd7684cd9836a05.woff2);
+  src: url(https://publish.obsidian.md/public/fonts/cb10ffd7684cd9836a05.woff2);
 }
 @font-face {
   font-family: 'Inter';
   font-weight: 600;
   font-style: normal;
   font-display: swap;
-  src: url(public/fonts/b5f0f109bc88052d4000.woff2);
+  src: url(https://publish.obsidian.md/public/fonts/b5f0f109bc88052d4000.woff2);
 }
 @font-face {
   font-family: 'Inter';
   font-weight: 800;
   font-style: normal;
   font-display: swap;
-  src: url(public/fonts/cbe0ae49c52c920fd563.woff2);
+  src: url(https://publish.obsidian.md/public/fonts/cbe0ae49c52c920fd563.woff2);
 }
 @font-face {
   font-family: 'Inter';
   font-weight: 800;
   font-style: italic;
   font-display: swap;
-  src: url(public/fonts/535a6cf662596b3bd6a6.woff2);
+  src: url(https://publish.obsidian.md/public/fonts/535a6cf662596b3bd6a6.woff2);
 }
 @font-face {
   font-family: 'Source Code Pro';
   font-weight: normal;
   font-style: normal;
   font-display: swap;
-  src: url(public/fonts/70cc7ff27245e82ad414.ttf);
+  src: url(https://publish.obsidian.md/public/fonts/70cc7ff27245e82ad414.ttf);
 }
 @font-face {
   font-family: 'Source Code Pro';
   font-weight: normal;
   font-style: italic;
   font-display: swap;
-  src: url(public/fonts/454577c22304619db035.ttf);
+  src: url(https://publish.obsidian.md/public/fonts/454577c22304619db035.ttf);
 }
 @font-face {
   font-family: 'Source Code Pro';
   font-weight: bold;
   font-style: normal;
   font-display: swap;
-  src: url(public/fonts/52ac8f3034507f1d9e53.ttf);
+  src: url(https://publish.obsidian.md/public/fonts/52ac8f3034507f1d9e53.ttf);
 }
 @font-face {
   font-family: 'Source Code Pro';
   font-weight: bold;
   font-style: italic;
   font-display: swap;
-  src: url(public/fonts/05b618077343fbbd92b7.ttf);
+  src: url(https://publish.obsidian.md/public/fonts/05b618077343fbbd92b7.ttf);
 }
 @font-face {
   font-family: 'Flow Circular';
   font-display: swap;
-  src: url(public/fonts/853ff76f08786ae44ca0.woff);
+  src: url(https://publish.obsidian.md/public/fonts/853ff76f08786ae44ca0.woff);
 }
 @font-face {
   font-family: '??';
@@ -814,9 +814,16 @@ body {
   .markdown-embed-link {
     display: none !important;
   }
-  body > :not(.print) {
+
+  #save-pdf {
     display: none !important;
   }
+
+  .toggle, .toggle_inline, .toggle__input, .toggle__fill
+  {
+    display: none !important;
+  }
+
   .print .markdown-preview-view {
     -webkit-print-color-adjust: exact;
     color: initial;
@@ -10788,3 +10795,776 @@ input.mobile-vault-chooser-field-input {
   width: 100%;
 }
 
+/* MathJax */
+
+mjx-container[jax="CHTML"] {
+  line-height: 0;
+}
+
+mjx-container [space="1"] {
+  margin-left: .111em;
+}
+
+mjx-container [space="2"] {
+  margin-left: .167em;
+}
+
+mjx-container [space="3"] {
+  margin-left: .222em;
+}
+
+mjx-container [space="4"] {
+  margin-left: .278em;
+}
+
+mjx-container [space="5"] {
+  margin-left: .333em;
+}
+
+mjx-container [rspace="1"] {
+  margin-right: .111em;
+}
+
+mjx-container [rspace="2"] {
+  margin-right: .167em;
+}
+
+mjx-container [rspace="3"] {
+  margin-right: .222em;
+}
+
+mjx-container [rspace="4"] {
+  margin-right: .278em;
+}
+
+mjx-container [rspace="5"] {
+  margin-right: .333em;
+}
+
+mjx-container [size="s"] {
+  font-size: 70.7%;
+}
+
+mjx-container [size="ss"] {
+  font-size: 50%;
+}
+
+mjx-container [size="Tn"] {
+  font-size: 60%;
+}
+
+mjx-container [size="sm"] {
+  font-size: 85%;
+}
+
+mjx-container [size="lg"] {
+  font-size: 120%;
+}
+
+mjx-container [size="Lg"] {
+  font-size: 144%;
+}
+
+mjx-container [size="LG"] {
+  font-size: 173%;
+}
+
+mjx-container [size="hg"] {
+  font-size: 207%;
+}
+
+mjx-container [size="HG"] {
+  font-size: 249%;
+}
+
+mjx-container [width="full"] {
+  width: 100%;
+}
+
+mjx-box {
+  display: inline-block;
+}
+
+mjx-block {
+  display: block;
+}
+
+mjx-itable {
+  display: inline-table;
+}
+
+mjx-row {
+  display: table-row;
+}
+
+mjx-row > * {
+  display: table-cell;
+}
+
+mjx-mtext {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mstyle {
+  display: inline-block;
+}
+
+mjx-merror {
+  display: inline-block;
+  color: red;
+  background-color: yellow;
+}
+
+mjx-mphantom {
+  visibility: hidden;
+}
+
+_::-webkit-full-page-media, _:future, :root mjx-container {
+  will-change: opacity;
+}
+
+mjx-assistive-mml {
+  position: absolute !important;
+  top: 0px;
+  left: 0px;
+  clip: rect(1px, 1px, 1px, 1px);
+  padding: 1px 0px 0px 0px !important;
+  border: 0px !important;
+  display: block !important;
+  width: auto !important;
+  overflow: hidden !important;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+mjx-assistive-mml[display="block"] {
+  width: 100% !important;
+}
+
+mjx-math {
+  display: inline-block;
+  text-align: left;
+  line-height: 0;
+  text-indent: 0;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 100%;
+  font-size-adjust: none;
+  letter-spacing: normal;
+  border-collapse: collapse;
+  word-wrap: normal;
+  word-spacing: normal;
+  white-space: nowrap;
+  direction: ltr;
+  padding: 1px 0;
+}
+
+mjx-container[jax="CHTML"][display="true"] {
+  display: block;
+  text-align: center;
+  margin: 1em 0;
+}
+
+mjx-container[jax="CHTML"][display="true"][width="full"] {
+  display: flex;
+}
+
+mjx-container[jax="CHTML"][display="true"] mjx-math {
+  padding: 0;
+}
+
+mjx-container[jax="CHTML"][justify="left"] {
+  text-align: left;
+}
+
+mjx-container[jax="CHTML"][justify="right"] {
+  text-align: right;
+}
+
+mjx-c {
+  display: inline-block;
+}
+
+mjx-utext {
+  display: inline-block;
+  padding: .75em 0 .2em 0;
+}
+
+mjx-mn {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mi {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-mo {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-stretchy-h {
+  display: inline-table;
+  width: 100%;
+}
+
+mjx-stretchy-h > * {
+  display: table-cell;
+  width: 0;
+}
+
+mjx-stretchy-h > * > mjx-c {
+  display: inline-block;
+  transform: scalex(1.0000001);
+}
+
+mjx-stretchy-h > * > mjx-c::before {
+  display: inline-block;
+  width: initial;
+}
+
+mjx-stretchy-h > mjx-ext {
+  /* IE */ overflow: hidden;
+  /* others */ overflow: clip visible;
+  width: 100%;
+}
+
+mjx-stretchy-h > mjx-ext > mjx-c::before {
+  transform: scalex(500);
+}
+
+mjx-stretchy-h > mjx-ext > mjx-c {
+  width: 0;
+}
+
+mjx-stretchy-h > mjx-beg > mjx-c {
+  margin-right: -.1em;
+}
+
+mjx-stretchy-h > mjx-end > mjx-c {
+  margin-left: -.1em;
+}
+
+mjx-stretchy-v {
+  display: inline-block;
+}
+
+mjx-stretchy-v > * {
+  display: block;
+}
+
+mjx-stretchy-v > mjx-beg {
+  height: 0;
+}
+
+mjx-stretchy-v > mjx-end > mjx-c {
+  display: block;
+}
+
+mjx-stretchy-v > * > mjx-c {
+  transform: scaley(1.0000001);
+  transform-origin: left center;
+  overflow: hidden;
+}
+
+mjx-stretchy-v > mjx-ext {
+  display: block;
+  height: 100%;
+  box-sizing: border-box;
+  border: 0px solid transparent;
+  /* IE */ overflow: hidden;
+  /* others */ overflow: visible clip;
+}
+
+mjx-stretchy-v > mjx-ext > mjx-c::before {
+  width: initial;
+  box-sizing: border-box;
+}
+
+mjx-stretchy-v > mjx-ext > mjx-c {
+  transform: scaleY(500) translateY(.075em);
+  overflow: visible;
+}
+
+mjx-mark {
+  display: inline-block;
+  height: 0px;
+}
+
+mjx-menclose {
+  display: inline-block;
+  text-align: left;
+  position: relative;
+}
+
+mjx-menclose > mjx-dstrike {
+  display: inline-block;
+  left: 0;
+  top: 0;
+  position: absolute;
+  border-top: 0.067em solid;
+  transform-origin: top left;
+}
+
+mjx-menclose > mjx-ustrike {
+  display: inline-block;
+  left: 0;
+  bottom: 0;
+  position: absolute;
+  border-top: 0.067em solid;
+  transform-origin: bottom left;
+}
+
+mjx-menclose > mjx-hstrike {
+  border-top: 0.067em solid;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 50%;
+  transform: translateY(0.034em);
+}
+
+mjx-menclose > mjx-vstrike {
+  border-left: 0.067em solid;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 50%;
+  transform: translateX(0.034em);
+}
+
+mjx-menclose > mjx-rbox {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  border: 0.067em solid;
+  border-radius: 0.267em;
+}
+
+mjx-menclose > mjx-cbox {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  left: 0;
+  border: 0.067em solid;
+  border-radius: 50%;
+}
+
+mjx-menclose > mjx-arrow {
+  position: absolute;
+  left: 0;
+  bottom: 50%;
+  height: 0;
+  width: 0;
+}
+
+mjx-menclose > mjx-arrow > * {
+  display: block;
+  position: absolute;
+  transform-origin: bottom;
+  border-left: 0.268em solid;
+  border-right: 0;
+  box-sizing: border-box;
+}
+
+mjx-menclose > mjx-arrow > mjx-aline {
+  left: 0;
+  top: -0.034em;
+  right: 0.201em;
+  height: 0;
+  border-top: 0.067em solid;
+  border-left: 0;
+}
+
+mjx-menclose > mjx-arrow[double] > mjx-aline {
+  left: 0.201em;
+  height: 0;
+}
+
+mjx-menclose > mjx-arrow > mjx-rthead {
+  transform: skewX(0.464rad);
+  right: 0;
+  bottom: -1px;
+  border-bottom: 1px solid transparent;
+  border-top: 0.134em solid transparent;
+}
+
+mjx-menclose > mjx-arrow > mjx-rbhead {
+  transform: skewX(-0.464rad);
+  transform-origin: top;
+  right: 0;
+  top: -1px;
+  border-top: 1px solid transparent;
+  border-bottom: 0.134em solid transparent;
+}
+
+mjx-menclose > mjx-arrow > mjx-lthead {
+  transform: skewX(-0.464rad);
+  left: 0;
+  bottom: -1px;
+  border-left: 0;
+  border-right: 0.268em solid;
+  border-bottom: 1px solid transparent;
+  border-top: 0.134em solid transparent;
+}
+
+mjx-menclose > mjx-arrow > mjx-lbhead {
+  transform: skewX(0.464rad);
+  transform-origin: top;
+  left: 0;
+  top: -1px;
+  border-left: 0;
+  border-right: 0.268em solid;
+  border-top: 1px solid transparent;
+  border-bottom: 0.134em solid transparent;
+}
+
+mjx-menclose > dbox {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -0.3em;
+  width: 0.6em;
+  border: 0.067em solid;
+  border-radius: 50%;
+  clip-path: inset(0 0 0 0.3em);
+  box-sizing: border-box;
+}
+
+mjx-TeXAtom {
+  display: inline-block;
+  text-align: left;
+}
+
+mjx-c::before {
+  display: block;
+  width: 0;
+}
+
+.MJX-TEX {
+  font-family: MJXZERO, MJXTEX;
+}
+
+.TEX-B {
+  font-family: MJXZERO, MJXTEX-B;
+}
+
+.TEX-I {
+  font-family: MJXZERO, MJXTEX-I;
+}
+
+.TEX-MI {
+  font-family: MJXZERO, MJXTEX-MI;
+}
+
+.TEX-BI {
+  font-family: MJXZERO, MJXTEX-BI;
+}
+
+.TEX-S1 {
+  font-family: MJXZERO, MJXTEX-S1;
+}
+
+.TEX-S2 {
+  font-family: MJXZERO, MJXTEX-S2;
+}
+
+.TEX-S3 {
+  font-family: MJXZERO, MJXTEX-S3;
+}
+
+.TEX-S4 {
+  font-family: MJXZERO, MJXTEX-S4;
+}
+
+.TEX-A {
+  font-family: MJXZERO, MJXTEX-A;
+}
+
+.TEX-C {
+  font-family: MJXZERO, MJXTEX-C;
+}
+
+.TEX-CB {
+  font-family: MJXZERO, MJXTEX-CB;
+}
+
+.TEX-FR {
+  font-family: MJXZERO, MJXTEX-FR;
+}
+
+.TEX-FRB {
+  font-family: MJXZERO, MJXTEX-FRB;
+}
+
+.TEX-SS {
+  font-family: MJXZERO, MJXTEX-SS;
+}
+
+.TEX-SSB {
+  font-family: MJXZERO, MJXTEX-SSB;
+}
+
+.TEX-SSI {
+  font-family: MJXZERO, MJXTEX-SSI;
+}
+
+.TEX-SC {
+  font-family: MJXZERO, MJXTEX-SC;
+}
+
+.TEX-T {
+  font-family: MJXZERO, MJXTEX-T;
+}
+
+.TEX-V {
+  font-family: MJXZERO, MJXTEX-V;
+}
+
+.TEX-VB {
+  font-family: MJXZERO, MJXTEX-VB;
+}
+
+mjx-stretchy-v mjx-c, mjx-stretchy-h mjx-c {
+  font-family: MJXZERO, MJXTEX-S1, MJXTEX-S4, MJXTEX, MJXTEX-A ! important;
+}
+
+@font-face /* 0 */ {
+  font-family: MJXZERO;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Zero.woff") format("woff");
+}
+
+@font-face /* 1 */ {
+  font-family: MJXTEX;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Main-Regular.woff") format("woff");
+}
+
+@font-face /* 2 */ {
+  font-family: MJXTEX-B;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Main-Bold.woff") format("woff");
+}
+
+@font-face /* 3 */ {
+  font-family: MJXTEX-I;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Math-Italic.woff") format("woff");
+}
+
+@font-face /* 4 */ {
+  font-family: MJXTEX-MI;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Main-Italic.woff") format("woff");
+}
+
+@font-face /* 5 */ {
+  font-family: MJXTEX-BI;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Math-BoldItalic.woff") format("woff");
+}
+
+@font-face /* 6 */ {
+  font-family: MJXTEX-S1;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Size1-Regular.woff") format("woff");
+}
+
+@font-face /* 7 */ {
+  font-family: MJXTEX-S2;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Size2-Regular.woff") format("woff");
+}
+
+@font-face /* 8 */ {
+  font-family: MJXTEX-S3;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Size3-Regular.woff") format("woff");
+}
+
+@font-face /* 9 */ {
+  font-family: MJXTEX-S4;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Size4-Regular.woff") format("woff");
+}
+
+@font-face /* 10 */ {
+  font-family: MJXTEX-A;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_AMS-Regular.woff") format("woff");
+}
+
+@font-face /* 11 */ {
+  font-family: MJXTEX-C;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Regular.woff") format("woff");
+}
+
+@font-face /* 12 */ {
+  font-family: MJXTEX-CB;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Calligraphic-Bold.woff") format("woff");
+}
+
+@font-face /* 13 */ {
+  font-family: MJXTEX-FR;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Fraktur-Regular.woff") format("woff");
+}
+
+@font-face /* 14 */ {
+  font-family: MJXTEX-FRB;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Fraktur-Bold.woff") format("woff");
+}
+
+@font-face /* 15 */ {
+  font-family: MJXTEX-SS;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_SansSerif-Regular.woff") format("woff");
+}
+
+@font-face /* 16 */ {
+  font-family: MJXTEX-SSB;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_SansSerif-Bold.woff") format("woff");
+}
+
+@font-face /* 17 */ {
+  font-family: MJXTEX-SSI;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_SansSerif-Italic.woff") format("woff");
+}
+
+@font-face /* 18 */ {
+  font-family: MJXTEX-SC;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Script-Regular.woff") format("woff");
+}
+
+@font-face /* 19 */ {
+  font-family: MJXTEX-T;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Typewriter-Regular.woff") format("woff");
+}
+
+@font-face /* 20 */ {
+  font-family: MJXTEX-V;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Vector-Regular.woff") format("woff");
+}
+
+@font-face /* 21 */ {
+  font-family: MJXTEX-VB;
+  src: url("https://publish.obsidian.md/lib/mathjax/output/chtml/fonts/woff-v2/MathJax_Vector-Bold.woff") format("woff");
+}
+
+mjx-c.mjx-cA0::before {
+  padding: 0 0.25em 0 0;
+  content: "\A0";
+}
+
+mjx-c.mjx-c31::before {
+  padding: 0.666em 0.5em 0 0;
+  content: "1";
+}
+
+mjx-c.mjx-c1D445.TEX-I::before {
+  padding: 0.683em 0.759em 0.021em 0;
+  content: "R";
+}
+
+mjx-c.mjx-c3A::before {
+  padding: 0.43em 0.278em 0 0;
+  content: ":";
+}
+
+mjx-c.mjx-c36::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "6";
+}
+
+mjx-c.mjx-c30::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "0";
+}
+
+mjx-c.mjx-c37::before {
+  padding: 0.676em 0.5em 0.022em 0;
+  content: "7";
+}
+
+mjx-c.mjx-c38::before {
+  padding: 0.666em 0.5em 0.022em 0;
+  content: "8";
+}
+
+mjx-c.mjx-c33::before {
+  padding: 0.665em 0.5em 0.022em 0;
+  content: "3";
+}
+
+mjx-c.mjx-c1D54B.TEX-A::before {
+  padding: 0.683em 0.667em 0 0;
+  content: "T";
+}
+
+mjx-c.mjx-c1D53C.TEX-A::before {
+  padding: 0.683em 0.667em 0 0;
+  content: "E";
+}
+
+mjx-c.mjx-c1D54F.TEX-A::before {
+  padding: 0.683em 0.722em 0 0;
+  content: "X";
+}
+
+mjx-c.mjx-c3D.TEX-B::before {
+  padding: 0.393em 0.894em 0 0;
+  content: "=";
+}
+
+mjx-c.mjx-c1D53D.TEX-A::before {
+  padding: 0.683em 0.611em 0 0;
+  content: "F";
+}
+
+mjx-c.mjx-c1D538.TEX-A::before {
+  padding: 0.701em 0.722em 0 0;
+  content: "A";
+}
+
+mjx-c.mjx-c2115.TEX-A::before {
+  padding: 0.683em 0.722em 0.02em 0;
+  content: "N";
+}
+
+mjx-c.mjx-c2102.TEX-A::before {
+  padding: 0.702em 0.722em 0.019em 0;
+  content: "C";
+}
+
+mjx-c.mjx-c1D550.TEX-A::before {
+  padding: 0.683em 0.722em 0 0;
+  content: "Y";
+}
+
+mjx-c.mjx-c2234.TEX-A::before {
+  padding: 0.471em 0.667em 0.082em 0;
+  content: "\2234";
+}
+
+mjx-c.mjx-c1D719.TEX-I::before {
+  padding: 0.694em 0.596em 0.205em 0;
+  content: "\3D5";
+}
+
+mjx-c.mjx-c3D::before {
+  padding: 0.583em 0.778em 0.082em 0;
+  content: "=";
+}
+
+mjx-c.mjx-c222A::before {
+  padding: 0.598em 0.667em 0.022em 0;
+  content: "\222A";
+}
+
+mjx-c.mjx-c2F::before {
+  padding: 0.75em 0.5em 0.25em 0;
+  content: "/";
+}
+
+mjx-c.mjx-c2229::before {
+  padding: 0.598em 0.667em 0.022em 0;
+  content: "\2229";
+}

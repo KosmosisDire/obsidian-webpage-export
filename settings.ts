@@ -3,22 +3,34 @@ import { Utils } from 'main';
 
 export interface ExportSettingsData 
 {
-	singleFile: boolean;
+    inlineCSS: boolean;
+    inlineJS: boolean;
+    inlineImages: boolean;
+
     uzeZip: boolean;
     addDarkModeToggle: boolean;
     includeOutline: boolean;
     customLineWidth: number;
     lastExportPath: string;
+
+    customJS: string;
+    customCSS: string;
 }
 
 const DEFAULT_SETTINGS: ExportSettingsData = 
 {
-	singleFile: true,
+    inlineCSS: true,
+    inlineJS: true,
+    inlineImages: true,
+
     uzeZip: false,
     addDarkModeToggle: true,
     includeOutline: true,
     customLineWidth: 0,
-    lastExportPath: ''
+    lastExportPath: '',
+
+    customJS: '',
+    customCSS: ''
 }
 
 export class ExportSettings extends Modal
@@ -58,33 +70,49 @@ export class ExportSettings extends Modal
 
 		contentEl.empty();
 
-		contentEl.createEl('h2', {text: 'HTML Webpage Export Settings'});
+		contentEl.createEl('h2', {text: 'HTML Webpage Settings'});
 
-		new Setting(contentEl)
-			.setName('Export Single HTML File')
-			.setDesc('Will export the HTML with all styles and scripts inlined. If unchecked, will export the .html, .css, and .js files separately.')
-			.addToggle((toggle) => toggle
-                .setValue(ExportSettings.settings.singleFile)
-				.onChange(async (value) => 
-                {
-					ExportSettings.settings.singleFile = value;
-					await ExportSettings.saveSettings();
-				}));
-
+        contentEl.createEl('h3', {text: 'Inlining Options:'});
+        
         new Setting(contentEl)
-            .setName('Use .zip for multiple files')
-            .setDesc('(Only when Single HTML File is turned off) Will export a .zip file with all the seperate files. If unchecked, will export the other files alongside the .html file in the same folder.')
+            .setName('Inline CSS')
+            .setDesc('Inline the CSS into the HTML file.')
             .addToggle((toggle) => toggle
-                .setValue(ExportSettings.settings.uzeZip)
+                .setValue(ExportSettings.settings.inlineCSS)
                 .onChange(async (value) =>
                 {
-                    ExportSettings.settings.uzeZip = value;
+                    ExportSettings.settings.inlineCSS = value;
                     await ExportSettings.saveSettings();
                 }));
 
         new Setting(contentEl)
+            .setName('Inline JS')
+            .setDesc('Inline the JS into the HTML file.')
+            .addToggle((toggle) => toggle
+                .setValue(ExportSettings.settings.inlineJS)
+                .onChange(async (value) =>
+                {
+                    ExportSettings.settings.inlineJS = value;
+                    await ExportSettings.saveSettings();
+                }));
+
+        new Setting(contentEl)
+            .setName('Inline Images')
+            .setDesc('Inline the images into the HTML file.')
+            .addToggle((toggle) => toggle
+                .setValue(ExportSettings.settings.inlineImages)
+                .onChange(async (value) =>
+                {
+                    ExportSettings.settings.inlineImages = value;
+                    await ExportSettings.saveSettings();
+                }));
+        
+
+        contentEl.createEl('h3', {text: 'Special Features:'});
+
+        new Setting(contentEl)
             .setName('Add Dark Mode Toggle')
-            .setDesc('Will replace any occurrence of /theme-toggle in the document with a dark mode toggle. If no occurrences are found, it will be fixed to the top left of the viewport.')
+            .setDesc('Will replace any occurrence of \\theme-toggle in the document with a dark mode toggle. If no occurrences are found, it will be fixed to the top left of the viewport.')
             .addToggle((toggle) => toggle
                 .setValue(ExportSettings.settings.addDarkModeToggle)
                 .onChange(async (value) =>
@@ -116,6 +144,19 @@ export class ExportSettings extends Modal
                     await ExportSettings.saveSettings();
                 }
             ));
+        
+        contentEl.createEl('h3', {text: 'Export Options:'});
+
+        // new Setting(contentEl)
+        // .setName('Export to ZIP')
+        // .setDesc('Will export a .zip file rather than putting all the files loose in the chosen folder.')
+        // .addToggle((toggle) => toggle
+        //     .setValue(ExportSettings.settings.uzeZip)
+        //     .onChange(async (value) =>
+        //     {
+        //         ExportSettings.settings.uzeZip = value;
+        //         await ExportSettings.saveSettings();
+        //     }));
 
         new Setting(contentEl)
             .setName('Start Export')

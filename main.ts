@@ -1,6 +1,6 @@
-import { createWriteStream, open, readdirSync, readFile, write, writeFile, WriteFileOptions } from 'fs';
+import { createWriteStream, open, readdirSync, readFile, write, writeFile, WriteFileOptions, existsSync, mkdirSync } from 'fs';
 var JSZip = require("jszip");
-import { MarkdownView, Plugin, TAbstractFile, TFile, PaneType, OpenViewState, SplitDirection, FileSystemAdapter, WorkspaceLeaf, Notice } from 'obsidian';
+import { MarkdownView, Plugin, TAbstractFile, TFile, PaneType, OpenViewState, SplitDirection, FileSystemAdapter, WorkspaceLeaf, Notice, View } from 'obsidian';
 import {  ExportSettings } from './settings';
 import { saveAs, FileSaverOptions } from 'file-saver';
 import { NewWindowEvent } from 'electron';
@@ -18,14 +18,22 @@ export default class HTMLExportPlugin extends Plugin {
 	configPath : string = Utils.getVaultPath() + "/.obsidian";
 	leafHandler : LeafHandler = new LeafHandler();
 
+	imagesToDownload : {original_path: string, destination_path_rel: string}[] = [];
+	
+
 	async onload() 
 	{
 		console.log('loading obsidian-webpage-export plugin');
 
-		
-
 		new ExportSettings(this);
 		ExportSettings.loadSettings();
+
+
+		let v = await Utils.getActiveView();
+		if (v instanceof MarkdownView)
+		{
+			console.log(v);
+		}
 
 		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu, file, source) => {
@@ -41,8 +49,6 @@ export default class HTMLExportPlugin extends Plugin {
 		);
 	}
 
-
-
 	async export(file: TAbstractFile)
 	{
 		this.leafHandler.switchToLeafWithFile(file as TFile, true);
@@ -54,18 +60,16 @@ export default class HTMLExportPlugin extends Plugin {
 		var html = await this.GetCurrentFileHTML();
 		if (!html) return;
 		
-		if(ExportSettings.settings.singleFile)
+		var toDownload = [];
+
+		if(!ExportSettings.settings.inlineCSS)
 		{
-			Utils.downloadFile(html, file.name.replace(".md", ".html"));
-		}
-		else
-		{
-			var appcss = await Utils.getText(this.pluginPath + "/app.css");
-			var plugincss = await Utils.getText(this.pluginPath + "/plugin-styles.css");
-			var togglejs = await Utils.getText(this.pluginPath + "/toggle.js");
-			var themecss = await Utils.getThemeContent(Utils.getCurrentTheme());
-			var snippetsList = await Utils.getStyleSnippetsContent();
-			var snippetsNames = await Utils.getEnabledSnippets();
+			let appcss = await Utils.getText(this.pluginPath + "/app.css");
+			let plugincss = await Utils.getText(this.pluginPath + "/plugin-styles.css");
+			let themecss = await Utils.getThemeContent(Utils.getCurrentTheme());
+
+			let snippetsList = await Utils.getStyleSnippetsContent();
+			let snippetsNames = await Utils.getEnabledSnippets();
 			var snippets = "";
 
 			for (var i = 0; i < snippetsList.length; i++)
@@ -73,34 +77,61 @@ export default class HTMLExportPlugin extends Plugin {
 				snippets += `/* --- ${snippetsNames[i]}.css --- */  \n ${snippetsList[i]}  \n\n\n`;
 			}
 
-			if (ExportSettings.settings.uzeZip)
-			{
-				Utils.downloadFilesAsZip([
-					{ filename: "app.css", data: appcss, type: "text/css" },
-					{ filename: "plugin-styles.css", data: plugincss, type: "text/css" },
-					{ filename: "toggle.js", data: togglejs, type: "text/javascript" },
-					{ filename: "theme.css", data: themecss, type: "text/css" },
-					{ filename: "snippets.css", data: snippets, type: "text/css" },
-					{ filename: file.name.replace(".md", ".html"), data: html, type: "text/html" }
-				], file.name.replace(".md", ".zip"));
-			}
-			else
-			{
-				let htmlPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.name.replace(".md", ".html"), false);
-				if (!htmlPath) return;
-				let filename = Utils.getFileNameFromFilePath(htmlPath);
-				let folderPath = Utils.getDirectoryFromFilePath(htmlPath);
+			let appcssDownload = { filename: "app.css", data: appcss, type: "text/css" };
+			let plugincssDownload = { filename: "plugin-styles.css", data: plugincss, type: "text/css" };
+			let themecssDownload = { filename: "theme.css", data: themecss, type: "text/css" };
+			let snippetsDownload = { filename: "snippets.css", data: snippets, type: "text/css" };
 
-				Utils.downloadFiles([
-					{ filename: "app.css", data: appcss },
-					{ filename: "plugin-styles.css", data: plugincss },
-					{ filename: "toggle.js", data: togglejs },
-					{ filename: "theme.css", data: themecss },
-					{ filename: "snippets.css", data: snippets },
-					{ filename: filename, data: html }
-				], folderPath);
+			toDownload.push(appcssDownload);
+			toDownload.push(plugincssDownload);
+			toDownload.push(themecssDownload);
+			toDownload.push(snippetsDownload);
+		}
+
+		if(!ExportSettings.settings.inlineJS)
+		{
+			var togglejs = await Utils.getText(this.pluginPath + "/toggle.js");
+			var togglejsDownload = { filename: "toggle.js", data: togglejs, type: "text/javascript" };
+			toDownload.push(togglejsDownload);
+		}
+
+		// let imagesDownload : {path: string, data: string}[] = [];
+
+		if(!ExportSettings.settings.inlineImages)
+		{
+			for (var i = 0; i < this.imagesToDownload.length; i++)
+			{
+				var image = this.imagesToDownload[i];
+				var data = await Utils.getTextBase64(image.original_path);
+				var imageDownload = 
+				{ 
+					filename: Utils.getFileNameFromFilePath(image.destination_path_rel), 
+					data: data, 
+					type: "image/png", 
+					relativePath: Utils.getDirectoryFromFilePath(image.destination_path_rel),
+					unicode: false
+				};
+				toDownload.push(imageDownload);
 			}
 		}
+
+		var htmlDownload = { filename: file.name.replace(".md", ".html"), data: html, type: "text/html" };
+		toDownload.push(htmlDownload);
+
+		// Download file
+		if (ExportSettings.settings.uzeZip) Utils.downloadFilesAsZip(toDownload, file.name.replace(".md", ".zip"));
+		else
+		{
+			let htmlPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.name.replace(".md", ".html"), false);
+			if (!htmlPath) return;
+			let filename = Utils.getFileNameFromFilePath(htmlPath);
+			let folderPath = Utils.getDirectoryFromFilePath(htmlPath);
+
+			toDownload[toDownload.length - 1].filename = filename;
+
+			Utils.downloadFiles(toDownload, folderPath);
+		}
+		
 	}
 
 	async GetCurrentFileHTML(): Promise<string | null>
@@ -111,12 +142,16 @@ export default class HTMLExportPlugin extends Plugin {
 		if (!view) return null;
 
 		Utils.setLineWidth(ExportSettings.settings.customLineWidth);
-		Utils.viewEnableFullRender(view);
+		await Utils.viewEnableFullRender(view);
 		var header = await this.generateHeader(view);
-
 		var html = this.generateBodyHTML();
+		html = header + html;
 		html = this.fixLinks(html);
-		html = await this.inlineImages(html);
+
+		if (ExportSettings.settings.inlineImages) 
+			html = await this.inlineImages(html);
+		else
+			html = await this.outlineImages(html, view);
 	
 		// inject darkmode toggle
 		if (ExportSettings.settings.addDarkModeToggle)
@@ -130,8 +165,7 @@ export default class HTMLExportPlugin extends Plugin {
 		// 	this.generateOutline(headers);
 		// }
 
-		// combine header and body
-		html = header + html;
+		
 
 		// enclose in <html> tags
 		html = "<!DOCTYPE html>\n<html>\n" + html + "\n</html>";
@@ -175,7 +209,6 @@ export default class HTMLExportPlugin extends Plugin {
 				if(href.length == 1)
 				{
 					finalHref = href[0] + ".html";
-					console.log("len 1");
 				}
 
 				if(href.length == 2)
@@ -187,8 +220,6 @@ export default class HTMLExportPlugin extends Plugin {
 					}
 
 					finalHref = filePath + href[0] + ".html#" + href[1].replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
-
-					console.log("len 2");
 				}
 
 				if(href.length > 2)
@@ -202,7 +233,6 @@ export default class HTMLExportPlugin extends Plugin {
 					}
 
 					finalHref = filePath + first + ".html#" + href.join("#").replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
-					console.log("len > 2");
 				}
 			}
 			else // if the file starts with #, then it links to an internal header.
@@ -211,26 +241,21 @@ export default class HTMLExportPlugin extends Plugin {
 				if(href.length == 1)
 				{
 					finalHref = "#"+href[0].replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
-					console.log("#len 1");
 				}
 
 				if(href.length > 1)
 				{
 					finalHref = href.join("#").replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
-					console.log("#len > 1");
 				}
 			}
 
 			$(this).attr("href", finalHref);
-			console.log("fixed link: " + finalHref);
-			
 		});
 
 		query.find("h1, h2, h3, h4, h5, h6").each(function ()
 		{
 			// use the headers inner text as the id
 			$(this).attr("id", $(this).text().replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_"));
-			console.log("Fixed id: " + $(this).attr("id"));
 		});
 
 		let result = el.innerHTML;
@@ -278,6 +303,53 @@ export default class HTMLExportPlugin extends Plugin {
 		return result;
 	}
 
+	async outlineImages(html: string, view: MarkdownView): Promise<string>
+	{
+		let el = document.createElement('html');
+		el.innerHTML = html;
+
+		let query = jQuery(el);
+
+		this.imagesToDownload = [];
+
+		let img2Download : {original_path: string, destination_path_rel: string}[] = [];
+		let vaultPath = Utils.getVaultPath();
+
+		query.find("img").each(function ()
+		{
+			let originalPath = $(this).attr("src")?.replaceAll("\\", "/").replaceAll("%20", " ").replace("app://local/", "");
+
+			console.log("originalPath: " + originalPath);
+
+			if (!originalPath) 
+			{
+				new Notice("Failed to outline image: " + originalPath + ". Couldn't find image src", 5000);
+				return;
+			}
+
+			if (originalPath.startsWith("data:image/png;base64,") || originalPath.startsWith("data:image/jpeg;base64,")) return;
+
+			let relPath = originalPath.split(Utils.getDirectoryFromFilePath(vaultPath + "/" + view.file.path.replaceAll("\\", "/")) + "/")[1];
+
+			console.log(originalPath, "vs.", Utils.getDirectoryFromFilePath(vaultPath + "/" + view.file.path.replaceAll("\\", "/")) + "/");
+			
+			if (!relPath)
+				relPath = ("images/" + Utils.getFileNameFromFilePath($(this).attr("src")?.replaceAll("\\", "/").replaceAll("%20", " ") ?? "")) ?? "img.png";
+			
+			console.log("relPath: " + relPath);
+
+			$(this).attr("src", relPath);
+
+			img2Download.push({original_path: originalPath, destination_path_rel: relPath});
+		});
+
+		this.imagesToDownload = img2Download;
+
+		let result = el.innerHTML;
+		el.remove();
+		return result;
+	}
+
 	async generateHeader(view: MarkdownView) : Promise<string>
 	{
 		let appStyles = await Utils.getText(this.pluginPath + "/app.css");
@@ -288,9 +360,20 @@ export default class HTMLExportPlugin extends Plugin {
 		let theme = await Utils.getThemeContent(Utils.getCurrentTheme());
 
 		let scripts = "\n\n<script src='https://code.jquery.com/jquery-3.6.0.js'></script>"
-					+ ((ExportSettings.settings.singleFile ? ("<script>\n" + await Utils.getText(this.pluginPath + "/toggle.js"))
+					+ ((ExportSettings.settings.inlineJS ? ("<script>\n" + await Utils.getText(this.pluginPath + "/toggle.js"))
 					: "<script src='toggle.js'></script>\n") + "\n</script>\n");
 
+		var height = 0;
+		// @ts-ignore
+		let sections = view.currentMode.renderer.sections;
+		for (let i = 0; i < sections.length; i++)
+		{
+			height += sections[i].height;
+		}
+
+		var width = (document.getElementsByClassName("markdown-preview-sizer markdown-preview-section")[0] as HTMLElement).style.maxWidth.replace("px", "");
+		
+					
 		let meta = 
 		`
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
@@ -299,9 +382,13 @@ export default class HTMLExportPlugin extends Plugin {
 		<meta name="mobile-web-app-capable" content="yes">
 		<title>${view.file.basename}</title>
 		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
+		<meta name="data-width" data-width="${width}"></meta>
+		<meta name="data-height" data-height="${height}"></meta>
 		`
 
-		if (ExportSettings.settings.singleFile)
+		
+
+		if (ExportSettings.settings.inlineCSS)
 		{
 			var header = 
 			`
@@ -610,13 +697,14 @@ export class Utils
 		});
 	}
 
-	static async downloadFilesAsZip(files: {filename: string, data: string, type: string}[], zipFileName: string)
+	static async downloadFilesAsZip(files: {filename: string, data: string, type: string, relativePath?: string}[], zipFileName: string)
 	{
 		var blobs = files.map(file => new Blob([file.data], {type: file.type}));
 		var zip = new JSZip();
 		for (var i = 0; i < files.length; i++)
 		{
-			zip.file(files[i].filename, blobs[i]);
+			let path = ((files[i].relativePath ?? "") + "/" + files[i].filename).replaceAll("//", "/");
+			zip.file(path, blobs[i]);
 		}
 
 		var zipBlob = await zip.generateAsync({type: "uint8array"});
@@ -631,12 +719,21 @@ export class Utils
 		});
 	}
 
-	static async downloadFiles(files: {filename: string, data: string}[], folderPath: string)
+	static async downloadFiles(files: {filename: string, data: string, type?: string, relativePath?: string, unicode?: boolean}[], folderPath: string)
 	{
 		for (var i = 0; i < files.length; i++)
 		{
-			var array = Utils.createUnicodeArray(files[i].data);
-			writeFile(folderPath + "/" + files[i].filename, array, (err) => {
+			var array = (files[i].unicode ?? true) ? Utils.createUnicodeArray(files[i].data) : Buffer.from(files[i].data, 'base64');
+
+			let path = (folderPath + "/" + (files[i].relativePath ?? "") + "/" + files[i].filename).replaceAll("\\", "/").replaceAll("//", "/").replaceAll("//", "/");
+			
+			let dir = Utils.getDirectoryFromFilePath(path);
+			if (!existsSync(dir))
+			{
+				mkdirSync(dir, { recursive: true });
+			}
+			
+			writeFile(path, array, (err) => {
 				if (err) throw err;
 				console.log('The file has been saved!');
 			});
@@ -671,7 +768,7 @@ export class Utils
 	{
 		let adapter = app.vault.adapter;
 		if (adapter instanceof FileSystemAdapter) {
-			return adapter.getBasePath();
+			return adapter.getBasePath().replaceAll("\\", "/");
 		}
 
 		return null;
@@ -736,7 +833,10 @@ export class Utils
 		/*@ts-ignore*/
 		view.previewMode.renderer.showAll = true;
 		/*@ts-ignore*/
-		await Utils.waitUntil(() => view ? view.previewMode.renderer.parsing == false : false, 5000, 100); 
+		await view.previewMode.renderer.unfoldAllHeadings();
+		await Utils.delay(300);
+		/*@ts-ignore*/
+		await view.previewMode.renderer.rerender();
 	}
 
 	static async getActiveView(): Promise<MarkdownView | null>

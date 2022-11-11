@@ -18,15 +18,16 @@
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",
+		"electron": "18.3.5",
 		"esbuild": "0.14.47",
 		"jquery": "^3.5.14",
 		"obsidian": "^0.16.3",
 		"tslib": "2.4.0",
-		"typescript": "4.7.4",
-		"electron": "18.3.5"
+		"typescript": "4.7.4"
 	},
 	"dependencies": {
 		"file-saver": "^2.0.5",
+		"html2pdf.js": "^0.10.1",
 		"jquery": "^3.5.14",
 		"jszip": "^3.10.1"
 	}

@@ -55,42 +55,6 @@ th[sortable-style="sortable-desc"]::after {
     display: flex;
 }
 
-
-
-/* use mathjax font for math rendering */
-
-@font-face
-{
-    font-family: "MathJax_AMS";
-    src: url("https://assets.hackmd.io/build/MathJax/fonts/HTML-CSS/TeX/woff/MathJax_AMS-Regular.woff?V=2.7.5") format("woff");
-}
-
-@font-face
-{
-    font-family: "MathJax_Main-Regular";
-    src: url("https://assets.hackmd.io/build/MathJax/fonts/HTML-CSS/TeX/woff/MathJax_Main-Regular.woff") format("woff");
-}
-
-@font-face
-{
-    font-family: "MathJax_Math-Italic";
-    src: url("https://assets.hackmd.io/build/MathJax/fonts/HTML-CSS/TeX/woff/MathJax_Math-Italic.woff?V=2.7.5") format("woff");
-}
-
-@font-face 
-{
-    font-family: "MathJax_Size1";
-    src: url("https://assets.hackmd.io/build/MathJax/fonts/HTML-CSS/TeX/woff/MathJax_Size1-Regular.woff?V=2.7.5") format("woff");
-}
-
-@import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c&display=swap');
-
-
-.MathJax
-{
-    font-family: "MathJax_Main", "Times New Roman", Times, serif;
-}
-
 /* Toggle Styles */
 .toggle {
     --toggle-width: 50px;

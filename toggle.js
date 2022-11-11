@@ -130,4 +130,36 @@ jQuery(function()
         }
     });
 
+    // Make button with id="#save-to-pdf" save the current page to a PDF file
+    $("#save-pdf").on("click", function()
+    {
+        $.ajax('/', function(list) {
+            $.ajax({
+                type: 'POST',
+                url: '/save-pdf',
+                body: 
+                {
+                    html: document.documentElement.innerHTML,
+                    width: document.querySelector('meta[name="data-width"]').getAttribute("data-width"),
+                    height: document.querySelector('meta[name="data-height"]').getAttribute("data-height")
+                },
+                success: function(result) 
+                {
+                    // result is the buffer of the PDF file
+                    console.log('Response:', result);
+
+                    // download the file
+                    var blob = new Blob([result], {type: 'application/pdf'});
+                    var link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = 'file.pdf';
+                    link.click();
+
+                    link.remove();
+
+                }
+            });
+        });
+    });
+
 });
