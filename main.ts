@@ -19,21 +19,45 @@ export default class HTMLExportPlugin extends Plugin {
 	leafHandler : LeafHandler = new LeafHandler();
 
 	imagesToDownload : {original_path: string, destination_path_rel: string}[] = [];
+
+	appStyles :string = "";
 	
+
+	async downloadExtras()
+	{
+
+	}
 
 	async onload() 
 	{
 		console.log('loading obsidian-webpage-export plugin');
 
+		this.appStyles = "";
+		let appSheet = document.styleSheets[1];
+
+		for (var i = 0; i < appSheet.cssRules.length; i++)
+		{
+			var rule = appSheet.cssRules[i];
+			if (rule instanceof CSSStyleRule)
+			{
+				if (rule.cssText.startsWith("@font-face")) continue;
+				if (rule.cssText.startsWith(".CodeMirror")) continue;
+				if (rule.cssText.startsWith(".cm-")) continue;
+
+				this.appStyles += rule.cssText + "\n";
+			}
+		}
+
+		this.appStyles += Utils.getText(this.pluginPath + "/obsidian-styles.css");
+
+		console.log("loaded app styles");
+
+
+
+
+
 		new ExportSettings(this);
 		ExportSettings.loadSettings();
-
-
-		let v = await Utils.getActiveView();
-		if (v instanceof MarkdownView)
-		{
-			console.log(v);
-		}
 
 		this.registerEvent(
 			this.app.workspace.on("file-menu", (menu, file, source) => {
@@ -64,7 +88,7 @@ export default class HTMLExportPlugin extends Plugin {
 
 		if(!ExportSettings.settings.inlineCSS)
 		{
-			let appcss = await Utils.getText(this.pluginPath + "/app.css");
+			let appcss = this.appStyles;
 			let plugincss = await Utils.getText(this.pluginPath + "/plugin-styles.css");
 			let themecss = await Utils.getThemeContent(Utils.getCurrentTheme());
 
@@ -77,7 +101,7 @@ export default class HTMLExportPlugin extends Plugin {
 				snippets += `/* --- ${snippetsNames[i]}.css --- */  \n ${snippetsList[i]}  \n\n\n`;
 			}
 
-			let appcssDownload = { filename: "app.css", data: appcss, type: "text/css" };
+			let appcssDownload = { filename: "obsidian-styles.css", data: appcss, type: "text/css" };
 			let plugincssDownload = { filename: "plugin-styles.css", data: plugincss, type: "text/css" };
 			let themecssDownload = { filename: "theme.css", data: themecss, type: "text/css" };
 			let snippetsDownload = { filename: "snippets.css", data: snippets, type: "text/css" };
@@ -199,7 +223,6 @@ export default class HTMLExportPlugin extends Plugin {
 
 	async generateHead(view: MarkdownView) : Promise<string>
 	{
-		let appStyles = await Utils.getText(this.pluginPath + "/app.css");
 		let pluginStyles = await Utils.getText(this.pluginPath +"/plugin-styles.css");
 		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
 		let snippets = await Utils.getStyleSnippetsContent();
@@ -253,7 +276,7 @@ export default class HTMLExportPlugin extends Plugin {
 			<style> ${pluginStyles} </style>
 
 			<!-- Obsidian App Styles / Other Built-in Styles -->
-			<style> ${appStyles} </style>
+			<style> ${this.appStyles} </style>
 			<style> ${cssSettings} </style>
 
 			${scripts}
@@ -269,7 +292,7 @@ export default class HTMLExportPlugin extends Plugin {
 
 			${meta}
 
-			<link rel="stylesheet" href="app.css">
+			<link rel="stylesheet" href="obsidian-styles.css">
 			<link rel="stylesheet" href="plugin-styles.css">
 			<link rel="stylesheet" href="theme.css">
 			<link rel="stylesheet" href="snippets.css">
