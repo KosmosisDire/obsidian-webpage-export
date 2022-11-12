@@ -66,14 +66,32 @@ export default class HTMLExportPlugin extends Plugin {
 	{
 		console.log('loading obsidian-webpage-export plugin');
 
+		await Utils.delay(1000);
+
 		this.appStyles = "";
 		let appSheet = document.styleSheets[1];
+		let mathStyles = document.styleSheets[document.styleSheets.length-1];
 
 		for (var i = 0; i < appSheet.cssRules.length; i++)
 		{
 			var rule = appSheet.cssRules[i];
 			if (rule)
 			{
+				if (rule.cssText.startsWith("@font-face")) continue;
+				if (rule.cssText.startsWith(".CodeMirror")) continue;
+				if (rule.cssText.startsWith(".cm-")) continue;
+
+				this.appStyles += rule.cssText + "\n";
+			}
+		}
+
+		for (var i = 0; i < mathStyles.cssRules.length; i++)
+		{
+			var rule = mathStyles.cssRules[i];
+			if (rule)
+			{
+				console.log(rule.cssText);
+
 				if (rule.cssText.startsWith("@font-face")) continue;
 				if (rule.cssText.startsWith(".CodeMirror")) continue;
 				if (rule.cssText.startsWith(".cm-")) continue;
