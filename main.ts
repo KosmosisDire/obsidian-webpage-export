@@ -72,7 +72,7 @@ export default class HTMLExportPlugin extends Plugin {
 		for (var i = 0; i < appSheet.cssRules.length; i++)
 		{
 			var rule = appSheet.cssRules[i];
-			if (rule instanceof CSSStyleRule)
+			if (rule)
 			{
 				if (rule.cssText.startsWith("@font-face")) continue;
 				if (rule.cssText.startsWith(".CodeMirror")) continue;
@@ -83,6 +83,14 @@ export default class HTMLExportPlugin extends Plugin {
 		}
 
 		this.appStyles += await Utils.getText(this.pluginPath + "/obsidian-styles.css");
+
+		await writeFile(this.pluginPath + "/app-styles.css", this.appStyles, function(err) {
+			if(err) {
+				return console.log(err);
+			}
+			console.log("app-styles.css file downloaded successfully");
+		});
+
 
 		console.log("loaded app styles");
 
