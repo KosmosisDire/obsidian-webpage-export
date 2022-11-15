@@ -2201,32 +2201,3 @@ body.is-tablet .mobile-navbar { display: none; }
 input.mobile-vault-chooser-field-input { width: 100%; font-size: var(--font-ui-medium); padding: 8px 12px; height: auto; }
 .mobile-vault-chooser-button-container { margin: 20px 0px; }
 .mobile-vault-chooser-button-container button { padding: 10px 20px; font-size: var(--font-ui-medium); width: 100%; }
-.CtxtMenu_Menu { position: absolute; background-color: white; color: black; width: auto; padding: 5px 0px; border: 1px solid rgb(204, 204, 204); margin: 0px; cursor: default; font-style: ; font-variant: normal; font-weight: ; font-stretch: ; font-size: ; font-family: ; text-align: left; text-indent: 0px; text-transform: none; line-height: normal; letter-spacing: normal; word-spacing: normal; overflow-wrap: normal; white-space: nowrap; float: none; z-index: 201; border-radius: 5px; box-shadow: rgb(128, 128, 128) 0px 10px 20px; }
-.CtxtMenu_MenuItem { padding: 1px 2em; background: transparent; }
-.CtxtMenu_MenuArrow { position: absolute; right: 0.5em; padding-top: 0.25em; color: rgb(102, 102, 102); font-family: null; font-size: 0.75em; }
-.CtxtMenu_MenuActive .CtxtMenu_MenuArrow { color: white; }
-.CtxtMenu_MenuArrow.CtxtMenu_RTL { left: 0.5em; right: auto; }
-.CtxtMenu_MenuCheck { position: absolute; left: 0.7em; font-family: null; }
-.CtxtMenu_MenuCheck.CtxtMenu_RTL { right: 0.7em; left: auto; }
-.CtxtMenu_MenuRadioCheck { position: absolute; left: 0.7em; }
-.CtxtMenu_MenuRadioCheck.CtxtMenu_RTL { right: 0.7em; left: auto; }
-.CtxtMenu_MenuInputBox { padding-left: 1em; right: 0.5em; color: rgb(102, 102, 102); font-family: null; }
-.CtxtMenu_MenuInputBox.CtxtMenu_RTL { left: 0.1em; }
-.CtxtMenu_MenuComboBox { left: 0.1em; padding-bottom: 0.5em; }
-.CtxtMenu_MenuSlider { left: 0.1em; }
-.CtxtMenu_SliderValue { position: absolute; right: 0.1em; padding-top: 0.25em; color: rgb(51, 51, 51); font-size: 0.75em; }
-.CtxtMenu_SliderBar { outline: none; background: rgb(211, 211, 211); }
-.CtxtMenu_MenuLabel { padding: 1px 2em 3px 1.33em; font-style: italic; }
-.CtxtMenu_MenuRule { border-top: 1px solid rgb(221, 221, 221); margin: 4px 3px; }
-.CtxtMenu_MenuDisabled { color: graytext; }
-.CtxtMenu_MenuActive { background-color: rgb(96, 104, 114); color: white; }
-.CtxtMenu_MenuDisabled:focus { background-color: rgb(232, 232, 232); }
-.CtxtMenu_MenuLabel:focus { background-color: rgb(232, 232, 232); }
-.CtxtMenu_ContextMenu:focus { outline: none; }
-.CtxtMenu_ContextMenu .CtxtMenu_MenuItem:focus { outline: none; }
-.CtxtMenu_SelectionMenu { position: relative; float: left; border-bottom: none; box-shadow: none; border-radius: 0px; }
-.CtxtMenu_SelectionItem { padding-right: 1em; }
-.CtxtMenu_Selection { right: 40%; width: 50%; }
-.CtxtMenu_SelectionBox { padding: 0em; max-height: 20em; max-width: none; background-color: rgb(255, 255, 255); }
-.CtxtMenu_SelectionDivider { clear: both; border-top: 2px solid rgb(0, 0, 0); }
-.CtxtMenu_Menu .CtxtMenu_MenuClose { top: -10px; left: -10px; }

@@ -1,6 +1,6 @@
 import { createWriteStream, open, readdirSync, readFile, write, writeFile, WriteFileOptions, existsSync, mkdirSync } from 'fs';
 var JSZip = require("jszip");
-import { MarkdownView, Plugin, TAbstractFile, TFile, PaneType, OpenViewState, SplitDirection, FileSystemAdapter, WorkspaceLeaf, Notice, View } from 'obsidian';
+import { MarkdownView, Plugin, TAbstractFile, TFile, PaneType, OpenViewState, SplitDirection, FileSystemAdapter, WorkspaceLeaf, Notice, View, FileView, MarkdownEditView, TextFileView } from 'obsidian';
 import {  ExportSettings } from './settings';
 import { saveAs, FileSaverOptions } from 'file-saver';
 import { NewWindowEvent } from 'electron';
@@ -21,6 +21,7 @@ export default class HTMLExportPlugin extends Plugin {
 	imagesToDownload : {original_path: string, destination_path_rel: string}[] = [];
 
 	appStyles :string = "";
+	mathStylesLoaded : boolean = false;
 	
 
 	autoDownloadExtras = false;
@@ -81,7 +82,7 @@ export default class HTMLExportPlugin extends Plugin {
 			parent.innerHTML = this.darkModeToggle;
 		});
 
-		//also replace `theme-toggle` and ```theme-toggle``` for inline code blocks
+		//also replace `theme-toggle` and ```theme-toggle``` for better inline toggles, or in places you couldn't use a normal code block
 		this.registerMarkdownPostProcessor((element, context) => 
 		{
 			let codeBlocks = element.querySelectorAll('code');
@@ -102,8 +103,16 @@ export default class HTMLExportPlugin extends Plugin {
 		await Utils.delay(1000);
 
 		this.appStyles = "";
-		let appSheet = document.styleSheets[1];
-		let mathStyles = document.styleSheets[document.styleSheets.length-1];
+		var appSheet = document.styleSheets[1];
+		let stylesheets = document.styleSheets;
+		for (let i = 0; i < stylesheets.length; i++)
+		{
+			if (stylesheets[i].href && stylesheets[i].href?.includes("app.css"))
+			{
+				appSheet = stylesheets[i];
+				break;
+			}
+		}
 
 		this.appStyles += await Utils.getText(this.pluginPath + "/obsidian-styles.css");
 
@@ -115,17 +124,6 @@ export default class HTMLExportPlugin extends Plugin {
 				if (rule.cssText.startsWith("@font-face")) continue;
 				if (rule.cssText.startsWith(".CodeMirror")) continue;
 				if (rule.cssText.startsWith(".cm-")) continue;
-
-				this.appStyles += rule.cssText + "\n";
-			}
-		}
-
-		for (var i = 0; i < mathStyles.cssRules.length; i++)
-		{
-			var rule = mathStyles.cssRules[i];
-			if (rule)
-			{
-				if (rule.cssText.startsWith("@font-face")) continue;
 
 				this.appStyles += rule.cssText + "\n";
 			}
@@ -197,6 +195,15 @@ export default class HTMLExportPlugin extends Plugin {
 				snippets += `/* --- ${snippetsNames[i]}.css --- */  \n ${snippetsList[i]}  \n\n\n`;
 			}
 
+			// load 3rd party plugin css
+			let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("/n");
+			for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
+			{
+				let path = this.pluginPath.replace("obsidian-webpage-export", thirdPartyPluginStyleNames[i].replace("\n", "")) + "/styles.css";
+				let style = await Utils.getText(path);
+				if (style) plugincss += "\n" + style + "\n";
+			}
+
 			let appcssDownload = { filename: "obsidian-styles.css", data: appcss, type: "text/css" };
 			let plugincssDownload = { filename: "plugin-styles.css", data: plugincss, type: "text/css" };
 			let themecssDownload = { filename: "theme.css", data: themecss, type: "text/css" };
@@ -264,7 +271,10 @@ export default class HTMLExportPlugin extends Plugin {
 		if (!view) return null;
 
 		Utils.setLineWidth(ExportSettings.settings.customLineWidth);
-		await Utils.viewEnableFullRender(view);
+
+		if (view instanceof MarkdownView)
+			await Utils.viewEnableFullRender(view);
+
 		var head = await this.generateHead(view);
 		var html = this.generateBodyHTML();
 		html = this.fixLinks(html);
@@ -323,9 +333,10 @@ export default class HTMLExportPlugin extends Plugin {
 		/*@ts-ignore*/
 		bodyStyle = bodyStyle.replaceAll("\"", "'");
 
-		var htmlEl = (document.querySelector(".workspace-leaf.mod-active .markdown-reading-view") as HTMLElement);
+		var htmlEl = (document.querySelector(".workspace-leaf.mod-active .markdown-reading-view") as HTMLElement)
+		if (!htmlEl) htmlEl = (document.querySelector(".workspace-leaf.mod-active .view-content") as HTMLElement);
+
 		htmlEl.style.flexBasis = (htmlEl.querySelector("markdown-preview-sizer markdown-preview-section") as HTMLElement)?.style.width ?? "1000px";
-		// htmlEl.style.marginLeft = "calc(50% - " + parseInt(htmlEl.style.flexBasis.replace("px", ""))/2 + "px)";
 		var html = htmlEl.outerHTML;
 
 		html = "\n<body class=\"" + bodyClasses + "\" style=\"" + bodyStyle + "\">\n" + html + "\n</body>\n";
@@ -333,7 +344,7 @@ export default class HTMLExportPlugin extends Plugin {
 		return html;
 	}
 
-	async generateHead(view: MarkdownView) : Promise<string>
+	async generateHead(view: TextFileView) : Promise<string>
 	{
 		let pluginStyles = await Utils.getText(this.pluginPath +"/plugin-styles.css");
 		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
@@ -347,13 +358,45 @@ export default class HTMLExportPlugin extends Plugin {
 
 		var height = 0;
 		// @ts-ignore
-		let sections = view.currentMode.renderer.sections;
+		let sections = (view.currentMode?.renderer?.sections) ?? [];
 		for (let i = 0; i < sections.length; i++)
 		{
 			height += sections[i].height;
 		}
 
-		var width = (document.getElementsByClassName("markdown-preview-sizer markdown-preview-section")[0] as HTMLElement).style.maxWidth.replace("px", "");
+		let sizer = document.getElementsByClassName("markdown-preview-sizer markdown-preview-section");
+		var width = "1000px"
+		if (sizer) width = (sizer[0] as HTMLElement)?.style?.maxWidth?.replace("px", "");
+
+		if (!this.mathStylesLoaded)
+		{
+			let mathStyles = document.styleSheets[document.styleSheets.length-1];
+			var mathStylesString = "";
+
+			for (var i = 0; i < mathStyles.cssRules.length; i++)
+			{
+				var rule = mathStyles.cssRules[i];
+				
+				if (rule)
+				{
+					if (i == 0 && !rule.cssText.startsWith(".mjx")) break;
+					if (rule.cssText.startsWith("@font-face")) continue;
+
+					mathStylesString += rule.cssText + "\n";
+				}
+			}
+
+			this.appStyles += mathStylesString;
+			this.mathStylesLoaded = true;
+		}
+
+		let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("/n");
+		for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
+		{
+			let path = this.pluginPath.replace("obsidian-webpage-export", thirdPartyPluginStyleNames[i].replace("\n", "")) + "/styles.css";
+			let style = await Utils.getText(path);
+			if (style) pluginStyles += "\n" + style + "\n";
+		}
 		
 					
 		let meta = 
@@ -384,7 +427,7 @@ export default class HTMLExportPlugin extends Plugin {
 			<!-- Snippets: ${snippetNames.join(", ")} -->
 			<style> ${snippets.join("</style><style>")} </style>
 		
-			<!-- Web Export Plugin Styles (light/dark toggle, outline) -->
+			<!-- Plugin Styles -->
 			<style> ${pluginStyles} </style>
 
 			<!-- Obsidian App Styles / Other Built-in Styles -->
@@ -539,7 +582,7 @@ export default class HTMLExportPlugin extends Plugin {
 		return result;
 	}
 
-	async outlineImages(html: string, view: MarkdownView): Promise<string>
+	async outlineImages(html: string, view: TextFileView): Promise<string>
 	{
 		let el = document.createElement('html');
 		el.innerHTML = html;
@@ -999,9 +1042,9 @@ export class Utils
 		await view.previewMode.renderer.rerender();
 	}
 
-	static async getActiveView(): Promise<MarkdownView | null>
+	static async getActiveView(): Promise<TextFileView | null>
 	{
-		let view = app.workspace.getActiveViewOfType(MarkdownView);
+		let view = app.workspace.getActiveViewOfType(TextFileView);
 		if (!view)
 		{
 			console.log("Failed to find active view");
@@ -1024,7 +1067,9 @@ export class Utils
 	{
 		if (width != 0)
 		{
-			document.getElementsByClassName("markdown-preview-sizer markdown-preview-section")[0].setAttribute("style", "max-width: " + width + "px");
+			let sizers = document.getElementsByClassName("markdown-preview-sizer markdown-preview-section");
+			if (sizers.length > 0)
+				sizers[0].setAttribute("style", "max-width: " + width + "px");
 		}
 	}
 }

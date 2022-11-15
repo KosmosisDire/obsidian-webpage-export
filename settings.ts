@@ -15,6 +15,8 @@ export interface ExportSettingsData
 
     customJS: string;
     customCSS: string;
+
+    includePluginCSS: string;
 }
 
 const DEFAULT_SETTINGS: ExportSettingsData = 
@@ -30,7 +32,9 @@ const DEFAULT_SETTINGS: ExportSettingsData =
     lastExportPath: '',
 
     customJS: '',
-    customCSS: ''
+    customCSS: '',
+
+    includePluginCSS: ''
 }
 
 export class ExportSettings extends Modal
@@ -157,6 +161,18 @@ export class ExportSettings extends Modal
         //         ExportSettings.settings.uzeZip = value;
         //         await ExportSettings.saveSettings();
         //     }));
+
+        new Setting(contentEl)
+            .setName('Include Plugin CSS')
+            .setDesc('Will include the CSS from the plugins listed below. Please write out the plugin\'s ID / folder name exactly each on a new line.')
+            .addTextArea((text) => text
+                .setValue(ExportSettings.settings.includePluginCSS)
+                .onChange(async (value) =>
+                {
+                    ExportSettings.settings.includePluginCSS = value;
+                    await ExportSettings.saveSettings();
+                }
+            ));
 
         new Setting(contentEl)
             .setName('Start Export')
