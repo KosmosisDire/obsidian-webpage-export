@@ -4,13 +4,13 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 
 ## Features:
 - Generates an interactive document outline with your page and embeds it onto the site.
-- Color theme toggle can be embedded anywhere on the page.
-- Supports images, with automatic base64 inlining, or by exporting the images seperately.
-- Supports inline CSS, or exporting seperately.
-- Supports inline JS, or exporting JS seperately.
+- Color theme toggle can be embedded anywhere on the page. [Explained in: Theme Toggle](#theme-toggle)
+- Supports images, with automatic base64 inlining, or by exporting the images seperately. [Explained in: Non-Inlined Files](#non-inlined-files)
+- Supports inline CSS, or exporting seperately. [Explained in: Non-Inlined Files](#non-inlined-files)
+- Supports inline JS, or exporting JS seperately. [Explained in: Non-Inlined Files](#non-inlined-files)
 - Supports snippets, and custom themes (both light and dark).
-- Interactivaly collapse and unfold headers
-- export documents with onclick attributes working.
+- Interactively collapse and unfold headers like in obsidian
+- Export documents with onclick attributes working. [Explained in: On Click Atrributes](#on-click-attributes)
 
 ## To Use:
 
@@ -20,7 +20,7 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 - Change options
 - Click Export, and select a location for the file
 
-### Theme Toggle Note:
+### Theme Toggle:
 - Any `theme-toggle` code block will be replaced with a toggle for changing the theme. That means:
 > \`theme-toggle\`
 > 
@@ -35,7 +35,7 @@ or
 - This toggle does not work inside of obsidian, however once exported it will (this may change in the future)
 - If you do not include \`theme-toggle\` in a document and the `Add Dark Mode Toggle` setting is on then a toggle will be fixed to every page in the top left corner.
 
-### Non-Inlined Files Notes:
+### Non-Inlined Files:
 - If exporting CSS or JS seperately those files will be exported into the same folder as the .HTML
 - Images will be placed relative to the .HTML file the same as they were in obsidian.
 - The exception to this is if the images were lower in the heirarchy than the .HTML file, in which case the images are placed in a `/image` directory.
