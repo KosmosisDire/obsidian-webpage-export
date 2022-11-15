@@ -129,12 +129,12 @@ export default class HTMLExportPlugin extends Plugin {
 			}
 		}
 
-		await writeFile(this.pluginPath + "/app-styles.css", this.appStyles, function(err) {
-			if(err) {
-				return console.log(err);
-			}
-			console.log("app-styles.css file downloaded successfully");
-		});
+		// await writeFile(this.pluginPath + "/app-styles.css", this.appStyles, function(err) {
+		// 	if(err) {
+		// 		return console.log(err);
+		// 	}
+		// 	console.log("app-styles.css file downloaded successfully");
+		// });
 
 
 		console.log("loaded app styles");
@@ -153,7 +153,7 @@ export default class HTMLExportPlugin extends Plugin {
 					.setIcon("document")
 					.onClick(async () => 
 					{
-						this.export(file);
+						this.exportFile(file);
 					});
 				});
 			})
@@ -167,7 +167,7 @@ export default class HTMLExportPlugin extends Plugin {
 		console.log('unloading obsidian-webpage-export plugin');
 	}
 
-	async export(file: TAbstractFile)
+	async exportFile(file: TAbstractFile, fullPath: string = "")
 	{
 		this.leafHandler.switchToLeafWithFile(file as TFile, true);
 						
@@ -246,19 +246,18 @@ export default class HTMLExportPlugin extends Plugin {
 		toDownload.push(htmlDownload);
 
 		// Download file
-		if (ExportSettings.settings.uzeZip) Utils.downloadFilesAsZip(toDownload, file.name.replace(".md", ".zip"));
-		else
-		{
-			let htmlPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.name.replace(".md", ".html"), false);
-			if (!htmlPath) return;
-			let filename = Utils.getFileNameFromFilePath(htmlPath);
-			let folderPath = Utils.getDirectoryFromFilePath(htmlPath);
+		var htmlPath : string | null = fullPath;
+		if (htmlPath == "")
+			htmlPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.name.replace(".md", ".html"), false);
 
-			toDownload[toDownload.length - 1].filename = filename;
+		if (!htmlPath) return;
 
-			Utils.downloadFiles(toDownload, folderPath);
-		}
-		
+		let filename = Utils.getFileNameFromFilePath(htmlPath);
+		let folderPath = Utils.getDirectoryFromFilePath(htmlPath);
+
+		toDownload[toDownload.length - 1].filename = filename;
+
+		Utils.downloadFiles(toDownload, folderPath);
 	}
 
 	//#region General HTML
