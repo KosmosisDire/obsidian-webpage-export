@@ -56,7 +56,9 @@ Note: This does not enable `onclick` inside of obsidian itself.
 
 ![image](https://user-images.githubusercontent.com/39423700/201829592-d9a95868-b5eb-45f6-abbe-bd7c43104023.png)
 
+
 ## To Do:
+<!--
 - Make sun and moon icons on theme toggle match the theme colors (not just b/w)
 - Export folders or whole vaults at once
 - Add mobile support for the outline (mdeia queries and popout menu)
@@ -66,6 +68,9 @@ Note: This does not enable `onclick` inside of obsidian itself.
 - Support for embedding custom external css and js files.
 - Add way to easily share the webpage / html file online (seperate plugin?)
 - Add style setting support for theming outline and toggles.
+-->
+
+![image](https://user-images.githubusercontent.com/39423700/201869149-257d7136-9876-4c43-a19c-5826e4abdd1c.png)
 
 
 ## Contributing
