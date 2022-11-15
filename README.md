@@ -33,20 +33,21 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 
 ![image](https://user-images.githubusercontent.com/39423700/201829478-bfacc587-4da6-4746-ac44-a58458e086a7.png)
 
+![image](https://user-images.githubusercontent.com/39423700/201829546-a99d1b71-dd1e-4a8c-a2b0-2ca8cc771a6f.png)
+
+![image](https://user-images.githubusercontent.com/39423700/201829592-d9a95868-b5eb-45f6-abbe-bd7c43104023.png)
+
 ## To Do:
-- Fix printing not showing all pages when outline is enabled.
-- Fix button elements not being clickable.
-- Add scrolling to the outline.
-- Make the theme not change to light automatically when printing.
-- Add mobile support for the outline (mdeia queries and popout menu)
-- Improve outline HTML layout so it can be more easily styled.
+- Make sun and moon icons on theme toggle match the theme colors (not just b/w)
 - Export folders or whole vaults at once
+- Add mobile support for the outline (mdeia queries and popout menu)
+- Make the theme not change to light automatically when printing.
 
 ## Future
-- Add an export-current button to the sidebar
-- Enable embedding 3rd party plugin css
-- Support custom css and js only for export
-- Add way to share this webpage online with all features enabled.
+- Support for embedding custom external css and js files.
+- Add way to easily share the webpage / html file online (seperate plugin?)
+- Add style setting support for theming outline and toggles.
+
 
 # Credits
 Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for switching between tabs.
