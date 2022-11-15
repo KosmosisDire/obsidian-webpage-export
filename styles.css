@@ -48,11 +48,16 @@
     width: var(--toggle-width);
     height: var(--toggle-height);
     border-radius: var(--border-radius);
-    background-color: var(--interactive-normal);
+    background-color: var(--background-secondary);
     transition: background-color 0.2s;
     z-index: 1000;
 
-    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.2);
+    box-shadow: inset 0px 0px 10px 2px rgba(0, 0, 0, 0.4);
+}
+
+.theme-light .toggle__fill 
+{
+    box-shadow: inset 0px 0px 5px 2px hsla(var(--color-accent-hsl), 0.15);
 }
 
 /* Fill in light mode */
