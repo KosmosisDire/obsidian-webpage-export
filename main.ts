@@ -1,6 +1,6 @@
 import { createWriteStream, open, readdirSync, readFile, write, writeFile, WriteFileOptions, existsSync, mkdirSync } from 'fs';
 var JSZip = require("jszip");
-import { MarkdownView, Plugin, TAbstractFile, TFile, PaneType, OpenViewState, SplitDirection, FileSystemAdapter, WorkspaceLeaf, Notice, View, FileView, MarkdownEditView, TextFileView } from 'obsidian';
+import { MarkdownView, Plugin, TAbstractFile, TFile, PaneType, OpenViewState, SplitDirection, FileSystemAdapter, WorkspaceLeaf, Notice, View, FileView, MarkdownEditView, TextFileView, TFolder } from 'obsidian';
 import {  ExportSettings } from './settings';
 import { saveAs, FileSaverOptions } from 'file-saver';
 import { NewWindowEvent } from 'electron';
@@ -153,11 +153,20 @@ export default class HTMLExportPlugin extends Plugin {
 					.setIcon("document")
 					.onClick(async () => 
 					{
-						this.exportFile(file);
+						if(Utils.getFileNameFromFilePath(file.path).contains("."))
+							this.exportFile(file);
+
+						else
+							this.exportFolder(file.path);
 					});
 				});
 			})
 		);
+
+		this.addRibbonIcon("folder-up", "Export Vault to HTML", async () =>
+		{
+			this.exportFolder("");
+		});
 
 		this.addTogglePostprocessor();
 	}
@@ -167,13 +176,16 @@ export default class HTMLExportPlugin extends Plugin {
 		console.log('unloading obsidian-webpage-export plugin');
 	}
 
-	async exportFile(file: TAbstractFile, fullPath: string = "")
+	async exportFile(file: TAbstractFile, fullPath: string = "", showSettings: boolean = true)
 	{
 		this.leafHandler.switchToLeafWithFile(file as TFile, true);
 						
 		// Open the settings modal and wait until it's closed
-		var exportCanceled = !await new ExportSettings(this).open();
-		if (exportCanceled) return;
+		if (showSettings)
+		{
+			var exportCanceled = !await new ExportSettings(this).open();
+			if (exportCanceled) return;
+		}
 
 		var html = await this.GetCurrentFileHTML();
 		if (!html) return;
@@ -199,6 +211,7 @@ export default class HTMLExportPlugin extends Plugin {
 			let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("/n");
 			for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
 			{
+				if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
 				let path = this.pluginPath.replace("obsidian-webpage-export", thirdPartyPluginStyleNames[i].replace("\n", "")) + "/styles.css";
 				let style = await Utils.getText(path);
 				if (style) plugincss += "\n" + style + "\n";
@@ -258,6 +271,29 @@ export default class HTMLExportPlugin extends Plugin {
 		toDownload[toDownload.length - 1].filename = filename;
 
 		Utils.downloadFiles(toDownload, folderPath);
+	}
+
+	async exportFolder(folderPath : string)
+	{
+		// folder path is the path relative to the vault that we are exporting
+
+		// Open the settings modal and wait until it's closed
+		var exportCanceled = !await new ExportSettings(this).open();
+		if (exportCanceled) return;
+
+		let htmlPath = await Utils.showSelectFolderDialog(Utils.idealDefaultPath());
+
+		var files = this.app.vault.getFiles();
+
+		for (var i = 0; i < files.length; i++)
+		{
+			var file = files[i];
+			if(file.path.startsWith(folderPath) && file.extension == "md")
+			{
+				var fullPath = htmlPath + "/" + file.path.replace(".md", ".html");
+				await this.exportFile(file, fullPath, false);
+			}
+		}
 	}
 
 	//#region General HTML
@@ -597,6 +633,8 @@ export default class HTMLExportPlugin extends Plugin {
 
 		query.find("img").each(function ()
 		{
+			if (!$(this).attr("src")?.startsWith("app://local/")) return;
+			
 			let originalPath = $(this).attr("src")?.replaceAll("\\", "/").replaceAll("%20", " ").replace("app://local/", "");
 
 			console.log("originalPath: " + originalPath);
@@ -621,6 +659,7 @@ export default class HTMLExportPlugin extends Plugin {
 			$(this).attr("src", relPath);
 
 			img2Download.push({original_path: originalPath, destination_path_rel: relPath});
+			
 		});
 
 		this.imagesToDownload = img2Download;
@@ -876,6 +915,26 @@ export class Utils
 			ExportSettings.saveSettings();
 		}
 		
+		return path;
+	}
+
+	static async showSelectFolderDialog(defaultPath: string): Promise<string | null>
+	{
+		let picker = await dialog.showOpenDialog({
+			defaultPath: defaultPath,
+			properties: ["openDirectory"]
+		});
+
+		if (picker.canceled) return null;
+
+		let path = picker.filePaths[0] ?? "";
+
+		if (path != "")
+		{
+			ExportSettings.settings.lastExportPath = path;
+			ExportSettings.saveSettings();
+		}
+
 		return path;
 	}
 

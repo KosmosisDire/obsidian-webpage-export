@@ -31,6 +31,22 @@
     width: 100%;
 }
 
+/* Small fix for exporting kanban files */
+.markdown-preview-view.kanban-plugin__markdown-preview-view {
+    font-family: var(--font-text, var(--default-font));
+    font-size: .875rem;
+    line-height: var(--line-height-tight);
+    padding: unset;
+    width: unset;
+    height: unset;
+    position: unset;
+    overflow-y: unset;
+    overflow-wrap: unset;
+    color: unset;
+    user-select: unset;
+    -webkit-user-select: unset;
+}
+
 @media print 
 {
     #sidebar, .sideabr-right, .sidebar-left, .outline-container, .theme-toggle, .theme-toggle-inline, .toggle__fill, .toggle__input
