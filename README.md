@@ -10,6 +10,7 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 - Supports inline JS, or exporting JS seperately.
 - Supports snippets, and custom themes (both light and dark).
 - Interactivaly collapse and unfold headers
+- export documents with onclick attributes working.
 
 ## To Use:
 
@@ -39,6 +40,13 @@ or
 - Images will be placed relative to the .HTML file the same as they were in obsidian.
 - The exception to this is if the images were lower in the heirarchy than the .HTML file, in which case the images are placed in a `/image` directory.
 - All references and links to images or files are updated automatically.
+
+### On Click Attributes
+This is a somewhat niche feature; however, if you want to use the `onlick` attribute in your exported HTML without editing it afterwards you can use simple feature in this plugin to do that:
+1. Replace the `onclick` attribute in your source with `data-onclick`.
+2. Export the file, and this attribute will be replaced with onclick in the exported html.
+
+Note: This does not enable `onclick` inside of obsidian itself. 
 
 ## Screenshots:
 
