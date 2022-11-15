@@ -66,7 +66,7 @@ export default class HTMLExportPlugin extends Plugin {
 	darkModeToggle =
 	`\n\n
 	<div>
-	<label class="toggle_inline" for="theme_toggle">
+	<label class="theme-toggle-inline" for="theme_toggle">
 		<input class="toggle__input" type="checkbox" id="theme_toggle">
 		<div class="toggle__fill"></div>
 	</label>
@@ -268,6 +268,7 @@ export default class HTMLExportPlugin extends Plugin {
 		var head = await this.generateHead(view);
 		var html = this.generateBodyHTML();
 		html = this.fixLinks(html);
+		html = this.repairOnClick(html); //replace data-onlick with onclick
 
 		if (ExportSettings.settings.inlineImages) 
 			html = await this.inlineImages(html);
@@ -591,10 +592,10 @@ export default class HTMLExportPlugin extends Plugin {
 	
 	async injectToggle(html: string) : Promise<string>
 	{
-		if (!html.contains(this.darkModeToggle))
+		if (!html.contains(this.darkModeToggle.split("\n")[1]))
 		{
 			//insert fixed toggle in corner
-			html = this.darkModeToggle.replace("toggle_inline", "toggle"); + html;
+			html = this.darkModeToggle.replace("theme-toggle-inline", "theme-toggle") + html;
 		}
 
 		return html;

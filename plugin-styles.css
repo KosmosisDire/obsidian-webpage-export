@@ -33,7 +33,7 @@
 
 @media print 
 {
-    #sidebar, .sideabr-right, .sidebar-left, .outline-container, .toggle, .toggle_inline, .toggle__fill, .toggle__input
+    #sidebar, .sideabr-right, .sidebar-left, .outline-container, .theme-toggle, .theme-toggle-inline, .toggle__fill, .toggle__input
     {
         display: none !important;
     }
@@ -200,7 +200,7 @@ th[sortable-style="sortable-desc"]::after {
 }
 
 /* Toggle Styles */
-.toggle {
+.theme-toggle {
     --toggle-width: 50px;
     --toggle-height: calc(var(--toggle-width) / 2.2);
     --border-radius: calc(var(--toggle-height) / 2);
@@ -217,7 +217,7 @@ th[sortable-style="sortable-desc"]::after {
     z-index: 1000;
 }
 
-.toggle_inline {
+.theme-toggle-inline {
     --toggle-width: 50px;
     --toggle-height: calc(var(--toggle-width) / 2.2);
     --border-radius: calc(var(--toggle-height) / 2);

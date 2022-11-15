@@ -3,7 +3,7 @@
 
 
 /* Toggle Styles for inside Obsidian */
-.toggle {
+.theme-toggle {
     --toggle-width: 50px;
     --toggle-height: calc(var(--toggle-width) / 2.2);
     --border-radius: calc(var(--toggle-height) / 2);
@@ -20,7 +20,7 @@
     z-index: 1000;
 }
 
-.toggle_inline {
+.theme-toggle-inline {
     --toggle-width: 50px;
     --toggle-height: calc(var(--toggle-width) / 2.2);
     --border-radius: calc(var(--toggle-height) / 2);
