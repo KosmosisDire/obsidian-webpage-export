@@ -80,7 +80,7 @@ export class ExportSettings extends Modal
         let supporLink = contentEl.createEl('a', {href: 'https://www.buymeacoffee.com/nathangeorge'});
         let supportButton = supporLink.createEl('img');
         supportButton.setAttribute('src', 'https://cdn.buymeacoffee.com/buttons/v2/default-violet.png');
-        supportButton.setAttribute('style', '    height: 30px; margin-right: 0; margin-left: 64px; transform: translateY(25%);');
+        supportButton.setAttribute('style', '    height: 30px; margin-right: 0; margin-left: 17px; transform: translateY(25%);');
         supportButton.setAttribute('alt', 'Buy Me A Coffee');
 
         contentEl.createEl('h3', {text: 'Inlining Options:'});
@@ -185,6 +185,17 @@ export class ExportSettings extends Modal
             .setName('Start Export')
             .addButton((button) => button
                 .setButtonText('Export')
+                .onClick(async () =>
+                {
+                    this.close();
+                    ExportSettings.success = true;
+                }
+            ));
+
+        new Setting(contentEl)
+            .setName('Export and Copy HTML')
+            .addButton((button) => button
+                .setButtonText('Copy HTML')
                 .onClick(async () =>
                 {
                     this.close();

@@ -85,10 +85,11 @@ export default class HTMLExportPlugin extends Plugin {
 		//also replace `theme-toggle` and ```theme-toggle``` for better inline toggles, or in places you couldn't use a normal code block
 		this.registerMarkdownPostProcessor((element, context) => 
 		{
-			let codeBlocks = element.querySelectorAll('code');
+			let codeBlocks = element.querySelectorAll('code, span.cm-inline-code');
 			codeBlocks.forEach((codeBlock) => 
 			{
-				if (codeBlock.innerText == "theme-toggle")
+				console.log(codeBlock);
+				if (codeBlock instanceof HTMLElement && codeBlock.innerText == "theme-toggle")
 				{
 					codeBlock.outerHTML = this.darkModeToggle;
 				}
@@ -435,7 +436,8 @@ export default class HTMLExportPlugin extends Plugin {
 			}
 		}
 
-		let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("/n");
+		let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("\n");
+		console.log(thirdPartyPluginStyleNames);
 		for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
 		{
 			if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
@@ -685,9 +687,10 @@ export default class HTMLExportPlugin extends Plugin {
 	
 	async injectToggle(html: string) : Promise<string>
 	{
-		if (!html.contains(this.darkModeToggle.split("\n")[1]))
+		if (!html.contains(this.darkModeToggle.split("\n")[4]))
 		{
 			//insert fixed toggle in corner
+			console.log("Injecting toggle");
 			html = this.darkModeToggle.replace("theme-toggle-inline", "theme-toggle") + html;
 		}
 
