@@ -408,21 +408,30 @@ export default class HTMLExportPlugin extends Plugin {
 			let mathStyles = document.styleSheets[document.styleSheets.length-1];
 			var mathStylesString = "";
 
+			var success = true;
 			for (var i = 0; i < mathStyles.cssRules.length; i++)
 			{
 				var rule = mathStyles.cssRules[i];
 				
 				if (rule)
 				{
-					if (i == 0 && !rule.cssText.startsWith(".mjx")) break;
+					if (i == 0 && !rule.cssText.startsWith(".mjx"))
+					{
+						success = false;
+						break;
+					}
+
 					if (rule.cssText.startsWith("@font-face")) continue;
 
 					mathStylesString += rule.cssText + "\n";
 				}
 			}
 
-			this.appStyles += mathStylesString;
-			this.mathStylesLoaded = true;
+			if (success)
+			{
+				this.appStyles += mathStylesString;
+				this.mathStylesLoaded = true;
+			}
 		}
 
 		let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("/n");

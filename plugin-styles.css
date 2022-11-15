@@ -47,7 +47,7 @@
     -webkit-user-select: unset;
 }
 
-.kanban-plugin__item-button-wrapper, .kanban-plugin__lane-grip, .kanban-plugin__lane-settings-button-wrapper, .kanban-plugin__item-postfix-button.clickable-icon
+.kanban-plugin__item-button-wrapper, .kanban-plugin__lane-grip, .kanban-plugin__lane-settings-button.clickable-icon, .kanban-plugin__item-postfix-button.clickable-icon
 {
     display: none;
 }
