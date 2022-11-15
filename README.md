@@ -2,8 +2,10 @@
 
 Exports an obsidian document, folder, or vault as an HTML document / webpage / website, **(correctly!)** including all styling and formatting.
 
+![image](https://user-images.githubusercontent.com/39423700/201875810-6d24c2b9-2e63-4d9b-a9d4-61840df659ac.png)
+
 ## Features:
-- Export files, folders, or the whole vault as html.
+- Export files, folders, or the whole vault as html. [Explained in: General](#general)
 - Color theme toggle can be embedded anywhere on the page. [Explained in: Theme Toggle](#theme-toggle)
 - Supports images, with automatic base64 inlining, or by exporting the images seperately. [Explained in: Non-Inlined Files](#non-inlined-files)
 - Supports inline CSS, or exporting seperately. [Explained in: Non-Inlined Files](#non-inlined-files)
@@ -14,13 +16,23 @@ Exports an obsidian document, folder, or vault as an HTML document / webpage / w
 
 ## To Use:
 
-### General:
-- Right click on the file in the file manager, on a tab, or open the file menu from the three dots.
-- Select Export As HTML
-- Change options
+#### General
+<details><summary>General Instructions</summary>
+<p>
+
+- From any of the file / folder context menus select `Export As HTML`. Or to export the whole vault use the ribbon icon.
+
+- Change options as desired. Special options are explained below.
+
 - Click Export, and select a location for the file
 
-### Theme Toggle:
+</p>
+</details>
+
+#### Theme Toggle
+<details><summary>Notes on the Theme Toggle</summary>
+<p>
+
 - Any `theme-toggle` code block will be replaced with a toggle for changing the theme. That means:
 > \`theme-toggle\`
 > 
@@ -35,26 +47,65 @@ or
 - This toggle does not work inside of obsidian, however once exported it will (this may change in the future)
 - If you do not include \`theme-toggle\` in a document and the `Add Dark Mode Toggle` setting is on then a toggle will be fixed to every page in the top left corner.
 
-### Non-Inlined Files:
+
+</p>
+</details>
+
+
+#### Non-Inlined Files:
+<details><summary>Notes on Non-inlined Files</summary>
+<p>
+
 - If exporting CSS or JS seperately those files will be exported into the same folder as the .HTML
 - Images will be placed relative to the .HTML file the same as they were in obsidian.
 - The exception to this is if the images were lower in the heirarchy than the .HTML file, in which case the images are placed in a `/image` directory.
 - All references and links to images or files are updated automatically.
 
-### On Click Attributes
+</p>
+</details>
+
+#### Inluding Plugin CSS
+<details><summary>Notes on how to include 3rd Party CSS from plugins</summary>
+<p>
+
+- If you want to include css from a plugin (like Kanban for example) in the export
+- Start exporting your file and stop on the settings modal
+- Locate the `Include Plugin CSS` setting
+- Ender a list of plugin `IDs` each on a seperate line (for example kanban's ID is `obsidian-kanban`)
+- This may get more user friendly in the future, but for now it's the fastest implementation.
+
+
+</p>
+</details>
+
+#### On Click Attributes
+
+<details><summary>Enabling onlick Attributes</summary>
+<p>
+
 This is a somewhat niche feature; however, if you want to use the `onlick` attribute in your exported HTML without editing it afterwards you can use simple feature in this plugin to do that:
 1. Replace the `onclick` attribute in your source with `data-onclick`.
 2. Export the file, and this attribute will be replaced with onclick in the exported html.
 
 Note: This does not enable `onclick` inside of obsidian itself. 
 
+</p>
+</details>
+
 ## Screenshots:
+
+<details><summary>Click to view more screenshots</summary>
+<p>
 
 ![image](https://user-images.githubusercontent.com/39423700/201829478-bfacc587-4da6-4746-ac44-a58458e086a7.png)
 
 ![image](https://user-images.githubusercontent.com/39423700/201829546-a99d1b71-dd1e-4a8c-a2b0-2ca8cc771a6f.png)
 
 ![image](https://user-images.githubusercontent.com/39423700/201829592-d9a95868-b5eb-45f6-abbe-bd7c43104023.png)
+
+</p>
+</details>
+
 
 
 ## To Do:
