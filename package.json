@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-webpage-export",
-	"version": "1.0.1",
+	"version": "1.1.0",
 	"description": "Exports an obsidian document as an HTML document / webpage / website, correctly including all styling and formatting.",
 	"main": "main.js",
 	"scripts": {
@@ -9,8 +9,8 @@
 		"version": "node version-bump.mjs && git add manifest.json versions.json"
 	},
 	"keywords": [],
-	"author": "",
-	"license": "MIT",
+	"author": "Nathan George",
+	"license": "GPL-3.0",
 	"devDependencies": {
 		"@types/file-saver": "^2.0.5",
 		"@types/jquery": "^3.5.14",
