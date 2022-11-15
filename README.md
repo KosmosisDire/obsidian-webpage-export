@@ -20,14 +20,25 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 - Click Export, and select a location for the file
 
 ### Theme Toggle Note:
-- If you want the theme toggle in a specific place be sure to write `\theme-toggle` in the place of the toggle in your document.
-- If you do not the toggle will show at the top left of the webpage.
+- Any `theme-toggle` code block will be replaced with a toggle for changing the theme. That means:
+> \`theme-toggle\`
+> 
+> \`\`\`theme-toggle\`\`\`
 
-### Seperate Files Notes:
-- If exporting files seperately they will all be but into the same folder as the .html file
-- Images will be placed relative to the .html file simmilarly to how they were in obsidian.
-- The exception to this is if the images were lower in the heirarchy than the .html file, in which case the images are placed in a `/image` directory.
-- All references are links are updated automatically.
+or
+
+> \`\`\`theme-toggle
+> 
+> \`\`\`
+
+- This toggle does not work inside of obsidian, however once exported it will (this may change in the future)
+- If you do not include \`theme-toggle\` in a document and the `Add Dark Mode Toggle` setting is on then a toggle will be fixed to every page in the top left corner.
+
+### Non-Inlined Files Notes:
+- If exporting CSS or JS seperately those files will be exported into the same folder as the .HTML
+- Images will be placed relative to the .HTML file the same as they were in obsidian.
+- The exception to this is if the images were lower in the heirarchy than the .HTML file, in which case the images are placed in a `/image` directory.
+- All references and links to images or files are updated automatically.
 
 ## Screenshots:
 
@@ -49,5 +60,14 @@ Exports an obsidian document as an HTML document / webpage / website, **(correct
 - Add style setting support for theming outline and toggles.
 
 
-# Credits
+## Contributing
+- I am open to any PRs as long as they align with my vision for the plugin. So if you are going to work on a feature that isn't on the TO DO, then please submit an issue instead.
+- When changing styles, you must set the `autoDownloadExtras` variable at the top of `main.ts` to `false`. This is to prevent the plugin from redownloading the extra styles and overwiting changes. Be sure to set this back once you're done testing, but then don't reload the plugin until you have commited your changes.
+- Try to keep large scale reorganization of the code to a minimum, even though I know it is a **HUGE** mess right now. Small regoranizations and refactors are fine.
+
+## Support Me
+<a href="https://www.buymeacoffee.com/nathangeorge">
+	<img src="https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/support-image.png" style="width:300px" />
+
+## Credits
 Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for switching between tabs.
