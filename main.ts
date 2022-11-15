@@ -415,7 +415,7 @@ export default class HTMLExportPlugin extends Plugin {
 				
 				if (rule)
 				{
-					if (i == 0 && !rule.cssText.startsWith(".mjx"))
+					if (i == 0 && !rule.cssText.startsWith("mjx"))
 					{
 						success = false;
 						break;
@@ -429,6 +429,7 @@ export default class HTMLExportPlugin extends Plugin {
 
 			if (success)
 			{
+				console.log("Loaded math styles");
 				this.appStyles += mathStylesString;
 				this.mathStylesLoaded = true;
 			}
@@ -467,19 +468,19 @@ export default class HTMLExportPlugin extends Plugin {
 
 			${meta}
 			
+			<!-- Obsidian App Styles / Other Built-in Styles -->
+			<style> ${this.appStyles} </style>
+			<style> ${cssSettings} </style>
+
+			<!-- Plugin Styles -->
+			<style> ${pluginStyles} </style>
+
 			<!-- Theme Styles ( ${Utils.getCurrentTheme()} ) -->
 			<style> ${theme} </style>
 
 			<!-- Snippets: ${snippetNames.join(", ")} -->
 			<style> ${snippets.join("</style><style>")} </style>
 		
-			<!-- Plugin Styles -->
-			<style> ${pluginStyles} </style>
-
-			<!-- Obsidian App Styles / Other Built-in Styles -->
-			<style> ${this.appStyles} </style>
-			<style> ${cssSettings} </style>
-
 			${scripts}
 
 			</head>
