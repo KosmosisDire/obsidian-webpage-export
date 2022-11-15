@@ -1,9 +1,9 @@
 # Webpage HTML Export
 
-Exports an obsidian document as an HTML document / webpage / website, **(correctly!)** including all styling and formatting.
+Exports an obsidian document, folder, or vault as an HTML document / webpage / website, **(correctly!)** including all styling and formatting.
 
 ## Features:
-- Generates an interactive document outline with your page and embeds it onto the site.
+- Export files, folders, or the whole vault as html.
 - Color theme toggle can be embedded anywhere on the page. [Explained in: Theme Toggle](#theme-toggle)
 - Supports images, with automatic base64 inlining, or by exporting the images seperately. [Explained in: Non-Inlined Files](#non-inlined-files)
 - Supports inline CSS, or exporting seperately. [Explained in: Non-Inlined Files](#non-inlined-files)
