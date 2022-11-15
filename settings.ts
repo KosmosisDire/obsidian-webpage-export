@@ -74,7 +74,14 @@ export class ExportSettings extends Modal
 
 		contentEl.empty();
 
-		contentEl.createEl('h2', {text: 'HTML Webpage Settings'});
+		let header = contentEl.createEl('h2', {text: 'HTML Webpage Settings'});
+        header.style.display = 'inline-block';
+
+        let supporLink = contentEl.createEl('a', {href: 'https://www.buymeacoffee.com/nathangeorge'});
+        let supportButton = supporLink.createEl('img');
+        supportButton.setAttribute('src', 'https://cdn.buymeacoffee.com/buttons/v2/default-violet.png');
+        supportButton.setAttribute('style', '    height: 30px; margin-right: 0; margin-left: 64px; transform: translateY(25%);');
+        supportButton.setAttribute('alt', 'Buy Me A Coffee');
 
         contentEl.createEl('h3', {text: 'Inlining Options:'});
         
