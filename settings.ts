@@ -112,7 +112,7 @@ export class ExportSettings extends Modal
 
         new Setting(contentEl)
             .setName('Add Dark Mode Toggle')
-            .setDesc('Will replace any occurrence of \\theme-toggle in the document with a dark mode toggle. If no occurrences are found, it will be fixed to the top left of the viewport.')
+            .setDesc('Adds a fixed theme toggle to the top of any page that doesn\'t already have a toggle embedded with `theme-toggle`.')
             .addToggle((toggle) => toggle
                 .setValue(ExportSettings.settings.addDarkModeToggle)
                 .onChange(async (value) =>

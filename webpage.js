@@ -169,85 +169,29 @@ jQuery(function()
 
     // MAKE OUTLINE COLLAPSIBLE
     // if "outline-header" is clicked, toggle the display of every div until the next heading of the same or lower level
-
-    function getOutlineHeaderContentSelector(header)
-    {
-        let headingLevel = header.attr("data-size");
-        let headingNumber = parseInt(headingLevel) ?? 6;
-
-        let endingHeadings = [1, 2, 3, 4, 5, 6].filter(function(item)
-        {
-            return item <= headingNumber;
-        }).map(function(item)
-        {
-            return `div.outline-control[data-size="${item}"]`;
-        });
-
-        let endingHeadingsSelector = endingHeadings.join(", ");
-
-        return endingHeadingsSelector;
-    }
     
     var outline_width = 0;
 
-    $("div.outline-control").on("click", function()
+    $(".outline-item-contents > .collapse-icon").on("click", function()
     {
-        var isCollapsed = $(this).hasClass("is-collapsed");
+        var isCollapsed = $(this).parent().parent().hasClass("is-collapsed");
         
-        $(this).toggleClass("is-collapsed");
-
-        let selector = getOutlineHeaderContentSelector($(this));
+        $(this).parent().parent().toggleClass("is-collapsed");
 
         if(isCollapsed)
         {
-            $(this).nextUntil(selector).each(function()
-            {
-                $(this).show();
-            });
-            
-            $(this).nextUntil(selector).each(function()
-            {
-                if ($(this).hasClass("is-collapsed"))
-                {
-                    let s = getOutlineHeaderContentSelector($(this));
-
-                    let array = $(this).nextUntil(s).toArray();
-
-                    for (let i = 1; i < array.length; i++)
-                    {
-                        $(array[i]).hide();
-                    }
-                }
-            });
+            $(this).parent().next().slideDown(120);
         }
         else
         {
-            let s = getOutlineHeaderContentSelector($(this));
-
-            let array = $(this).nextUntil(s).toArray();
-
-            for (let i = 1; i < array.length; i++)
-            {
-                $(array[i]).hide();
-            }
+            $(this).parent().next().slideUp(120);
         }
-
-        $(".outline-container").width(outline_width);
-
     });
 
     // hide the control button if the header has no children
-    $("div.outline-control").each(function()
+    $(".outline-item-children:not(:has(*))").each(function()
     {
-        let selector = getOutlineHeaderContentSelector($(this));
-
-        if ($(this).nextUntil(selector).length == 1)
-        {
-            this.style.visibility = "hidden";
-        }
-
-        outline_width = $(".outline-container").width();
-        $(".outline-container").width(outline_width);
+        $(this).parent().find(".collapse-icon").hide();
     });
 
 });

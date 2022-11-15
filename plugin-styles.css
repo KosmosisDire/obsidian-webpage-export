@@ -1,24 +1,22 @@
 /* sidebars */
-#sidebar
-{
+#sidebar {
     background-color: var(--background-secondary);
-    display: flex;
-    width: max-content;
+    flex: 1 0 fit-content;
 }
 
-#sidebar-left
+.sidebar-left
 {
-    border-right: 1px dashed var(--border-color);
+    border-right: 1px dashed var(--divider-color);
 }
 
-#sidebar-right
+.sidebar-right
 {
-    border-left: 1px dashed var(--border-color);
+    border-left: 1px dashed var(--divider-color);
 }
 
 .flex-container
 {
-    background-color: var(--background-color);
+    background-color: var(--background-primary);
     display: flex;
     flex-direction: row;
     justify-content: center;
@@ -35,7 +33,7 @@
 
 @media print 
 {
-    #sidebar, #sideabr-right, #sidebar-left, .outline-container, .toggle, .toggle_inline, .toggle__fill, .toggle__input
+    #sidebar, .sideabr-right, .sidebar-left, .outline-container, .toggle, .toggle_inline, .toggle__fill, .toggle__input
     {
         display: none !important;
     }
@@ -43,161 +41,107 @@
 
 @media screen and (max-width: 900px)
 {
-    #sidebar, #sideabr-right, #sidebar-left, .outline-container
+    #sidebar, .sideabr-right, .sidebar-left, .outline-container
     {
         display: none !important;
     }
 }
 
-/* outline style */
-.outline-container
+@media screen and (max-width: 1200px)
 {
-    width: 100%;
+    .sidebar-left
+    {
+        display: none !important;
+    }
+}
+
+.outline-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin: 0.3em;
+    margin-left: 10px;
+    margin-right: 10px;
+}
+
+.outline-item:last-child 
+{
+    margin-bottom: 0;
+}
+
+.outline-container {
+    width: 380px;
     margin: 10px;
-    margin-top: 20px;
-    height: min-content;
-    white-space: nowrap;
-    line-height: 1.6em;
+    margin-right: auto;
+    height: fit-content;
+    line-height: var(--line-height-tight);
+    display: flex;
+    flex-direction: column;
+    overflow-y: scroll;
+    height: 100%;
+    padding-bottom: 20px;
 }
 
-.theme-dark .outline-control
-{
-    background: url('https://api.iconify.design/lucide/chevron-down.svg?color=white') no-repeat center center / contain;
-}
-
-.theme-light .outline-control
-{
-    background: url('https://api.iconify.design/lucide/chevron-down.svg?color=black') no-repeat center center / contain;
-}
-
-.outline-control
-{
-    transition: transform 0.2s;
-    transform: rotate(0deg) translateY(2px);
-    width: 1em;
-    height: 1em;
-    display: inline-block;
-    white-space: nowrap;
-}
-
-.is-collapsed.outline-control
-{
-    transform: rotate(-90deg) translateX(-2px);
-}
-
-.outline-control[data-size="1"]
-{
-    margin-left: 0;
-}
-
-.outline-control[data-size="2"]
-{
-    margin-left: 1em;
-}
-
-.outline-control[data-size="3"]
-{
-    margin-left: 2em;
-}
-
-.outline-control[data-size="4"]
-{
-    margin-left: 3em;
-}
-
-.outline-control[data-size="5"]
-{
-    margin-left: 4em;
-}
-
-.outline-control[data-size="6"]
-{
-    margin-left: 5em;
-}
-
-.outline-control[data-size="1"] + .outline-header
-{
-    color: var(--h1-color);
-    font-family: var(--h1-font);
-}
-
-.outline-control[data-size="2"] + .outline-header
-{
-    color: var(--h2-color);
-    font-family: var(--h2-font);
-}
-
-.outline-control[data-size="3"] + .outline-header
-{
-    color: var(--h3-color);
-    font-family: var(--h3-font);
-}
-
-.outline-control[data-size="4"] + .outline-header
-{
-    color: var(--h4-color);
-    font-family: var(--h4-font);
-}
-
-.outline-control[data-size="5"] + .outline-header
-{
-    color: var(--h5-color);
-    font-family: var(--h5-font);
-}
-
-.outline-control[data-size="6"] + .outline-header
-{
-    color: var(--h6-color);
-    font-family: var(--h6-font);
-}
-
-.outline-header
-{
-    width: max-content;
-    margin-left: 1em;
-    box-sizing: content-box;
-    text-decoration: none;
-    font-weight: bold;
-    text-rendering: optimizeLegibility;
-    white-space: nowrap;
-    display: inline;
-}
-
-.outline-header::before
-{
-    content: attr(data-content);
-    display: inherit;
-    width: auto;
-    height: 1em;
-    padding: 1em;
-    padding-bottom: 0.5em;
-    padding-top: 0;
-    background-color: var(--interactive-normal);
+.outline-item-contents {
+    display: flex;
+    flex-direction: row;
+    align-items: baseline;
+    padding: 0.3em;
     border-radius: 0.4em;
-    position: absolute;
+    color: var(--nav-item-color);
+    width: 100%;
 }
 
-.outline-header::after
+.outline-item-contents:hover 
 {
-    content: '';
-    display: block;
-    clear: both;
-}
-
-.outline-header:hover::before
-{
+    background-color: var(--nav-item-background-hover);
+    color: var(--nav-item-color-hover);
     cursor: pointer;
-    background-color: var(--interactive-hover);
-    text-decoration: underline;
 }
 
-.outline-header:active::before
+.outline-item-contents:active
 {
-    background-color: var(--background-primary-alt);
+    background-color: var(--nav-item-background-active);
+    color: var(--nav-item-color-active);
+    cursor: pointer;
+}
+
+a.outline-item-title {
+    margin-left: 0.5em;
+    text-decoration: none;
+    color: inherit;
+}
+
+a.outline-item-title:hover 
+{
+    color: inherit;
+    text-decoration: none;
+}
+
+.outline-item-children {
+    border-left: 1px solid var(--divider-color);
+    margin-left: 10px;
+    width: 100%;
+}
+
+.outline-header 
+{
+    margin-left: 10px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.outline-item.is-collapsed .collapse-icon svg.svg-icon
+{
+    color: var(--color-accent);
 }
 
 
-
+/* Let links wrap anywhere so that the width isn't set by long links */
+a {
+    overflow-wrap: anywhere;
+}
 
 /* mobile support for obsidian columns plugin */
 .columnParent {

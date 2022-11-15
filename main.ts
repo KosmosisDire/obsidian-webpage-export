@@ -23,7 +23,7 @@ export default class HTMLExportPlugin extends Plugin {
 	appStyles :string = "";
 	
 
-	autoDownloadExtras = true;
+	autoDownloadExtras = false;
 
 	webpagejsURL : string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/webpage.js";
 	pluginStylesURL : string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/plugin-styles.css";
@@ -60,6 +60,39 @@ export default class HTMLExportPlugin extends Plugin {
 			console.log("obsidian-styles.css file downloaded successfully");
 		});
 
+	}
+
+
+	darkModeToggle =
+	`\n\n
+	<div>
+	<label class="toggle_inline" for="theme_toggle">
+		<input class="toggle__input" type="checkbox" id="theme_toggle">
+		<div class="toggle__fill"></div>
+	</label>
+	</div>
+	\n\n`
+
+	addTogglePostprocessor() 
+	{
+		this.registerMarkdownCodeBlockProcessor("theme-toggle", (source, el, ctx) => 
+		{
+			let parent = el.createEl('div');
+			parent.innerHTML = this.darkModeToggle;
+		});
+
+		//also replace `theme-toggle` and ```theme-toggle``` for inline code blocks
+		this.registerMarkdownPostProcessor((element, context) => 
+		{
+			let codeBlocks = element.querySelectorAll('code');
+			codeBlocks.forEach((codeBlock) => 
+			{
+				if (codeBlock.innerText == "theme-toggle")
+				{
+					codeBlock.outerHTML = this.darkModeToggle;
+				}
+			});
+		});
 	}
 
 	async onload() 
@@ -127,6 +160,8 @@ export default class HTMLExportPlugin extends Plugin {
 				});
 			})
 		);
+
+		this.addTogglePostprocessor();
 	}
 
 	onunload() 
@@ -245,29 +280,30 @@ export default class HTMLExportPlugin extends Plugin {
 			html = await this.injectToggle(html);
 		}
 
-
-		var headers = this.getHeaderList(html);
-		if (headers)
+		if (ExportSettings.settings.includeOutline)
 		{
-			var outline = this.generateOutline(headers);
-			// put side bars on either side of content and put them in a flex container
-			let el = document.createElement("html");
-			el.innerHTML = html;
-			let body = el.querySelector("body");
-			if (body)
+			var headers = this.getHeaderList(html);
+			if (headers)
 			{
-				html = `<div class="flex-container"><div id="sidebar sidebar-left"></div>${body.innerHTML}<div id="sidebar sidebar-right">${outline}</div></div>`;
-				body.innerHTML = html;
-				html = body?.outerHTML;
+				var outline = this.generateOutline(headers);
+				// put side bars on either side of content and put them in a flex container
+				let el = document.createElement("html");
+				el.innerHTML = html;
+				let body = el.querySelector("body");
+				if (body)
+				{
+					html = `<div class="flex-container"><div id="sidebar" class="sidebar-left"></div>${body.innerHTML}<div id="sidebar" class="sidebar-right">${outline}</div></div>`;
+					body.innerHTML = html;
+					html = body?.outerHTML;
+				}
+				else
+				{
+					console.error("Could not find body element in html");
+				}
+				
+				el.remove();
 			}
-			else
-			{
-				console.error("Could not find body element in html");
-			}
-			
-			el.remove();
 		}
-
 
 		html = head + html;
 
@@ -555,28 +591,18 @@ export default class HTMLExportPlugin extends Plugin {
 	
 	async injectToggle(html: string) : Promise<string>
 	{
-		var darkModeToggle =
-		`\n\n
-		<div>
-		<label class="toggle_inline" for="theme_toggle">
-			<input class="toggle__input" type="checkbox" id="theme_toggle">
-			<div class="toggle__fill"></div>
-		</label>
-		</div>
-		\n\n`
-		
-		if (html.contains("\\theme-toggle"))
-		{
-			/*@ts-ignore*/
-			html = html.replaceAll("\\theme-toggle", darkModeToggle);
-		}
-		else
+		if (!html.contains(this.darkModeToggle))
 		{
 			//insert fixed toggle in corner
-			darkModeToggle = darkModeToggle.replace("toggle_inline", "toggle");
-			html = darkModeToggle + html;
+			html = this.darkModeToggle.replace("toggle_inline", "toggle"); + html;
 		}
 
+		return html;
+	}
+
+	repairOnClick(html: string) : string
+	{
+		html = html.replaceAll("data-onclick", "onclick");
 		return html;
 	}
 
@@ -607,34 +633,83 @@ export default class HTMLExportPlugin extends Plugin {
 	{
 		var outline = 
 		`
-		<div class="outline-container">
+		<div class="outline-container" data-size="0">
+		    
+			<div class="outline-header">
+				<svg viewBox="0 0 100 100" class="bullet-list" width="18" height="18"><path fill="var(--h6-color)" stroke="var(--h6-color)" d="M16.4,16.4c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,16.4,16.4,16.4z M16.4,19.6 c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2C13.2,21,14.6,19.6,16.4,19.6z M29.2,21.2v3.2H90v-3.2H29.2z M16.4,43.6c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,43.6,16.4,43.6z M16.4,46.8c1.8,0,3.2,1.4,3.2,3.2 s-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2S14.6,46.8,16.4,46.8z M29.2,48.4v3.2H90v-3.2H29.2z M16.4,70.8c-3.5,0-6.4,2.9-6.4,6.4 c0,3.5,2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4C22.8,73.7,19.9,70.8,16.4,70.8z M16.4,74c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2 s-3.2-1.4-3.2-3.2C13.2,75.4,14.6,74,16.4,74z M29.2,75.6v3.2H90v-3.2H29.2z"></path></svg>
+				<h6 style="margin: 1em"> Table of Contents </h6>
+			</div>
 		
 		</div>
 		`;
 
-		var outlineEl = document.createElement( 'html' );
-		outlineEl.innerHTML = outline;
+		var builderRoot = document.createElement( 'html' );
+		builderRoot.innerHTML = outline;
 
-		var outlineContainer = outlineEl.querySelector(".outline-container");
+		var outlineEl = builderRoot.querySelector(".outline-container");
 
-		if (!outlineContainer) return "";
+		if (!outlineEl) return "";
+
+		var listItemTemplate = 
+		`
+		
+		<div class="outline-item" data-size="{size}">
+			
+			<div class="outline-item-contents">
+				<div class="tree-item-icon collapse-icon">
+					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path>
+					</svg>
+				</div>
+
+				<a class="outline-item-title" href="#{href}">{title}</a>
+			</div>
+
+			<div class="outline-item-children">
+
+			</div>
+		</div>
+		`;
+
+
+		var listStack = [outlineEl];
+
+		// function to get the data-size of the previous list item as a number
+		function getLastStackSize() : number
+		{
+			return parseInt(listStack[listStack.length - 1].getAttribute("data-size") ?? "0");
+		}
+
 
 		for (var i = 0; i < headers.length; i++)
 		{
 			var header = headers[i];
-			var controlEl = document.createElement("div");
-			controlEl.classList.add("outline-control");
-			controlEl.setAttribute("data-size", header.size.toString());
-			outlineContainer.appendChild(controlEl);
+			var listItem = listItemTemplate.replace("{size}", header.size.toString()).replace("{href}", header.href).replace("{title}", header.title);
 
-			let title = outlineContainer.createEl("a", {text: header.title});
-			title.setAttribute("href", "#" + header.href);
-			title.setAttribute("data-content", header.title);
-			title.classList.add("outline-header");
+			while (getLastStackSize() >= header.size && listStack.length > 1)
+			{
+				listStack.pop();
+			}
+
+			var builditemRoot = document.createElement( 'div' );
+			builditemRoot.innerHTML = listItem;
+			var newOutlineItem = builditemRoot.querySelector(".outline-item");
+
+			if (!newOutlineItem) continue;
+			
+			var childContainer = listStack.last()?.querySelector(".outline-item-children");
+			if (getLastStackSize() == 0) childContainer = listStack.last();
+
+			if (!childContainer) continue;
+			
+			childContainer.appendChild(newOutlineItem);
+			listStack.push(newOutlineItem);
+
+			builditemRoot.remove();
 		}
 
-		var result = outlineEl.innerHTML;
-		outlineEl.remove();
+		var result = builderRoot.innerHTML;
+		builderRoot.remove();
+
 		return result;
 	}
 
@@ -951,12 +1026,13 @@ export class Utils
 			document.getElementsByClassName("markdown-preview-sizer markdown-preview-section")[0].setAttribute("style", "max-width: " + width + "px");
 		}
 	}
-
-	
 }
 
 export class LeafHandler
 {
+	// from obsidian-switcher-plus by darlal: https://github.com/darlal/obsidian-switcher-plus/blob/27d337039883008bcbf40ca13ea2f9287469dde4/src/Handlers/handler.ts#L388
+	// only some functions are used and have been packaged into this class for easy use.
+
 	isMainPanelLeaf(leaf: WorkspaceLeaf): boolean 
 	{
 		const { workspace } = app;
@@ -985,7 +1061,7 @@ export class LeafHandler
 		return leaves;
 	}
 
-	openFileInNewLeaf( // from obsidian-switcher-plus by darlal: https://github.com/darlal/obsidian-switcher-plus/blob/27d337039883008bcbf40ca13ea2f9287469dde4/src/Handlers/handler.ts#L388
+	openFileInNewLeaf( 
 		file: TFile,
 		navType: PaneType | boolean,
 		openState?: OpenViewState,
