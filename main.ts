@@ -393,6 +393,8 @@ export default class HTMLExportPlugin extends Plugin {
 		let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("/n");
 		for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
 		{
+			if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
+
 			let path = this.pluginPath.replace("obsidian-webpage-export", thirdPartyPluginStyleNames[i].replace("\n", "")) + "/styles.css";
 			let style = await Utils.getText(path);
 			if (style) pluginStyles += "\n" + style + "\n";
