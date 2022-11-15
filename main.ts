@@ -88,7 +88,7 @@ export default class HTMLExportPlugin extends Plugin {
 			let codeBlocks = element.querySelectorAll('code, span.cm-inline-code');
 			codeBlocks.forEach((codeBlock) => 
 			{
-				console.log(codeBlock);
+				// console.log(codeBlock);
 				if (codeBlock instanceof HTMLElement && codeBlock.innerText == "theme-toggle")
 				{
 					codeBlock.outerHTML = this.darkModeToggle;
@@ -209,10 +209,11 @@ export default class HTMLExportPlugin extends Plugin {
 			}
 
 			// load 3rd party plugin css
-			let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("/n");
+			let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("\n");
 			for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
 			{
 				if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
+
 				let path = this.pluginPath.replace("obsidian-webpage-export", thirdPartyPluginStyleNames[i].replace("\n", "")) + "/styles.css";
 				let style = await Utils.getText(path);
 				if (style) plugincss += "\n" + style + "\n";
@@ -431,13 +432,13 @@ export default class HTMLExportPlugin extends Plugin {
 			if (success)
 			{
 				console.log("Loaded math styles");
+				console.log(mathStylesString);
 				this.appStyles += mathStylesString;
 				this.mathStylesLoaded = true;
 			}
 		}
 
 		let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("\n");
-		console.log(thirdPartyPluginStyleNames);
 		for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
 		{
 			if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
@@ -649,7 +650,7 @@ export default class HTMLExportPlugin extends Plugin {
 			
 			let originalPath = $(this).attr("src")?.replaceAll("\\", "/").replaceAll("%20", " ").replace("app://local/", "");
 
-			console.log("originalPath: " + originalPath);
+			// console.log("originalPath: " + originalPath);
 
 			if (!originalPath) 
 			{
@@ -661,12 +662,12 @@ export default class HTMLExportPlugin extends Plugin {
 
 			let relPath = originalPath.split(Utils.getDirectoryFromFilePath(vaultPath + "/" + view.file.path.replaceAll("\\", "/")) + "/")[1];
 
-			console.log(originalPath, "vs.", Utils.getDirectoryFromFilePath(vaultPath + "/" + view.file.path.replaceAll("\\", "/")) + "/");
+			// console.log(originalPath, "vs.", Utils.getDirectoryFromFilePath(vaultPath + "/" + view.file.path.replaceAll("\\", "/")) + "/");
 			
 			if (!relPath)
 				relPath = ("images/" + Utils.getFileNameFromFilePath($(this).attr("src")?.replaceAll("\\", "/").replaceAll("%20", " ") ?? "")) ?? "img.png";
 			
-			console.log("relPath: " + relPath);
+			// console.log("relPath: " + relPath);
 
 			$(this).attr("src", relPath);
 
