@@ -122,7 +122,7 @@ Note: This does not enable `onclick` inside of obsidian itself.
 - Add style setting support for theming outline and toggles.
 -->
 
-![image](https://user-images.githubusercontent.com/39423700/202929751-a1398c5d-f37a-4d14-899b-d7dfd3dd8a8b.png)
+![image](https://user-images.githubusercontent.com/39423700/202931955-e9aac55d-9f2a-459b-95cf-574019089281.png)
 
 ## Contributing
 - I am open to any PRs as long as they align with my vision for the plugin. So if you are going to work on a feature that isn't on the TO DO, then please submit an issue instead.
