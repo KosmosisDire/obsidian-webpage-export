@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-webpage-export",
-	"version": "1.3.0",
+	"version": "1.3.1",
 	"description": "Exports an obsidian document as an HTML document / webpage / website, correctly including all styling and formatting.",
 	"main": "main.js",
 	"scripts": {
