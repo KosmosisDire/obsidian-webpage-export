@@ -48,11 +48,13 @@
     width: var(--toggle-width);
     height: var(--toggle-height);
     border-radius: var(--border-radius);
-    background-color: var(--background-secondary);
+    background-color: var(--background-primary-alt);
     transition: background-color 0.2s;
     z-index: 1000;
 
     box-shadow: inset 0px 0px 10px 2px rgba(0, 0, 0, 0.4);
+
+	border: 1px solid var(--divider-color);
 }
 
 .theme-light .toggle__fill 

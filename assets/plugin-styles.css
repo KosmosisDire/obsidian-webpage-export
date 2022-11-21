@@ -345,11 +345,15 @@ th[sortable-style="sortable-desc"]::after {
     width: var(--toggle-width);
     height: var(--toggle-height);
     border-radius: var(--border-radius);
-    background-color: var(--background-secondary);
+	background-color: var(--background-primary-alt);
+
     transition: background-color 0.2s;
     z-index: 1000;
 
     box-shadow: inset 0px 0px 10px 2px rgba(0, 0, 0, 0.4);
+
+	border: 1px solid var(--divider-color);
+
 }
 
 .theme-light .toggle__fill 
@@ -363,7 +367,7 @@ th[sortable-style="sortable-desc"]::after {
     content: "";
     position: absolute;
     left: var(--handle-margin);
-    top: var(--handle-margin);
+    top: calc(var(--handle-margin) * 0.75);
     height: var(--handle-width);
     width: var(--handle-width);
     
@@ -397,7 +401,7 @@ th[sortable-style="sortable-desc"]::after {
     content: "";
     position: absolute;
     right: var(--handle-margin);
-    top: var(--handle-margin);
+    top: calc(var(--handle-margin) * 0.75);
     height: var(--handle-width);
     width: var(--handle-width);
     scale: 90%;
