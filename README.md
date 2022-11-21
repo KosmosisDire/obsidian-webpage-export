@@ -132,7 +132,7 @@ Note: This does not enable `onclick` inside of obsidian itself.
 ## Credits
 Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for switching between tabs.
 
-## Support Me
+## Coffee
 Hello! I make these plugins out of my own enjoyment for obsidian and coding. If you enjoy my plugins and want to support me feel free to leave something here:
 
 <a href="https://www.buymeacoffee.com/nathangeorge">
