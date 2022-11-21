@@ -3,6 +3,7 @@ import { MarkdownView, Notice, TextFileView } from "obsidian";
 import { ExportSettings } from "./settings";
 import { Utils } from "./utils";
 import jQuery from 'jquery';
+import { existsSync, mkdirSync } from "fs";
 const $ = jQuery;
 
 export class HTMLGenerator
@@ -40,6 +41,12 @@ export class HTMLGenerator
 	private obsidianStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/obsidian-styles.css";
 	private async downloadExtras()
 	{
+		if (!existsSync(this.assetsPath))
+		{
+			console.log("Creating assets folder as it does not exist.");
+			mkdirSync(this.assetsPath);
+		}
+
 		//Download webpage.js
 		let webpagejs = await fetch(this.webpagejsURL);
 		let webpagejsText = await webpagejs.text();
