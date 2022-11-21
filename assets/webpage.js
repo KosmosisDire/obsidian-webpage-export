@@ -202,4 +202,9 @@ jQuery(function()
 		$(this).parent().attr("data-task", $(this).parent().hasClass("is-checked") ? "x" : " ");
 	});
 
+	$(`input[type="checkbox"]`).each(function()
+	{
+		$(this).prop("checked", $(this).parent().hasClass("is-checked"));
+	});
+
 });
