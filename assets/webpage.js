@@ -194,4 +194,12 @@ jQuery(function()
         $(this).parent().find(".collapse-icon").hide();
     });
 
+
+	// Fix checkboxed toggling .is-checked
+	$(".task-list-item-checkbox").on("click", function()
+	{
+		$(this).parent().toggleClass("is-checked");
+		$(this).parent().attr("data-task", $(this).parent().hasClass("is-checked") ? "x" : " ");
+	});
+
 });
