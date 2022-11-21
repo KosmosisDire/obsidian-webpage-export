@@ -130,8 +130,9 @@ Note: This does not enable `onclick` inside of obsidian itself.
 - Try to keep large scale reorganization of the code to a minimum, even though I know it is a **HUGE** mess right now. Small regoranizations and refactors are fine.
 
 ## Support Me
+Hello! I make these plugins out of my own enjoyment for obsidian and coding. If you enjoy my plugins and want to support me feel free to leave something here:
 <a href="https://www.buymeacoffee.com/nathangeorge">
-	<img src="https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/support-image.png" style="width:300px" />
+	<img src="https://cdn.buymeacoffee.com/buttons/v2/default-violet.png" style="width:300px" />
 
 ## Credits
 Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for switching between tabs.
