@@ -74,7 +74,7 @@
     content: "";
     position: absolute;
     left: var(--handle-margin);
-    top: var(--handle-margin);
+    top: calc(var(--handle-margin) * 0.75);
     height: var(--handle-width);
     width: var(--handle-width);
     
@@ -101,7 +101,7 @@
     content: "";
     position: absolute;
     right: var(--handle-margin);
-    top: var(--handle-margin);
+    top: calc(var(--handle-margin) * 0.75);
     height: var(--handle-width);
     width: var(--handle-width);
     scale: 90%;

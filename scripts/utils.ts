@@ -332,9 +332,11 @@ export class Utils
 	{
 		if (width != 0)
 		{
-			let sizers = document.getElementsByClassName("markdown-preview-sizer markdown-preview-section");
+			let sizers = document.querySelectorAll(".workspace-leaf.mod-active .markdown-preview-sizer");
 			if (sizers.length > 0)
-				sizers[0].setAttribute("style", "max-width: " + width + "px");
+			{
+				sizers[0].setAttribute("style", `${sizers[0].getAttr("style") ?? ""} max-width: ${width}px; width: unset;`);
+			}
 		}
 	}
 }
