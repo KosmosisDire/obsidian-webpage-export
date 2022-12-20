@@ -1,3 +1,9 @@
+/* fix coloring for horizontal divider */
+hr
+{
+	border-top: var(--hr-thickness) solid var(--divider-color);
+}
+
 /* sidebars */
 #sidebar {
     background-color: var(--background-secondary);
