@@ -18,7 +18,7 @@ Canvas support is currently very preliminary. Your canvas documents will export,
 - Interactively collapse and unfold headers like in obsidian
 - Export documents with onclick attributes working. [Explained in: On Click Atrributes](#on-click-attributes)
 
-## To Use:
+## FAQ
 
 #### General
 <details><summary>General Instructions</summary>
@@ -34,7 +34,7 @@ Canvas support is currently very preliminary. Your canvas documents will export,
 </details>
 
 #### Theme Toggle
-<details><summary>Notes on the Theme Toggle</summary>
+<details><summary>How do I include a light and dark mode toggle?</summary>
 <p>
 
 - Any `theme-toggle` code block will be replaced with a toggle for changing the theme. That means:
@@ -57,7 +57,7 @@ or
 
 
 #### Non-Inlined Files:
-<details><summary>Notes on Non-inlined Files</summary>
+<details><summary>How do I export my images, js, or css as seperate files?</summary>
 <p>
 
 - If exporting CSS or JS seperately those files will be exported into the same folder as the .HTML
@@ -70,7 +70,7 @@ or
 </details>
 
 #### Inluding Plugin CSS
-<details><summary>Notes on how to include 3rd Party CSS from plugins</summary>
+<details><summary>How do I include css added by other plugins?</summary>
 <p>
 
 - If you want to include css from a plugin (like Kanban for example) in the export
@@ -85,7 +85,7 @@ or
 
 #### On Click Attributes
 
-<details><summary>Enabling onlick Attributes</summary>
+<details><summary>How do I make buttons or other elements with an 'on-click' attribute work after export?</summary>
 <p>
 
 This is a somewhat niche feature; however, if you want to use the `onlick` attribute in your exported HTML without editing it afterwards you can use simple feature in this plugin to do that:
@@ -100,15 +100,19 @@ Note: This does not enable `onclick` inside of obsidian itself.
 ## Screenshots:
 
 <details><summary>Click to view more screenshots</summary>
-<p>
+	<p>
+		Dark mode document with the outline enabled
+		![image](https://user-images.githubusercontent.com/39423700/208754928-82eb3a4a-6018-4be9-a098-abc2800d6d32.png)
+		
+		Light mode document with the outline enabled
+		![image](https://user-images.githubusercontent.com/39423700/208754972-f9bc22be-8f0c-48ff-aab8-2e25e7052790.png)
 
-![image](https://user-images.githubusercontent.com/39423700/201829478-bfacc587-4da6-4746-ac44-a58458e086a7.png)
-
-![image](https://user-images.githubusercontent.com/39423700/201829546-a99d1b71-dd1e-4a8c-a2b0-2ca8cc771a6f.png)
-
-![image](https://user-images.githubusercontent.com/39423700/201829592-d9a95868-b5eb-45f6-abbe-bd7c43104023.png)
-
-</p>
+		Canvas export
+		![image](https://user-images.githubusercontent.com/39423700/208755062-62311347-a15f-4ae5-b798-8a5719934988.png)
+		
+		Kanban export
+		![image](https://user-images.githubusercontent.com/39423700/208755364-919894b3-2107-4a29-bd9b-06f75521c25a.png)
+	</p>
 </details>
 
 
