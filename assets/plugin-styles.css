@@ -116,6 +116,7 @@ hr
     padding: 0.3em;
     border-radius: 0.4em;
     color: var(--nav-item-color);
+	text-decoration: none;
     width: 100%;
 }
 
@@ -123,6 +124,7 @@ hr
 {
     background-color: var(--nav-item-background-hover);
     color: var(--nav-item-color-hover);
+	text-decoration: none;
     cursor: pointer;
 }
 
@@ -130,16 +132,17 @@ hr
 {
     background-color: var(--nav-item-background-active);
     color: var(--nav-item-color-active);
+	text-decoration: none;
     cursor: pointer;
 }
 
-a.outline-item-title {
+span.outline-item-title {
     margin-left: 0.5em;
     text-decoration: none;
     color: inherit;
 }
 
-a.outline-item-title:hover 
+span.outline-item-title:hover 
 {
     color: inherit;
     text-decoration: none;
