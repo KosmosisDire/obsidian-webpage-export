@@ -202,43 +202,47 @@ export class HTMLGenerator
 		if (view instanceof MarkdownView)
 			await Utils.viewEnableFullRender(view);
 		
-		let documentContentEl : HTMLElement = this.generateBodyContents();
+		let contentEl : HTMLElement = this.generateBodyContents();
 
-		this.fixLinks(documentContentEl); // modify links to work outside of obsidian (including relative links)
-		this.repairOnClick(documentContentEl); // replace data-onlick with onclick
+		this.fixLinks(contentEl); // modify links to work outside of obsidian (including relative links)
+		this.repairOnClick(contentEl); // replace data-onlick with onclick
 
 		// inline / outline images
 		if (ExportSettings.settings.inlineImages)
 		{
-			await this.inlineImages(documentContentEl);
+			await this.inlineImages(contentEl);
 		}
 		else
 		{
-			await this.outlineImages(documentContentEl, view);
+			await this.outlineImages(contentEl, view);
 		}
 
 		// inject darkmode toggle
+		let toggle : HTMLElement | null = null;
 		if (ExportSettings.settings.addDarkModeToggle)
 		{
-			await this.injectFixedToggle(documentContentEl, view.file.extension != "md");
+			toggle = this.generateFixedToggle(contentEl, view.file.extension != "md");
 		}
 
-		let documentWrapperEl : HTMLElement = documentContentEl;
+		let outline : HTMLElement | null = null;
 		if (ExportSettings.settings.includeOutline)
 		{
-			let headers = this.getHeaderList(documentContentEl);
+			let headers = this.getHeaderList(contentEl);
 			if (headers)
 			{
-				let outline = this.generateOutline(headers);
-				documentWrapperEl = this.generateSideBars(documentContentEl, document.createElement("div"), outline);
+				outline = this.generateOutline(headers);
 			}
 		}
 
 		let htmlEl : HTMLHtmlElement = document.createElement("html");
 		let headEl: HTMLHeadElement = await this.generateHead(view);
 		let bodyRootEl : HTMLBodyElement = this.generateBodyRoot();
+		let sidebars = this.generateSideBars(contentEl, toggle ?? document.createElement("div"), outline ?? document.createElement("div"));
+		
+		let finalContent : HTMLElement = sidebars;
+		if(toggle == null && outline == null) finalContent = contentEl;
 
-		bodyRootEl.appendChild(documentWrapperEl);
+		bodyRootEl.appendChild(finalContent);
 		htmlEl.appendChild(headEl);
 		htmlEl.appendChild(bodyRootEl);
 
@@ -561,16 +565,17 @@ export class HTMLGenerator
 
 	//#region Special Features
 
-	private async injectFixedToggle(page: HTMLElement, alwaysInject : boolean = false)
+	private generateFixedToggle(page: HTMLElement, alwaysInject : boolean = false) : HTMLElement
 	{
-		if (!alwaysInject && page.querySelector(".theme-toggle-inline, .theme-toggle")) return;
+		if (!alwaysInject && page.querySelector(".theme-toggle-inline, .theme-toggle")) return document.createElement("div");
 
 		if(ExportSettings.settings.addDarkModeToggle)
 		{
 			//insert fixed toggle in corner
-			let toggle = this.generateDarkmodeToggle(false);
-			page.appendChild(toggle);
+			return this.generateDarkmodeToggle(false);
 		}
+
+		return document.createElement("div");
 	}
 
 	private repairOnClick(page: HTMLElement)
@@ -634,6 +639,8 @@ export class HTMLGenerator
 
 	private generateOutline(headers: { size: number, title: string, href: string }[]): HTMLDivElement
 	{
+		if(headers.length <= 1) return document.createElement("div");
+
 		let outlineEl = document.createElement('div');
 		outlineEl.classList.add("outline-container");
 		outlineEl.setAttribute("data-size", "0");

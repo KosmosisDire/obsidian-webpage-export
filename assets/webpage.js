@@ -1,39 +1,84 @@
 jQuery(function()
 {
     // THEME TOGGLE
+
+	// load saved theme state
     if (localStorage.getItem("theme_toggle") != null)
     {
-        if (localStorage.getItem("theme_toggle") == "true")
-        {
-            $(".toggle__input").prop("checked", true);
-            $("body").addClass("theme-light");
-            $("body").removeClass("theme-dark");
-        }
+        setThemeToggle(localStorage.getItem("theme_toggle") == "true");
     }
 
-    if (localStorage.getItem("theme_toggle") == null && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
-    {
-        $(".toggle__input").prop("checked", true);
-        $("body").addClass("theme-light");
-        $("body").removeClass("theme-dark");
-        localStorage.setItem("theme_toggle", "true");
-    }
+	// change theme to match current system theme
+	if (localStorage.getItem("theme_toggle") == null && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
+	{
+		setThemeToggle(true);
+	}
+	if (localStorage.getItem("theme_toggle") == null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+	{
+		setThemeToggle(true);
+	}
+
+	// set initial toggle state based on body theme class
+	if ($("body").hasClass("theme-light"))
+	{
+		console.log("light");
+		setThemeToggle(true);
+	}
+	else
+	{
+		console.log("dark");
+		setThemeToggle(false);
+	}
+
+	function setThemeToggle(state, instant = false)
+	{
+		$(".toggle__input").each(function()
+		{
+			$(this).prop("checked", state);
+		});
+
+		if(!$(".toggle__input").hasClass("is-checked") && state)
+		{
+			$(".toggle__input").addClass("is-checked");
+			console.log("checked");
+		}
+		else if ($(".toggle__input").hasClass("is-checked") && !state)
+		{
+			$(".toggle__input").removeClass("is-checked");
+			console.log("unchecked");
+		}
+
+		if(!state)
+		{
+			if ($("body").hasClass("theme-light"))
+			{
+				$("body").removeClass("theme-light");
+			}
+
+			if (!$("body").hasClass("theme-dark"))
+			{
+				$("body").addClass("theme-dark");
+			}
+		}
+		else
+		{
+			if ($("body").hasClass("theme-dark"))
+			{
+				$("body").removeClass("theme-dark");
+			}
+
+			if (!$("body").hasClass("theme-light"))
+			{
+				$("body").addClass("theme-light");
+			}
+		}
+
+		localStorage.setItem("theme_toggle", state ? "true" : "false");
+	}
 
     $(".toggle__input").on("click", function()
     {
-        $('body').toggleClass('theme-light');
-        $('body').toggleClass('theme-dark');
-
-        if (localStorage.getItem("theme_toggle") == "true")
-        {
-            localStorage.setItem("theme_toggle", "false");
-        }
-        else
-        {
-            localStorage.setItem("theme_toggle", "true");
-        }
-
-        $(".toggle__input").prop("checked", localStorage.getItem("theme_toggle") == "true");
+		setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
     });
 
     window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
@@ -41,18 +86,12 @@ jQuery(function()
 
         if (newColorScheme == "theme-dark")
         {
-            $("body").addClass("theme-dark");
-            $("body").removeClass("theme-light");
-            $(".toggle__input").prop("checked", false);
-            localStorage.setItem("theme_toggle", "false");
+			setThemeToggle(false);
         }
 
         if (newColorScheme == "theme-light")
         {
-            $("body").addClass("theme-light");
-            $("body").removeClass("theme-dark");
-            $(".toggle__input").prop("checked", true);
-            localStorage.setItem("theme_toggle", "true");
+			setThemeToggle(true);
         }
     });
 
@@ -174,7 +213,10 @@ jQuery(function()
 
 	$(`input[type="checkbox"]`).each(function()
 	{
-		$(this).prop("checked", $(this).parent().hasClass("is-checked"));
+		console.log(this);
+		console.log($(this).hasClass("is-checked"));
+
+		$(this).prop("checked", $(this).hasClass("is-checked"));
 	});
 
 	$('.kanban-plugin__item.is-complete').each(function()

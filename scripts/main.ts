@@ -148,7 +148,7 @@ export default class HTMLExportPlugin extends Plugin
 
 				copyDocToClipboard = result.copyToClipboard;
 
-				if(copyDocToClipboard && !ExportSettings.settings.inlineCSS || !ExportSettings.settings.inlineJS || !ExportSettings.settings.inlineImages)
+				if(copyDocToClipboard && (!ExportSettings.settings.inlineCSS || !ExportSettings.settings.inlineJS || !ExportSettings.settings.inlineImages))
 				{
 					let error = "To copy to the clipboard please enable inline CSS, JS and Images";
 					console.error(error);

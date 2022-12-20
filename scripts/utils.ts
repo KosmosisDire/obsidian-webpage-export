@@ -175,7 +175,6 @@ export class Utils
 
 	static async downloadFile(data: string, filename: string, path: string = "")
 	{
-
 		if (path == "")
 		{
 			path = await Utils.showSaveDialog(Utils.idealDefaultPath(), filename) ?? "";
@@ -185,7 +184,7 @@ export class Utils
 
 		let array = Utils.createUnicodeArray(data);
 
-		writeFile(path, array, (err) => {
+		writeFile(Utils.fixPath(path), array, (err) => {
 			if (err) throw err;
 			console.log('The file has been saved at ' + path + '!');
 		});
@@ -207,7 +206,7 @@ export class Utils
 
 		if (path == "") return;
 
-		writeFile(path, zipBlob, (err) => {
+		writeFile(Utils.fixPath(path), zipBlob, (err) => {
 			if (err) throw err;
 			console.log('The file has been saved at ' + path + '!');
 		});
@@ -227,7 +226,7 @@ export class Utils
 				mkdirSync(dir, { recursive: true });
 			}
 			
-			writeFile(path, array, (err) => {
+			writeFile(Utils.fixPath(path), array, (err) => {
 				if (err) throw err;
 				console.log('The file has been saved at ' + path + '!');
 			});
