@@ -31,11 +31,13 @@ hr
 .sidebar-left
 {
     border-right: 1px dashed var(--divider-color);
+	z-index: 1000;
 }
 
 .sidebar-right
 {
     border-left: 1px dashed var(--divider-color);
+	z-index: 1000;
 }
 
 .flex-container
