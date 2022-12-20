@@ -220,7 +220,7 @@ export class HTMLGenerator
 		// inject darkmode toggle
 		if (ExportSettings.settings.addDarkModeToggle)
 		{
-			await this.injectFixedToggle(documentContentEl);
+			await this.injectFixedToggle(documentContentEl, view.file.extension != "md");
 		}
 
 		let documentWrapperEl : HTMLElement = documentContentEl;
@@ -561,9 +561,9 @@ export class HTMLGenerator
 
 	//#region Special Features
 
-	private async injectFixedToggle(page: HTMLElement)
+	private async injectFixedToggle(page: HTMLElement, alwaysInject : boolean = false)
 	{
-		if (page.querySelector(".theme-toggle-inline, .theme-toggle")) return;
+		if (!alwaysInject && page.querySelector(".theme-toggle-inline, .theme-toggle")) return;
 
 		if(ExportSettings.settings.addDarkModeToggle)
 		{

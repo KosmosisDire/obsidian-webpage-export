@@ -134,7 +134,7 @@ export default class HTMLExportPlugin extends Plugin
 		console.log('unloading obsidian-webpage-export plugin');
 	}
 
-	async exportFile(file: TAbstractFile, fullPath: string = "", showSettings: boolean = true) : Promise<boolean>
+	async exportFile(file: TFile, fullPath: string = "", showSettings: boolean = true) : Promise<boolean>
 	{
 		// Open the settings modal and wait until it's closed
 		let copyDocToClipboard = false;
@@ -186,12 +186,12 @@ export default class HTMLExportPlugin extends Plugin
 		}
 
 		// Download files
-		let htmlDownload = { filename: file.name.replace(".md", ".html"), data: htmlText, type: "text/html" };
+		let htmlDownload = { filename: file.basename + ".html", data: htmlText, type: "text/html" };
 		toDownload.push(htmlDownload);
 
 		let htmlPath: string | null = fullPath;
 		if (htmlPath == "")
-			htmlPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.name.replace(".md", ".html"), false);
+			htmlPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.basename + ".html", false);
 
 		if (!htmlPath) return false;
 
@@ -243,7 +243,7 @@ export default class HTMLExportPlugin extends Plugin
 			let file = files[i];
 			if (file.path.startsWith(folderPath) && file.extension == "md")
 			{
-				let fullPath = htmlPath + "/" + file.path.replace(".md", ".html");
+				let fullPath = htmlPath + "/" + Utils.getDirectoryFromFilePath(file.path) + "/" + file.basename + ".html";
 				await this.exportFile(file, fullPath, false);
 			}
 		}
