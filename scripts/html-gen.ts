@@ -2,8 +2,8 @@ import { writeFile } from "fs/promises";
 import { MarkdownView, Notice, TextFileView } from "obsidian";
 import { ExportSettings } from "./settings";
 import { Utils } from "./utils";
-import jQuery from 'jquery';
 import { existsSync, mkdirSync } from "fs";
+import jQuery from 'jquery';
 const $ = jQuery;
 
 export class HTMLGenerator
@@ -17,28 +17,37 @@ export class HTMLGenerator
 
 	// this is a list of images that is populated during generation and then downloaded upon export
 	// I am sure there is a better way to handle this data flow but I am not sure what to do.
-	private imagesToDownload: { original_path: string, destination_path_rel: string }[] = [];
+	private outlinedImages: { original_path: string, destination_path_rel: string }[] = [];
 
 	// this is a string containing the filtered app.css file. It is populated on load. 
 	// The math styles are attempted to load on every export until they are succesfully loaded. 
 	// This is because they only load when a file containing latex is opened.
 	appStyles: string = "";
 
-	// short html snippet for a dark mode toggle
-	darkModeToggle =
-		`\n\n
-	<div>
-	<label class="theme-toggle-inline" for="theme_toggle">
-		<input class="toggle__input" type="checkbox" id="theme_toggle">
-		<div class="toggle__fill"></div>
-	</label>
-	</div>
-	\n\n`
+	public generateDarkmodeToggle(inline : boolean = true) : HTMLElement
+	{
+		// programatically generates the above html snippet
+		let toggle = document.createElement("div");
+		let label = document.createElement("label");
+		label.classList.add(inline ? "theme-toggle-inline" : "theme-toggle");
+		label.setAttribute("for", "theme_toggle");
+		let input = document.createElement("input");
+		input.classList.add("toggle__input");
+		input.setAttribute("type", "checkbox");
+		input.setAttribute("id", "theme_toggle");
+		let div = document.createElement("div");
+		div.classList.add("toggle__fill");
+		label.appendChild(input);
+		label.appendChild(div);
+		toggle.appendChild(label);
+		return toggle;
+	}
 
 	// the raw github urls for the extra files
 	private webpagejsURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/webpage.js";
 	private pluginStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/plugin-styles.css";
 	private obsidianStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/obsidian-styles.css";
+	
 	private async downloadExtras()
 	{
 		if (!existsSync(this.assetsPath))
@@ -65,7 +74,7 @@ export class HTMLGenerator
 
 	private async loadAppStyles()
 	{
-		var appSheet = document.styleSheets[1];
+		let appSheet = document.styleSheets[1];
 		let stylesheets = document.styleSheets;
 		for (let i = 0; i < stylesheets.length; i++)
 		{
@@ -78,9 +87,9 @@ export class HTMLGenerator
 
 		this.appStyles += await Utils.getText(this.assetsPath + "/obsidian-styles.css");
 
-		for (var i = 0; i < appSheet.cssRules.length; i++)
+		for (let i = 0; i < appSheet.cssRules.length; i++)
 		{
-			var rule = appSheet.cssRules[i];
+			let rule = appSheet.cssRules[i];
 			if (rule)
 			{
 				if (rule.cssText.startsWith("@font-face")) continue;
@@ -121,7 +130,7 @@ export class HTMLGenerator
 
 	async getSeperateFilesToDownload() : Promise<{filename: string, data: string, type: string, relativePath?: string, unicode?: boolean}[]>
 	{
-		var toDownload: {filename: string, data: string, type: string, relativePath?: string, unicode?: boolean}[] = [];
+		let toDownload: {filename: string, data: string, type: string, relativePath?: string, unicode?: boolean}[] = [];
 
 		if (!ExportSettings.settings.inlineCSS)
 		{
@@ -131,9 +140,9 @@ export class HTMLGenerator
 
 			let snippetsList = await Utils.getStyleSnippetsContent();
 			let snippetsNames = await Utils.getEnabledSnippets();
-			var snippets = "";
+			let snippets = "";
 
-			for (var i = 0; i < snippetsList.length; i++)
+			for (let i = 0; i < snippetsList.length; i++)
 			{
 				snippets += `/* --- ${snippetsNames[i]}.css --- */  \n ${snippetsList[i]}  \n\n\n`;
 			}
@@ -154,19 +163,18 @@ export class HTMLGenerator
 
 		if (!ExportSettings.settings.inlineJS)
 		{
-			var webpagejs = await Utils.getText(this.assetsPath + "/webpage.js");
-			var webpagejsDownload = { filename: "webpage.js", data: webpagejs, type: "text/javascript" };
+			let webpagejs = await Utils.getText(this.assetsPath + "/webpage.js");
+			let webpagejsDownload = { filename: "webpage.js", data: webpagejs, type: "text/javascript" };
 			toDownload.push(webpagejsDownload);
 		}
 
-		// let imagesDownload : {path: string, data: string}[] = [];
 		if (!ExportSettings.settings.inlineImages)
 		{
-			for (var i = 0; i < this.imagesToDownload.length; i++)
+			for (let i = 0; i < this.outlinedImages.length; i++)
 			{
-				var image = this.imagesToDownload[i];
-				var data = await Utils.getTextBase64(image.original_path);
-				var imageDownload =
+				let image = this.outlinedImages[i];
+				let data = await Utils.getTextBase64(image.original_path);
+				let imageDownload =
 				{
 					filename: Utils.getFileNameFromFilePath(image.destination_path_rel),
 					data: data,
@@ -183,7 +191,7 @@ export class HTMLGenerator
 
 	//#region General HTML
 
-	public async GetCurrentFileHTML(): Promise<string | null>
+	public async getCurrentFileHTML(): Promise<HTMLHtmlElement | null>
 	{
 		await Utils.delay(200);
 
@@ -191,101 +199,124 @@ export class HTMLGenerator
 		if (!view) return null;
 
 		Utils.setLineWidth(ExportSettings.settings.customLineWidth);
-
 		if (view instanceof MarkdownView)
 			await Utils.viewEnableFullRender(view);
+		
+		let documentContentEl : HTMLElement = this.generateBodyContents();
 
-		var head = await this.generateHead(view);
-		var html = this.generateBodyHTML();
-		html = this.fixLinks(html);
-		html = this.repairOnClick(html); //replace data-onlick with onclick
+		this.fixLinks(documentContentEl); // modify links to work outside of obsidian (including relative links)
+		this.repairOnClick(documentContentEl); // replace data-onlick with onclick
 
+		// inline / outline images
 		if (ExportSettings.settings.inlineImages)
-			html = await this.inlineImages(html);
+		{
+			await this.inlineImages(documentContentEl);
+		}
 		else
-			html = await this.outlineImages(html, view);
+		{
+			await this.outlineImages(documentContentEl, view);
+		}
 
 		// inject darkmode toggle
 		if (ExportSettings.settings.addDarkModeToggle)
 		{
-			html = await this.injectToggle(html);
+			await this.injectFixedToggle(documentContentEl);
 		}
 
+		let documentWrapperEl : HTMLElement = documentContentEl;
 		if (ExportSettings.settings.includeOutline)
 		{
-			var headers = this.getHeaderList(html);
+			let headers = this.getHeaderList(documentContentEl);
 			if (headers)
 			{
-				var outline = this.generateOutline(headers);
-				// put side bars on either side of content and put them in a flex container
-				let el = document.createElement("html");
-				el.innerHTML = html;
-				let body = el.querySelector("body");
-				if (body)
-				{
-					html = `<div class="flex-container"><div id="sidebar" class="sidebar-left"></div>${body.innerHTML}<div id="sidebar" class="sidebar-right">${outline}</div></div>`;
-					body.innerHTML = html;
-					html = body?.outerHTML;
-				}
-				else
-				{
-					console.error("Could not find body element in html");
-				}
-
-				el.remove();
+				let outline = this.generateOutline(headers);
+				documentWrapperEl = this.generateSideBars(documentContentEl, document.createElement("div"), outline);
 			}
 		}
 
-		html = head + html;
+		let htmlEl : HTMLHtmlElement = document.createElement("html");
+		let headEl: HTMLHeadElement = await this.generateHead(view);
+		let bodyRootEl : HTMLBodyElement = this.generateBodyRoot();
 
-		// enclose in <html> tags
-		html = "<!DOCTYPE html>\n<html>\n" + html + "\n</html>";
+		bodyRootEl.appendChild(documentWrapperEl);
+		htmlEl.appendChild(headEl);
+		htmlEl.appendChild(bodyRootEl);
 
-		return html;
+		return htmlEl;
 	}
 
-	private generateBodyHTML(): string
+	private generateSideBars(middleContent: HTMLElement, leftContent: HTMLElement, rightContent: HTMLElement): HTMLDivElement
 	{
-		var bodyClasses = document.body.getAttribute("class") ?? "";
-		var bodyStyle = document.body.getAttribute("style") ?? "";
-		/*@ts-ignore*/
-		bodyClasses = bodyClasses.replaceAll("\"", "'");
-		/*@ts-ignore*/
-		bodyStyle = bodyStyle.replaceAll("\"", "'");
+		let flexContainer = document.createElement("div");
+		flexContainer.setAttribute("class", "flex-container");
 
-		var htmlEl = (document.querySelector(".workspace-leaf.mod-active .markdown-reading-view") as HTMLElement)
-		if (!htmlEl) htmlEl = (document.querySelector(".workspace-leaf.mod-active .view-content") as HTMLElement);
+		let leftBar = document.createElement("div");
+		leftBar.setAttribute("id", "sidebar");
+		leftBar.setAttribute("class", "sidebar-left");
+		leftBar.appendChild(leftContent);
+
+		let rightBar = document.createElement("div");
+		rightBar.setAttribute("id", "sidebar");
+		rightBar.setAttribute("class", "sidebar-right");
+		rightBar.appendChild(rightContent);
+
+		flexContainer.appendChild(leftBar);
+		flexContainer.appendChild(middleContent);
+		flexContainer.appendChild(rightBar);
+
+		return flexContainer;
+	}
+
+	private generateBodyContents(): HTMLElement
+	{
+		let obsidianDocEl = (document.querySelector(".workspace-leaf.mod-active .markdown-reading-view") as HTMLElement);
+		if (!obsidianDocEl) obsidianDocEl = (document.querySelector(".workspace-leaf.mod-active .view-content") as HTMLElement);
 
 		let width = "1000px";
 		if (ExportSettings.settings.customLineWidth > 0)
 			width = ExportSettings.settings.customLineWidth + "px";
 		else
 		{
-			let sizer = (htmlEl.querySelector(".markdown-preview-sizer.markdown-preview-section") as HTMLElement);
+			let sizer = (obsidianDocEl.querySelector(".markdown-preview-sizer.markdown-preview-section") as HTMLElement);
 			if (sizer)
 			{
 				width = sizer.style.width;
 			}
 		}
 
-		htmlEl.style.flexBasis = width;
-		htmlEl.style.width = "unset";
-		var html = htmlEl.outerHTML;
+		let contentEl = document.createElement("div");
+		contentEl.setAttribute("class", obsidianDocEl.getAttribute("class") ?? "");
+		contentEl.innerHTML = obsidianDocEl.innerHTML;
+		contentEl.style.flexBasis = width;
+		contentEl.style.height = "100%";
+		contentEl.style.width = "unset";
 
-		html = "\n<body class=\"" + bodyClasses + "\" style=\"" + bodyStyle + "\">\n" + html + "\n</body>\n";
+		return contentEl;
+	}
 
-		return html;
+	private generateBodyRoot(): HTMLBodyElement
+	{
+		let bodyClasses = document.body.getAttribute("class") ?? "";
+		let bodyStyle = document.body.getAttribute("style") ?? "";
+		bodyClasses = bodyClasses.replaceAll("\"", "'");
+		bodyStyle = bodyStyle.replaceAll("\"", "'");
+
+		let bodyEl = document.createElement("body");
+		bodyEl.setAttribute("class", bodyClasses);
+		bodyEl.setAttribute("style", bodyStyle);
+
+		return bodyEl;
 	}
 
 	private getMathStyles(): string
 	{
 		let mathStyles = document.styleSheets[document.styleSheets.length - 1];
-		var mathStylesString = "";
+		let mathStylesString = "";
 
-		var success = true;
-		for (var i = 0; i < mathStyles.cssRules.length; i++)
+		let success = true;
+		for (let i = 0; i < mathStyles.cssRules.length; i++)
 		{
-			var rule = mathStyles.cssRules[i];
+			let rule = mathStyles.cssRules[i];
 
 			if (rule)
 			{
@@ -304,7 +335,7 @@ export class HTMLGenerator
 		return success ? mathStylesString : "";
 	}
 
-	private async generateHead(view: TextFileView): Promise<string>
+	private async generateHead(view: TextFileView): Promise<HTMLHeadElement>
 	{
 		let meta =
 		`
@@ -313,14 +344,15 @@ export class HTMLGenerator
 		<meta name="apple-mobile-web-app-status-bar-style" content="black">
 		<meta name="mobile-web-app-capable" content="yes">
 		<title>${view.file.basename}</title>
+
 		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
+		<script src='https://code.jquery.com/jquery-3.6.0.js'></script>
 		`
 
 		let mathStyles = this.getMathStyles();
 		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
-		let scripts = "\n\n<script src='https://code.jquery.com/jquery-3.6.0.js'></script>"
-			+ ((ExportSettings.settings.inlineJS ? ("<script>\n" + await Utils.getText(this.assetsPath + "/webpage.js"))
-				: "<script src='webpage.js'></script>\n") + "\n</script>\n");
+		let scripts = `\n<script>\n ${await Utils.getText(this.assetsPath + "/webpage.js")} \n</script>\n`;
+		if (!ExportSettings.settings.inlineJS) scripts = "<script src='webpage.js'></script>\n";
 
 		if (ExportSettings.settings.inlineCSS)
 		{
@@ -333,9 +365,7 @@ export class HTMLGenerator
 			pluginStyles += thirdPartyPluginStyles;
 			
 			var header =
-				`
-			<head>
-
+			`
 			${meta}
 			
 			<!-- Obsidian App Styles / Other Built-in Styles -->
@@ -353,16 +383,12 @@ export class HTMLGenerator
 			<style> ${snippets.join("</style><style>")} </style>
 		
 			${scripts}
-
-			</head>
 			`;
 		}
 		else
 		{
 			header =
-				`
-			<head>
-
+			`
 			${meta}
 
 			<link rel="stylesheet" href="obsidian-styles.css">
@@ -374,24 +400,22 @@ export class HTMLGenerator
 			<style> ${mathStyles} </style>
 
 			${scripts}
-
-			</head>
 			`;
 		}
 
-		return header;
+		let headerEl = document.createElement("head");
+		headerEl.innerHTML = header;
+
+		return headerEl;
 	}
 
 	//#endregion
 
 	//#region Links and Images
 
-	private fixLinks(html: string): string
+	private fixLinks(page: HTMLElement)
 	{
-		let el = document.createElement('html');
-		el.innerHTML = html;
-
-		let query = jQuery(el);
+		let query = jQuery(page);
 		query.find("a.internal-link").each(function ()
 		{
 			$(this).attr("target", "_self");
@@ -411,7 +435,7 @@ export class HTMLGenerator
 
 				if (href.length == 2)
 				{
-					var filePath = "";
+					let filePath = "";
 					if (!href[0].contains("/") && !href[0].contains("\\"))
 					{
 						filePath = Utils.getDirectoryFromFilePath(Utils.getFirstFileByName(href[0])?.path ?? "") + "/";
@@ -424,7 +448,7 @@ export class HTMLGenerator
 				{
 					let first = href.shift() ?? "";
 
-					var filePath = "";
+					let filePath = "";
 					if (!first.contains("/") && !first.contains("\\"))
 					{
 						filePath = Utils.getDirectoryFromFilePath(Utils.getFirstFileByName(first)?.path ?? "") + "/";
@@ -455,18 +479,11 @@ export class HTMLGenerator
 			// use the headers inner text as the id
 			$(this).attr("id", $(this).text().replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_"));
 		});
-
-		let result = el.innerHTML;
-		el.remove();
-		return result;
 	}
 
-	private async inlineImages(html: string): Promise<string>
+	private async inlineImages(page: HTMLElement)
 	{
-		let el = document.createElement('html');
-		el.innerHTML = html;
-
-		let query = jQuery(el);
+		let query = jQuery(page);
 		let images = query.find("img").toArray();
 
 		for (let i = 0; i < images.length; i++)
@@ -474,11 +491,11 @@ export class HTMLGenerator
 			let img = images[i];
 			if ($(img).attr("src")?.startsWith("app://local/"))
 			{
-				let path = $(img).attr("src")?.replace("app://local/", "").replaceAll("%20", " ").split("?")[0];
+				let path = $(img).attr("src")?.replace("app://local/", "file:///").split("?")[0];
 
 				if (path)
 				{
-					var base64 = "";
+					let base64 = "";
 					try
 					{
 						base64 = await Utils.getTextBase64(path);
@@ -495,20 +512,13 @@ export class HTMLGenerator
 				}
 			}
 		}
-
-		let result = el.innerHTML;
-		el.remove();
-		return result;
 	}
 
-	private async outlineImages(html: string, view: TextFileView): Promise<string>
+	private async outlineImages(page: HTMLElement, view: TextFileView)
 	{
-		let el = document.createElement('html');
-		el.innerHTML = html;
+		let query = jQuery(page);
 
-		let query = jQuery(el);
-
-		this.imagesToDownload = [];
+		this.outlinedImages = [];
 
 		let img2Download: { original_path: string, destination_path_rel: string }[] = [];
 		let vaultPath = Utils.getVaultPath();
@@ -544,140 +554,141 @@ export class HTMLGenerator
 
 		});
 
-		this.imagesToDownload = img2Download;
-
-		let result = el.innerHTML;
-		el.remove();
-		return result;
+		this.outlinedImages = img2Download;
 	}
 
 	//#endregion
 
 	//#region Special Features
 
-	private async injectToggle(html: string): Promise<string>
+	private async injectFixedToggle(page: HTMLElement)
 	{
-		if (!html.contains(this.darkModeToggle.split("\n")[4]))
+		if (page.querySelector(".theme-toggle-inline, .theme-toggle")) return;
+
+		if(ExportSettings.settings.addDarkModeToggle)
 		{
 			//insert fixed toggle in corner
-			console.log("Injecting toggle");
-			html = this.darkModeToggle.replace("theme-toggle-inline", "theme-toggle") + html;
+			let toggle = this.generateDarkmodeToggle(false);
+			page.appendChild(toggle);
 		}
-
-		return html;
 	}
 
-	private repairOnClick(html: string): string
+	private repairOnClick(page: HTMLElement)
 	{
-		html = html.replaceAll("data-onclick", "onclick");
-		return html;
+		page.innerHTML = page.innerHTML.replaceAll("data-onclick", "onclick");
 	}
 
-	private getHeaderList(html: string): { size: number, title: string, href: string }[] | null
+	private getHeaderList(page: HTMLElement): { size: number, title: string, href: string }[] | null
 	{
-		var headers = [];
+		let headers = [];
 
-		var el = document.createElement('html');
-		el.innerHTML = html;
+		let headerElements = page.querySelectorAll("h1, h2, h3, h4, h5, h6");
 
-		var headerElements = el.querySelectorAll("h1, h2, h3, h4, h5, h6");
-
-		for (var i = 0; i < headerElements.length; i++)
+		for (let i = 0; i < headerElements.length; i++)
 		{
-			var header = headerElements[i];
-			var size = parseInt(header.tagName[1]);
-			var title = (header as HTMLElement).innerText;
-			var href = (header as HTMLHeadingElement).id;
+			let header = headerElements[i];
+			let size = parseInt(header.tagName[1]);
+			let title = (header as HTMLElement).innerText;
+			let href = (header as HTMLHeadingElement).id;
 			headers.push({ size, title, href });
 		}
-
-		el.remove();
 
 		return headers;
 	}
 
-	private generateOutline(headers: { size: number, title: string, href: string }[]): string
+	private generateOutlineItem(header: { size: number, title: string, href: string }): HTMLDivElement
 	{
-		var outline =
-			`
-		<div class="outline-container" data-size="0">
-			
-			<div class="outline-header">
-				<svg viewBox="0 0 100 100" class="bullet-list" width="18" height="18"><path fill="var(--h6-color)" stroke="var(--h6-color)" d="M16.4,16.4c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,16.4,16.4,16.4z M16.4,19.6 c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2C13.2,21,14.6,19.6,16.4,19.6z M29.2,21.2v3.2H90v-3.2H29.2z M16.4,43.6c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,43.6,16.4,43.6z M16.4,46.8c1.8,0,3.2,1.4,3.2,3.2 s-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2S14.6,46.8,16.4,46.8z M29.2,48.4v3.2H90v-3.2H29.2z M16.4,70.8c-3.5,0-6.4,2.9-6.4,6.4 c0,3.5,2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4C22.8,73.7,19.9,70.8,16.4,70.8z M16.4,74c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2 s-3.2-1.4-3.2-3.2C13.2,75.4,14.6,74,16.4,74z M29.2,75.6v3.2H90v-3.2H29.2z"></path></svg>
-				<h6 style="margin: 1em"> Table of Contents </h6>
-			</div>
+		let arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path>`;
+
+		let outlineItemEl = document.createElement('div');
+		outlineItemEl.classList.add("outline-item");
+		outlineItemEl.setAttribute("data-size", header.size.toString());
+
+		let outlineItemContentsEl = document.createElement('a');
+		outlineItemContentsEl.classList.add("outline-item-contents");
+		outlineItemContentsEl.setAttribute("href", "#" + header.href);
 		
-		</div>
-		`;
-
-		var builderRoot = document.createElement('html');
-		builderRoot.innerHTML = outline;
-
-		var outlineEl = builderRoot.querySelector(".outline-container");
-
-		if (!outlineEl) return "";
-
-		var listItemTemplate =
-			`
+		let outlineItemIconEl = document.createElement('div');
+		outlineItemIconEl.classList.add("tree-item-icon");
+		outlineItemIconEl.classList.add("collapse-icon");
 		
-		<div class="outline-item" data-size="{size}">
-			
-			<div class="outline-item-contents">
-				<div class="tree-item-icon collapse-icon">
-					<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path>
-					</svg>
-				</div>
+		let outlineItemIconSvgEl = document.createElement('svg');
+		outlineItemIconSvgEl.innerHTML = arrowIcon;
+		outlineItemIconSvgEl = outlineItemIconSvgEl.firstChild as HTMLElement;
+		
+		let outlineItemTitleEl = document.createElement('span');
+		outlineItemTitleEl.classList.add("outline-item-title");
+		outlineItemTitleEl.innerText = header.title;
 
-				<a class="outline-item-title" href="#{href}">{title}</a>
-			</div>
+		let outlineItemChildrenEl = document.createElement('div');
+		outlineItemChildrenEl.classList.add("outline-item-children");
 
-			<div class="outline-item-children">
+		outlineItemIconEl.appendChild(outlineItemIconSvgEl);
+		outlineItemContentsEl.appendChild(outlineItemIconEl);
+		outlineItemContentsEl.appendChild(outlineItemTitleEl);
+		outlineItemEl.appendChild(outlineItemContentsEl);
+		outlineItemEl.appendChild(outlineItemChildrenEl);
 
-			</div>
-		</div>
-		`;
+		return outlineItemEl;
+	}
 
+	private generateOutline(headers: { size: number, title: string, href: string }[]): HTMLDivElement
+	{
+		let outlineEl = document.createElement('div');
+		outlineEl.classList.add("outline-container");
+		outlineEl.setAttribute("data-size", "0");
 
-		var listStack = [outlineEl];
+		let outlineHeader = document.createElement('div');
+		outlineHeader.classList.add("outline-header");
 
+		let headerIconEl = document.createElement('svg');
+		headerIconEl.setAttribute("viewBox", "0 0 100 100");
+		headerIconEl.classList.add("bullet-list");
+		headerIconEl.setAttribute("width", "18");
+		headerIconEl.setAttribute("height", "18");
+
+		let headerIconPathEl = document.createElement('path');
+		let headerPathData = "M16.4,16.4c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,16.4,16.4,16.4z M16.4,19.6 c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2C13.2,21,14.6,19.6,16.4,19.6z M29.2,21.2v3.2H90v-3.2H29.2z M16.4,43.6c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,43.6,16.4,43.6z M16.4,46.8c1.8,0,3.2,1.4,3.2,3.2 s-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2S14.6,46.8,16.4,46.8z M29.2,48.4v3.2H90v-3.2H29.2z M16.4,70.8c-3.5,0-6.4,2.9-6.4,6.4 c0,3.5,2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4C22.8,73.7,19.9,70.8,16.4,70.8z M16.4,74c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2 s-3.2-1.4-3.2-3.2C13.2,75.4,14.6,74,16.4,74z M29.2,75.6v3.2H90v-3.2H29.2z";
+		headerIconPathEl.setAttribute("fill", "var(--h6-color)");
+		headerIconPathEl.setAttribute("stroke", "var(--h6-color)");
+		headerIconPathEl.setAttribute("d", headerPathData);
+
+		let headerLabelEl = document.createElement('h6');
+		headerLabelEl.style.margin = "1em";
+		headerLabelEl.innerText = "Table of Contents";
+
+		headerIconEl.appendChild(headerIconPathEl);
+		outlineHeader.appendChild(headerIconEl);
+		outlineHeader.appendChild(headerLabelEl);
+		outlineEl.appendChild(outlineHeader);
+
+		let listStack = [outlineEl];
+		
 		// function to get the data-size of the previous list item as a number
 		function getLastStackSize(): number
 		{
 			return parseInt(listStack[listStack.length - 1].getAttribute("data-size") ?? "0");
 		}
 
-
-		for (var i = 0; i < headers.length; i++)
+		for (let i = 0; i < headers.length; i++)
 		{
-			var header = headers[i];
-			var listItem = listItemTemplate.replace("{size}", header.size.toString()).replace("{href}", header.href).replace("{title}", header.title);
+			let header = headers[i];
+			let listItem : HTMLDivElement = this.generateOutlineItem(header);
 
 			while (getLastStackSize() >= header.size && listStack.length > 1)
 			{
 				listStack.pop();
 			}
 
-			var builditemRoot = document.createElement('div');
-			builditemRoot.innerHTML = listItem;
-			var newOutlineItem = builditemRoot.querySelector(".outline-item");
-
-			if (!newOutlineItem) continue;
-
-			var childContainer = listStack.last()?.querySelector(".outline-item-children");
+			let childContainer = listStack.last()?.querySelector(".outline-item-children");
 			if (getLastStackSize() == 0) childContainer = listStack.last();
-
 			if (!childContainer) continue;
 
-			childContainer.appendChild(newOutlineItem);
-			listStack.push(newOutlineItem);
-
-			builditemRoot.remove();
+			childContainer.appendChild(listItem);
+			listStack.push(listItem);
 		}
 
-		var result = builderRoot.innerHTML;
-		builderRoot.remove();
-
-		return result;
+		return outlineEl;
 	}
 
 	//#endregion

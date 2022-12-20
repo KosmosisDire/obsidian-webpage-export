@@ -1,4 +1,4 @@
-import { MarkdownView, OpenViewState, PaneType, SplitDirection, TFile, WorkspaceLeaf } from "obsidian";
+import {  OpenViewState, PaneType, SplitDirection, TFile, WorkspaceLeaf } from "obsidian";
 
 
 export class LeafHandler
@@ -57,7 +57,7 @@ export class LeafHandler
 				: workspace.getLeaf(navType);
 		};
 
-		var leaf = getLeaf();
+		let leaf = getLeaf();
 
 		try
 		{
@@ -73,42 +73,6 @@ export class LeafHandler
 		}
 
 		return leaf;
-	}
-
-	getLeafByFile(file: TFile): WorkspaceLeaf | null
-	{
-		const leaves = this.getOpenLeaves();
-		for (let leaf of leaves)
-		{
-			if (leaf.view instanceof MarkdownView) 
-			{
-				if (leaf.view.file.path === file.path)
-				{
-					return leaf;
-				}
-			}
-		}
-
-		return null;
-	}
-
-	switchToLeafWithFile(file: TFile, openNewIfNotOpen: boolean): {leaf: WorkspaceLeaf | null, alreadyOpen: boolean}
-	{
-		const { workspace } = app;
-		let leaf = this.getLeafByFile(file);
-
-		let alreadyOpen = false;
-		if (leaf) 
-		{
-			workspace.setActiveLeaf(leaf);
-			alreadyOpen = true;
-		}
-		else if (openNewIfNotOpen)
-		{
-			leaf = this.openFileInNewLeaf(file, true, { active: true }, "Failed to open file to new tab after it was found to not be open yet.");
-		}
-
-		return {leaf, alreadyOpen};
 	}
 }
 

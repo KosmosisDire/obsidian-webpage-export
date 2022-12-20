@@ -1,7 +1,8 @@
 import { open, readFile, writeFile, existsSync, mkdirSync } from 'fs';
 import { FileSystemAdapter, MarkdownView, TextFileView, TFile } from 'obsidian';
 import { ExportSettings } from './settings';
-var JSZip = require("jszip");
+import JSZip from "jszip";
+import { fileURLToPath } from 'url';
 
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;
@@ -11,6 +12,12 @@ export class Utils
 	static async delay (ms: number)
 	{
 		return new Promise( resolve => setTimeout(resolve, ms) );
+	}
+
+	static makePathUnicode(path: string) : string
+	{
+		let newPath = path;
+		return newPath;
 	}
 
 
@@ -33,10 +40,24 @@ export class Utils
 		});
 	}
 
+	static fixPath(path: string) : string
+	{
+		if (!path.contains('file:///'))
+		{
+			if(path.contains(':'))
+				path = 'file:///' + path;
+			else
+				path = fileURLToPath("file:///" + this.getVaultPath() + "/" + path);
+		}
+
+		return fileURLToPath(path);
+	}
+
+
 	static async getTextBase64(path: string): Promise<string>
 	{
 		return new Promise((resolve, reject) => {
-			open(path, 'r', (err, fd) => {
+			open(Utils.fixPath(path), 'r', (err, fd) => {
 				if (err) {
 					reject(err);
 				} else {
@@ -62,25 +83,18 @@ export class Utils
 
 	static createUnicodeArray(content: string) : Uint8Array
 	{
-		var charCode, byteArray = [];
+		let charCode, byteArray = [];
 
 		// BE BOM
 		byteArray.push(254, 255);
 
-		// LE BOM
-		// byteArray.push(255, 254);
+		for (let i = 0; i < content.length; ++i) 
+		{
+			charCode = content.charCodeAt(i);
 
-		for (var i = 0; i < content.length; ++i) {
-
-		charCode = content.charCodeAt(i);
-
-		// BE Bytes
-		byteArray.push((charCode & 0xFF00) >>> 8);
-		byteArray.push(charCode & 0xFF);
-
-		// LE Bytes
-		// byteArray.push(charCode & 0xff);
-		// byteArray.push(charCode / 256 >>> 0);
+			// BE Bytes
+			byteArray.push((charCode & 0xFF00) >>> 8);
+			byteArray.push(charCode & 0xFF);
 		}
 
 		return new Uint8Array(byteArray);
@@ -90,7 +104,7 @@ export class Utils
 	{
 		let type = (defaultFileName.split(".").pop() ?? "txt");
 
-		var filters = [{
+		let filters = [{
 			name: type.toUpperCase() + " Files",
 			extensions: [type]
 		}];
@@ -149,6 +163,7 @@ export class Utils
 
 	static async downloadFile(data: string, filename: string, path: string = "")
 	{
+
 		if (path == "")
 		{
 			path = await Utils.showSaveDialog(Utils.idealDefaultPath(), filename) ?? "";
@@ -156,7 +171,7 @@ export class Utils
 			if (path == "") return;
 		}
 
-		var array = Utils.createUnicodeArray(data);
+		let array = Utils.createUnicodeArray(data);
 
 		writeFile(path, array, (err) => {
 			if (err) throw err;
@@ -166,17 +181,17 @@ export class Utils
 
 	static async downloadFilesAsZip(files: {filename: string, data: string, type: string, relativePath?: string}[], zipFileName: string)
 	{
-		var blobs = files.map(file => new Blob([file.data], {type: file.type}));
-		var zip = new JSZip();
-		for (var i = 0; i < files.length; i++)
+		let blobs = files.map(file => new Blob([file.data], {type: file.type}));
+		let zip = new JSZip();
+		for (let i = 0; i < files.length; i++)
 		{
 			let path = ((files[i].relativePath ?? "") + "/" + files[i].filename).replaceAll("//", "/");
 			zip.file(path, blobs[i]);
 		}
 
-		var zipBlob = await zip.generateAsync({type: "uint8array"});
+		let zipBlob = await zip.generateAsync({type: "uint8array"});
 		
-		var path = await Utils.showSaveDialog(Utils.idealDefaultPath(), zipFileName, false) ?? "";
+		let path = await Utils.showSaveDialog(Utils.idealDefaultPath(), zipFileName, false) ?? "";
 
 		if (path == "") return;
 
@@ -188,9 +203,9 @@ export class Utils
 
 	static async downloadFiles(files: {filename: string, data: string, type?: string, relativePath?: string, unicode?: boolean}[], folderPath: string)
 	{
-		for (var i = 0; i < files.length; i++)
+		for (let i = 0; i < files.length; i++)
 		{
-			var array = (files[i].unicode ?? true) ? Utils.createUnicodeArray(files[i].data) : Buffer.from(files[i].data, 'base64');
+			let array = (files[i].unicode ?? true) ? Utils.createUnicodeArray(files[i].data) : Buffer.from(files[i].data, 'base64');
 
 			let path = (folderPath + "/" + (files[i].relativePath ?? "") + "/" + files[i].filename).replaceAll("\\", "/").replaceAll("//", "/").replaceAll("//", "/");
 			
@@ -209,10 +224,10 @@ export class Utils
 
 	static getDirectoryFromFilePath(path: string): string
 	{
-		var forwardIndex = path.lastIndexOf("/");
-		var backwardIndex = path.lastIndexOf("\\");
+		let forwardIndex = path.lastIndexOf("/");
+		let backwardIndex = path.lastIndexOf("\\");
 		
-		var index = forwardIndex > backwardIndex ? forwardIndex : backwardIndex;
+		let index = forwardIndex > backwardIndex ? forwardIndex : backwardIndex;
 
 		if (index == -1) return "";
 
@@ -221,10 +236,10 @@ export class Utils
 
 	static getFileNameFromFilePath(path: string): string
 	{
-		var forwardIndex = path.lastIndexOf("/");
-		var backwardIndex = path.lastIndexOf("\\");
+		let forwardIndex = path.lastIndexOf("/");
+		let backwardIndex = path.lastIndexOf("\\");
 
-		var index = forwardIndex > backwardIndex ? forwardIndex : backwardIndex;
+		let index = forwardIndex > backwardIndex ? forwardIndex : backwardIndex;
 
 		if (index == -1) return path;
 
@@ -286,7 +301,7 @@ export class Utils
 		let snippetContents : string[] = [];
 		let enabledSnippets = this.getEnabledSnippets();
 
-		for (var i = 0; i < enabledSnippets.length; i++)
+		for (let i = 0; i < enabledSnippets.length; i++)
 		{
 			snippetContents.push(await Utils.getText(Utils.getVaultPath() + "/.obsidian/snippets/" + enabledSnippets[i] + ".css"));
 		}

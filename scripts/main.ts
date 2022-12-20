@@ -1,11 +1,13 @@
 // imports from obsidian API
-import { Plugin, TAbstractFile, TFile} from 'obsidian';
+import { MarkdownRenderChild, Plugin, TAbstractFile, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
 import { ExportSettings } from './settings';
 import { Utils } from './utils';
 import { LeafHandler } from './leaf-handler';
 import { HTMLGenerator } from './html-gen';
+import { open } from 'fs';
+import { fileURLToPath } from 'url';
 
 export default class HTMLExportPlugin extends Plugin
 {
@@ -16,8 +18,8 @@ export default class HTMLExportPlugin extends Plugin
 	{
 		this.registerMarkdownCodeBlockProcessor("theme-toggle", (source, el, ctx) =>
 		{
-			let parent = el.createEl('div');
-			parent.innerHTML = this.htmlGenerator.darkModeToggle;
+			let toggleEl = this.htmlGenerator.generateDarkmodeToggle();
+			el.replaceWith(toggleEl);
 		});
 
 		//also replace `theme-toggle` and ```theme-toggle``` for better inline toggles, or in places you couldn't use a normal code block
@@ -26,10 +28,10 @@ export default class HTMLExportPlugin extends Plugin
 			let codeBlocks = element.querySelectorAll('code, span.cm-inline-code');
 			codeBlocks.forEach((codeBlock) =>
 			{
-				// console.log(codeBlock);
 				if (codeBlock instanceof HTMLElement && codeBlock.innerText == "theme-toggle")
 				{
-					codeBlock.outerHTML = this.htmlGenerator.darkModeToggle;
+					let toggleEl = this.htmlGenerator.generateDarkmodeToggle();
+					codeBlock.replaceWith(toggleEl);
 				}
 			});
 		});
@@ -52,13 +54,20 @@ export default class HTMLExportPlugin extends Plugin
 					item
 						.setTitle("Export to HTML")
 						.setIcon("document")
-						.onClick(async () =>
+						.onClick(() =>
 						{
-							if (Utils.getFileNameFromFilePath(file.path).contains("."))
+							if(file instanceof TFile)
+							{
 								this.exportFile(file);
-
-							else
+							}
+							else if(file instanceof TFolder)
+							{
 								this.exportFolder(file.path);
+							}
+							else
+							{
+								console.error("File is not a TFile or TFolder, invalid type: " + typeof file + "");
+							}
 						});
 				});
 			})
@@ -95,27 +104,28 @@ export default class HTMLExportPlugin extends Plugin
 
 		let fileTab = this.leafHandler.openFileInNewLeaf(file as TFile, true);
 
-		var html = await this.htmlGenerator.GetCurrentFileHTML();
-		if (!html) return;
+		let htmlEl : HTMLHtmlElement | null = await this.htmlGenerator.getCurrentFileHTML();
+		if (!htmlEl) return;
+
+		let htmlText = htmlEl.outerHTML;
 
 		let toDownload = await this.htmlGenerator.getSeperateFilesToDownload();
 
 		// Close the file tab after HTML is generated
 		fileTab.detach();
 
-
 		// if onlyCopy is true, then we don't want to download the file, we just want to copy it to the clipboard
 		if (onlyCopy)
 		{
-			navigator.clipboard.writeText(html);
+			navigator.clipboard.writeText(htmlText);
 			return;
 		}
 
 		// Download files
-		var htmlDownload = { filename: file.name.replace(".md", ".html"), data: html, type: "text/html" };
+		let htmlDownload = { filename: file.name.replace(".md", ".html"), data: htmlText, type: "text/html" };
 		toDownload.push(htmlDownload);
 
-		var htmlPath: string | null = fullPath;
+		let htmlPath: string | null = fullPath;
 		if (htmlPath == "")
 			htmlPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.name.replace(".md", ".html"), false);
 
@@ -134,19 +144,19 @@ export default class HTMLExportPlugin extends Plugin
 		// folder path is the path relative to the vault that we are exporting
 
 		// Open the settings modal and wait until it's closed
-		var exportCanceled = !await new ExportSettings(this).open();
+		let exportCanceled = !await new ExportSettings(this).open();
 		if (exportCanceled) return;
 
 		let htmlPath = await Utils.showSelectFolderDialog(Utils.idealDefaultPath());
 
-		var files = this.app.vault.getFiles();
+		let files = this.app.vault.getFiles();
 
-		for (var i = 0; i < files.length; i++)
+		for (let i = 0; i < files.length; i++)
 		{
-			var file = files[i];
+			let file = files[i];
 			if (file.path.startsWith(folderPath) && file.extension == "md")
 			{
-				var fullPath = htmlPath + "/" + file.path.replace(".md", ".html");
+				let fullPath = htmlPath + "/" + file.path.replace(".md", ".html");
 				await this.exportFile(file, fullPath, false);
 			}
 		}
