@@ -1,3 +1,21 @@
+/* remove canvas controls */
+.canvas-card-menu {
+	display: none;
+}
+
+.canvas-controls {
+	display: none;
+}
+
+.canvas-node-connection-point 
+{
+	display: none;
+}
+
+.canvas-menu-container {
+	display: none;
+}
+
 /* fix coloring for horizontal divider */
 hr
 {

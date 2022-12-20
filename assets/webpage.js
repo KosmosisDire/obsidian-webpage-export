@@ -134,36 +134,6 @@ jQuery(function()
     $("#save-pdf").on("click", function()
     {
         window.print();
-
-
-
-        // $.ajax('/', function(list) {
-        //     $.ajax({
-        //         type: 'POST',
-        //         url: '/save-pdf',
-        //         body: 
-        //         {
-        //             html: document.documentElement.innerHTML,
-        //             width: document.querySelector('meta[name="data-width"]').getAttribute("data-width"),
-        //             height: document.querySelector('meta[name="data-height"]').getAttribute("data-height")
-        //         },
-        //         success: function(result) 
-        //         {
-        //             // result is the buffer of the PDF file
-        //             console.log('Response:', result);
-
-        //             // download the file
-        //             var blob = new Blob([result], {type: 'application/pdf'});
-        //             var link = document.createElement('a');
-        //             link.href = window.URL.createObjectURL(blob);
-        //             link.download = 'file.pdf';
-        //             link.click();
-
-        //             link.remove();
-
-        //         }
-        //     });
-        // });
     });
 
 
@@ -205,6 +175,41 @@ jQuery(function()
 	$(`input[type="checkbox"]`).each(function()
 	{
 		$(this).prop("checked", $(this).parent().hasClass("is-checked"));
+	});
+
+	// make code snippet block copy button copy the code to the clipboard
+	$(".copy-code-button").on("click", function()
+	{
+		let code = $(this).parent().find("code").text();
+		navigator.clipboard.writeText(code);
+	});
+
+	let focusedNode = null;
+
+	// make canvas nodes selectable
+	$(".canvas-node-content-blocker").on("click", function()
+	{
+		console.log("clicked");
+		$(this).parent().parent().toggleClass("is-focused");
+		$(this).hide();
+
+		if (focusedNode)
+		{
+			focusedNode.removeClass("is-focused");
+			$(focusedNode).find(".canvas-node-content-blocker").show();
+		}
+
+		focusedNode = $(this).parent().parent();
+	});
+
+	// make canvas node deselect when clicking outside
+	$(document).on("click", function(event)
+	{
+		if (!$(event.target).closest(".canvas-node").length)
+		{
+			$(".canvas-node").removeClass("is-focused");
+			$(".canvas-node-content-blocker").show();
+		}
 	});
 
 });
