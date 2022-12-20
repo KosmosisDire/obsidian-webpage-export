@@ -177,6 +177,11 @@ jQuery(function()
 		$(this).prop("checked", $(this).parent().hasClass("is-checked"));
 	});
 
+	$('.kanban-plugin__item.is-complete').each(function()
+	{
+		$(this).find('input[type="checkbox"]').prop("checked", true);
+	});
+
 	// make code snippet block copy button copy the code to the clipboard
 	$(".copy-code-button").on("click", function()
 	{
