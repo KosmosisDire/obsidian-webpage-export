@@ -110,19 +110,7 @@ Note: This does not enable `onclick` inside of obsidian itself.
 
 
 ## To Do:
-<!--
-- Make sun and moon icons on theme toggle match the theme colors (not just b/w)
-- Export folders or whole vaults at once
-- Add mobile support for the outline (mdeia queries and popout menu)
-- Make the theme not change to light automatically when printing.
-
-## Future
-- Support for embedding custom external css and js files.
-- Add way to easily share the webpage / html file online (seperate plugin?)
-- Add style setting support for theming outline and toggles.
--->
-
-![image](https://user-images.githubusercontent.com/39423700/202931955-e9aac55d-9f2a-459b-95cf-574019089281.png)
+![To do image](https://user-images.githubusercontent.com/39423700/208750435-5e6d1395-4912-4ee3-9c7d-792f03e9edeb.png)
 
 ## Contributing
 - I am open to any PRs as long as they align with my vision for the plugin. So if you are going to work on a feature that isn't on the TO DO, then please submit an issue instead.
