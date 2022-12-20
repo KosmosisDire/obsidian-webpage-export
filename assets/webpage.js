@@ -8,25 +8,26 @@ jQuery(function()
         setThemeToggle(localStorage.getItem("theme_toggle") == "true");
     }
 
+	var lastScheme = "theme-dark";
 	// change theme to match current system theme
 	if (localStorage.getItem("theme_toggle") == null && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
 	{
 		setThemeToggle(true);
+		lastScheme = "theme-light";
 	}
 	if (localStorage.getItem("theme_toggle") == null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
 	{
 		setThemeToggle(true);
+		lastScheme = "theme-dark";
 	}
 
 	// set initial toggle state based on body theme class
 	if ($("body").hasClass("theme-light"))
 	{
-		console.log("light");
 		setThemeToggle(true);
 	}
 	else
 	{
-		console.log("dark");
 		setThemeToggle(false);
 	}
 
@@ -40,12 +41,10 @@ jQuery(function()
 		if(!$(".toggle__input").hasClass("is-checked") && state)
 		{
 			$(".toggle__input").addClass("is-checked");
-			console.log("checked");
 		}
 		else if ($(".toggle__input").hasClass("is-checked") && !state)
 		{
 			$(".toggle__input").removeClass("is-checked");
-			console.log("unchecked");
 		}
 
 		if(!state)
@@ -81,18 +80,31 @@ jQuery(function()
 		setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
     });
 
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => 
+	{
+		// return if we are printing
+		if (window.matchMedia('print').matches)
+		{
+			printing = true;
+			return;
+		}
+
         let newColorScheme = event.matches ? "theme-dark" : "theme-light";
+
+		if (newColorScheme == lastScheme) return;
 
         if (newColorScheme == "theme-dark")
         {
 			setThemeToggle(false);
+			console.log("dark");
         }
 
         if (newColorScheme == "theme-light")
         {
 			setThemeToggle(true);
         }
+
+		lastScheme = newColorScheme;
     });
 
     // MAKE CALLOUTS COLLAPSIBLE
@@ -213,9 +225,6 @@ jQuery(function()
 
 	$(`input[type="checkbox"]`).each(function()
 	{
-		console.log(this);
-		console.log($(this).hasClass("is-checked"));
-
 		$(this).prop("checked", $(this).hasClass("is-checked"));
 	});
 
