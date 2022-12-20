@@ -268,7 +268,18 @@ jQuery(function()
 		}
 	});
 
+	// open outline header when an internal link that points to that header is clicked
+	$(".internal-link").on("click", function()
+	{
+		let target = $(this).attr("href");
+
+		if (target.startsWith("#"))
+		{
+			$(target).parent().removeClass("is-collapsed");			
+			$(target).parent().next().slideDown(120);
+		}
+	});
+
 	// unhide html elements that are hidden by default
 	$("html").css("visibility", "visible");
-
 });
