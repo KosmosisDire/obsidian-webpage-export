@@ -259,4 +259,7 @@ jQuery(function()
 		}
 	});
 
+	// unhide html elements that are hidden by default
+	$("html").css("visibility", "visible");
+
 });

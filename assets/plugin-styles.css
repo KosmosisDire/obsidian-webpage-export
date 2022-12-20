@@ -1,3 +1,6 @@
+/* hide page before it is loaded */
+html { visibility: hidden; background-color: black; }
+
 /* remove canvas controls */
 .canvas-card-menu {
 	display: none;
