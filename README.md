@@ -118,7 +118,7 @@ Note: This does not enable `onclick` inside of obsidian itself.
 - Try to keep large scale reorganization of the code to a minimum. Small regoranizations and refactors are fine.
 
 ## Credits
-Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for switching between tabs.
+Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for opening specific files in a new tab.
 
 ## Coffee
 Hello! I make these plugins out of my own enjoyment for obsidian and coding. If you enjoy my plugins and want to support me feel free to leave something here:
