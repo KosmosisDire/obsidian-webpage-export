@@ -100,19 +100,28 @@ Note: This does not enable `onclick` inside of obsidian itself.
 ## Screenshots:
 
 <details><summary>Click to view more screenshots</summary>
-	<p>
-		Dark mode document with the outline enabled
-		![image](https://user-images.githubusercontent.com/39423700/208754928-82eb3a4a-6018-4be9-a098-abc2800d6d32.png)
-		
-		Light mode document with the outline enabled
-		![image](https://user-images.githubusercontent.com/39423700/208754972-f9bc22be-8f0c-48ff-aab8-2e25e7052790.png)
+<p>
+Dark mode document with the outline enabled
 
-		Canvas export
-		![image](https://user-images.githubusercontent.com/39423700/208755062-62311347-a15f-4ae5-b798-8a5719934988.png)
-		
-		Kanban export
-		![image](https://user-images.githubusercontent.com/39423700/208755364-919894b3-2107-4a29-bd9b-06f75521c25a.png)
-	</p>
+![image](https://user-images.githubusercontent.com/39423700/208754928-82eb3a4a-6018-4be9-a098-abc2800d6d32.png)
+
+Light mode document with the outline enabled
+
+![image](https://user-images.githubusercontent.com/39423700/208754972-f9bc22be-8f0c-48ff-aab8-2e25e7052790.png)
+
+Canvas export
+
+![image](https://user-images.githubusercontent.com/39423700/208755062-62311347-a15f-4ae5-b798-8a5719934988.png)
+
+Kanban export
+
+![image](https://user-images.githubusercontent.com/39423700/208755364-919894b3-2107-4a29-bd9b-06f75521c25a.png)
+</p>
+	
+Export options
+	
+![image](https://user-images.githubusercontent.com/39423700/208756140-37c212b5-0647-45b8-98ed-922765095a4e.png)
+
 </details>
 
 
