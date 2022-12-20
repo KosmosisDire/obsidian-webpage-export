@@ -1,19 +1,47 @@
 /* remove canvas controls */
 .canvas-card-menu {
 	display: none;
+	cursor: default !important;
+
 }
 
 .canvas-controls {
 	display: none;
+	cursor: default !important;
+
 }
 
 .canvas-node-connection-point 
 {
 	display: none;
+	cursor: default !important;
+
 }
 
 .canvas-menu-container {
 	display: none;
+}
+
+.canvas-node-content-blocker
+{
+	display: none;
+	cursor: pointer !important;
+}
+
+.canvas-wrapper
+{
+	position: relative;
+	cursor: default !important;
+}
+
+.canvas-node-resizer
+{
+	cursor: default !important;
+}
+
+.canvas-node-container
+{
+	cursor: default !important;
 }
 
 /* fix coloring for horizontal divider */
