@@ -1,4 +1,4 @@
-import { open, readFile, writeFile, existsSync, mkdirSync } from 'fs';
+import { open, readFile, writeFile, existsSync, mkdirSync, close } from 'fs';
 import { FileSystemAdapter, MarkdownView, TextFileView, TFile } from 'obsidian';
 import { ExportSettings } from './settings';
 import JSZip from "jszip";
@@ -23,19 +23,24 @@ export class Utils
 
 	static async getText(path: string): Promise<string>
 	{
-		return new Promise((resolve, reject) => {
-			open(path, 'r', (err, fd) => {
-				if (err) {
+		path = this.fixPath(path);
+
+		if(!existsSync(path))
+		{ 
+			console.log("File not found: " + path); 
+			return "";
+		}
+
+		return new Promise((resolve, reject) =>
+		{
+			readFile(path, { encoding: 'utf8' }, (err, data) => 
+			{
+				if (err)
+				{
+					console.error("Error:" + err);
 					reject(err);
-				} else {
-					readFile(fd, { encoding: 'utf8' }, (err, data) => {
-						if (err) {
-							reject(err);
-						} else {
-							resolve(data);
-						}
-					});
 				}
+				else resolve(data);
 			});
 		});
 	}
@@ -56,19 +61,26 @@ export class Utils
 
 	static async getTextBase64(path: string): Promise<string>
 	{
-		return new Promise((resolve, reject) => {
-			open(Utils.fixPath(path), 'r', (err, fd) => {
-				if (err) {
+		path = this.fixPath(path);
+
+		if(!existsSync(path))
+		{
+			console.log("File not found: " + path); 
+			return "";
+		}
+
+		console.log(path);
+
+		return new Promise((resolve, reject) =>
+		{
+			readFile(path, { encoding: 'base64' }, (err, data) => 
+			{
+				if (err)
+				{
+					console.error("Error:" + err);
 					reject(err);
-				} else {
-					readFile(fd, { encoding: 'base64' }, (err, data) => {
-						if (err) {
-							reject(err);
-						} else {
-							resolve(data);
-						}
-					});
 				}
+				else resolve(data);
 			});
 		});
 	}
@@ -175,7 +187,7 @@ export class Utils
 
 		writeFile(path, array, (err) => {
 			if (err) throw err;
-			console.log('The file has been saved!');
+			console.log('The file has been saved at ' + path + '!');
 		});
 	}
 
@@ -197,7 +209,7 @@ export class Utils
 
 		writeFile(path, zipBlob, (err) => {
 			if (err) throw err;
-			console.log('The file has been saved!');
+			console.log('The file has been saved at ' + path + '!');
 		});
 	}
 
@@ -217,7 +229,7 @@ export class Utils
 			
 			writeFile(path, array, (err) => {
 				if (err) throw err;
-				console.log('The file has been saved!');
+				console.log('The file has been saved at ' + path + '!');
 			});
 		}
 	}
@@ -322,12 +334,11 @@ export class Utils
 		await view.previewMode.renderer.rerender();
 	}
 
-	static async getActiveView(): Promise<TextFileView | null>
+	static getActiveView(): TextFileView | null
 	{
 		let view = app.workspace.getActiveViewOfType(TextFileView);
 		if (!view)
 		{
-			console.log("Failed to find active view");
 			return null;
 		}
 

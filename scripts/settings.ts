@@ -17,6 +17,7 @@ export interface ExportSettingsData
 	customCSS: string;
 
 	includePluginCSS: string;
+	openAfterExport: boolean;
 }
 
 const DEFAULT_SETTINGS: ExportSettingsData =
@@ -34,7 +35,8 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	customJS: '',
 	customCSS: '',
 
-	includePluginCSS: ''
+	includePluginCSS: '',
+	openAfterExport: true,
 }
 
 export class ExportSettings extends Modal
@@ -42,7 +44,7 @@ export class ExportSettings extends Modal
 	static settings: ExportSettingsData = DEFAULT_SETTINGS;
 	static plugin: Plugin;
 	static isClosed: boolean = true;
-	static success: boolean = false;
+	static canceled: boolean = true;
 	static onlyCopy: boolean = false;
 
 	constructor(plugin: Plugin) 
@@ -66,10 +68,13 @@ export class ExportSettings extends Modal
 	 * @returns True if the EXPORT button was pressed, false is the export was canceled.
 	 * @override
 	*/
-	async open(): Promise<{canceled: boolean, onlyCopy: boolean}>
+	async open(): Promise<{canceled: boolean, copyToClipboard: boolean}>
 	{
-		super.open();
 		ExportSettings.isClosed = false;
+		ExportSettings.canceled = true;
+		ExportSettings.onlyCopy = false;
+
+		super.open();
 
 		const { contentEl } = this;
 
@@ -119,7 +124,6 @@ export class ExportSettings extends Modal
 					await ExportSettings.saveSettings();
 				}));
 
-
 		contentEl.createEl('h3', { text: 'Special Features:' });
 
 		new Setting(contentEl)
@@ -159,17 +163,6 @@ export class ExportSettings extends Modal
 
 		contentEl.createEl('h3', { text: 'Export Options:' });
 
-		// new Setting(contentEl)
-		// .setName('Export to ZIP')
-		// .setDesc('Will export a .zip file rather than putting all the files loose in the chosen folder.')
-		// .addToggle((toggle) => toggle
-		//     .setValue(ExportSettings.settings.uzeZip)
-		//     .onChange(async (value) =>
-		//     {
-		//         ExportSettings.settings.uzeZip = value;
-		//         await ExportSettings.saveSettings();
-		//     }));
-
 		new Setting(contentEl)
 			.setName('Include Plugin CSS')
 			.setDesc('Will include the CSS from the plugins listed below. Please write out the plugin\'s ID / folder name exactly each on a new line.')
@@ -183,31 +176,44 @@ export class ExportSettings extends Modal
 				));
 
 		new Setting(contentEl)
-			.setName('Start Export')
+			.setName('Open After Export')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.openAfterExport)
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.openAfterExport = value;
+					await ExportSettings.saveSettings();
+				})
+			)
+
+		new Setting(contentEl)
+			.setName('Export')
 			.addButton((button) => button
 				.setButtonText('Export')
 				.onClick(async () =>
 				{
+					ExportSettings.canceled = false;
 					this.close();
-					ExportSettings.success = true;
-				}
-				));
-
-		new Setting(contentEl)
-			.setName('Export and Copy HTML')
+				})
+			)
 			.addButton((button) => button
 				.setButtonText('Copy HTML')
 				.onClick(async () =>
 				{
-					this.close();
-					ExportSettings.success = true;
+					ExportSettings.canceled = false;
 					ExportSettings.onlyCopy = true;
-				}
-				));
+					this.close();
+				})
+			);
 
-		await Utils.waitUntil(() => ExportSettings.isClosed, 60 * 60 * 1000, 200);
 
-		return { canceled: !ExportSettings.success, onlyCopy: ExportSettings.onlyCopy };
+			
+
+
+
+		await Utils.waitUntil(() => ExportSettings.isClosed, 60 * 60 * 1000, 10);
+
+		return { canceled: ExportSettings.canceled, copyToClipboard: ExportSettings.onlyCopy };
 	}
 
 	onClose()
@@ -215,7 +221,5 @@ export class ExportSettings extends Modal
 		const { contentEl } = this;
 		contentEl.empty();
 		ExportSettings.isClosed = true;
-		ExportSettings.success = false;
-		ExportSettings.onlyCopy = false;
 	}
 }

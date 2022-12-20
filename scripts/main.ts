@@ -1,5 +1,5 @@
 // imports from obsidian API
-import { MarkdownRenderChild, Plugin, TAbstractFile, TFile, TFolder} from 'obsidian';
+import { MarkdownRenderChild, Notice, Plugin, TAbstractFile, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
 import { ExportSettings } from './settings';
@@ -8,6 +8,7 @@ import { LeafHandler } from './leaf-handler';
 import { HTMLGenerator } from './html-gen';
 import { open } from 'fs';
 import { fileURLToPath } from 'url';
+const {shell} = require('electron') // deconstructing assignment
 
 export default class HTMLExportPlugin extends Plugin
 {
@@ -37,6 +38,35 @@ export default class HTMLExportPlugin extends Plugin
 		});
 	}
 
+	async addCommands()
+	{
+		this.addCommand({
+			id: 'export-html-file',
+			name: 'Export current file to HTML',
+			checkCallback: (checking: boolean) =>
+			{
+				let file = (Utils.getActiveView())?.file;
+				if(file instanceof TFile)
+				{
+					if(checking) return true;
+
+					this.exportFile(file);
+				}
+
+				return false;
+			}
+		});
+
+		this.addCommand({
+			id: 'export-html-vault',
+			name: 'Export vault to HTML',
+			callback: () =>
+			{
+				this.exportFolder("");
+			}
+		});
+	}
+
 	async onload()
 	{
 		console.log('loading obsidian-webpage-export plugin');
@@ -53,20 +83,30 @@ export default class HTMLExportPlugin extends Plugin
 				{
 					item
 						.setTitle("Export to HTML")
-						.setIcon("document")
-						.onClick(() =>
+						.setIcon("download")
+						.setSection("action")
+						.onClick(async () =>
 						{
 							if(file instanceof TFile)
 							{
-								this.exportFile(file);
+								let success = await this.exportFile(file);
+								if (success && ExportSettings.settings.openAfterExport)
+								{
+									shell.openPath(ExportSettings.settings.lastExportPath);
+								}
 							}
 							else if(file instanceof TFolder)
 							{
-								this.exportFolder(file.path);
+								let success = await this.exportFolder(file.path);
+								if (success && ExportSettings.settings.openAfterExport)
+								{
+									shell.openPath(ExportSettings.settings.lastExportPath);
+								}
 							}
 							else
 							{
-								console.error("File is not a TFile or TFolder, invalid type: " + typeof file + "");
+								console.error("File is not a TFile or TFolder! Invalid type: " + typeof file + "");
+								new Notice("File is not a File or Folder! Invalid type: " + typeof file + "", 5000);
 							}
 						});
 				});
@@ -82,6 +122,9 @@ export default class HTMLExportPlugin extends Plugin
 		// add toggle postprocessor
 		this.addTogglePostprocessor();
 
+		// add commands
+		this.addCommands();
+
 		// init html generator
 		this.htmlGenerator.initialize();
 	}
@@ -91,21 +134,42 @@ export default class HTMLExportPlugin extends Plugin
 		console.log('unloading obsidian-webpage-export plugin');
 	}
 
-	async exportFile(file: TAbstractFile, fullPath: string = "", showSettings: boolean = true)
+	async exportFile(file: TAbstractFile, fullPath: string = "", showSettings: boolean = true) : Promise<boolean>
 	{
 		// Open the settings modal and wait until it's closed
-		let onlyCopy = false;
+		let copyDocToClipboard = false;
 		if (showSettings)
 		{
-			let result = await new ExportSettings(this).open();
-			if (result.canceled) return;
-			onlyCopy = result.onlyCopy;
+			let validSelection = false;
+			while (!validSelection)
+			{
+				let result = await new ExportSettings(this).open();
+				if (result.canceled) return false;
+
+				copyDocToClipboard = result.copyToClipboard;
+
+				if(copyDocToClipboard && !ExportSettings.settings.inlineCSS || !ExportSettings.settings.inlineJS || !ExportSettings.settings.inlineImages)
+				{
+					let error = "To copy to the clipboard please enable inline CSS, JS and Images";
+					console.error(error);
+					new Notice(error, 5000);
+					validSelection = false;
+					continue;
+				}
+
+				validSelection = true;
+			}
 		}
 
 		let fileTab = this.leafHandler.openFileInNewLeaf(file as TFile, true);
 
 		let htmlEl : HTMLHtmlElement | null = await this.htmlGenerator.getCurrentFileHTML();
-		if (!htmlEl) return;
+		if (!htmlEl) 
+		{
+			console.error("Failed to get HTML for file " + file.name);
+			new Notice("Failed to get HTML for file " + file.name, 5000);
+			return false;
+		}
 
 		let htmlText = htmlEl.outerHTML;
 
@@ -115,10 +179,10 @@ export default class HTMLExportPlugin extends Plugin
 		fileTab.detach();
 
 		// if onlyCopy is true, then we don't want to download the file, we just want to copy it to the clipboard
-		if (onlyCopy)
+		if (copyDocToClipboard)
 		{
 			navigator.clipboard.writeText(htmlText);
-			return;
+			return false;
 		}
 
 		// Download files
@@ -129,7 +193,7 @@ export default class HTMLExportPlugin extends Plugin
 		if (htmlPath == "")
 			htmlPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.name.replace(".md", ".html"), false);
 
-		if (!htmlPath) return;
+		if (!htmlPath) return false;
 
 		let filename = Utils.getFileNameFromFilePath(htmlPath);
 		let folderPath = Utils.getDirectoryFromFilePath(htmlPath);
@@ -137,17 +201,40 @@ export default class HTMLExportPlugin extends Plugin
 		toDownload[toDownload.length - 1].filename = filename;
 
 		await Utils.downloadFiles(toDownload, folderPath);
+
+		new Notice("Exported " + file.name + " to " + htmlPath, 5000);
+
+		return true;
 	}
 
-	async exportFolder(folderPath: string)
+	async exportFolder(folderPath: string, showSettings: boolean = true) : Promise<boolean>
 	{
 		// folder path is the path relative to the vault that we are exporting
 
 		// Open the settings modal and wait until it's closed
-		let exportCanceled = !await new ExportSettings(this).open();
-		if (exportCanceled) return;
+		if (showSettings)
+		{
+			let validSelection = false;
+			while (!validSelection)
+			{
+				let result = await new ExportSettings(this).open();
+				if (result.canceled) return false;
+				
+				if (result.copyToClipboard) 
+				{
+					let error = "You cannot export a folder or vault to the clipboard.";
+					console.error(error);
+					new Notice(error, 5000);
+					validSelection = false;
+					continue;
+				}
 
-		let htmlPath = await Utils.showSelectFolderDialog(Utils.idealDefaultPath());
+				validSelection = true;
+			}
+		}
+
+		let htmlPath = await Utils.showSelectFolderDialog(Utils.getDirectoryFromFilePath(Utils.idealDefaultPath()));
+		if (!htmlPath) return false;
 
 		let files = this.app.vault.getFiles();
 
@@ -160,5 +247,9 @@ export default class HTMLExportPlugin extends Plugin
 				await this.exportFile(file, fullPath, false);
 			}
 		}
+
+		new Notice("Folder exported " + folderPath + " to " + htmlPath, 7000);
+
+		return true;
 	}
 }
