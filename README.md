@@ -4,8 +4,12 @@ Exports an obsidian document, folder, or vault as an HTML document / webpage / w
 
 ![image](https://user-images.githubusercontent.com/39423700/201875810-6d24c2b9-2e63-4d9b-a9d4-61840df659ac.png)
 
+## Canvas Support
+Canvas support is currently very preliminary. Your canvas documents will export, but large documents included wll not render fully, and documnets larger than one screen will be cut off or documents will become invisible. Small simple canvas documents should work fine.
+
 ## Features:
 - Export files, folders, or the whole vault as html. [Explained in: General](#general)
+- Support for Kanban, and Canvas documents (and possibly other plugins that haven't been tested)!
 - Color theme toggle can be embedded anywhere on the page. [Explained in: Theme Toggle](#theme-toggle)
 - Supports images, with automatic base64 inlining, or by exporting the images seperately. [Explained in: Non-Inlined Files](#non-inlined-files)
 - Supports inline CSS, or exporting seperately. [Explained in: Non-Inlined Files](#non-inlined-files)
@@ -110,7 +114,7 @@ Note: This does not enable `onclick` inside of obsidian itself.
 
 
 ## To Do:
-![To do image](https://user-images.githubusercontent.com/39423700/208750435-5e6d1395-4912-4ee3-9c7d-792f03e9edeb.png)
+![image](https://user-images.githubusercontent.com/39423700/208753817-a2c83a8c-430e-4825-8421-ce4e7ac96fcf.png)
 
 ## Contributing
 - I am open to any PRs as long as they align with my vision for the plugin. So if you are going to work on a feature that isn't on the TO DO, then please submit an issue instead.
