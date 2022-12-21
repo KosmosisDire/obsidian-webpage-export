@@ -611,6 +611,7 @@ export class HTMLGenerator
 
 		let outlineItemContentsEl = document.createElement('a');
 		outlineItemContentsEl.classList.add("outline-item-contents");
+		outlineItemContentsEl.classList.add("internal-link");
 		outlineItemContentsEl.setAttribute("href", "#" + header.href);
 		
 		let outlineItemIconEl = document.createElement('div');

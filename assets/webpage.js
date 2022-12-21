@@ -134,7 +134,7 @@ jQuery(function()
 
     function getHeadingContentsSelector(header)
     {
-        let headingLevel = header.parent().prop("tagName").toLowerCase();
+        let headingLevel = $(header).children().first().prop("tagName").toLowerCase();
         let headingNumber = parseInt(headingLevel.replace("h", ""));
 
         let endingHeadings = [1, 2, 3, 4, 5, 6].filter(function(item)
@@ -150,36 +150,64 @@ jQuery(function()
         return endingHeadingsSelector;
     }
 
+	function setHeaderCollapse(header, collapse)
+	{
+		let selector = getHeadingContentsSelector($(header));
+
+        if(!collapse)
+        {
+			if ($(header).hasClass("is-collapsed")) $(header).toggleClass("is-collapsed");
+
+            $(header).nextUntil(selector).show();
+			
+			// close headers inside of this one that are collapsed
+            $(header).nextUntil(selector).each(function()
+            {
+				if($(this).hasClass("is-collapsed"))
+					setHeaderCollapse($(this), true);
+            });
+			
+			//open headers above this one that are collapsed
+			lastHeaderSize = $(header).children().first().prop("tagName").toLowerCase().replace("h", "");
+			$(header).prevAll().each(function()
+			{
+				if($(this).hasClass("is-collapsed") && $(this).has("h1, h2, h3, h4, h5, h6"))
+				{
+					let hSize = $(this).children().first().prop("tagName").toLowerCase().replace("h", "");
+					console.log(hSize + " <? " + lastHeaderSize);
+					if(hSize < lastHeaderSize)
+					{
+						setHeaderCollapse($(this), false);
+						lastHeaderSize = hSize;
+					}
+				}
+			});
+        }
+        else
+        {
+			if (!$(header).hasClass("is-collapsed")) $(header).toggleClass("is-collapsed");
+            $(header).nextUntil(selector).hide();
+        }
+	}
 
     $(".heading-collapse-indicator").on("click", function()
     {
         var isCollapsed = $(this).parent().parent().hasClass("is-collapsed");
-        
-        $(this).parent().parent().toggleClass("is-collapsed");
-
-        let selector = getHeadingContentsSelector($(this));
-
-        if(isCollapsed)
-        {
-            $(this).parent().parent().nextUntil(selector).each(function()
-            {
-                $(this).show();
-            });
-            
-            $(this).parent().parent().nextUntil(selector).each(function()
-            {
-                if ($(this).hasClass("is-collapsed"))
-                {
-                    let s = getHeadingContentsSelector($(this).children().first().children().first());
-                    $(this).nextUntil(s).hide();
-                }
-            });
-        }
-        else
-        {
-            $(this).parent().parent().nextUntil(selector).hide();
-        }
+		setHeaderCollapse($(this).parent().parent(), !isCollapsed);
     });
+
+	// open outline header when an internal link that points to that header is clicked
+	$(".internal-link").on("click", function()
+	{
+		let target = $(this).attr("href");
+
+		if (target.startsWith("#"))
+		{
+			let header = $(target);
+
+			setHeaderCollapse($(header).parent(), false);
+		}
+	});
 
     // Make button with id="#save-to-pdf" save the current page to a PDF file
     $("#save-pdf").on("click", function()
@@ -265,18 +293,6 @@ jQuery(function()
 		{
 			$(".canvas-node").removeClass("is-focused");
 			$(".canvas-node-content-blocker").show();
-		}
-	});
-
-	// open outline header when an internal link that points to that header is clicked
-	$(".internal-link").on("click", function()
-	{
-		let target = $(this).attr("href");
-
-		if (target.startsWith("#"))
-		{
-			$(target).parent().removeClass("is-collapsed");			
-			$(target).parent().next().slideDown(120);
 		}
 	});
 

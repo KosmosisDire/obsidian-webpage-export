@@ -58,7 +58,6 @@ export class Utils
 		return fileURLToPath(path);
 	}
 
-
 	static async getTextBase64(path: string): Promise<string>
 	{
 		path = this.fixPath(path);
