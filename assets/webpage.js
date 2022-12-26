@@ -297,5 +297,6 @@ jQuery(function()
 	});
 
 	// unhide html elements that are hidden by default
-	$("html").css("visibility", "visible");
+	// $("html").css("visibility", "visible");
+	// $("html").css("background-color", "var(--background-primary)");
 });
