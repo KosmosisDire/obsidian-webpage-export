@@ -127,7 +127,7 @@ Export options
 
 
 ## To Do:
-![image](https://user-images.githubusercontent.com/39423700/208753817-a2c83a8c-430e-4825-8421-ce4e7ac96fcf.png)
+![image](https://user-images.githubusercontent.com/39423700/210203283-c5a19672-5c22-4227-ab11-9953d10e2d8c.png)
 
 ## Contributing
 - I am open to any PRs as long as they align with my vision for the plugin. So if you are going to work on a feature that isn't on the TO DO, then please submit an issue instead.
