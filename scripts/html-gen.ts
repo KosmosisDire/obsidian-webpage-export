@@ -191,7 +191,7 @@ export class HTMLGenerator
 
 	//#region General HTML
 
-	public async getCurrentFileHTML(): Promise<HTMLHtmlElement | null>
+	public async getCurrentFileHTML(returnEl : boolean = false): Promise<string | HTMLHtmlElement | null>
 	{
 		await Utils.delay(200);
 
@@ -246,7 +246,10 @@ export class HTMLGenerator
 		htmlEl.appendChild(headEl);
 		htmlEl.appendChild(bodyRootEl);
 
-		return htmlEl;
+		if (returnEl == true)
+			return htmlEl;
+		else
+			return "<!DOCTYPE html>\n" + htmlEl.outerHTML;
 	}
 
 	private generateSideBars(middleContent: HTMLElement, leftContent: HTMLElement, rightContent: HTMLElement): HTMLDivElement

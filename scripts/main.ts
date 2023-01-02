@@ -163,15 +163,15 @@ export default class HTMLExportPlugin extends Plugin
 
 		let fileTab = this.leafHandler.openFileInNewLeaf(file as TFile, true);
 
-		let htmlEl : HTMLHtmlElement | null = await this.htmlGenerator.getCurrentFileHTML();
-		if (!htmlEl) 
+		let htmlEl : string | HTMLHtmlElement | null = await this.htmlGenerator.getCurrentFileHTML();
+		if (htmlEl == null) 
 		{
 			console.error("Failed to get HTML for file " + file.name);
 			new Notice("Failed to get HTML for file " + file.name, 5000);
 			return false;
 		}
 
-		let htmlText = htmlEl.outerHTML;
+		let htmlText = (htmlEl instanceof HTMLHtmlElement) ? htmlEl.outerHTML : htmlEl;
 
 		let toDownload = await this.htmlGenerator.getSeperateFilesToDownload();
 
