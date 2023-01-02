@@ -127,7 +127,7 @@ Export options
 
 
 ## To Do:
-![image](https://user-images.githubusercontent.com/39423700/208753817-a2c83a8c-430e-4825-8421-ce4e7ac96fcf.png)
+![image](https://user-images.githubusercontent.com/39423700/210203496-54a4656c-12a2-4312-b300-7ae17129c83b.png)
 
 ## Contributing
 - I am open to any PRs as long as they align with my vision for the plugin. So if you are going to work on a feature that isn't on the TO DO, then please submit an issue instead.
@@ -138,7 +138,7 @@ Export options
 Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for opening specific files in a new tab.
 
 ## Coffee
-Hello! I make these plugins out of my own enjoyment for obsidian and coding. If you enjoy my plugins and want to support me feel free to leave something here:
+Hello! I am a college student who makes these plugins for free out of my own enjoyment for obsidian and coding. If you enjoy my plugins and want to support me a little bit feel free to leave something here:
 
 <a href="https://www.buymeacoffee.com/nathangeorge">
 	<img src="https://cdn.buymeacoffee.com/buttons/v2/default-violet.png" style="width:300px" />
