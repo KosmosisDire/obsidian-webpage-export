@@ -69,7 +69,7 @@ export default class HTMLExportPlugin extends Plugin
 
 	async onload()
 	{
-		console.log('loading obsidian-webpage-export plugin');
+		console.log('loading webpage-html-export plugin');
 
 		// init settings
 		new ExportSettings(this);
@@ -131,7 +131,7 @@ export default class HTMLExportPlugin extends Plugin
 
 	onunload()
 	{
-		console.log('unloading obsidian-webpage-export plugin');
+		console.log('unloading webpage-html-export plugin');
 	}
 
 	async exportFile(file: TFile, fullPath: string = "", showSettings: boolean = true) : Promise<boolean>

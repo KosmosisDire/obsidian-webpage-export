@@ -12,7 +12,7 @@ export class HTMLGenerator
 	autoDownloadExtras = true;
 
 	private vaultPluginsPath: string = Utils.getVaultPath() + "/.obsidian/plugins";
-	private thisPluginPath: string = this.vaultPluginsPath + "/obsidian-webpage-export";
+	private thisPluginPath: string = this.vaultPluginsPath + "/webpage-html-export";
 	private assetsPath: string = this.thisPluginPath + "/assets";
 
 	// this is a list of images that is populated during generation and then downloaded upon export
