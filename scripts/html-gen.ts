@@ -449,7 +449,7 @@ export class HTMLGenerator
 					bestPath = "../" + bestPath;
 				}
 
-				console.log("bestPath: " + bestPath);
+				console.log("bestPath: " + bestPath); 
 
 				if (href.length == 1)
 				{
