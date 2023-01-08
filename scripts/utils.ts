@@ -363,4 +363,24 @@ export class Utils
 			}
 		}
 	}
+
+	static trimEnd(inputString: string, trimString: string): string
+	{
+		if (inputString.endsWith(trimString))
+		{
+			return inputString.substring(0, inputString.length - trimString.length);
+		}
+
+		return inputString;
+	}
+
+	static trimStart(inputString: string, trimString: string): string
+	{
+		if (inputString.startsWith(trimString))
+		{
+			return inputString.substring(trimString.length);
+		}
+
+		return inputString;
+	}
 }

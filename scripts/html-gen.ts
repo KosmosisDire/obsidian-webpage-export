@@ -433,35 +433,50 @@ export class HTMLGenerator
 			if (!href) return;
 
 			// if the file doesn't start with #, then it links to a file, or a header in another file.
-			if (!(href[0] == ""))
+			if (href[0] != "") // href[0] is everything that came before the #, if there was a #.
 			{
+				// find the file that matches the link
+				let currentFile = app.workspace.getActiveFile();
+				if (!currentFile) return;
+
+				let bestPath = app.metadataCache.getFirstLinkpathDest(href[0], currentFile.path)?.path;
+				if (!bestPath) return;
+
+				bestPath = Utils.trimEnd(Utils.trimEnd(bestPath, ".md"), ".canvas");
+				let fileDepth = currentFile.path.split("/").length - 1;
+				for (let i = 0; i < fileDepth; i++)
+				{
+					bestPath = "../" + bestPath;
+				}
+
+				console.log("bestPath: " + bestPath);
+
 				if (href.length == 1)
 				{
-					finalHref = href[0] + ".html";
+					finalHref = bestPath + ".html"; 
 				}
 
 				if (href.length == 2)
 				{
 					let filePath = "";
-					if (!href[0].contains("/") && !href[0].contains("\\"))
+					if (!bestPath.contains("/") && !bestPath.contains("\\"))
 					{
-						filePath = Utils.getDirectoryFromFilePath(Utils.getFirstFileByName(href[0])?.path ?? "") + "/";
+						filePath = Utils.getDirectoryFromFilePath(Utils.getFirstFileByName(bestPath)?.path ?? "") + "/";
 					}
 
-					finalHref = filePath + href[0] + ".html#" + href[1].replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
+					finalHref = filePath + bestPath + ".html#" + href[1].replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
 				}
 
 				if (href.length > 2)
 				{
-					let first = href.shift() ?? "";
-
+					href.shift();
 					let filePath = "";
-					if (!first.contains("/") && !first.contains("\\"))
+					if (!bestPath.contains("/") && !bestPath.contains("\\"))
 					{
-						filePath = Utils.getDirectoryFromFilePath(Utils.getFirstFileByName(first)?.path ?? "") + "/";
+						filePath = Utils.getDirectoryFromFilePath(Utils.getFirstFileByName(bestPath)?.path ?? "") + "/";
 					}
 
-					finalHref = filePath + first + ".html#" + href.join("#").replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
+					finalHref = filePath + bestPath + ".html#" + href.join("#").replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
 				}
 			}
 			else // if the file starts with #, then it links to an internal header.

@@ -1,14 +1,12 @@
 // imports from obsidian API
-import { MarkdownRenderChild, Notice, Plugin, TAbstractFile, TFile, TFolder} from 'obsidian';
+import { Notice, Plugin, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
 import { ExportSettings } from './settings';
 import { Utils } from './utils';
 import { LeafHandler } from './leaf-handler';
 import { HTMLGenerator } from './html-gen';
-import { open } from 'fs';
-import { fileURLToPath } from 'url';
-const {shell} = require('electron') // deconstructing assignment
+const {shell} = require('electron') 
 
 export default class HTMLExportPlugin extends Plugin
 {
