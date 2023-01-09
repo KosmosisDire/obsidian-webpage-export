@@ -1,7 +1,6 @@
-import { open, readFile, writeFile, existsSync, mkdirSync, close } from 'fs';
+import {  readFile, writeFile, existsSync, mkdirSync } from 'fs';
 import { FileSystemAdapter, MarkdownView, TextFileView, TFile } from 'obsidian';
 import { ExportSettings } from './settings';
-import JSZip from "jszip";
 import { fileURLToPath } from 'url';
 
 /* @ts-ignore */
@@ -189,28 +188,6 @@ export class Utils
 		});
 	}
 
-	static async downloadFilesAsZip(files: {filename: string, data: string, type: string, relativePath?: string}[], zipFileName: string)
-	{
-		let blobs = files.map(file => new Blob([file.data], {type: file.type}));
-		let zip = new JSZip();
-		for (let i = 0; i < files.length; i++)
-		{
-			let path = ((files[i].relativePath ?? "") + "/" + files[i].filename).replaceAll("//", "/");
-			zip.file(path, blobs[i]);
-		}
-
-		let zipBlob = await zip.generateAsync({type: "uint8array"});
-		
-		let path = await Utils.showSaveDialog(Utils.idealDefaultPath(), zipFileName, false) ?? "";
-
-		if (path == "") return;
-
-		writeFile(Utils.fixPath(path), zipBlob, (err) => {
-			if (err) throw err;
-			console.log('The file has been saved at ' + path + '!');
-		});
-	}
-
 	static async downloadFiles(files: {filename: string, data: string, type?: string, relativePath?: string, unicode?: boolean}[], folderPath: string)
 	{
 		for (let i = 0; i < files.length; i++)
@@ -330,6 +307,16 @@ export class Utils
 		await Utils.delay(300);
 		/*@ts-ignore*/
 		await view.previewMode.renderer.rerender();
+	}
+
+	static async getRendererHeight(view: MarkdownView, rerender: boolean = false): Promise<number>
+	{
+		if(rerender) await Utils.viewEnableFullRender(view);
+
+		/*@ts-ignore*/
+		let height = view.previewMode.renderer.sizerEl.offsetHeight;
+
+		return height;
 	}
 
 	static getActiveView(): TextFileView | null
