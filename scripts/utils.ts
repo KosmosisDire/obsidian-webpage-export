@@ -1,7 +1,9 @@
 import {  readFile, writeFile, existsSync, mkdirSync } from 'fs';
-import { FileSystemAdapter, MarkdownView, TextFileView, TFile } from 'obsidian';
+import { FileSystemAdapter, MarkdownView, Notice, TextFileView, TFile } from 'obsidian';
 import { ExportSettings } from './settings';
 import { fileURLToPath } from 'url';
+import process from 'process';
+const pathTools = require('upath');
 
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;
@@ -13,30 +15,94 @@ export class Utils
 		return new Promise( resolve => setTimeout(resolve, ms) );
 	}
 
-	static makePathUnicode(path: string) : string
+	static parsePath(path: string): { root: string, dir: string, base: string, ext: string, name: string, fullPath: string }
 	{
-		let newPath = path;
-		return newPath;
+		path = this.makePathUnicodeCompatible(path);
+		let parsed = pathTools.parse(path);
+		if(path.endsWith("/")) 
+		{
+			parsed.dir = pathTools.normalizeSafe(path);
+			parsed.base = "";
+		}
+
+		let fullPath = pathTools.join(parsed.dir, parsed.base);
+
+		return { root: parsed.root, dir: parsed.dir, base: parsed.base, ext: parsed.ext, name: parsed.name, fullPath: fullPath };
 	}
 
+	static joinPaths(...paths: string[]): string
+	{
+		return this.makePathUnicodeCompatible(pathTools.join(...paths));
+	}
+
+	static pathExists(path: string, showErrors: boolean = true): boolean
+	{
+		if(!existsSync(path))
+		{ 
+			if(showErrors) new Notice("Error: Path does not exist: \n\n" + path, 10000);
+			if(showErrors) console.error("Path does not exist: " + path);
+			return false;
+		}
+
+		return true;
+	}
+
+	static makePathUnicodeCompatible(path: string): string
+	{
+		return decodeURI(path);
+	}
+
+	static pathIsAbsolute(path: string): boolean
+	{
+		if(process.platform == "win32")
+		{
+			if (path.match(/^[A-Za-z]:[\\|\/]/)) return true;
+			else return false;
+		}
+		else
+		{
+			if (path.match(/^[\/]/)) return true;
+			else return false;
+		}
+	}
+
+	static getAbsolutePath(path: string, mustExist: boolean = true, workingDirectory: string = this.getVaultPath()): string | undefined
+	{
+		let reliablePath = this.parsePath(path).fullPath;
+
+		if (!Utils.pathIsAbsolute(reliablePath))
+		{
+			reliablePath = this.joinPaths(workingDirectory, reliablePath);
+		}
+
+		if (mustExist && !this.pathExists(reliablePath)) return undefined;
+
+		return this.makePathUnicodeCompatible(reliablePath);
+	}
+
+	static getRelativePath(path: string, workingDirectory: string = this.getVaultPath()) : string
+	{
+		let absolutePath = this.getAbsolutePath(Utils.parsePath(path).dir);
+		let absoluteWorkingDirectory = this.getAbsolutePath(Utils.parsePath(workingDirectory).dir);
+
+		if (!absolutePath || !absoluteWorkingDirectory) return path;
+
+		return pathTools.relative(absoluteWorkingDirectory, absolutePath);
+	}
 
 	static async getText(path: string): Promise<string>
 	{
-		path = this.fixPath(path);
-
-		if(!existsSync(path))
-		{ 
-			console.log("File not found: " + path); 
-			return "";
-		}
+		let absolutePath = this.getAbsolutePath(path);
+		if (!absolutePath) return "";
 
 		return new Promise((resolve, reject) =>
 		{
-			readFile(path, { encoding: 'utf8' }, (err, data) => 
+			readFile(absolutePath as string, { encoding: 'utf8' }, (err, data) => 
 			{
 				if (err)
 				{
-					console.error("Error:" + err);
+					new Notice("Error: could not read text file at path: \n\n" + path + "\n\n" + err, 10000);
+					console.error("Error: could not read text file at path: \n\n" + path + "\n\n" + err);
 					reject(err);
 				}
 				else resolve(data);
@@ -44,38 +110,45 @@ export class Utils
 		});
 	}
 
-	static fixPath(path: string) : string
-	{
-		if (!path.contains('file:///'))
-		{
-			if(path.contains(':'))
-				path = 'file:///' + path;
-			else
-				path = fileURLToPath("file:///" + this.getVaultPath() + "/" + path);
-		}
+	// static fixPath(path: string) : string
+	// {
+	// 	let filePath = path;
+	// 	if (!filePath.contains('file:///'))
+	// 	{
+	// 		if(pathTools.resolve(filePath) === pathTools.normalize(filePath)) // if it's an absolute path
+	// 		{
+	// 			filePath = 'file:///' + filePath;
+	// 		}
+	// 		else
+	// 		{
+	// 			filePath = "file:///" + this.getVaultPath() + "/" + filePath;
+	// 		}
+	// 	}
 
-		return fileURLToPath(path);
-	}
+	// 	try
+	// 	{
+	// 		return fileURLToPath(filePath);
+	// 	}
+	// 	catch
+	// 	{
+	// 		new Notice("Error: Invalid path to file: " + filePath);
+	// 		return path;
+	// 	}
+	// }
 
 	static async getTextBase64(path: string): Promise<string>
 	{
-		path = this.fixPath(path);
-
-		if(!existsSync(path))
-		{
-			console.log("File not found: " + path); 
-			return "";
-		}
-
-		console.log(path);
+		let absolutePath = this.getAbsolutePath(path);
+		if (!absolutePath) return "";
 
 		return new Promise((resolve, reject) =>
 		{
-			readFile(path, { encoding: 'base64' }, (err, data) => 
+			readFile(absolutePath as string, { encoding: 'base64' }, (err, data) => 
 			{
 				if (err)
 				{
-					console.error("Error:" + err);
+					new Notice("Error: could not read base64 text file at path: \n\n" + path + "\n\n" + err, 10000);
+					console.error("Error: could not read base64 text file at path: \n\n" + path + "\n\n" + err);
 					reject(err);
 				}
 				else resolve(data);
@@ -112,11 +185,17 @@ export class Utils
 
 	static async showSaveDialog(defaultPath: string, defaultFileName: string, showAllFilesOption: boolean = true): Promise<string | null>
 	{
-		let type = (defaultFileName.split(".").pop() ?? "txt");
+		// get paths
+		let absoluteDefaultPath = this.getAbsolutePath(this.parsePath(defaultPath).dir);
+		if (!absoluteDefaultPath) absoluteDefaultPath = this.getVaultPath();
+		absoluteDefaultPath += "/" + defaultFileName;
 
+		let defaultPathParsed = this.parsePath(absoluteDefaultPath);
+		
+		// add filters
 		let filters = [{
-			name: type.toUpperCase() + " Files",
-			extensions: [type]
+			name: Utils.trimStart(defaultPathParsed.ext, ".").toUpperCase() + " Files",
+			extensions: [Utils.trimStart(defaultPathParsed.ext, ".")]
 		}];
 
 		if (showAllFilesOption)
@@ -127,48 +206,48 @@ export class Utils
 			});
 		}
 
+		console.log(defaultPathParsed.fullPath);
+
+		// show picker
 		let picker = await dialog.showSaveDialog({
-			defaultPath: (defaultPath + "/" + defaultFileName).replaceAll("\\", "/").replaceAll("//", "/"),
+			defaultPath: defaultPathParsed.fullPath,
 			filters: filters,
 			properties: ["showOverwriteConfirmation"]
 		})
 
 		if (picker.canceled) return null;
 		
-		let path = picker.filePath ?? "";
-
-		if (path != "")
-		{
-			ExportSettings.settings.lastExportPath = path;
-			ExportSettings.saveSettings();
-		}
+		let pickedPath = picker.filePath;
+		ExportSettings.settings.lastExportPath = Utils.parsePath(pickedPath).fullPath;
+		ExportSettings.saveSettings();
 		
-		return path;
+		return pickedPath;
 	}
 
 	static async showSelectFolderDialog(defaultPath: string): Promise<string | null>
 	{
+		// get paths
+		let absoluteDefaultPath = this.getAbsolutePath(defaultPath);
+		if (!absoluteDefaultPath) absoluteDefaultPath = this.getVaultPath();
+
+		// show picker
 		let picker = await dialog.showOpenDialog({
-			defaultPath: defaultPath,
+			defaultPath: Utils.parsePath(absoluteDefaultPath).dir,
 			properties: ["openDirectory"]
 		});
 
 		if (picker.canceled) return null;
 
-		let path = picker.filePaths[0] ?? "";
-
-		if (path != "")
-		{
-			ExportSettings.settings.lastExportPath = path;
-			ExportSettings.saveSettings();
-		}
+		let path = picker.filePaths[0];
+		ExportSettings.settings.lastExportPath = Utils.parsePath(path).dir;
+		ExportSettings.saveSettings();
 
 		return path;
 	}
 
 	static idealDefaultPath() : string
 	{
-		return ExportSettings.settings.lastExportPath == "" ? (Utils.getVaultPath() ?? "") : ExportSettings.settings.lastExportPath;
+		return ExportSettings.settings.lastExportPath == "" ? Utils.getVaultPath() : Utils.parsePath(ExportSettings.settings.lastExportPath).dir;
 	}
 
 	static async downloadFile(data: string, filename: string, path: string = "")
@@ -176,15 +255,21 @@ export class Utils
 		if (path == "")
 		{
 			path = await Utils.showSaveDialog(Utils.idealDefaultPath(), filename) ?? "";
-
 			if (path == "") return;
 		}
 
+		let absolutePath = this.getAbsolutePath(path);
+		if (!absolutePath) return "";
+
 		let array = Utils.createUnicodeArray(data);
 
-		writeFile(Utils.fixPath(path), array, (err) => {
-			if (err) throw err;
-			console.log('The file has been saved at ' + path + '!');
+		writeFile(absolutePath, array, (err) => 
+		{
+			if (err)
+			{
+				console.error("Error: could not write file at path: \n\n" + absolutePath + "\n\n" + err);
+				new Notice("Error: could not write file at path: \n\n" + absolutePath + "\n\n" + err, 10000);
+			}
 		});
 	}
 
@@ -194,53 +279,31 @@ export class Utils
 		{
 			let array = (files[i].unicode ?? true) ? Utils.createUnicodeArray(files[i].data) : Buffer.from(files[i].data, 'base64');
 
-			let path = (folderPath + "/" + (files[i].relativePath ?? "") + "/" + files[i].filename).replaceAll("\\", "/").replaceAll("//", "/").replaceAll("//", "/");
+			let parsedPath = this.parsePath(this.joinPaths(folderPath, files[i].relativePath ?? "", files[i].filename));
 			
-			let dir = Utils.getDirectoryFromFilePath(path);
-			if (!existsSync(dir))
+			if (!this.pathExists(parsedPath.dir)) continue;
+			console.log(parsedPath.fullPath);
+			
+			writeFile(parsedPath.fullPath, array, (err) => 
 			{
-				mkdirSync(dir, { recursive: true });
-			}
-			
-			writeFile(Utils.fixPath(path), array, (err) => {
-				if (err) throw err;
-				console.log('The file has been saved at ' + path + '!');
+				if (err) 
+				{
+					console.error("Error: could not write file at path: \n\n" + parsedPath.fullPath + "\n\n" + err);
+					new Notice("Error: could not write file at path: \n\n" + parsedPath.fullPath + "\n\n" + err, 10000);
+				}
 			});
 		}
 	}
 
-	static getDirectoryFromFilePath(path: string): string
-	{
-		let forwardIndex = path.lastIndexOf("/");
-		let backwardIndex = path.lastIndexOf("\\");
-		
-		let index = forwardIndex > backwardIndex ? forwardIndex : backwardIndex;
-
-		if (index == -1) return "";
-
-		return path.substring(0, index);
-	}
-
-	static getFileNameFromFilePath(path: string): string
-	{
-		let forwardIndex = path.lastIndexOf("/");
-		let backwardIndex = path.lastIndexOf("\\");
-
-		let index = forwardIndex > backwardIndex ? forwardIndex : backwardIndex;
-
-		if (index == -1) return path;
-
-		return path.substring(index + 1);
-	}
-
-	static getVaultPath(): string | null
+	static getVaultPath(): string
 	{
 		let adapter = app.vault.adapter;
-		if (adapter instanceof FileSystemAdapter) {
-			return adapter.getBasePath().replaceAll("\\", "/");
+		if (adapter instanceof FileSystemAdapter) 
+		{
+			return this.parsePath(adapter.getBasePath() ?? "").fullPath;
 		}
 
-		return null;
+		return "";
 	}
 
 	//async function that awaits until a condition is met
@@ -265,8 +328,9 @@ export class Utils
 
 	static async getThemeContent(themeName: string): Promise<string>
 	{
-		let themePath = this.getVaultPath() + "/.obsidian/themes/" + themeName + "/theme.css";
-		if (!existsSync(themePath)) return "";
+		let themePath = this.getAbsolutePath(`/.obsidian/themes/${themeName}/theme.css`);
+		if (!themePath) return "/* Error: Theme not found */";
+
 		let themeContent = await Utils.getText(themePath);
 		return themeContent;
 	}
@@ -290,7 +354,7 @@ export class Utils
 
 		for (let i = 0; i < enabledSnippets.length; i++)
 		{
-			snippetContents.push(await Utils.getText(Utils.getVaultPath() + "/.obsidian/snippets/" + enabledSnippets[i] + ".css"));
+			snippetContents.push(await Utils.getText(`/.obsidian/snippets/${enabledSnippets[i]}.css`));
 		}
 
 		return snippetContents;
@@ -330,7 +394,7 @@ export class Utils
 		return view;
 	}
 
-	static getFirstFileByName(name: string): TFile | undefined
+	static findFileInVaultByName(name: string): TFile | undefined
 	{
 		return app.vault.getFiles().find(file =>
 		{
@@ -350,6 +414,38 @@ export class Utils
 			}
 		}
 	}
+
+	static beautifyHTML(html: string) : string
+	{
+		var div = document.createElement('div');
+		div.innerHTML = html.trim();
+	
+		return this._beautifyhtmlrecursive(div, 0).innerHTML;
+	}
+
+	static _beautifyhtmlrecursive(node: Element, level: number) : Element
+	{
+		var indentBefore = new Array(level++ + 1).join('  '),
+			indentAfter  = new Array(level - 1).join('  '),
+			textNode;
+	
+		for (var i = 0; i < node.children.length; i++) {
+	
+			textNode = document.createTextNode('\n' + indentBefore);
+			node.insertBefore(textNode, node.children[i]);
+	
+			this._beautifyhtmlrecursive(node.children[i], level);
+	
+			if (node.lastElementChild == node.children[i]) {
+				textNode = document.createTextNode('\n' + indentAfter);
+				node.appendChild(textNode);
+			}
+		}
+	
+		return node;
+	}
+	
+	
 
 	static trimEnd(inputString: string, trimString: string): string
 	{

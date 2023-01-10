@@ -27,6 +27,7 @@
 	},
 	"dependencies": {
 		"jquery": "^3.5.14",
-		"jszip": "^3.10.1"
+		"jszip": "^3.10.1",
+		"upath": "^2.0.1"
 	}
 }
