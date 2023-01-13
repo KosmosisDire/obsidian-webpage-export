@@ -135,8 +135,7 @@ Export options
 
 ## Contributing
 - I am open to any PRs as long as they align with my vision for the plugin. So if you are going to work on a feature that isn't on the TO DO, then please submit an issue instead.
-- When changing styles, you must set the `autoDownloadExtras` variable at the top of `html-gen.ts` to `false`. This is to prevent the plugin from redownloading the extra styles and overwiting changes. Be sure to set this back once you're done testing, but then don't reload the plugin until you have commited your changes.
-- Try to keep large scale reorganization of the code to a minimum. Small regoranizations and refactors are fine.
+- When changing files in the `assets` folder, you must set `autoDownloadExtras` to false inside of html-gen.ts, or it will redownload the files and overwrite your changes. Once you've finished only commit your changes to the assets folder (not html-gen.ts). Unfortunately, it will keep overwriting your results every time the plugin is reloaded, until those changes are part of the main branch on github.
 
 ## Credits
 Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for opening specific files in a new tab.
