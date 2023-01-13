@@ -1,3 +1,5 @@
+# NOTICE: MAC OS and Linux are currently unsupported due to file managment oversights on my part. Check back in a couple weeks or follow the issue on github. Thanks for your patience :)
+
 # Webpage HTML Export
 
 Exports an obsidian document, folder, or vault as an HTML document / webpage / website, **(correctly!)** including all styling and formatting.
