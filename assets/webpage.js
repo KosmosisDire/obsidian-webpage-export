@@ -80,7 +80,7 @@ jQuery(function()
 		setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
     });
 
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => 
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event =>
 	{
 		// return if we are printing
 		if (window.matchMedia('print').matches)
@@ -127,7 +127,7 @@ jQuery(function()
         });
     });
 
-    
+
 
     // MAKE HEADERS COLLAPSIBLE
     // if "heading-collapse-indicator" is clicked, toggle the display of every div until the next heading of the same or lower level
@@ -159,14 +159,14 @@ jQuery(function()
 			if ($(header).hasClass("is-collapsed")) $(header).toggleClass("is-collapsed");
 
             $(header).nextUntil(selector).show();
-			
+
 			// close headers inside of this one that are collapsed
             $(header).nextUntil(selector).each(function()
             {
 				if($(this).hasClass("is-collapsed"))
 					setHeaderCollapse($(this), true);
             });
-			
+
 			//open headers above this one that are collapsed
 			lastHeaderSize = $(header).children().first().prop("tagName").toLowerCase().replace("h", "");
 			$(header).prevAll().each(function()
@@ -218,13 +218,13 @@ jQuery(function()
 
     // MAKE OUTLINE COLLAPSIBLE
     // if "outline-header" is clicked, toggle the display of every div until the next heading of the same or lower level
-    
+
     var outline_width = 0;
 
     $(".outline-item-contents > .collapse-icon").on("click", function()
     {
         var isCollapsed = $(this).parent().parent().hasClass("is-collapsed");
-        
+
         $(this).parent().parent().toggleClass("is-collapsed");
 
         if(isCollapsed)
@@ -235,6 +235,9 @@ jQuery(function()
         {
             $(this).parent().next().slideUp(120);
         }
+
+		// Prevent the collapse button from triggering the parent <a> tag navigation.
+		return false;
     });
 
     // hide the control button if the header has no children

@@ -1,14 +1,16 @@
 import {  readFile, writeFile, existsSync, mkdirSync } from 'fs';
 import { FileSystemAdapter, MarkdownView, TextFileView, TFile } from 'obsidian';
 import { ExportSettings } from './settings';
-import { fileURLToPath } from 'url';
+import { fileURLToPath, pathToFileURL } from 'url';
+import { isAbsolute, normalize, join } from 'path';
+
 
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;
 
 export class Utils
 {
-	static async delay (ms: number)
+	static async delay(ms: number)
 	{
 		return new Promise( resolve => setTimeout(resolve, ms) );
 	}
@@ -19,20 +21,19 @@ export class Utils
 		return newPath;
 	}
 
-
 	static async getText(path: string): Promise<string>
 	{
 		path = this.fixPath(path);
 
-		if(!existsSync(path))
-		{ 
-			console.log("File not found: " + path); 
+		if (!existsSync(path))
+		{
+			console.log("File not found: " + path);
 			return "";
 		}
 
 		return new Promise((resolve, reject) =>
 		{
-			readFile(path, { encoding: 'utf8' }, (err, data) => 
+			readFile(path, { encoding: 'utf8' }, (err, data) =>
 			{
 				if (err)
 				{
@@ -49,9 +50,9 @@ export class Utils
 		if (!path.startsWith('file:///'))
 		{
 			if (isAbsolute(path))
-				path = pathToFileURL(normalize(path));
+				path = pathToFileURL(normalize(path)).toString();
 			else
-				path = pathToFileURL(normalize(join(this.getVaultPath(), path)));
+				path = pathToFileURL(normalize(join(this.getVaultPath() as string, path))).toString();
 		}
 
 		return fileURLToPath(path);
@@ -63,7 +64,7 @@ export class Utils
 
 		if(!existsSync(path))
 		{
-			console.log("File not found: " + path); 
+			console.log("File not found: " + path);
 			return "";
 		}
 
@@ -71,7 +72,7 @@ export class Utils
 
 		return new Promise((resolve, reject) =>
 		{
-			readFile(path, { encoding: 'base64' }, (err, data) => 
+			readFile(path, { encoding: 'base64' }, (err, data) =>
 			{
 				if (err)
 				{
@@ -86,7 +87,7 @@ export class Utils
 	static changeViewMode(view: MarkdownView, modeName: "preview" | "source")
 	{
 		/*@ts-ignore*/
-		const mode = view.modes[modeName]; 
+		const mode = view.modes[modeName];
 		/*@ts-ignore*/
 		mode && view.setMode(mode);
 	};
@@ -98,7 +99,7 @@ export class Utils
 		// BE BOM
 		byteArray.push(254, 255);
 
-		for (let i = 0; i < content.length; ++i) 
+		for (let i = 0; i < content.length; ++i)
 		{
 			charCode = content.charCodeAt(i);
 
@@ -134,7 +135,7 @@ export class Utils
 		})
 
 		if (picker.canceled) return null;
-		
+
 		let path = picker.filePath ?? "";
 
 		if (path != "")
@@ -142,7 +143,7 @@ export class Utils
 			ExportSettings.settings.lastExportPath = path;
 			ExportSettings.saveSettings();
 		}
-		
+
 		return path;
 	}
 
@@ -195,13 +196,13 @@ export class Utils
 			let array = (files[i].unicode ?? true) ? Utils.createUnicodeArray(files[i].data) : Buffer.from(files[i].data, 'base64');
 
 			let path = (folderPath + "/" + (files[i].relativePath ?? "") + "/" + files[i].filename).replaceAll("\\", "/").replaceAll("//", "/").replaceAll("//", "/");
-			
+
 			let dir = Utils.getDirectoryFromFilePath(path);
 			if (!existsSync(dir))
 			{
 				mkdirSync(dir, { recursive: true });
 			}
-			
+
 			writeFile(Utils.fixPath(path), array, (err) => {
 				if (err) throw err;
 				console.log('The file has been saved at ' + path + '!');
@@ -213,7 +214,7 @@ export class Utils
 	{
 		let forwardIndex = path.lastIndexOf("/");
 		let backwardIndex = path.lastIndexOf("\\");
-		
+
 		let index = forwardIndex > backwardIndex ? forwardIndex : backwardIndex;
 
 		if (index == -1) return "";

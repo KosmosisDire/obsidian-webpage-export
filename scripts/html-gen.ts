@@ -19,8 +19,8 @@ export class HTMLGenerator
 	// I am sure there is a better way to handle this data flow but I am not sure what to do.
 	private outlinedImages: { original_path: string, destination_path_rel: string }[] = [];
 
-	// this is a string containing the filtered app.css file. It is populated on load. 
-	// The math styles are attempted to load on every export until they are succesfully loaded. 
+	// this is a string containing the filtered app.css file. It is populated on load.
+	// The math styles are attempted to load on every export until they are succesfully loaded.
 	// This is because they only load when a file containing latex is opened.
 	appStyles: string = "";
 
@@ -47,9 +47,12 @@ export class HTMLGenerator
 	private webpagejsURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/webpage.js";
 	private pluginStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/plugin-styles.css";
 	private obsidianStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/obsidian-styles.css";
-	
+
 	private async downloadExtras()
 	{
+		if (!this.autoDownloadExtras)
+			return;
+
 		if (!existsSync(this.assetsPath))
 		{
 			console.log("Creating assets folder as it does not exist.");
@@ -201,7 +204,7 @@ export class HTMLGenerator
 		Utils.setLineWidth(ExportSettings.settings.customLineWidth);
 		if (view instanceof MarkdownView)
 			await Utils.viewEnableFullRender(view);
-		
+
 		let contentEl : HTMLElement = this.generateBodyContents();
 
 		this.fixLinks(contentEl); // modify links to work outside of obsidian (including relative links)
@@ -238,7 +241,7 @@ export class HTMLGenerator
 		let headEl: HTMLHeadElement = await this.generateHead(view);
 		let bodyRootEl : HTMLBodyElement = this.generateBodyRoot();
 		let sidebars = this.generateSideBars(contentEl, toggle ?? document.createElement("div"), outline ?? document.createElement("div"));
-		
+
 		let finalContent : HTMLElement = sidebars;
 		if(toggle == null && outline == null) finalContent = contentEl;
 
@@ -370,11 +373,11 @@ export class HTMLGenerator
 
 			let thirdPartyPluginStyles = await this.getThirdPartyPluginCSS();
 			pluginStyles += thirdPartyPluginStyles;
-			
+
 			var header =
 			`
 			${meta}
-			
+
 			<!-- Obsidian App Styles / Other Built-in Styles -->
 			<style> ${this.appStyles} </style>
 			<style> ${mathStyles} </style>
@@ -388,7 +391,7 @@ export class HTMLGenerator
 
 			<!-- Snippets: ${snippetNames.join(", ")} -->
 			<style> ${snippets.join("</style><style>")} </style>
-		
+
 			${scripts}
 			`;
 		}
@@ -449,11 +452,11 @@ export class HTMLGenerator
 					bestPath = "../" + bestPath;
 				}
 
-				console.log("bestPath: " + bestPath); 
+				console.log("bestPath: " + bestPath);
 
 				if (href.length == 1)
 				{
-					finalHref = bestPath + ".html"; 
+					finalHref = bestPath + ".html";
 				}
 
 				if (href.length == 2)
@@ -501,6 +504,8 @@ export class HTMLGenerator
 			// use the headers inner text as the id
 			$(this).attr("id", $(this).text().replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_"));
 		});
+
+		query.find("a.footnote-link").attr("target", "_self");
 	}
 
 	private async inlineImages(page: HTMLElement)
@@ -511,13 +516,16 @@ export class HTMLGenerator
 		for (let i = 0; i < images.length; i++)
 		{
 			let img = images[i];
-			if ($(img).attr("src")?.startsWith("app://local/"))
+			const src = $(img).attr("src");
+
+			if (src && src.startsWith("app://local/"))
 			{
-				let path = $(img).attr("src")?.replace("app://local/", "file:///").split("?")[0];
+				let path = src.replace("app://local/", "file:///").split("?")[0];
 
 				if (path)
 				{
 					let base64 = "";
+
 					try
 					{
 						base64 = await Utils.getTextBase64(path);
@@ -530,7 +538,11 @@ export class HTMLGenerator
 						continue;
 					}
 
-					$(img).attr("src", "data:image/png;base64," + base64);
+
+					if (src.contains(".svg"))
+						$(img).attr("src", "data:image/svg+xml;base64," + base64);
+					else
+						$(img).attr("src", "data:image/png;base64," + base64);
 				}
 			}
 		}
@@ -631,15 +643,15 @@ export class HTMLGenerator
 		outlineItemContentsEl.classList.add("outline-item-contents");
 		outlineItemContentsEl.classList.add("internal-link");
 		outlineItemContentsEl.setAttribute("href", "#" + header.href);
-		
+
 		let outlineItemIconEl = document.createElement('div');
 		outlineItemIconEl.classList.add("tree-item-icon");
 		outlineItemIconEl.classList.add("collapse-icon");
-		
+
 		let outlineItemIconSvgEl = document.createElement('svg');
 		outlineItemIconSvgEl.innerHTML = arrowIcon;
 		outlineItemIconSvgEl = outlineItemIconSvgEl.firstChild as HTMLElement;
-		
+
 		let outlineItemTitleEl = document.createElement('span');
 		outlineItemTitleEl.classList.add("outline-item-title");
 		outlineItemTitleEl.innerText = header.title;
@@ -689,7 +701,7 @@ export class HTMLGenerator
 		outlineEl.appendChild(outlineHeader);
 
 		let listStack = [outlineEl];
-		
+
 		// function to get the data-size of the previous list item as a number
 		function getLastStackSize(): number
 		{
