@@ -46,12 +46,12 @@ export class Utils
 
 	static fixPath(path: string) : string
 	{
-		if (!path.contains('file:///'))
+		if (!path.startsWith('file:///'))
 		{
-			if(path.contains(':'))
-				path = 'file:///' + path;
+			if (isAbsolute(path))
+				path = pathToFileURL(normalize(path));
 			else
-				path = fileURLToPath("file:///" + this.getVaultPath() + "/" + path);
+				path = pathToFileURL(normalize(join(this.getVaultPath(), path)));
 		}
 
 		return fileURLToPath(path);
