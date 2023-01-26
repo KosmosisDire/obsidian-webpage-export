@@ -11,9 +11,9 @@ export class HTMLGenerator
 	// When this is enabled the plugin will download the extra .css and .js files from github.
 	autoDownloadExtras = true;
 
-	private vaultPluginsPath: string = Utils.getVaultPath() + "/.obsidian/plugins";
-	private thisPluginPath: string = this.vaultPluginsPath + "/webpage-html-export";
-	private assetsPath: string = this.thisPluginPath + "/assets";
+	private vaultPluginsPath: string = Utils.getAbsolutePath(Utils.getVaultPath() + "/.obsidian/plugins/") as string;
+	private thisPluginPath: string = Utils.getAbsolutePath(this.vaultPluginsPath + "/webpage-html-export/") as string;
+	private assetsPath: string = Utils.getAbsolutePath(this.thisPluginPath + "/assets/") as string;
 
 	// this is a list of images that is populated during generation and then downloaded upon export
 	// I am sure there is a better way to handle this data flow but I am not sure what to do.
@@ -250,7 +250,7 @@ export class HTMLGenerator
 		if (returnEl == true)
 			return htmlEl;
 		else
-			return Utils.beautifyHTML("<!DOCTYPE html>\n" + htmlEl.outerHTML);
+			return "<!DOCTYPE html>\n" + htmlEl.outerHTML;
 	}
 
 	private generateSideBars(middleContent: HTMLElement, leftContent: HTMLElement, rightContent: HTMLElement): HTMLDivElement
@@ -490,6 +490,11 @@ export class HTMLGenerator
 			$(this).attr("href", finalHref);
 		});
 
+		query.find("a.footnote-link").each(function ()
+		{
+			$(this).attr("target", "_self");
+		});
+
 		query.find("h1, h2, h3, h4, h5, h6").each(function ()
 		{
 			// use the headers inner text as the id
@@ -508,6 +513,9 @@ export class HTMLGenerator
 			if (!$(img).attr("src")?.startsWith("app://local/")) continue;
 			
 			let path = $(img).attr("src")?.replace("app://local/", "").split("?")[0];
+			if(!path) continue;
+
+			path = Utils.makeRelative(path);
 
 			if (path)
 			{
@@ -550,17 +558,20 @@ export class HTMLGenerator
 			}
 			if (imagePathOriginal.startsWith("data:image/png;base64,") || imagePathOriginal.startsWith("data:image/jpeg;base64,")) return;
 
+			console.log("image path original: " + imagePathOriginal);
 			imagePathOriginal = Utils.getAbsolutePath(imagePathOriginal);
 			if (!imagePathOriginal) return;
 
 			let continingFilePath = Utils.getAbsolutePath(view.file.path);
 			if (!continingFilePath) return;
 
-			let relativeImagePath = Utils.getRelativePath(imagePathOriginal, continingFilePath);
-			if (relativeImagePath.startsWith("..")) relativeImagePath = Utils.joinPaths("/images", Utils.parsePath(imagePathOriginal).base);
+			let relativeImagePath = Utils.joinPaths(Utils.getRelativePath(imagePathOriginal, continingFilePath), Utils.parsePath(imagePathOriginal).base);
+			if (relativeImagePath.startsWith("..")) relativeImagePath = Utils.joinPaths("images", Utils.parsePath(imagePathOriginal).base);
+			
+			relativeImagePath = Utils.makeRelative(relativeImagePath);
 
-			console.log("relative image path: " + relativeImagePath);
-
+			console.log("relative image path: " + relativeImagePath + " | original: " + imagePathOriginal);
+			
 			$(this).attr("src", relativeImagePath);
 
 			imagesToOutline.push({ localImagePath: imagePathOriginal, relativeExportImagePath: relativeImagePath });

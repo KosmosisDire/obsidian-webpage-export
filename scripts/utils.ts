@@ -19,7 +19,7 @@ export class Utils
 	{
 		path = this.makePathUnicodeCompatible(path);
 		let parsed = pathTools.parse(path);
-		if(path.endsWith("/")) 
+		if(path.endsWith("/") || parsed.ext == "") 
 		{
 			parsed.dir = pathTools.normalizeSafe(path);
 			parsed.base = "";
@@ -47,6 +47,19 @@ export class Utils
 		return true;
 	}
 
+	static createDirectory(path: string)
+	{
+		path = this.parsePath(this.getAbsolutePath(path, false) ?? path).dir;
+
+		console.log("Checking directory: " + path);
+
+		if (!this.pathExists(path, false))
+		{
+			console.log("Creating directory at: " + path);
+			mkdirSync(path, { recursive: true });
+		}
+	}
+
 	static makePathUnicodeCompatible(path: string): string
 	{
 		return decodeURI(path);
@@ -64,6 +77,22 @@ export class Utils
 			if (path.match(/^[\/]/)) return true;
 			else return false;
 		}
+	}
+
+	static makeRelative(path: string): string
+	{
+		path = path.replaceAll("\\", "/");
+
+		if(process.platform == "win32")
+		{
+			if(!path.startsWith("/")) return "/" + path;
+		}
+		else
+		{
+			if(path.startsWith("/")) return path.slice(1);
+		}
+
+		return path;
 	}
 
 	static getAbsolutePath(path: string, mustExist: boolean = true, workingDirectory: string = this.getVaultPath()): string | undefined
@@ -206,8 +235,6 @@ export class Utils
 			});
 		}
 
-		console.log(defaultPathParsed.fullPath);
-
 		// show picker
 		let picker = await dialog.showSaveDialog({
 			defaultPath: defaultPathParsed.fullPath,
@@ -258,8 +285,10 @@ export class Utils
 			if (path == "") return;
 		}
 
-		let absolutePath = this.getAbsolutePath(path);
+		let absolutePath = this.getAbsolutePath(path, false);
 		if (!absolutePath) return "";
+
+		this.createDirectory(absolutePath);
 
 		let array = Utils.createUnicodeArray(data);
 
@@ -281,8 +310,7 @@ export class Utils
 
 			let parsedPath = this.parsePath(this.joinPaths(folderPath, files[i].relativePath ?? "", files[i].filename));
 			
-			if (!this.pathExists(parsedPath.dir)) continue;
-			console.log(parsedPath.fullPath);
+			this.createDirectory(parsedPath.fullPath);
 			
 			writeFile(parsedPath.fullPath, array, (err) => 
 			{
