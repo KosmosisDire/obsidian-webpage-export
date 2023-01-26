@@ -72,6 +72,8 @@ export default class HTMLExportPlugin extends Plugin
 	{
 		console.log('loading webpage-html-export plugin');
 
+		//"app://local/" + Utils.getAbsolutePath(Utils.makeRelative(".obsidian/plugins/webpage-html-export/webpage.js"));
+
 		// init settings
 		new ExportSettings(this);
 		ExportSettings.loadSettings();
