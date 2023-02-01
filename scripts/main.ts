@@ -7,6 +7,7 @@ import { Utils } from './utils';
 import { LeafHandler } from './leaf-handler';
 import { HTMLGenerator } from './html-gen';
 const {shell} = require('electron') 
+const pathTools = require('path');
 
 export default class HTMLExportPlugin extends Plugin
 {
@@ -35,6 +36,8 @@ export default class HTMLExportPlugin extends Plugin
 			});
 		});
 	}
+
+	
 
 	async addCommands()
 	{
@@ -68,6 +71,7 @@ export default class HTMLExportPlugin extends Plugin
 	async onload()
 	{
 		console.log('loading webpage-html-export plugin');
+
 
 		// init settings
 		new ExportSettings(this);
@@ -159,6 +163,14 @@ export default class HTMLExportPlugin extends Plugin
 			}
 		}
 
+		let parsedPath = Utils.parsePath(fullPath);
+		if (fullPath == "") 
+		{
+			let saveDialogPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.basename + ".html", false) ?? undefined;
+			if (saveDialogPath == undefined) return false;
+			parsedPath = Utils.parsePath(saveDialogPath);
+		}
+
 		let fileTab = this.leafHandler.openFileInNewLeaf(file as TFile, true);
 
 		let htmlEl : string | HTMLHtmlElement | null = await this.htmlGenerator.getCurrentFileHTML();
@@ -171,7 +183,7 @@ export default class HTMLExportPlugin extends Plugin
 
 		let htmlText = (htmlEl instanceof HTMLHtmlElement) ? htmlEl.outerHTML : htmlEl;
 
-		let toDownload = await this.htmlGenerator.getSeperateFilesToDownload();
+		let filesToDownload = await this.htmlGenerator.getSeperateFilesToDownload();
 
 		// Close the file tab after HTML is generated
 		fileTab.detach();
@@ -185,22 +197,16 @@ export default class HTMLExportPlugin extends Plugin
 
 		// Download files
 		let htmlDownload = { filename: file.basename + ".html", data: htmlText, type: "text/html" };
-		toDownload.push(htmlDownload);
+		filesToDownload.unshift(htmlDownload);
 
-		let htmlPath: string | null = fullPath;
-		if (htmlPath == "")
-			htmlPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.basename + ".html", false);
+		let filename = parsedPath.base;
+		let folderPath = parsedPath.dir;
 
-		if (!htmlPath) return false;
+		filesToDownload[0].filename = filename;
 
-		let filename = Utils.getFileNameFromFilePath(htmlPath);
-		let folderPath = Utils.getDirectoryFromFilePath(htmlPath);
+		await Utils.downloadFiles(filesToDownload, folderPath);
 
-		toDownload[toDownload.length - 1].filename = filename;
-
-		await Utils.downloadFiles(toDownload, folderPath);
-
-		new Notice("Exported " + file.name + " to " + htmlPath, 5000);
+		new Notice("Exported " + file.name + " to " + parsedPath.fullPath, 5000);
 
 		return true;
 	}
@@ -231,7 +237,7 @@ export default class HTMLExportPlugin extends Plugin
 			}
 		}
 
-		let htmlPath = await Utils.showSelectFolderDialog(Utils.getDirectoryFromFilePath(Utils.idealDefaultPath()));
+		let htmlPath = await Utils.showSelectFolderDialog(Utils.parsePath(Utils.idealDefaultPath()).dir);
 		if (!htmlPath) return false;
 
 		let files = this.app.vault.getFiles();
@@ -241,12 +247,12 @@ export default class HTMLExportPlugin extends Plugin
 			let file = files[i];
 			if (file.path.startsWith(folderPath) && file.extension == "md")
 			{
-				let fullPath = htmlPath + "/" + Utils.getDirectoryFromFilePath(file.path) + "/" + file.basename + ".html";
+				let fullPath = Utils.joinPaths(htmlPath, Utils.parsePath(file.path).dir, file.basename + ".html");
 				await this.exportFile(file, fullPath, false);
 			}
 		}
 
-		new Notice("Folder exported " + folderPath + " to " + htmlPath, 7000);
+		new Notice("Folder exported " + folderPath + " to " + htmlPath, 10000);
 
 		return true;
 	}

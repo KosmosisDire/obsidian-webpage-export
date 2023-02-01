@@ -11,13 +11,13 @@ export class HTMLGenerator
 	// When this is enabled the plugin will download the extra .css and .js files from github.
 	autoDownloadExtras = true;
 
-	private vaultPluginsPath: string = Utils.getVaultPath() + "/.obsidian/plugins";
-	private thisPluginPath: string = this.vaultPluginsPath + "/webpage-html-export";
-	private assetsPath: string = this.thisPluginPath + "/assets";
+	private vaultPluginsPath: string = Utils.getAbsolutePath(Utils.getVaultPath() + "/.obsidian/plugins/") as string;
+	private thisPluginPath: string = Utils.getAbsolutePath(this.vaultPluginsPath + "/webpage-html-export/") as string;
+	private assetsPath: string = Utils.getAbsolutePath(this.thisPluginPath + "/assets/") as string;
 
 	// this is a list of images that is populated during generation and then downloaded upon export
 	// I am sure there is a better way to handle this data flow but I am not sure what to do.
-	private outlinedImages: { original_path: string, destination_path_rel: string }[] = [];
+	private outlinedImages: { localImagePath: string, relativeExportImagePath: string }[] = [];
 
 	// this is a string containing the filtered app.css file. It is populated on load. 
 	// The math styles are attempted to load on every export until they are succesfully loaded. 
@@ -50,11 +50,7 @@ export class HTMLGenerator
 	
 	private async downloadExtras()
 	{
-		if (!existsSync(this.assetsPath))
-		{
-			console.log("Creating assets folder as it does not exist.");
-			mkdirSync(this.assetsPath);
-		}
+		Utils.createDirectory(this.assetsPath);
 
 		//Download webpage.js
 		let webpagejs = await fetch(this.webpagejsURL);
@@ -173,13 +169,14 @@ export class HTMLGenerator
 			for (let i = 0; i < this.outlinedImages.length; i++)
 			{
 				let image = this.outlinedImages[i];
-				let data = await Utils.getTextBase64(image.original_path);
+				let data = await Utils.getTextBase64(image.localImagePath);
+				let destinationPath = Utils.parsePath(image.relativeExportImagePath);
 				let imageDownload =
 				{
-					filename: Utils.getFileNameFromFilePath(image.destination_path_rel),
+					filename: destinationPath.base,
 					data: data,
 					type: "image/png",
-					relativePath: Utils.getDirectoryFromFilePath(image.destination_path_rel),
+					relativePath: destinationPath.dir,
 					unicode: false
 				};
 				toDownload.push(imageDownload);
@@ -419,7 +416,6 @@ export class HTMLGenerator
 	//#endregion
 
 	//#region Links and Images
-
 	private fixLinks(page: HTMLElement)
 	{
 		let query = jQuery(page);
@@ -428,78 +424,77 @@ export class HTMLGenerator
 			$(this).attr("target", "_self");
 
 			let finalHref = "";
-			let href = $(this).attr("href")?.split("#");
-
+			let href = $(this).attr("href");
 			if (!href) return;
 
-			// if the file doesn't start with #, then it links to a file, or a header in another file.
-			if (href[0] != "") // href[0] is everything that came before the #, if there was a #.
+			if (href.startsWith("#")) // link pointing to header of this document
 			{
+				finalHref = "#" + href.slice(1).replaceAll(" ", "_").replaceAll("#", "");
+			}
+			else // if it doesn't start with #, it's a link to another document
+			{
+				let headers = href.split("#");
+
 				// find the file that matches the link
 				let currentFile = app.workspace.getActiveFile();
 				if (!currentFile) return;
 
-				let bestPath = app.metadataCache.getFirstLinkpathDest(href[0], currentFile.path)?.path;
+				let bestPath = app.metadataCache.getFirstLinkpathDest(headers[0], currentFile.path)?.path;
 				if (!bestPath) return;
-
-				bestPath = Utils.trimEnd(Utils.trimEnd(bestPath, ".md"), ".canvas");
+				
 				let fileDepth = currentFile.path.split("/").length - 1;
 				for (let i = 0; i < fileDepth; i++)
 				{
 					bestPath = "../" + bestPath;
 				}
+				
+				// get the targeted header name if there is one
+				headers.shift(); // remove the file name from headers list
+				let header = "#" + headers.join("-").replaceAll(" ", "_");
 
-				console.log("bestPath: " + bestPath); 
+				finalHref = bestPath + ".html" + header;
 
-				if (href.length == 1)
-				{
-					finalHref = bestPath + ".html"; 
-				}
+				// if (href.length == 1)
+				// {
+				// 	finalHref = bestPath + ".html"; 
+				// }
 
-				if (href.length == 2)
-				{
-					let filePath = "";
-					if (!bestPath.contains("/") && !bestPath.contains("\\"))
-					{
-						filePath = Utils.getDirectoryFromFilePath(Utils.getFirstFileByName(bestPath)?.path ?? "") + "/";
-					}
+				// if (href.length == 2)
+				// {
+				// 	let filePath = "";
+				// 	if (!bestPath.contains("/") && !bestPath.contains("\\"))
+				// 	{
+				// 		filePath = Utils.getDirectoryFromFilePath(Utils.findFileInVaultByName(bestPath)?.path ?? "") + "/";
+				// 	}
 
-					finalHref = filePath + bestPath + ".html#" + href[1].replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
-				}
+				// 	finalHref = filePath + bestPath + ".html#" + href[1].replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
+				// }
 
-				if (href.length > 2)
-				{
-					href.shift();
-					let filePath = "";
-					if (!bestPath.contains("/") && !bestPath.contains("\\"))
-					{
-						filePath = Utils.getDirectoryFromFilePath(Utils.getFirstFileByName(bestPath)?.path ?? "") + "/";
-					}
+				// if (href.length > 2)
+				// {
+				// 	href.shift();
+				// 	let filePath = "";
+				// 	if (!bestPath.contains("/") && !bestPath.contains("\\"))
+				// 	{
+				// 		filePath = Utils.getDirectoryFromFilePath(Utils.findFileInVaultByName(bestPath)?.path ?? "") + "/";
+				// 	}
 
-					finalHref = filePath + bestPath + ".html#" + href.join("#").replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
-				}
-			}
-			else // if the file starts with #, then it links to an internal header.
-			{
-				href.shift();
-				if (href.length == 1)
-				{
-					finalHref = "#" + href[0].replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
-				}
-
-				if (href.length > 1)
-				{
-					finalHref = href.join("#").replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
-				}
+				// 	finalHref = filePath + bestPath + ".html#" + href.join("#").replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
+				// }
 			}
 
 			$(this).attr("href", finalHref);
 		});
 
+		query.find("a.footnote-link").each(function ()
+		{
+			$(this).attr("target", "_self");
+		});
+
 		query.find("h1, h2, h3, h4, h5, h6").each(function ()
 		{
 			// use the headers inner text as the id
-			$(this).attr("id", $(this).text().replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_"));
+			$(this).attr("id", $(this).text().replaceAll(" ", "_").replaceAll("#", ""));
 		});
 	}
 
@@ -511,28 +506,28 @@ export class HTMLGenerator
 		for (let i = 0; i < images.length; i++)
 		{
 			let img = images[i];
-			if ($(img).attr("src")?.startsWith("app://local/"))
+			if (!$(img).attr("src")?.startsWith("app://local")) continue;
+			
+			let path = $(img).attr("src")?.replace("app://local", "").split("?")[0];
+			if(!path) continue;
+
+			path = Utils.forceAbsolutePath(path);
+
+			let base64 = "";
+			try
 			{
-				let path = $(img).attr("src")?.replace("app://local/", "file:///").split("?")[0];
-
-				if (path)
-				{
-					let base64 = "";
-					try
-					{
-						base64 = await Utils.getTextBase64(path);
-					}
-					catch (e)
-					{
-						console.error(e);
-						console.warn("Failed to inline image: " + path);
-						new Notice("Failed to inline image: " + path, 5000);
-						continue;
-					}
-
-					$(img).attr("src", "data:image/png;base64," + base64);
-				}
+				base64 = await Utils.getTextBase64(path);
 			}
+			catch (e)
+			{
+				console.error(e);
+				console.warn("Failed to inline image: " + path);
+				new Notice("Failed to inline image: " + path, 5000);
+				continue;
+			}
+
+			$(img).attr("src", "data:image/png;base64," + base64);
+			
 		}
 	}
 
@@ -542,41 +537,37 @@ export class HTMLGenerator
 
 		this.outlinedImages = [];
 
-		let img2Download: { original_path: string, destination_path_rel: string }[] = [];
-		let vaultPath = Utils.getVaultPath();
+		let imagesToOutline: { localImagePath: string, relativeExportImagePath: string }[] = [];
 
 		query.find("img").each(function ()
 		{
-			if (!$(this).attr("src")?.startsWith("app://local/")) return;
+			let imagePath = $(this).attr("src") ?? "";
+			if (imagePath == "") return;
 
-			let originalPath = $(this).attr("src")?.replaceAll("\\", "/").replaceAll("%20", " ").replace("app://local/", "");
+			if (!imagePath.startsWith("app://local") || imagePath.contains("data:")) return;
 
-			// console.log("originalPath: " + originalPath);
+			imagePath = Utils.trimStart(imagePath, "app://local").split("?")[0];
+			imagePath = Utils.forceAbsolutePath(imagePath);
+			
+			let filePath = Utils.getAbsolutePath(view.file.path) ?? "";
+			
+			let imageBase = Utils.parsePath(imagePath).base;
+			let relativeImagePath = Utils.joinPaths(Utils.getRelativePath(imagePath, filePath), imageBase);
 
-			if (!originalPath)
+			// we won't save images at a relative path lower than or equal to the document, so we just group them all in an "images" folder
+			if (relativeImagePath.startsWith("..") || relativeImagePath == "/" || relativeImagePath == "") 
 			{
-				new Notice("Failed to outline image: " + originalPath + ". Couldn't find image src", 5000);
-				return;
+				relativeImagePath = Utils.joinPaths("images", imageBase);
 			}
+			
+			relativeImagePath = Utils.forceRelativePath(relativeImagePath, true);
 
-			if (originalPath.startsWith("data:image/png;base64,") || originalPath.startsWith("data:image/jpeg;base64,")) return;
+			$(this).attr("src", relativeImagePath);
 
-			let relPath = originalPath.split(Utils.getDirectoryFromFilePath(vaultPath + "/" + view.file.path.replaceAll("\\", "/")) + "/")[1];
-
-			// console.log(originalPath, "vs.", Utils.getDirectoryFromFilePath(vaultPath + "/" + view.file.path.replaceAll("\\", "/")) + "/");
-
-			if (!relPath)
-				relPath = ("images/" + Utils.getFileNameFromFilePath($(this).attr("src")?.replaceAll("\\", "/").replaceAll("%20", " ") ?? "")) ?? "img.png";
-
-			// console.log("relPath: " + relPath);
-
-			$(this).attr("src", relPath);
-
-			img2Download.push({ original_path: originalPath, destination_path_rel: relPath });
-
+			imagesToOutline.push({ localImagePath: imagePath, relativeExportImagePath: relativeImagePath });
 		});
 
-		this.outlinedImages = img2Download;
+		this.outlinedImages = imagesToOutline;
 	}
 
 	//#endregion
