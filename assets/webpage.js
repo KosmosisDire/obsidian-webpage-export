@@ -221,7 +221,7 @@ jQuery(function()
     
     var outline_width = 0;
 
-    $(".outline-item-contents > .collapse-icon").on("click", function()
+    $(".outline-item-contents > .collapse-icon").on("click", function(e)
     {
         var isCollapsed = $(this).parent().parent().hasClass("is-collapsed");
         
@@ -235,6 +235,8 @@ jQuery(function()
         {
             $(this).parent().next().slideUp(120);
         }
+
+		e.stopPropagation();
     });
 
     // hide the control button if the header has no children
