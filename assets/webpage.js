@@ -236,7 +236,9 @@ jQuery(function()
             $(this).parent().next().slideUp(120);
         }
 
-		e.stopPropagation();
+		// Prevent the collapse button from triggering the parent <a> tag navigation.
+		// fix implented by 'zombony' from GitHub
+		return false;
     });
 
     // hide the control button if the header has no children
