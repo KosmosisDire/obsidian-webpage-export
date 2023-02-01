@@ -30,6 +30,11 @@ export class Utils
 		return { root: parsed.root, dir: parsed.dir, base: parsed.base, ext: parsed.ext, name: parsed.name, fullPath: fullPath };
 	}
 
+	static parseFullPath(path: string): string
+	{
+		return this.parsePath(path).fullPath;
+	}
+
 	static joinPaths(...paths: string[]): string
 	{
 		return this.makePathUnicodeCompatible(pathTools.join(...paths));
@@ -51,7 +56,7 @@ export class Utils
 	{
 		path = this.parsePath(this.getAbsolutePath(path, false) ?? path).dir;
 
-		console.log("Checking directory: " + path);
+		console.log("Checking directory exists: " + path);
 
 		if (!this.pathExists(path, false))
 		{
@@ -79,11 +84,11 @@ export class Utils
 		}
 	}
 
-	static makeRelative(path: string): string
+	static forceRelativePath(path: string, forcePOSIX: boolean = false): string
 	{
 		path = path.replaceAll("\\", "/");
 
-		if(process.platform == "win32")
+		if(process.platform == "win32" && !forcePOSIX)
 		{
 			if(!path.startsWith("/")) return "/" + path;
 		}
@@ -95,9 +100,25 @@ export class Utils
 		return path;
 	}
 
+	static forceAbsolutePath(path: string, forcePOSIX: boolean = false): string
+	{
+		path = path.replaceAll("\\", "/");
+
+		if(process.platform == "win32" && !forcePOSIX)
+		{
+			if(path.startsWith("/")) return path = Utils.trimStart(path, "/");
+		}
+		else
+		{
+			if(!path.startsWith("/")) return "/" + path;
+		}
+
+		return path;
+	}
+
 	static getAbsolutePath(path: string, mustExist: boolean = true, workingDirectory: string = this.getVaultPath()): string | undefined
 	{
-		let reliablePath = this.parsePath(path).fullPath;
+		let reliablePath = this.parseFullPath(path);
 
 		if (!Utils.pathIsAbsolute(reliablePath))
 		{

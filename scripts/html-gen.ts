@@ -50,11 +50,7 @@ export class HTMLGenerator
 	
 	private async downloadExtras()
 	{
-		if (!existsSync(this.assetsPath))
-		{
-			console.log("Creating assets folder as it does not exist.");
-			mkdirSync(this.assetsPath);
-		}
+		Utils.createDirectory(this.assetsPath);
 
 		//Download webpage.js
 		let webpagejs = await fetch(this.webpagejsURL);
@@ -510,30 +506,28 @@ export class HTMLGenerator
 		for (let i = 0; i < images.length; i++)
 		{
 			let img = images[i];
-			if (!$(img).attr("src")?.startsWith("app://local/")) continue;
+			if (!$(img).attr("src")?.startsWith("app://local")) continue;
 			
-			let path = $(img).attr("src")?.replace("app://local/", "").split("?")[0];
+			let path = $(img).attr("src")?.replace("app://local", "").split("?")[0];
 			if(!path) continue;
 
-			path = Utils.makeRelative(path);
+			path = Utils.forceAbsolutePath(path);
 
-			if (path)
+			let base64 = "";
+			try
 			{
-				let base64 = "";
-				try
-				{
-					base64 = await Utils.getTextBase64(path);
-				}
-				catch (e)
-				{
-					console.error(e);
-					console.warn("Failed to inline image: " + path);
-					new Notice("Failed to inline image: " + path, 5000);
-					continue;
-				}
-
-				$(img).attr("src", "data:image/png;base64," + base64);
+				base64 = await Utils.getTextBase64(path);
 			}
+			catch (e)
+			{
+				console.error(e);
+				console.warn("Failed to inline image: " + path);
+				new Notice("Failed to inline image: " + path, 5000);
+				continue;
+			}
+
+			$(img).attr("src", "data:image/png;base64," + base64);
+			
 		}
 	}
 
@@ -547,34 +541,30 @@ export class HTMLGenerator
 
 		query.find("img").each(function ()
 		{
-			if (!$(this).attr("src")?.startsWith("app://local/")) return;
+			let imagePath = $(this).attr("src") ?? "";
+			if (imagePath == "") return;
 
-			let imagePathOriginal = $(this).attr("src")?.replace("app://local/", "").split("?")[0];
-			if (!imagePathOriginal)
+			if (!imagePath.startsWith("app://local") || imagePath.contains("data:")) return;
+
+			imagePath = Utils.trimStart(imagePath, "app://local").split("?")[0];
+			imagePath = Utils.forceAbsolutePath(imagePath);
+			
+			let filePath = Utils.getAbsolutePath(view.file.path) ?? "";
+			
+			let imageBase = Utils.parsePath(imagePath).base;
+			let relativeImagePath = Utils.joinPaths(Utils.getRelativePath(imagePath, filePath), imageBase);
+
+			// we won't save images at a relative path lower than or equal to the document, so we just group them all in an "images" folder
+			if (relativeImagePath.startsWith("..") || relativeImagePath == "/" || relativeImagePath == "") 
 			{
-				new Notice("Failed to outline image: " + imagePathOriginal + ". Couldn't find image src", 5000);
-				console.warn("Failed to outline image: " + imagePathOriginal + ". Couldn't find image src");
-				return;
+				relativeImagePath = Utils.joinPaths("images", imageBase);
 			}
-			if (imagePathOriginal.startsWith("data:image/png;base64,") || imagePathOriginal.startsWith("data:image/jpeg;base64,")) return;
-
-			console.log("image path original: " + imagePathOriginal);
-			imagePathOriginal = Utils.getAbsolutePath(imagePathOriginal);
-			if (!imagePathOriginal) return;
-
-			let continingFilePath = Utils.getAbsolutePath(view.file.path);
-			if (!continingFilePath) return;
-
-			let relativeImagePath = Utils.joinPaths(Utils.getRelativePath(imagePathOriginal, continingFilePath), Utils.parsePath(imagePathOriginal).base);
-			if (relativeImagePath.startsWith("..")) relativeImagePath = Utils.joinPaths("images", Utils.parsePath(imagePathOriginal).base);
 			
-			relativeImagePath = Utils.makeRelative(relativeImagePath);
+			relativeImagePath = Utils.forceRelativePath(relativeImagePath, true);
 
-			console.log("relative image path: " + relativeImagePath + " | original: " + imagePathOriginal);
-			
 			$(this).attr("src", relativeImagePath);
 
-			imagesToOutline.push({ localImagePath: imagePathOriginal, relativeExportImagePath: relativeImagePath });
+			imagesToOutline.push({ localImagePath: imagePath, relativeExportImagePath: relativeImagePath });
 		});
 
 		this.outlinedImages = imagesToOutline;
