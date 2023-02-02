@@ -91,8 +91,12 @@ export class HTMLGenerator
 				if (rule.cssText.startsWith("@font-face")) continue;
 				if (rule.cssText.startsWith(".CodeMirror")) continue;
 				if (rule.cssText.startsWith(".cm-")) continue;
-
-				this.appStyles += rule.cssText + "\n";
+				
+				let cssText = rule.cssText + "\n";
+				cssText = cssText.replaceAll("public/", "https://publish.obsidian.md/public/");
+				cssText = cssText.replaceAll("lib/", "https://publish.obsidian.md/lib/")
+				
+				this.appStyles += cssText;
 			}
 		}
 	}
