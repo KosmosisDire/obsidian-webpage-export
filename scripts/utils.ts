@@ -70,6 +70,11 @@ export class Utils
 		return decodeURI(path);
 	}
 
+	static makePathWebStyle(path: string): string
+	{
+		return path.replaceAll(" ", "-").toLowerCase();
+	}
+
 	static pathIsAbsolute(path: string): boolean
 	{
 		if(process.platform == "win32")
@@ -328,7 +333,7 @@ export class Utils
 		for (let i = 0; i < files.length; i++)
 		{
 			let array = (files[i].unicode ?? true) ? Utils.createUnicodeArray(files[i].data) : Buffer.from(files[i].data, 'base64');
-
+			
 			let parsedPath = this.parsePath(this.joinPaths(folderPath, files[i].relativePath ?? "", files[i].filename));
 			
 			this.createDirectory(parsedPath.fullPath);

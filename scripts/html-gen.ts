@@ -18,7 +18,8 @@ export class HTMLGenerator
 	constructor(pluginID: string)
 	{
 		this.thisPluginPath = Utils.getAbsolutePath(Utils.joinPaths(this.vaultPluginsPath, pluginID, "/")) as string;
-		this.assetsPath = Utils.getAbsolutePath(Utils.joinPaths(this.thisPluginPath, "assets/")) as string;
+		this.assetsPath = Utils.getAbsolutePath(Utils.joinPaths(this.thisPluginPath, "assets/"), false) as string;
+		Utils.createDirectory(this.assetsPath);
 	}
 
 	// this is a list of images that is populated during generation and then downloaded upon export
@@ -122,8 +123,15 @@ export class HTMLGenerator
 		for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
 		{
 			if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
-
+			
 			let path = Utils.joinPaths(this.vaultPluginsPath, thirdPartyPluginStyleNames[i].replace("\n", ""), "styles.css");
+			
+			if (!Utils.pathExists(path, false))
+			{ 
+				console.log("Could not find plugin css file at " + path);
+				continue;
+			}
+			
 			let style = await Utils.getText(path);
 			if (style)
 			{
@@ -179,6 +187,11 @@ export class HTMLGenerator
 			for (let i = 0; i < this.outlinedImages.length; i++)
 			{
 				let image = this.outlinedImages[i];
+				if (!Utils.pathExists(Utils.parseFullPath(image.localImagePath), false))
+				{
+					console.log("Could not find image at " + image.localImagePath);
+					continue;
+				}
 				let data = await Utils.getTextBase64(image.localImagePath);
 				let destinationPath = Utils.parsePath(image.relativeExportImagePath);
 				let imageDownload =
@@ -204,6 +217,8 @@ export class HTMLGenerator
 
 		let view = await Utils.getActiveView();
 		if (!view) return null;
+
+		console.log(view);
 
 		Utils.setLineWidth(ExportSettings.settings.customLineWidth);
 		if (view instanceof MarkdownView)
@@ -288,7 +303,9 @@ export class HTMLGenerator
 
 		let width = "1000px";
 		if (ExportSettings.settings.customLineWidth > 0)
+		{
 			width = ExportSettings.settings.customLineWidth + "px";
+		}
 		else
 		{
 			let sizer = (obsidianDocEl.querySelector(".markdown-preview-sizer.markdown-preview-section") as HTMLElement);
@@ -296,13 +313,31 @@ export class HTMLGenerator
 			{
 				width = sizer.style.width;
 			}
+
+			if(width == "")
+			{
+				sizer = $(obsidianDocEl).find("div.canvas").get(0) as HTMLElement;
+				if (sizer)
+				{
+					width = sizer.clientWidth + "px";
+				}
+			}
+
+			if(width == "")
+			{
+				width = "var(--line-width)";
+			}
+
+			
 		}
 
 		let contentEl = document.createElement("div");
 		contentEl.setAttribute("class", obsidianDocEl.getAttribute("class") ?? "");
 		contentEl.innerHTML = obsidianDocEl.innerHTML;
-		contentEl.style.flexBasis = `min(${width}, 100vw)`;
-		contentEl.style.height = "100%";
+		
+		$(contentEl).css("flex-basis", `min(${width}, 100vw)`);
+		$(contentEl).css("height", "100%");
+
 
 		return contentEl;
 	}
@@ -362,6 +397,8 @@ export class HTMLGenerator
 		<script src='https://code.jquery.com/jquery-3.6.0.js'></script>
 		<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js" integrity="sha256-xLD7nhI62fcsEZK2/v8LsBcb4lG7dgULkuXoXB/j91c=" crossorigin="anonymous"></script>
 		</script>
+
+		<script src="https://code.iconify.design/iconify-icon/1.0.3/iconify-icon.min.js"></script>
 		`
 
 		let mathStyles = this.getMathStyles();
@@ -458,10 +495,16 @@ export class HTMLGenerator
 				{
 					bestPath = "../" + bestPath;
 				}
+
+				if(ExportSettings.settings.makeNamesWebStyle)
+					bestPath = Utils.makePathWebStyle(bestPath)
+
+				bestPath = Utils.joinPaths(Utils.parsePath(bestPath).dir, Utils.parsePath(bestPath).name);
 				
 				// get the targeted header name if there is one
 				headers.shift(); // remove the file name from headers list
 				let header = "#" + headers.join("-").replaceAll(" ", "_");
+
 
 				finalHref = bestPath + ".html" + header;
 			}
@@ -544,6 +587,11 @@ export class HTMLGenerator
 			}
 			
 			relativeImagePath = Utils.forceRelativePath(relativeImagePath, true);
+
+			if(ExportSettings.settings.makeNamesWebStyle)
+			{
+				relativeImagePath = Utils.makePathWebStyle(relativeImagePath);
+			}
 
 			$(this).attr("src", relativeImagePath);
 
@@ -644,22 +692,38 @@ export class HTMLGenerator
 		let headerIconEl = document.createElement('svg');
 		headerIconEl.setAttribute("viewBox", "0 0 100 100");
 		headerIconEl.classList.add("bullet-list");
-		headerIconEl.setAttribute("width", "18");
-		headerIconEl.setAttribute("height", "18");
+		headerIconEl.setAttribute("width", "18px");
+		headerIconEl.setAttribute("height", "18px");
 
 		let headerIconPathEl = document.createElement('path');
 		let headerPathData = "M16.4,16.4c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,16.4,16.4,16.4z M16.4,19.6 c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2C13.2,21,14.6,19.6,16.4,19.6z M29.2,21.2v3.2H90v-3.2H29.2z M16.4,43.6c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,43.6,16.4,43.6z M16.4,46.8c1.8,0,3.2,1.4,3.2,3.2 s-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2S14.6,46.8,16.4,46.8z M29.2,48.4v3.2H90v-3.2H29.2z M16.4,70.8c-3.5,0-6.4,2.9-6.4,6.4 c0,3.5,2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4C22.8,73.7,19.9,70.8,16.4,70.8z M16.4,74c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2 s-3.2-1.4-3.2-3.2C13.2,75.4,14.6,74,16.4,74z M29.2,75.6v3.2H90v-3.2H29.2z";
-		headerIconPathEl.setAttribute("fill", "var(--color-base-100)");
-		headerIconPathEl.setAttribute("stroke", "var(--color-base-100)");
+		headerIconPathEl.setAttribute("fill", "currentColor");
+		headerIconPathEl.setAttribute("stroke", "currentColor");
 		headerIconPathEl.setAttribute("d", headerPathData);
 
 		let headerLabelEl = document.createElement('h6');
 		headerLabelEl.style.margin = "1em";
 		headerLabelEl.innerText = "Table of Contents";
 
+		let headerCollapseAllEl = document.createElement('button');
+		headerCollapseAllEl.classList.add("clickable-icon", "collapse-all");
+		headerCollapseAllEl.setAttribute("collapsed", "false");
+
+		let headerCollapseAllIconEl = document.createElement('iconify-icon');
+		headerCollapseAllIconEl.setAttribute("icon", "ph:arrows-in-line-horizontal-bold");
+		headerCollapseAllIconEl.setAttribute("width", "18px");
+		headerCollapseAllIconEl.setAttribute("height", "18px");
+		headerCollapseAllIconEl.setAttribute("rotate", "90deg");
+		headerCollapseAllIconEl.setAttribute("color", "currentColor");
+		
+		
+
+		headerCollapseAllEl.appendChild(headerCollapseAllIconEl);
+
 		headerIconEl.appendChild(headerIconPathEl);
 		outlineHeader.appendChild(headerIconEl);
 		outlineHeader.appendChild(headerLabelEl);
+		outlineHeader.appendChild(headerCollapseAllEl);
 		outlineEl.appendChild(outlineHeader);
 
 		let listStack = [outlineEl];

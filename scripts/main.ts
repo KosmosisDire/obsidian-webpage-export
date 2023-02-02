@@ -165,7 +165,8 @@ export default class HTMLExportPlugin extends Plugin
 		let parsedPath = Utils.parsePath(fullPath);
 		if (fullPath == "" && !copyDocToClipboard) 
 		{
-			let saveDialogPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.basename + ".html", false) ?? undefined;
+			let defaultFileName = (ExportSettings.settings.makeNamesWebStyle ? Utils.makePathWebStyle(file.basename) : file.basename) + ".html";
+			let saveDialogPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), defaultFileName, false) ?? undefined;
 			if (saveDialogPath == undefined) return false;
 			parsedPath = Utils.parsePath(saveDialogPath);
 		}
@@ -202,6 +203,15 @@ export default class HTMLExportPlugin extends Plugin
 		let folderPath = parsedPath.dir;
 
 		filesToDownload[0].filename = filename;
+
+		if(ExportSettings.settings.makeNamesWebStyle)
+		{
+			filesToDownload.forEach((file) =>
+			{
+				file.filename = Utils.makePathWebStyle(file.filename);
+				file.relativePath = Utils.makePathWebStyle(file.relativePath ?? "");
+			});
+		}
 
 		await Utils.downloadFiles(filesToDownload, folderPath);
 
@@ -246,7 +256,11 @@ export default class HTMLExportPlugin extends Plugin
 			let file = files[i];
 			if (file.path.startsWith(folderPath) && file.extension == "md")
 			{
-				let fullPath = Utils.joinPaths(htmlPath, Utils.parsePath(file.path).dir, file.basename + ".html");
+				let fullPath = "";
+				if(ExportSettings.settings.makeNamesWebStyle)
+					fullPath = Utils.joinPaths(htmlPath, Utils.makePathWebStyle(Utils.parsePath(file.path).dir), Utils.makePathWebStyle(file.basename + ".html"));
+				else
+					fullPath = Utils.joinPaths(htmlPath, Utils.parsePath(file.path).dir, file.basename + ".html");
 				await this.exportFile(file, fullPath, false);
 			}
 		}
