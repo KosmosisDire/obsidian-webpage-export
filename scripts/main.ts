@@ -164,7 +164,7 @@ export default class HTMLExportPlugin extends Plugin
 		}
 
 		let parsedPath = Utils.parsePath(fullPath);
-		if (fullPath == "") 
+		if (fullPath == "" && !copyDocToClipboard) 
 		{
 			let saveDialogPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), file.basename + ".html", false) ?? undefined;
 			if (saveDialogPath == undefined) return false;
