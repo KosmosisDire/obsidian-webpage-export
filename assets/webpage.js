@@ -203,7 +203,7 @@ jQuery(function()
 
 		if (target.startsWith("#"))
 		{
-			let header = $(target);
+			let header = $(document.getElementById(target.substring(1)));
 
 			setHeaderCollapse($(header).parent(), false);
 		}
