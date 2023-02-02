@@ -210,27 +210,51 @@ jQuery(function()
     // MAKE OUTLINE COLLAPSIBLE
     // if "outline-header" is clicked, toggle the display of every div until the next heading of the same or lower level
     
-    var outline_width = 0;
+	function setOutlineCollapse(header, collapse)
+	{
+		if (collapse)
+		{
+			if (!$(header).hasClass("is-collapsed")) 
+				$(header).addClass("is-collapsed");
+
+			$(header).children(".outline-item-children").slideUp(120);
+		}
+		else
+		{
+			if ($(header).hasClass("is-collapsed"))
+				$(header).removeClass("is-collapsed");
+			
+			$(header).children(".outline-item-children").slideDown(120);
+		}
+	}
+
+	function toggleOutlineCollapse(header)
+	{
+		let isCollapsed = $(header).hasClass("is-collapsed");
+		setOutlineCollapse(header, !isCollapsed);
+	}
 
     $(".outline-item-contents > .collapse-icon").on("click", function(e)
     {
-        var isCollapsed = $(this).parent().parent().hasClass("is-collapsed");
-        
-        $(this).parent().parent().toggleClass("is-collapsed");
-
-        if(isCollapsed)
-        {
-            $(this).parent().next().slideDown(120);
-        }
-        else
-        {
-            $(this).parent().next().slideUp(120);
-        }
+        toggleOutlineCollapse($(this).parent().parent());
 
 		// Prevent the collapse button from triggering the parent <a> tag navigation.
 		// fix implented by 'zombony' from GitHub
 		return false;
     });
+
+	$(".collapse-all").on("click", function()
+	{
+		let button = $(this);
+		$(".outline-container div.outline-item").each(function()
+		{
+			setOutlineCollapse($(this), !button.hasClass("is-collapsed"));
+		});
+
+		button.toggleClass("is-collapsed");
+
+		button.find("iconify-icon").attr("icon", button.hasClass("is-collapsed") ? "ph:arrows-out-line-horizontal-bold" : "ph:arrows-in-line-horizontal-bold");
+	});
 
     // hide the control button if the header has no children
     $(".outline-item-children:not(:has(*))").each(function()

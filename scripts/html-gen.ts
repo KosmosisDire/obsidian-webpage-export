@@ -218,8 +218,6 @@ export class HTMLGenerator
 		let view = await Utils.getActiveView();
 		if (!view) return null;
 
-		console.log(view);
-
 		Utils.setLineWidth(ExportSettings.settings.customLineWidth);
 		if (view instanceof MarkdownView)
 			await Utils.viewEnableFullRender(view);
@@ -707,7 +705,6 @@ export class HTMLGenerator
 
 		let headerCollapseAllEl = document.createElement('button');
 		headerCollapseAllEl.classList.add("clickable-icon", "collapse-all");
-		headerCollapseAllEl.setAttribute("collapsed", "false");
 
 		let headerCollapseAllIconEl = document.createElement('iconify-icon');
 		headerCollapseAllIconEl.setAttribute("icon", "ph:arrows-in-line-horizontal-bold");
