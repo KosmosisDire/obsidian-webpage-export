@@ -248,9 +248,9 @@ jQuery(function()
 		$(this).parent().attr("data-task", $(this).parent().hasClass("is-checked") ? "x" : " ");
 	});
 
-	$(`input[type="checkbox"]`).each(function()
+	$(`.plugin-tasks-list-item input[type="checkbox"]`).each(function()
 	{
-		$(this).prop("checked", $(this).hasClass("is-checked"));
+		$(this).prop("checked", $(this).parent().hasClass("is-checked"));
 	});
 
 	$('.kanban-plugin__item.is-complete').each(function()
