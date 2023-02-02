@@ -108,14 +108,13 @@ hr
 	align-items: flex-start;
 }
 
-.flex-container
-{
+.flex-container {
     background-color: var(--background-primary);
     display: flex;
     flex-direction: row;
-    justify-content: center;
     height: 100%;
     width: 100%;
+    align-items: stretch;
 }
 
 .markdown-reading-view
