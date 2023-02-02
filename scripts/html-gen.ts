@@ -11,9 +11,9 @@ export class HTMLGenerator
 	// When this is enabled the plugin will download the extra .css and .js files from github.
 	autoDownloadExtras = true;
 
-	private vaultPluginsPath: string = Utils.getAbsolutePath(Utils.getVaultPath() + "/.obsidian/plugins/") as string;
-	private thisPluginPath: string = Utils.getAbsolutePath(this.vaultPluginsPath + "/webpage-html-export/") as string;
-	private assetsPath: string = Utils.getAbsolutePath(this.thisPluginPath + "/assets/") as string;
+	private vaultPluginsPath: string = Utils.getAbsolutePath(Utils.joinPaths(Utils.getVaultPath(), ".obsidian/plugins/")) as string;
+	private thisPluginPath: string = Utils.getAbsolutePath(Utils.joinPaths(this.vaultPluginsPath,"webpage-html-export/")) as string;
+	private assetsPath: string = Utils.getAbsolutePath(Utils.joinPaths(this.thisPluginPath, "assets/")) as string;
 
 	// this is a list of images that is populated during generation and then downloaded upon export
 	// I am sure there is a better way to handle this data flow but I am not sure what to do.
@@ -55,17 +55,17 @@ export class HTMLGenerator
 		//Download webpage.js
 		let webpagejs = await fetch(this.webpagejsURL);
 		let webpagejsText = await webpagejs.text();
-		await writeFile(this.assetsPath + "/webpage.js", webpagejsText).catch((err) => { console.log(err); });
+		await writeFile(Utils.joinPaths(this.assetsPath, "webpage.js"), webpagejsText).catch((err) => { console.log(err); });
 
 		//Download plugin-styles.css
 		let pluginStyles = await fetch(this.pluginStylesURL);
 		let pluginStylesText = await pluginStyles.text();
-		await writeFile(this.assetsPath + "/plugin-styles.css", pluginStylesText).catch((err) => { console.log(err); });
+		await writeFile(Utils.joinPaths(this.assetsPath, "plugin-styles.css"), pluginStylesText).catch((err) => { console.log(err); });
 
 		//Download obsidian-styles.css
 		let obsidianStyles = await fetch(this.obsidianStylesURL);
 		let obsidianStylesText = await obsidianStyles.text();
-		await writeFile(this.assetsPath + "/obsidian-styles.css", obsidianStylesText).catch((err) => { console.log(err); });
+		await writeFile(Utils.joinPaths(this.assetsPath, "obsidian-styles.css"), obsidianStylesText).catch((err) => { console.log(err); });
 	}
 
 	private async loadAppStyles()
@@ -81,7 +81,7 @@ export class HTMLGenerator
 			}
 		}
 
-		this.appStyles += await Utils.getText(this.assetsPath + "/obsidian-styles.css");
+		this.appStyles += await Utils.getText(Utils.joinPaths(this.assetsPath, "obsidian-styles.css"));
 
 		for (let i = 0; i < appSheet.cssRules.length; i++)
 		{
@@ -113,7 +113,7 @@ export class HTMLGenerator
 		{
 			if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
 
-			let path = this.vaultPluginsPath + "/" + thirdPartyPluginStyleNames[i].replace("\n", "") + "/styles.css";
+			let path = Utils.joinPaths(this.vaultPluginsPath, thirdPartyPluginStyleNames[i].replace("\n", ""), "styles.css");
 			let style = await Utils.getText(path);
 			if (style)
 			{
@@ -131,7 +131,7 @@ export class HTMLGenerator
 		if (!ExportSettings.settings.inlineCSS)
 		{
 			let appcss = this.appStyles;
-			let plugincss = await Utils.getText(this.assetsPath + "/plugin-styles.css");
+			let plugincss = await Utils.getText(Utils.joinPaths(this.assetsPath, "plugin-styles.css"));
 			let themecss = await Utils.getThemeContent(Utils.getCurrentTheme());
 
 			let snippetsList = await Utils.getStyleSnippetsContent();
@@ -159,7 +159,7 @@ export class HTMLGenerator
 
 		if (!ExportSettings.settings.inlineJS)
 		{
-			let webpagejs = await Utils.getText(this.assetsPath + "/webpage.js");
+			let webpagejs = await Utils.getText(Utils.joinPaths(this.assetsPath, "webpage.js"));
 			let webpagejsDownload = { filename: "webpage.js", data: webpagejs, type: "text/javascript" };
 			toDownload.push(webpagejsDownload);
 		}
@@ -355,12 +355,12 @@ export class HTMLGenerator
 
 		let mathStyles = this.getMathStyles();
 		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
-		let scripts = `\n<script>\n ${await Utils.getText(this.assetsPath + "/webpage.js")} \n</script>\n`;
+		let scripts = `\n<script>\n ${await Utils.getText(Utils.joinPaths(this.assetsPath, "webpage.js"))} \n</script>\n`;
 		if (!ExportSettings.settings.inlineJS) scripts = "<script src='webpage.js'></script>\n";
 
 		if (ExportSettings.settings.inlineCSS)
 		{
-			let pluginStyles = await Utils.getText(this.assetsPath + "/plugin-styles.css");
+			let pluginStyles = await Utils.getText(Utils.joinPaths(this.assetsPath, "plugin-styles.css"));
 			let snippets = await Utils.getStyleSnippetsContent();
 			let snippetNames = Utils.getEnabledSnippets();
 			let theme = await Utils.getThemeContent(Utils.getCurrentTheme());
@@ -453,34 +453,6 @@ export class HTMLGenerator
 				let header = "#" + headers.join("-").replaceAll(" ", "_");
 
 				finalHref = bestPath + ".html" + header;
-
-				// if (href.length == 1)
-				// {
-				// 	finalHref = bestPath + ".html"; 
-				// }
-
-				// if (href.length == 2)
-				// {
-				// 	let filePath = "";
-				// 	if (!bestPath.contains("/") && !bestPath.contains("\\"))
-				// 	{
-				// 		filePath = Utils.getDirectoryFromFilePath(Utils.findFileInVaultByName(bestPath)?.path ?? "") + "/";
-				// 	}
-
-				// 	finalHref = filePath + bestPath + ".html#" + href[1].replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
-				// }
-
-				// if (href.length > 2)
-				// {
-				// 	href.shift();
-				// 	let filePath = "";
-				// 	if (!bestPath.contains("/") && !bestPath.contains("\\"))
-				// 	{
-				// 		filePath = Utils.getDirectoryFromFilePath(Utils.findFileInVaultByName(bestPath)?.path ?? "") + "/";
-				// 	}
-
-				// 	finalHref = filePath + bestPath + ".html#" + href.join("#").replaceAll(" ", "_").replaceAll("#", "").replaceAll("__", "_");
-				// }
 			}
 
 			$(this).attr("href", finalHref);
@@ -555,7 +527,7 @@ export class HTMLGenerator
 			let relativeImagePath = Utils.joinPaths(Utils.getRelativePath(imagePath, filePath), imageBase);
 
 			// we won't save images at a relative path lower than or equal to the document, so we just group them all in an "images" folder
-			if (relativeImagePath.startsWith("..") || relativeImagePath == "/" || relativeImagePath == "") 
+			if (relativeImagePath.startsWith("..") || relativeImagePath == "/" || relativeImagePath == "")
 			{
 				relativeImagePath = Utils.joinPaths("images", imageBase);
 			}

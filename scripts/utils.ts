@@ -377,7 +377,7 @@ export class Utils
 
 	static async getThemeContent(themeName: string): Promise<string>
 	{
-		let themePath = this.getAbsolutePath(`/.obsidian/themes/${themeName}/theme.css`);
+		let themePath = this.getAbsolutePath(this.forceRelativePath(`.obsidian/themes/${themeName}/theme.css`));
 		if (!themePath) return "/* Error: Theme not found */";
 
 		let themeContent = await Utils.getText(themePath);
@@ -403,7 +403,7 @@ export class Utils
 
 		for (let i = 0; i < enabledSnippets.length; i++)
 		{
-			snippetContents.push(await Utils.getText(`/.obsidian/snippets/${enabledSnippets[i]}.css`));
+			snippetContents.push(await Utils.getText(this.forceRelativePath(`.obsidian/snippets/${enabledSnippets[i]}.css`)));
 		}
 
 		return snippetContents;
