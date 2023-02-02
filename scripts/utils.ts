@@ -1,6 +1,6 @@
 import {  readFile, writeFile, existsSync, mkdirSync } from 'fs';
-import { FileSystemAdapter, MarkdownView, Notice, TextFileView, TFile } from 'obsidian';
-import { ExportSettings } from './settings';
+import { FileSystemAdapter, MarkdownView, Notice, PluginManifest, TextFileView, TFile } from 'obsidian';
+import { ExportModal, ExportSettings } from './export-settings';
 import { fileURLToPath } from 'url';
 import process from 'process';
 const pathTools = require('upath');
@@ -56,7 +56,7 @@ export class Utils
 	{
 		path = this.parsePath(this.getAbsolutePath(path, false) ?? path).dir;
 
-		console.log("Checking directory exists: " + path);
+		// console.log("Checking directory exists: " + path);
 
 		if (!this.pathExists(path, false))
 		{
@@ -377,6 +377,8 @@ export class Utils
 
 	static async getThemeContent(themeName: string): Promise<string>
 	{
+		if (themeName == "Default") return "/* Using default theme. */";
+
 		let themePath = this.getAbsolutePath(this.forceRelativePath(`.obsidian/themes/${themeName}/theme.css`));
 		if (!themePath) return "/* Error: Theme not found */";
 
@@ -386,14 +388,38 @@ export class Utils
 
 	static getCurrentTheme(): string
 	{
-		/*@ts-ignore*/ // config does exist
-		return app.vault.config?.cssTheme ?? "Default";
+		/*@ts-ignore*/
+		let themeName = app.vault.config?.cssTheme;
+		return (themeName ?? "") == "" ? "Default" : themeName;
 	}
 
 	static getEnabledSnippets(): string[]
 	{
 		/*@ts-ignore*/
 		return app.vault.config?.enabledCssSnippets ?? [];
+	}
+
+	static getPluginIDs(): string[]
+	{
+		/*@ts-ignore*/
+		let pluginsArray: string[] = Array.from(app.plugins.enabledPlugins.values()) as string[];
+		for (let i = 0; i < pluginsArray.length; i++)
+		{
+			/*@ts-ignore*/
+			if (app.plugins.manifests[pluginsArray[i]] == undefined)
+			{
+				pluginsArray.splice(i, 1);
+				i--;
+			}
+		}
+
+		return pluginsArray;
+	}
+
+	static getPluginManifest(pluginID: string): PluginManifest | null
+	{
+		// @ts-ignore
+		return app.plugins.manifests[pluginID] ?? null;
 	}
 
 	static async getStyleSnippetsContent(): Promise<string[]>

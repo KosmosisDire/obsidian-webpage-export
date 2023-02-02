@@ -96,7 +96,6 @@ jQuery(function()
         if (newColorScheme == "theme-dark")
         {
 			setThemeToggle(false);
-			console.log("dark");
         }
 
         if (newColorScheme == "theme-light")
@@ -174,7 +173,6 @@ jQuery(function()
 				if($(this).hasClass("is-collapsed") && $(this).has("h1, h2, h3, h4, h5, h6"))
 				{
 					let hSize = $(this).children().first().prop("tagName").toLowerCase().replace("h", "");
-					console.log(hSize + " <? " + lastHeaderSize);
 					if(hSize < lastHeaderSize)
 					{
 						setHeaderCollapse($(this), false);
@@ -263,6 +261,12 @@ jQuery(function()
 	{
 		let code = $(this).parent().find("code").text();
 		navigator.clipboard.writeText(code);
+		$(this).text("Copied!");
+		// set a timeout to change the text back
+		setTimeout(function()
+		{
+			$(".copy-code-button").text("Copy");
+		}, 2000);
 	});
 
 	let focusedNode = null;
@@ -270,7 +274,6 @@ jQuery(function()
 	// make canvas nodes selectable
 	$(".canvas-node-content-blocker").on("click", function()
 	{
-		console.log("clicked");
 		$(this).parent().parent().toggleClass("is-focused");
 		$(this).hide();
 

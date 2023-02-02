@@ -2,7 +2,7 @@
 import { Notice, Plugin, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
-import { ExportSettings } from './settings';
+import { ExportModal, ExportSettings } from './export-settings';
 import { Utils } from './utils';
 import { LeafHandler } from './leaf-handler';
 import { HTMLGenerator } from './html-gen';
@@ -12,7 +12,7 @@ const pathTools = require('path');
 export default class HTMLExportPlugin extends Plugin
 {
 	leafHandler: LeafHandler = new LeafHandler();
-	htmlGenerator: HTMLGenerator = new HTMLGenerator();
+	htmlGenerator: HTMLGenerator = new HTMLGenerator("webpage-html-export");
 
 	addTogglePostprocessor()
 	{
@@ -36,8 +36,6 @@ export default class HTMLExportPlugin extends Plugin
 			});
 		});
 	}
-
-	
 
 	async addCommands()
 	{
@@ -72,10 +70,24 @@ export default class HTMLExportPlugin extends Plugin
 	{
 		console.log('loading webpage-html-export plugin');
 
-
 		// init settings
-		new ExportSettings(this);
+		this.addSettingTab(new ExportSettings(this));
 		ExportSettings.loadSettings();
+
+		// add export vault icon to ribbon
+		this.addRibbonIcon("folder-up", "Export Vault to HTML", async () =>
+		{
+			this.exportFolder("");
+		});
+
+		// add toggle postprocessor
+		this.addTogglePostprocessor();
+
+		// add commands
+		this.addCommands();
+
+		// init html generator
+		this.htmlGenerator.initialize();
 
 		// Register the Export As HTML button in the file menu
 		this.registerEvent(
@@ -115,20 +127,7 @@ export default class HTMLExportPlugin extends Plugin
 			})
 		);
 		
-		// add export vault icon to ribbon
-		this.addRibbonIcon("folder-up", "Export Vault to HTML", async () =>
-		{
-			this.exportFolder("");
-		});
-
-		// add toggle postprocessor
-		this.addTogglePostprocessor();
-
-		// add commands
-		this.addCommands();
-
-		// init html generator
-		this.htmlGenerator.initialize();
+		
 	}
 
 	onunload()
@@ -145,7 +144,7 @@ export default class HTMLExportPlugin extends Plugin
 			let validSelection = false;
 			while (!validSelection)
 			{
-				let result = await new ExportSettings(this).open();
+				let result = await new ExportModal().open();
 				if (result.canceled) return false;
 
 				copyDocToClipboard = result.copyToClipboard;
@@ -221,7 +220,7 @@ export default class HTMLExportPlugin extends Plugin
 			let validSelection = false;
 			while (!validSelection)
 			{
-				let result = await new ExportSettings(this).open();
+				let result = await new ExportModal().open();
 				if (result.canceled) return false;
 				
 				if (result.copyToClipboard) 

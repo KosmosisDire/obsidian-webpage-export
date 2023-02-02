@@ -1,6 +1,6 @@
 import { writeFile } from "fs/promises";
 import { MarkdownView, Notice, TextFileView } from "obsidian";
-import { ExportSettings } from "./settings";
+import { ExportSettings } from "./export-settings";
 import { Utils } from "./utils";
 import { existsSync, mkdirSync } from "fs";
 import jQuery from 'jquery';
@@ -9,11 +9,17 @@ const $ = jQuery;
 export class HTMLGenerator
 {
 	// When this is enabled the plugin will download the extra .css and .js files from github.
-	autoDownloadExtras = true;
+	autoDownloadExtras = false;
 
 	private vaultPluginsPath: string = Utils.getAbsolutePath(Utils.joinPaths(Utils.getVaultPath(), ".obsidian/plugins/")) as string;
-	private thisPluginPath: string = Utils.getAbsolutePath(Utils.joinPaths(this.vaultPluginsPath,"webpage-html-export/")) as string;
-	private assetsPath: string = Utils.getAbsolutePath(Utils.joinPaths(this.thisPluginPath, "assets/")) as string;
+	private thisPluginPath: string;
+	private assetsPath: string;
+
+	constructor(pluginID: string)
+	{
+		this.thisPluginPath = Utils.getAbsolutePath(Utils.joinPaths(this.vaultPluginsPath, pluginID, "/")) as string;
+		this.assetsPath = Utils.getAbsolutePath(Utils.joinPaths(this.thisPluginPath, "assets/")) as string;
+	}
 
 	// this is a list of images that is populated during generation and then downloaded upon export
 	// I am sure there is a better way to handle this data flow but I am not sure what to do.
@@ -103,7 +109,7 @@ export class HTMLGenerator
 
 	public async initialize()
 	{
-		await this.downloadExtras();
+		if (this.autoDownloadExtras) await this.downloadExtras();
 		await this.loadAppStyles();
 	}
 
@@ -295,9 +301,8 @@ export class HTMLGenerator
 		let contentEl = document.createElement("div");
 		contentEl.setAttribute("class", obsidianDocEl.getAttribute("class") ?? "");
 		contentEl.innerHTML = obsidianDocEl.innerHTML;
-		contentEl.style.flexBasis = width;
+		contentEl.style.flexBasis = `min(${width}, 100vw)`;
 		contentEl.style.height = "100%";
-		contentEl.style.width = "unset";
 
 		return contentEl;
 	}
@@ -355,6 +360,8 @@ export class HTMLGenerator
 
 		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
 		<script src='https://code.jquery.com/jquery-3.6.0.js'></script>
+		<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js" integrity="sha256-xLD7nhI62fcsEZK2/v8LsBcb4lG7dgULkuXoXB/j91c=" crossorigin="anonymous"></script>
+		</script>
 		`
 
 		let mathStyles = this.getMathStyles();
