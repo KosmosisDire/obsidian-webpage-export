@@ -9,7 +9,7 @@ const $ = jQuery;
 export class HTMLGenerator
 {
 	// When this is enabled the plugin will download the extra .css and .js files from github.
-	autoDownloadExtras = false;
+	autoDownloadExtras = true;
 
 	private vaultPluginsPath: string = Utils.getAbsolutePath(Utils.joinPaths(Utils.getVaultPath(), ".obsidian/plugins/")) as string;
 	private thisPluginPath: string;
