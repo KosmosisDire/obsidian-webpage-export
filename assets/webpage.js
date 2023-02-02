@@ -209,13 +209,6 @@ jQuery(function()
 		}
 	});
 
-    // Make button with id="#save-to-pdf" save the current page to a PDF file
-    $("#save-pdf").on("click", function()
-    {
-        window.print();
-    });
-
-
     // MAKE OUTLINE COLLAPSIBLE
     // if "outline-header" is clicked, toggle the display of every div until the next heading of the same or lower level
     
