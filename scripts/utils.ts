@@ -94,7 +94,7 @@ export class Utils
 		}
 		else
 		{
-			if(path.startsWith("/")) return path.slice(1);
+			if(path.startsWith("/")) return Utils.trimStart(path, "/");
 		}
 
 		return path;
@@ -106,7 +106,7 @@ export class Utils
 
 		if(process.platform == "win32" && !forcePOSIX)
 		{
-			if(path.startsWith("/")) return path = Utils.trimStart(path, "/");
+			if(path.startsWith("/")) return Utils.trimStart(path, "/");
 		}
 		else
 		{
