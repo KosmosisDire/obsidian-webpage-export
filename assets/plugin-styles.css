@@ -269,7 +269,7 @@ span.outline-item-title:hover
 }
 
 .outline-item-children {
-    border-left: 1px solid var(--divider-color);
+    border-left: 1px solid var(--nav-indentation-guide-color);
     margin-left: 10px;
     width: 100%;
 }
