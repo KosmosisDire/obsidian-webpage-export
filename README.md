@@ -5,7 +5,7 @@ Exports an obsidian document, folder, or vault as an HTML document / webpage / w
 ![image](https://user-images.githubusercontent.com/39423700/201875810-6d24c2b9-2e63-4d9b-a9d4-61840df659ac.png)
 
 ## Canvas Support
-Canvas support is currently very preliminary. Your canvas documents will export, but large documents included wll not render fully, and documnets larger than one screen will be cut off or documents will become invisible. Small simple canvas documents should work fine.
+Canvas support is currently very preliminary. Your canvas documents will export, but large documents included wll not render fully, and documents larger than one screen will be cut off or documents will become invisible. Small simple canvas documents should work fine.
 
 ## Features:
 - Export files, folders, or the whole vault as html. [Explained in: General](#general)
