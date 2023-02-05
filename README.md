@@ -127,7 +127,7 @@ Export options
 
 ## Contributing
 - Please let me know before starting work on a feature!
-- I am open to any PRs as long as they align with my vision for the plugin. So if you are going to work on a feature that already an issue, then please submit an issue instead.
+- I am open to any PRs as long as they align with my vision for the plugin. So if you are going to work on a feature that isn't already an issue, then please submit an issue instead.
 - When changing files in the `assets` folder, you must set `autoDownloadExtras` to false inside of html-gen.ts, or it will redownload the files and overwrite your changes. Once you've finished only commit your changes to the assets folder (not html-gen.ts). Unfortunately, it will keep overwriting your results every time the plugin is reloaded, until those changes are part of the main branch on github.
 
 ## Credits
