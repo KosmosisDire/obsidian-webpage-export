@@ -62,7 +62,7 @@ or
 
 - If exporting CSS or JS seperately those files will be exported into the same folder as the .HTML
 - Images will be placed relative to the .HTML file the same as they were in obsidian.
-- The exception to this is if the images were lower in the heirarchy than the .HTML file, in which case the images are placed in a `/image` directory.
+- The exception to this is if the images were heigher in the heirarchy than the .HTML file, in which case the images are placed in a `/image` directory.
 - All references and links to images or files are updated automatically.
 - When exporting a folder or vault with non-inlined files every file will have its own copy of each file. This is something that works for now but is far from optimal. Hopefully this will be updated in the future.
 
