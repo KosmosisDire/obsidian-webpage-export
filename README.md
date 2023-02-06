@@ -5,7 +5,7 @@ Exports an obsidian document, folder, or vault as an HTML document / webpage / w
 ![image](https://user-images.githubusercontent.com/39423700/201875810-6d24c2b9-2e63-4d9b-a9d4-61840df659ac.png)
 
 ## Canvas Support
-Canvas support is currently very preliminary. Your canvas documents will export, but large documents included wll not render fully, and documnets larger than one screen will be cut off or documents will become invisible. Small simple canvas documents should work fine.
+Canvas support is currently very preliminary. Your canvas documents will export, but large documents included wll not render fully, and documents larger than one screen will be cut off or documents will become invisible. Small simple canvas documents should work fine.
 
 ## Features:
 - Export files, folders, or the whole vault as html. [Explained in: General](#general)
@@ -62,7 +62,7 @@ or
 
 - If exporting CSS or JS seperately those files will be exported into the same folder as the .HTML
 - Images will be placed relative to the .HTML file the same as they were in obsidian.
-- The exception to this is if the images were lower in the heirarchy than the .HTML file, in which case the images are placed in a `/image` directory.
+- The exception to this is if the images were heigher in the heirarchy than the .HTML file, in which case the images are placed in a `/image` directory.
 - All references and links to images or files are updated automatically.
 - When exporting a folder or vault with non-inlined files every file will have its own copy of each file. This is something that works for now but is far from optimal. Hopefully this will be updated in the future.
 
@@ -127,7 +127,7 @@ Export options
 
 ## Contributing
 - Please let me know before starting work on a feature!
-- I am open to any PRs as long as they align with my vision for the plugin. So if you are going to work on a feature that already an issue, then please submit an issue instead.
+- I am open to any PRs as long as they align with my vision for the plugin. So if you are going to work on a feature that isn't already an issue, then please submit an issue instead.
 - When changing files in the `assets` folder, you must set `autoDownloadExtras` to false inside of html-gen.ts, or it will redownload the files and overwrite your changes. Once you've finished only commit your changes to the assets folder (not html-gen.ts). Unfortunately, it will keep overwriting your results every time the plugin is reloaded, until those changes are part of the main branch on github.
 
 ## Credits
