@@ -1,7 +1,6 @@
 import {  readFile, writeFile, existsSync, mkdirSync } from 'fs';
 import { FileSystemAdapter, MarkdownView, Notice, PluginManifest, TextFileView, TFile } from 'obsidian';
-import { ExportModal, ExportSettings } from './export-settings';
-import { fileURLToPath } from 'url';
+import { ExportSettings } from './export-settings';
 import process from 'process';
 const pathTools = require('upath');
 
@@ -440,6 +439,14 @@ export class Utils
 		return snippetContents;
 	}
 
+	static async rerenderView(view: MarkdownView)
+	{
+		await Utils.delay(300);
+		/*@ts-ignore*/
+		await view.previewMode.renderer.rerender();
+		await Utils.delay(300);
+	}
+
 	static async viewEnableFullRender(view: MarkdownView)
 	{
 		Utils.changeViewMode(view, "preview");
@@ -448,9 +455,8 @@ export class Utils
 		view.previewMode.renderer.showAll = true;
 		/*@ts-ignore*/
 		await view.previewMode.renderer.unfoldAllHeadings();
-		await Utils.delay(300);
-		/*@ts-ignore*/
-		await view.previewMode.renderer.rerender();
+		
+		await this.rerenderView(view);
 	}
 
 	static async getRendererHeight(view: MarkdownView, rerender: boolean = false): Promise<number>
@@ -463,7 +469,7 @@ export class Utils
 		return height;
 	}
 
-	static getActiveView(): TextFileView | null
+	static getActiveTextView(): TextFileView | null
 	{
 		let view = app.workspace.getActiveViewOfType(TextFileView);
 		if (!view)

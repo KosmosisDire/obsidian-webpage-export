@@ -98,7 +98,7 @@ export default class HTMLExportPlugin extends Plugin
 					item
 						.setTitle("Export to HTML")
 						.setIcon("download")
-						.setSection("action")
+						.setSection("export")
 						.onClick(async () =>
 						{
 							if(file instanceof TFile)

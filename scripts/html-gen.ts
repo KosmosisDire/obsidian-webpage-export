@@ -215,13 +215,15 @@ export class HTMLGenerator
 	{
 		await Utils.delay(200);
 
-		let view = await Utils.getActiveView();
+		let view = Utils.getActiveTextView();
 		if (!view) return null;
 
 		Utils.setLineWidth(ExportSettings.settings.customLineWidth);
 		if (view instanceof MarkdownView)
+		{
 			await Utils.viewEnableFullRender(view);
-		
+		}
+
 		let contentEl : HTMLElement = this.generateBodyContents();
 
 		this.fixLinks(contentEl); // modify links to work outside of obsidian (including relative links)
@@ -267,7 +269,9 @@ export class HTMLGenerator
 		htmlEl.appendChild(bodyRootEl);
 
 		if (returnEl == true)
+		{
 			return htmlEl;
+		}
 		else
 			return "<!DOCTYPE html>\n" + htmlEl.outerHTML;
 	}
@@ -323,7 +327,7 @@ export class HTMLGenerator
 
 			if(width == "")
 			{
-				width = "var(--line-width)";
+				width = "var(--file-line-width)";
 			}
 
 			
@@ -356,29 +360,32 @@ export class HTMLGenerator
 
 	private getMathStyles(): string
 	{
-		let mathStyles = document.styleSheets[document.styleSheets.length - 1];
-		let mathStylesString = "";
+		console.log("getMathStyles");
+		let mathStyles = document.getElementById('MJX-CHTML-styles');
+		console.log(mathStyles);
+		return mathStyles?.innerHTML ?? "";
+		// let mathStylesString = "";
 
-		let success = true;
-		for (let i = 0; i < mathStyles.cssRules.length; i++)
-		{
-			let rule = mathStyles.cssRules[i];
+		// let success = true;
+		// for (let i = 0; i < mathStyles.cssRules.length; i++)
+		// {
+		// 	let rule = mathStyles.cssRules[i];
 
-			if (rule)
-			{
-				if (i == 0 && !rule.cssText.startsWith("mjx"))
-				{
-					success = false;
-					break;
-				}
+		// 	if (rule)
+		// 	{
+		// 		if (i == 0 && !rule.cssText.startsWith("mjx"))
+		// 		{
+		// 			success = false;
+		// 			break;
+		// 		}
 
-				if (rule.cssText.startsWith("@font-face")) continue;
+		// 		if (rule.cssText.startsWith("@font-face")) continue;
 
-				mathStylesString += rule.cssText + "\n";
-			}
-		}
+		// 		mathStylesString += rule.cssText + "\n";
+		// 	}
+		// }
 
-		return success ? mathStylesString : "";
+		// return success ? mathStylesString : "";
 	}
 
 	private async generateHead(view: TextFileView): Promise<HTMLHeadElement>
@@ -398,6 +405,9 @@ export class HTMLGenerator
 
 		<script src="https://code.iconify.design/iconify-icon/1.0.3/iconify-icon.min.js"></script>
 		`
+
+		if (view instanceof MarkdownView)
+			await Utils.rerenderView(view);
 
 		let mathStyles = this.getMathStyles();
 		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
