@@ -136,6 +136,4 @@ Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for ope
 ## Coffee
 Hello! I am a college student who makes these plugins for free out of my own enjoyment for obsidian and coding. If you enjoy my plugins and want to support me a little bit feel free to leave something here:
 
-<a href="https://www.buymeacoffee.com/nathangeorge">
-	<img src="https://cdn.buymeacoffee.com/buttons/v2/default-violet.png" style="width:300px" />
-</a>
+<a href="https://www.buymeacoffee.com/nathangeorge"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=6a8695&font_colour=ffffff&font_family=Poppins&outline_colour=000000&coffee_colour=FFDD00"></a>
