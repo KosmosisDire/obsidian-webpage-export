@@ -108,13 +108,15 @@ export class ExportSettings extends PluginSettingTab
 		containerEl.empty();
 
 		let header = containerEl.createEl('h2', { text: 'HTML Export Settings' });
-		header.style.display = 'inline-block';
+		header.style.display = 'block';
+		header.style.marginBottom = '15px';
 
-		let supporLink = containerEl.createEl('a', { href: 'https://www.buymeacoffee.com/nathangeorge' });
-		let supportButton = supporLink.createEl('img');
-		supportButton.setAttribute('src', 'https://cdn.buymeacoffee.com/buttons/v2/default-violet.png');
-		supportButton.setAttribute('style', '    height: 30px; margin-right: 0; margin-left: 17px; transform: translateY(25%);');
-		supportButton.setAttribute('alt', 'Buy Me A Coffee');
+		let supportLink = containerEl.createEl('a');
+		supportLink.outerHTML = `<a href="https://www.buymeacoffee.com/nathangeorge"><img style="height:40px;" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=${app.vault.getConfig("accentColor").replace("#", "")}&font_colour=ffffff&font_family=Poppins&outline_colour=000000&coffee_colour=FFDD00"></a>`;
+		let supportHeader = containerEl.createDiv({ text: 'Support my development of this plugin.', cls: "setting-item-description"});
+		supportHeader.style.display = 'block';
+		supportHeader.style.marginBottom = '20px';
+
 
 		containerEl.createEl('h3', { text: 'Inlining Options:' });
 

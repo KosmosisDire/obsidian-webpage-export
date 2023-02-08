@@ -44,7 +44,7 @@ export default class HTMLExportPlugin extends Plugin
 			name: 'Export current file to HTML',
 			checkCallback: (checking: boolean) =>
 			{
-				let file = (Utils.getActiveView())?.file;
+				let file = (Utils.getActiveTextView())?.file;
 				if(file instanceof TFile)
 				{
 					if(checking) return true;
