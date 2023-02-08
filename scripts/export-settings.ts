@@ -112,6 +112,7 @@ export class ExportSettings extends PluginSettingTab
 		header.style.marginBottom = '15px';
 
 		let supportLink = containerEl.createEl('a');
+		// @ts-ignore
 		supportLink.outerHTML = `<a href="https://www.buymeacoffee.com/nathangeorge"><img style="height:40px;" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=${app.vault.getConfig("accentColor").replace("#", "")}&font_colour=ffffff&font_family=Poppins&outline_colour=000000&coffee_colour=FFDD00"></a>`;
 		let supportHeader = containerEl.createDiv({ text: 'Support my development of this plugin.', cls: "setting-item-description"});
 		supportHeader.style.display = 'block';
