@@ -134,6 +134,7 @@ Export options
 Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for opening specific files in a new tab.
 
 ## Coffee
-Hello! I am a college student who makes these plugins for free out of my own enjoyment for obsidian and coding. If you enjoy my plugins and want to support me a little bit feel free to leave something here:
+
+If you want to fund the continued development of this plugin you can do so here:
 
 <a href="https://www.buymeacoffee.com/nathangeorge"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=6a8695&font_colour=ffffff&font_family=Poppins&outline_colour=000000&coffee_colour=FFDD00"></a>
