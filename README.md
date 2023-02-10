@@ -135,6 +135,6 @@ Thanks to https://github.com/darlal/obsidian-switcher-plus for reference for ope
 
 ## Coffee
 
-If you want to fund the continued development of this plugin you can do so here:
+This plugin takes a lot of work to maintain and continue adding features. If you want to fund the continued development of this plugin you can do so here:
 
 <a href="https://www.buymeacoffee.com/nathangeorge"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=6a8695&font_colour=ffffff&font_family=Poppins&outline_colour=000000&coffee_colour=FFDD00"></a>
