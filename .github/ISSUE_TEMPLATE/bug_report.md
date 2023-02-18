@@ -26,4 +26,4 @@ If applicable, add screenshots here to help explain your problem (just copy past
 ### IMPORTANT: Error Log
 1. Please open the developer console using (Ctrl + Shift + I), and clear the console using the button at the top left corner.
 2. Reproduce the bug
-3. Take a screenshot of the console if it has any output and paste it here
+3. Take a screenshot orcopy the error from the console if it has any output and paste it here
