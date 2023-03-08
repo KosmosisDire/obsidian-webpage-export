@@ -396,6 +396,7 @@ export class HTMLGenerator
 		<meta name="apple-mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-status-bar-style" content="black">
 		<meta name="mobile-web-app-capable" content="yes">
+		<meta charset="UTF-8">
 		<title>${view.file.basename}</title>
 
 		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
