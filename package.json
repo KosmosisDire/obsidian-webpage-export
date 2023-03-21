@@ -15,6 +15,7 @@
 		"@types/file-saver": "^2.0.5",
 		"@types/jquery": "^3.5.14",
 		"@types/node": "^16.11.6",
+		"@types/victor": "^1.1.0",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",
@@ -23,7 +24,8 @@
 		"jquery": "^3.5.14",
 		"obsidian": "^0.16.3",
 		"tslib": "2.4.0",
-		"typescript": "4.7.4"
+		"typescript": "4.7.4",
+		"victor": "^1.1.0"
 	},
 	"dependencies": {
 		"jquery": "^3.5.14",

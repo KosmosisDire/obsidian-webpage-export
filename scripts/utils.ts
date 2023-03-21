@@ -2,6 +2,7 @@ import {  readFile, writeFile, existsSync, mkdirSync } from 'fs';
 import { FileSystemAdapter, MarkdownView, Notice, PluginManifest, TextFileView, TFile } from 'obsidian';
 import { ExportSettings } from './export-settings';
 import process from 'process';
+import { css } from 'jquery';
 const pathTools = require('upath');
 
 /* @ts-ignore */
@@ -43,8 +44,12 @@ export class Utils
 	{
 		if(!existsSync(path))
 		{ 
-			if(showErrors) new Notice("Error: Path does not exist: \n\n" + path, 10000);
-			if(showErrors) console.error("Path does not exist: " + path);
+			if(showErrors) 
+			{
+				new Notice("Error: Path does not exist: \n\n" + path, 10000);
+				console.error("Path does not exist: " + path);
+			}
+			
 			return false;
 		}
 
@@ -383,8 +388,13 @@ export class Utils
 	{
 		if (themeName == "Default") return "/* Using default theme. */";
 
-		let themePath = this.getAbsolutePath(this.forceRelativePath(`.obsidian/themes/${themeName}/theme.css`));
-		if (!themePath) return "/* Error: Theme not found */";
+		let themePath = this.getAbsolutePath(this.forceRelativePath(`.obsidian/themes/${themeName}/theme.css`), false);
+		if (!themePath)
+		{
+			console.warn("Warning: could not find theme at path: \n\n" + themePath);
+			new Notice("Warning: could not find theme at path: \n\n" + themePath, 1000);
+			return "";
+		}
 
 		let themeContent = await Utils.getText(themePath);
 		return themeContent;
@@ -487,18 +497,6 @@ export class Utils
 			if(!name) return false;
 			return file.basename == name;
 		});
-	}
-
-	static setLineWidth(width: number) : void
-	{
-		if (width != 0)
-		{
-			let sizers = document.querySelectorAll(".workspace-leaf.mod-active .markdown-preview-sizer");
-			if (sizers.length > 0)
-			{
-				sizers[0].setAttribute("style", `${sizers[0].getAttr("style") ?? ""} max-width: ${width}px; width: unset;`);
-			}
-		}
 	}
 
 	static beautifyHTML(html: string) : string
