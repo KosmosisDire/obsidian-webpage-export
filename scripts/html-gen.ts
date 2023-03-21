@@ -268,7 +268,7 @@ export class HTMLGenerator
 
 		if (view instanceof MarkdownView)
 		{
-			await Utils.viewEnableFullRender(view);
+			await Utils.doFullRender(view);
 		}
 
 		let contentEl : HTMLElement = this.generateBodyContents();
@@ -279,7 +279,7 @@ export class HTMLGenerator
 		// inline / outline images
 		if (ExportSettings.settings.inlineImages)
 		{
-			await this.inlineImages(contentEl);
+			await this.inlineMedia(contentEl);
 		}
 		else
 		{
@@ -391,32 +391,10 @@ export class HTMLGenerator
 
 	private getMathStyles(): string
 	{
-		console.log("getMathStyles");
+
 		let mathStyles = document.getElementById('MJX-CHTML-styles');
 		console.log(mathStyles);
 		return mathStyles?.innerHTML ?? "";
-		// let mathStylesString = "";
-
-		// let success = true;
-		// for (let i = 0; i < mathStyles.cssRules.length; i++)
-		// {
-		// 	let rule = mathStyles.cssRules[i];
-
-		// 	if (rule)
-		// 	{
-		// 		if (i == 0 && !rule.cssText.startsWith("mjx"))
-		// 		{
-		// 			success = false;
-		// 			break;
-		// 		}
-
-		// 		if (rule.cssText.startsWith("@font-face")) continue;
-
-		// 		mathStylesString += rule.cssText + "\n";
-		// 	}
-		// }
-
-		// return success ? mathStylesString : "";
 	}
 
 	private async generateHead(view: TextFileView): Promise<HTMLHeadElement>
@@ -439,7 +417,7 @@ export class HTMLGenerator
 		`
 
 		if (view instanceof MarkdownView)
-			await Utils.rerenderView(view);
+			await Utils.doFullRender(view);
 
 		let mathStyles = this.getMathStyles();
 		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
@@ -564,17 +542,17 @@ export class HTMLGenerator
 		});
 	}
 
-	private async inlineImages(page: HTMLElement)
+	private async inlineMedia(page: HTMLElement)
 	{
 		let query = jQuery(page);
-		let images = query.find("img").toArray();
+		let media = query.find("img, audio").toArray();
 
-		for (let i = 0; i < images.length; i++)
+		for (let i = 0; i < media.length; i++)
 		{
-			let img = images[i];
-			if (!$(img).attr("src")?.startsWith("app://local")) continue;
+			let mediaEl = media[i];
+			if (!$(mediaEl).attr("src")?.startsWith("app://local")) continue;
 			
-			let path = $(img).attr("src")?.replace("app://local", "").split("?")[0];
+			let path = $(mediaEl).attr("src")?.replace("app://local", "").split("?")[0];
 			if(!path) continue;
 
 			path = Utils.forceAbsolutePath(path);
@@ -587,13 +565,23 @@ export class HTMLGenerator
 			catch (e)
 			{
 				console.error(e);
-				console.warn("Failed to inline image: " + path);
-				new Notice("Failed to inline image: " + path, 5000);
+				console.warn("Failed to inline media: " + path);
+				new Notice("Failed to inline media: " + path, 5000);
 				continue;
 			}
 
-			$(img).attr("src", "data:image/png;base64," + base64);
-			
+			let pathInfo = Utils.parsePath(path);
+
+			let type = "audio";
+			let ext = pathInfo.ext.replace("\.", "");
+
+			if ($(mediaEl).is("img"))
+			{
+				type = "image";
+				if(ext == "svg") ext += "+xml";
+			}
+
+			$(mediaEl).attr("src", `data:${type}/${ext};base64,${base64}`);
 		}
 	}
 

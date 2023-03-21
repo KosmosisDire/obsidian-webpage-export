@@ -457,7 +457,7 @@ export class Utils
 		await Utils.delay(300);
 	}
 
-	static async viewEnableFullRender(view: MarkdownView)
+	static async doFullRender(view: MarkdownView)
 	{
 		Utils.changeViewMode(view, "preview");
 		await this.delay(200);
@@ -471,7 +471,7 @@ export class Utils
 
 	static async getRendererHeight(view: MarkdownView, rerender: boolean = false): Promise<number>
 	{
-		if(rerender) await Utils.viewEnableFullRender(view);
+		if(rerender) await Utils.doFullRender(view);
 
 		/*@ts-ignore*/
 		let height = view.previewMode.renderer.sizerEl.offsetHeight;
