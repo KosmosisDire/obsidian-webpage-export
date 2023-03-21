@@ -11,7 +11,7 @@ export interface ExportSettingsData
 
 	addDarkModeToggle: boolean;
 	includeOutline: boolean;
-	customLineWidth: number;
+	customLineWidth: string;
 	openAfterExport: boolean;
 
 	lastExportPath: string;
@@ -28,7 +28,7 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 
 	addDarkModeToggle: true,
 	includeOutline: true,
-	customLineWidth: 0,
+	customLineWidth: "",
 	openAfterExport: true,
 
 	lastExportPath: '',
@@ -94,6 +94,8 @@ export class ExportSettings extends PluginSettingTab
 	static async loadSettings() 
 	{
 		ExportSettings.settings = Object.assign({}, DEFAULT_SETTINGS, await ExportSettings.plugin.loadData());
+		ExportSettings.settings.customLineWidth = ExportSettings.settings.customLineWidth.toString();
+		if (ExportSettings.settings.customLineWidth == "0") ExportSettings.settings.customLineWidth = ""; 
 	}
 
 	static async saveSettings() 
@@ -253,22 +255,21 @@ export class ExportModal extends Modal
 				));
 
 		new Setting(contentEl)
-			.setName('Page Width (px)')
-			.setTooltip('Sets the line width of the exported document.')
+			.setName('Page Width')
+			.setTooltip('Sets the line width of the exported document. Use any css units.\nDefault units: px')
 			.setHeading()
 			.addText((text) => text
-				.setValue(ExportSettings.settings.customLineWidth == 0 ? '' : ExportSettings.settings.customLineWidth.toString())
+				.setValue(ExportSettings.settings.customLineWidth)
 				.setPlaceholder('Leave blank for default')
 				.onChange(async (value) =>
 				{
-					let widthInt = parseInt(value);
-					ExportSettings.settings.customLineWidth = widthInt ?? 0;
+					ExportSettings.settings.customLineWidth = value;
 					await ExportSettings.saveSettings();
 				}
 			))
 			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() =>
 			{
-				ExportSettings.settings.customLineWidth = 0;
+				ExportSettings.settings.customLineWidth = "";
 				ExportSettings.saveSettings();
 				this.open();
 			}));

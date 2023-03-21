@@ -126,11 +126,8 @@ export class HTMLGenerator
 			
 			let path = Utils.joinPaths(this.vaultPluginsPath, thirdPartyPluginStyleNames[i].replace("\n", ""), "styles.css");
 			
-			if (!Utils.pathExists(path, false))
-			{ 
-				console.log("Could not find plugin css file at " + path);
-				continue;
-			}
+			if (!Utils.pathExists(path, true)) continue;
+			
 			
 			let style = await Utils.getText(path);
 			if (style)
@@ -211,6 +208,57 @@ export class HTMLGenerator
 
 	//#region General HTML
 
+	postprocessHTML(html: HTMLHtmlElement) : HTMLHtmlElement
+	{
+		// stop sizer from setting width and margin
+		let sizer = $(html).find(".markdown-preview-sizer");
+		sizer.css("margin", "0");
+		sizer.css("width", "100%");
+		sizer.css("max-width", "100%");
+
+		// set real margin on the .markdown-preview-view (using padding)
+		let view = $(html).find(".markdown-preview-view");
+		view.css("padding", "5%");
+
+		let body = $(html).find('body');
+
+		// set --line-width, --line-width-adaptive, and --file-line-width to the ExportSettings.settings.customLineWidth
+		if(ExportSettings.settings.customLineWidth != "")
+		{
+			let lineWidth = ExportSettings.settings.customLineWidth;
+			if (!isNaN(Number(lineWidth))) lineWidth += "px";
+			body.css("--line-width", lineWidth);
+			body.css("--line-width-adaptive", lineWidth);
+			body.css("--file-line-width", lineWidth);
+		}
+
+		// change the class on body to theme-dark or theme-light depending on the ExportSettings.settings.themeChoice enum
+
+		// if (ExportSettings.settings.themeChoice == ThemeOptions.Dark)
+		// {
+		// 	if (body.hasClass("theme-light"))
+		// 		body.removeClass("theme-light");
+		// 		body.addClass("theme-dark");
+		// }
+
+		// if (ExportSettings.settings.themeChoice == ThemeOptions.Light)
+		// {
+		// 	if (body.hasClass("theme-dark"))
+		// 		body.removeClass("theme-dark");
+		// 		body.addClass("theme-light");
+		// }
+
+		// uncollapse collapsed callouts
+		let callouts = $(html).find(".callout.is-collapsible.is-collapsed");
+		callouts.each((index, element) =>
+		{
+			$(element).removeClass("is-collapsed");
+			$(element).find(".callout-content").css("display", "block");
+		});
+
+		return html;
+	}
+
 	public async getCurrentFileHTML(returnEl : boolean = false): Promise<string | HTMLHtmlElement | null>
 	{
 		await Utils.delay(200);
@@ -218,7 +266,6 @@ export class HTMLGenerator
 		let view = Utils.getActiveTextView();
 		if (!view) return null;
 
-		Utils.setLineWidth(ExportSettings.settings.customLineWidth);
 		if (view instanceof MarkdownView)
 		{
 			await Utils.viewEnableFullRender(view);
@@ -268,6 +315,8 @@ export class HTMLGenerator
 		htmlEl.appendChild(headEl);
 		htmlEl.appendChild(bodyRootEl);
 
+		htmlEl = this.postprocessHTML(htmlEl);
+
 		if (returnEl == true)
 		{
 			return htmlEl;
@@ -303,34 +352,13 @@ export class HTMLGenerator
 		let obsidianDocEl = (document.querySelector(".workspace-leaf.mod-active .markdown-reading-view") as HTMLElement);
 		if (!obsidianDocEl) obsidianDocEl = (document.querySelector(".workspace-leaf.mod-active .view-content") as HTMLElement);
 
-		let width = "1000px";
-		if (ExportSettings.settings.customLineWidth > 0)
+		let customLineWidthActive = false;
+		let width = "var(--line-width)";
+		if(ExportSettings.settings.customLineWidth.trim() != "")
 		{
-			width = ExportSettings.settings.customLineWidth + "px";
-		}
-		else
-		{
-			let sizer = (obsidianDocEl.querySelector(".markdown-preview-sizer.markdown-preview-section") as HTMLElement);
-			if (sizer)
-			{
-				width = sizer.style.width;
-			}
-
-			if(width == "")
-			{
-				sizer = $(obsidianDocEl).find("div.canvas").get(0) as HTMLElement;
-				if (sizer)
-				{
-					width = sizer.clientWidth + "px";
-				}
-			}
-
-			if(width == "")
-			{
-				width = "var(--file-line-width)";
-			}
-
-			
+			width = ExportSettings.settings.customLineWidth;
+			if (!isNaN(Number(width))) width = width + "px";
+			customLineWidthActive = true;
 		}
 
 		let contentEl = document.createElement("div");
@@ -340,6 +368,9 @@ export class HTMLGenerator
 		$(contentEl).css("flex-basis", `min(${width}, 100vw)`);
 		$(contentEl).css("height", "100%");
 
+		if(customLineWidthActive) $(contentEl).css("--line-width", width);
+		$(contentEl).css("--line-width-adaptive", width);
+		$(contentEl).css("--file-line-width", width);
 
 		return contentEl;
 	}
@@ -396,6 +427,8 @@ export class HTMLGenerator
 		<meta name="apple-mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-status-bar-style" content="black">
 		<meta name="mobile-web-app-capable" content="yes">
+		<meta charset="utf-8">
+
 		<title>${view.file.basename}</title>
 
 		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
