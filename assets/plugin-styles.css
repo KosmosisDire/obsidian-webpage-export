@@ -90,8 +90,22 @@ hr
 #sidebar {
     background-color: var(--background-secondary);
     flex: 1 0 fit-content;
-    display: flex;
     flex-direction: column;
+}
+
+.sidebar-content
+{
+	display: flex;
+	flex-direction: column;
+	flex: 1 0 fit-content;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 0 10px;
+	padding-top: 10px;
+	padding-bottom: 10px;
+	width: 100%;
+	height: 100%;
+	align-items: stretch;
 }
 
 .sidebar-left
