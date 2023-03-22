@@ -12,7 +12,6 @@ obsidian-full-calendar
 obsidian-graphviz
 obsidian-latex
 obsidian-latex-suite
-obsidian-list-callouts
 obsidian-minimal-settings
 obsidian-plantuml
 obsidian-prozen
