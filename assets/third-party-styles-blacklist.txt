@@ -24,3 +24,6 @@ surfing
 table-editor-obsidian
 text-snippets-obsidian
 webpage-html-export
+lapel
+obsidian-regex-replace
+templater-obsidian
