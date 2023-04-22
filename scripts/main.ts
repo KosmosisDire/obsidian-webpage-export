@@ -1,11 +1,12 @@
 // imports from obsidian API
-import { Notice, Plugin, TFile, TFolder} from 'obsidian';
+import { MarkdownRenderer, Notice, Plugin, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
 import { ExportModal, ExportSettings } from './export-settings';
 import { Utils } from './utils';
 import { LeafHandler } from './leaf-handler';
 import { HTMLGenerator } from './html-gen';
+import { GraphGenerator } from './graph-view/graph-gen';
 const {shell} = require('electron') 
 const pathTools = require('path');
 
@@ -36,6 +37,7 @@ export default class HTMLExportPlugin extends Plugin
 			});
 		});
 	}
+
 
 	async addCommands()
 	{
@@ -69,6 +71,9 @@ export default class HTMLExportPlugin extends Plugin
 	async onload()
 	{
 		console.log('loading webpage-html-export plugin');
+
+		console.log(app);
+
 
 		// init settings
 		this.addSettingTab(new ExportSettings(this));
@@ -127,7 +132,7 @@ export default class HTMLExportPlugin extends Plugin
 			})
 		);
 		
-		
+		console.log(GraphGenerator.getGlobalGraph(3, 20));
 	}
 
 	onunload()

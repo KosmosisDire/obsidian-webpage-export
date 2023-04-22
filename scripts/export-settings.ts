@@ -1,5 +1,7 @@
 import { App, ExtraButtonComponent, Modal, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { Utils } from './utils';
+import { writeFile } from "fs/promises";
+import { HTMLGenerator } from './html-gen';
 
 export interface ExportSettingsData 
 {
@@ -11,6 +13,7 @@ export interface ExportSettingsData
 
 	addDarkModeToggle: boolean;
 	includeOutline: boolean;
+	includeGraphView: boolean;
 	customLineWidth: string;
 	openAfterExport: boolean;
 
@@ -28,6 +31,7 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 
 	addDarkModeToggle: true,
 	includeOutline: true,
+	includeGraphView: true,
 	customLineWidth: "",
 	openAfterExport: true,
 
@@ -79,11 +83,29 @@ export class FlowList
 
 }
 
+
+
 export class ExportSettings extends PluginSettingTab
 {
 
 	static settings: ExportSettingsData = DEFAULT_SETTINGS;
 	static plugin: Plugin;
+
+	private static thirdPartyStylesBlacklistURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/third-party-styles-blacklist.txt";
+
+	private blacklistedPluginIDs: string[] = [];
+	public async getBlacklistedPluginIDs() : Promise<string[]>
+	{
+		if (this.blacklistedPluginIDs.length > 0) return this.blacklistedPluginIDs;
+		
+		let blacklist = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "third-party-styles-blacklist.txt"));
+		if (blacklist)
+		{
+			this.blacklistedPluginIDs = blacklist.split("\n");
+		}
+
+		return this.blacklistedPluginIDs;
+	}
 
 	constructor(plugin: Plugin) 
 	{
@@ -96,6 +118,11 @@ export class ExportSettings extends PluginSettingTab
 		ExportSettings.settings = Object.assign({}, DEFAULT_SETTINGS, await ExportSettings.plugin.loadData());
 		ExportSettings.settings.customLineWidth = ExportSettings.settings.customLineWidth.toString();
 		if (ExportSettings.settings.customLineWidth == "0") ExportSettings.settings.customLineWidth = ""; 
+
+		//Download third-party-styles-blacklist.txt
+		let thirdPartyStylesBlacklist = await fetch(ExportSettings.thirdPartyStylesBlacklistURL);
+		let thirdPartyStylesBlacklistText = await thirdPartyStylesBlacklist.text();
+		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "third-party-styles-blacklist.txt"), thirdPartyStylesBlacklistText).catch((err) => { console.log(err); });
 	}
 
 	static async saveSettings() 
@@ -173,12 +200,15 @@ export class ExportSettings extends PluginSettingTab
 			.setHeading()
 
 		let pluginsList = new FlowList(containerEl);
-		Utils.getPluginIDs().forEach((plugin) =>
+		Utils.getPluginIDs().forEach(async (plugin) =>
 		{
 			let pluginManifest = Utils.getPluginManifest(plugin);
 			if (!pluginManifest) return;
 
-			if (pluginManifest.name == 'Webpage HTML Export') return;
+			if ((await this.getBlacklistedPluginIDs()).contains(pluginManifest.id))
+			{
+				return;
+			}
 
 			let pluginPath = pluginManifest.dir;
 			if (!pluginPath) return;
@@ -250,6 +280,18 @@ export class ExportModal extends Modal
 				.onChange(async (value) =>
 				{
 					ExportSettings.settings.includeOutline = value;
+					await ExportSettings.saveSettings();
+				}
+				));
+
+		new Setting(contentEl)
+			.setName('Include graph view')
+			.setDesc('Will include an interactive graph view sim of the document simmilar to obsidian\'s.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.includeGraphView)
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.includeGraphView = value;
 					await ExportSettings.saveSettings();
 				}
 				));

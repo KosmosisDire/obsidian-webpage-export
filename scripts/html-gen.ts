@@ -1,9 +1,11 @@
 import { writeFile } from "fs/promises";
-import { MarkdownView, Notice, TextFileView } from "obsidian";
+import { MarkdownView, Notice, TextFileView, TFile } from "obsidian";
 import { ExportSettings } from "./export-settings";
 import { Utils } from "./utils";
 import { existsSync, mkdirSync } from "fs";
 import jQuery from 'jquery';
+import { GraphGenerator } from "./graph-view/graph-gen";
+import { html_beautify } from "js-beautify";
 const $ = jQuery;
 
 export class HTMLGenerator
@@ -11,15 +13,15 @@ export class HTMLGenerator
 	// When this is enabled the plugin will download the extra .css and .js files from github.
 	autoDownloadExtras = true;
 
-	private vaultPluginsPath: string = Utils.getAbsolutePath(Utils.joinPaths(Utils.getVaultPath(), ".obsidian/plugins/")) as string;
-	private thisPluginPath: string;
-	private assetsPath: string;
+	public static vaultPluginsPath: string = Utils.getAbsolutePath(Utils.joinPaths(Utils.getVaultPath(), app.vault.configDir, "plugins/")) as string;
+	public static thisPluginPath: string;
+	public static assetsPath: string;
 
 	constructor(pluginID: string)
 	{
-		this.thisPluginPath = Utils.getAbsolutePath(Utils.joinPaths(this.vaultPluginsPath, pluginID, "/")) as string;
-		this.assetsPath = Utils.getAbsolutePath(Utils.joinPaths(this.thisPluginPath, "assets/"), false) as string;
-		Utils.createDirectory(this.assetsPath);
+		HTMLGenerator.thisPluginPath = Utils.getAbsolutePath(Utils.joinPaths(HTMLGenerator.vaultPluginsPath, pluginID, "/")) as string;
+		HTMLGenerator.assetsPath = Utils.getAbsolutePath(Utils.joinPaths(HTMLGenerator.thisPluginPath, "assets/"), false) as string;
+		Utils.createDirectory(HTMLGenerator.assetsPath);
 	}
 
 	// this is a list of images that is populated during generation and then downloaded upon export
@@ -50,29 +52,39 @@ export class HTMLGenerator
 		return toggle;
 	}
 
+	// public generateLocalGraphView(file: TFile, minRadius:number, maxRadius:number) : HTMLElement
+	// {
+	// 	let graphViewRoot = document.createElement("div");
+	// 	graphViewRoot.id = "graph-view-root";
+
+	// 	graphViewRoot.setAttr("graph-data", GraphGenerator.getLocalGraph(file, minRadius, maxRadius));
+
+	// 	return graphViewRoot;
+	// }
+
 	// the raw github urls for the extra files
 	private webpagejsURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/webpage.js";
 	private pluginStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/plugin-styles.css";
 	private obsidianStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/obsidian-styles.css";
-	
+
 	private async downloadExtras()
 	{
-		Utils.createDirectory(this.assetsPath);
+		Utils.createDirectory(HTMLGenerator.assetsPath);
 
 		//Download webpage.js
 		let webpagejs = await fetch(this.webpagejsURL);
 		let webpagejsText = await webpagejs.text();
-		await writeFile(Utils.joinPaths(this.assetsPath, "webpage.js"), webpagejsText).catch((err) => { console.log(err); });
+		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "webpage.js"), webpagejsText).catch((err) => { console.log(err); });
 
 		//Download plugin-styles.css
 		let pluginStyles = await fetch(this.pluginStylesURL);
 		let pluginStylesText = await pluginStyles.text();
-		await writeFile(Utils.joinPaths(this.assetsPath, "plugin-styles.css"), pluginStylesText).catch((err) => { console.log(err); });
+		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "plugin-styles.css"), pluginStylesText).catch((err) => { console.log(err); });
 
 		//Download obsidian-styles.css
 		let obsidianStyles = await fetch(this.obsidianStylesURL);
 		let obsidianStylesText = await obsidianStyles.text();
-		await writeFile(Utils.joinPaths(this.assetsPath, "obsidian-styles.css"), obsidianStylesText).catch((err) => { console.log(err); });
+		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "obsidian-styles.css"), obsidianStylesText).catch((err) => { console.log(err); });
 	}
 
 	private async loadAppStyles()
@@ -88,7 +100,7 @@ export class HTMLGenerator
 			}
 		}
 
-		this.appStyles += await Utils.getText(Utils.joinPaths(this.assetsPath, "obsidian-styles.css"));
+		this.appStyles += await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "obsidian-styles.css"));
 
 		for (let i = 0; i < appSheet.cssRules.length; i++)
 		{
@@ -124,7 +136,7 @@ export class HTMLGenerator
 		{
 			if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
 			
-			let path = Utils.joinPaths(this.vaultPluginsPath, thirdPartyPluginStyleNames[i].replace("\n", ""), "styles.css");
+			let path = Utils.joinPaths(HTMLGenerator.vaultPluginsPath, thirdPartyPluginStyleNames[i].replace("\n", ""), "styles.css");
 			
 			if (!Utils.pathExists(path, true)) continue;
 			
@@ -146,7 +158,7 @@ export class HTMLGenerator
 		if (!ExportSettings.settings.inlineCSS)
 		{
 			let appcss = this.appStyles;
-			let plugincss = await Utils.getText(Utils.joinPaths(this.assetsPath, "plugin-styles.css"));
+			let plugincss = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "plugin-styles.css")) ?? "";
 			let themecss = await Utils.getThemeContent(Utils.getCurrentTheme());
 
 			let snippetsList = await Utils.getStyleSnippetsContent();
@@ -174,7 +186,7 @@ export class HTMLGenerator
 
 		if (!ExportSettings.settings.inlineJS)
 		{
-			let webpagejs = await Utils.getText(Utils.joinPaths(this.assetsPath, "webpage.js"));
+			let webpagejs = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "webpage.js")) ?? "";
 			let webpagejsDownload = { filename: "webpage.js", data: webpagejs, type: "text/javascript" };
 			toDownload.push(webpagejsDownload);
 		}
@@ -293,6 +305,7 @@ export class HTMLGenerator
 			toggle = this.generateFixedToggle(contentEl, view.file.extension != "md");
 		}
 
+		// inject outline
 		let outline : HTMLElement | null = null;
 		if (ExportSettings.settings.includeOutline)
 		{
@@ -303,10 +316,36 @@ export class HTMLGenerator
 			}
 		}
 
+		// inject graph view
+		let graph : HTMLElement | null = null;
+		if (ExportSettings.settings.includeGraphView)
+		{
+			// graph = this.generateLocalGraphView(view.file, 10, 30);
+			graph = document.createDiv({ cls: "graph-view-placeholder"});
+			graph.innerHTML = 
+			`
+			<div class="graph-view-container">
+				<div class="graph-icon graph-expand" role="button" aria-label="Expand" data-tooltip-position="top"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-arrow-up-right"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg></div>
+				<canvas id="graph-canvas" width="512px" height="512px"></canvas>
+			</div>
+			`
+		}
+
 		let htmlEl : HTMLHtmlElement = document.createElement("html");
 		let headEl: HTMLHeadElement = await this.generateHead(view);
 		let bodyRootEl : HTMLBodyElement = this.generateBodyRoot();
-		let sidebars = this.generateSideBars(contentEl, toggle ?? document.createElement("div"), outline ?? document.createElement("div"));
+
+		let rightSidebarContent = document.createElement("div");
+		rightSidebarContent.classList.add("sidebar-content");
+		if (graph != null && outline != null) outline.appendChild(graph);
+		if (graph != null && outline == null) rightSidebarContent.appendChild(graph);
+		if (outline != null) rightSidebarContent.appendChild(outline);
+
+		let leftSidebarContent = document.createElement("div");
+		leftSidebarContent.classList.add("sidebar-content");
+		if (toggle != null) leftSidebarContent.appendChild(toggle);
+
+		let sidebars = this.generateSideBars(contentEl, leftSidebarContent, rightSidebarContent);
 		
 		let finalContent : HTMLElement = sidebars;
 		if(toggle == null && outline == null) finalContent = contentEl;
@@ -322,7 +361,7 @@ export class HTMLGenerator
 			return htmlEl;
 		}
 		else
-			return "<!DOCTYPE html>\n" + htmlEl.outerHTML;
+			return html_beautify("<!DOCTYPE html>\n" + htmlEl.outerHTML);
 	}
 
 	private generateSideBars(middleContent: HTMLElement, leftContent: HTMLElement, rightContent: HTMLElement): HTMLDivElement
@@ -414,6 +453,9 @@ export class HTMLGenerator
 		</script>
 
 		<script src="https://code.iconify.design/iconify-icon/1.0.3/iconify-icon.min.js"></script>
+
+		<script src="https://pixijs.download/v7.2.4/pixi.js"></script>
+    	<script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.6.0/tinycolor.js" integrity="sha512-4zLVma2et+Ww6WRDMUOjjETyQpMsSLhFO+2zRrH/dmBNh2RRBQzRj89Ll2d5qL4HGFaxr7g9p+ggLjIImBYf9Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 		`
 
 		if (view instanceof MarkdownView)
@@ -421,12 +463,12 @@ export class HTMLGenerator
 
 		let mathStyles = this.getMathStyles();
 		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
-		let scripts = `\n<script>\n ${await Utils.getText(Utils.joinPaths(this.assetsPath, "webpage.js"))} \n</script>\n`;
-		if (!ExportSettings.settings.inlineJS) scripts = "<script src='webpage.js'></script>\n";
+		let scripts = `\n<script type='module'>\n ${await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "webpage.js"))} \n</script>\n`;
+		if (!ExportSettings.settings.inlineJS) scripts = "<script type='module' src='webpage.js'></script>\n";
 
 		if (ExportSettings.settings.inlineCSS)
 		{
-			let pluginStyles = await Utils.getText(Utils.joinPaths(this.assetsPath, "plugin-styles.css"));
+			let pluginStyles = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "plugin-styles.css"));
 			let snippets = await Utils.getStyleSnippetsContent();
 			let snippetNames = Utils.getEnabledSnippets();
 			let theme = await Utils.getThemeContent(Utils.getCurrentTheme());
@@ -572,14 +614,13 @@ export class HTMLGenerator
 
 			let pathInfo = Utils.parsePath(path);
 
-			let type = "audio";
-			let ext = pathInfo.ext.replace("\.", "");
 
-			if ($(mediaEl).is("img"))
-			{
-				type = "image";
-				if(ext == "svg") ext += "+xml";
-			}
+			let ext = pathInfo.ext.replace("\.", "");
+			//@ts-ignore
+			let type = app.viewRegistry.typeByExtension[ext] ?? "audio";
+
+			if(ext == "svg") ext += "+xml";
+			
 
 			$(mediaEl).attr("src", `data:${type}/${ext};base64,${base64}`);
 		}

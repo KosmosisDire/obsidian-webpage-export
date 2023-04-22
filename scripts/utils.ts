@@ -149,7 +149,7 @@ export class Utils
 		return pathTools.relative(absoluteWorkingDirectory, absolutePath);
 	}
 
-	static async getText(path: string): Promise<string>
+	static async getText(path: string): Promise<string | undefined>
 	{
 		let absolutePath = this.getAbsolutePath(path);
 		if (!absolutePath) return "";
@@ -162,7 +162,7 @@ export class Utils
 				{
 					new Notice("Error: could not read text file at path: \n\n" + path + "\n\n" + err, 10000);
 					console.error("Error: could not read text file at path: \n\n" + path + "\n\n" + err);
-					reject(err);
+					resolve(undefined);
 				}
 				else resolve(data);
 			});
@@ -320,9 +320,9 @@ export class Utils
 
 		this.createDirectory(absolutePath);
 
-		let array = Utils.createUnicodeArray(data);
+		// let array = Utils.createUnicodeArray(data);
 
-		writeFile(absolutePath, array, (err) => 
+		writeFile(absolutePath, data, (err) => 
 		{
 			if (err)
 			{
@@ -336,7 +336,7 @@ export class Utils
 	{
 		for (let i = 0; i < files.length; i++)
 		{
-			let array = (files[i].unicode ?? true) ? Utils.createUnicodeArray(files[i].data) : Buffer.from(files[i].data, 'base64');
+			let array = (files[i].unicode ?? true) ? files[i].data : Buffer.from(files[i].data, 'base64');
 			
 			let parsedPath = this.parsePath(this.joinPaths(folderPath, files[i].relativePath ?? "", files[i].filename));
 			
@@ -396,7 +396,7 @@ export class Utils
 			return "";
 		}
 
-		let themeContent = await Utils.getText(themePath);
+		let themeContent = await Utils.getText(themePath) ?? "";
 		return themeContent;
 	}
 
@@ -443,7 +443,7 @@ export class Utils
 
 		for (let i = 0; i < enabledSnippets.length; i++)
 		{
-			snippetContents.push(await Utils.getText(this.forceRelativePath(`.obsidian/snippets/${enabledSnippets[i]}.css`)));
+			snippetContents.push(await Utils.getText(this.forceRelativePath(`.obsidian/snippets/${enabledSnippets[i]}.css`)) ?? "\n");
 		}
 
 		return snippetContents;

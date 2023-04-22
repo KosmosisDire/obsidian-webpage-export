@@ -1,9 +1,3 @@
-import { randomInt } from "crypto";
-import { file } from "jszip";
-import { MarkdownView, Notice, TextFileView, View } from "obsidian";
-import { Utils } from "./utils";
-import Victor from "victor";
-
 
 export class GraphGenerator
 {
@@ -17,11 +11,10 @@ export class GraphGenerator
 		return start + (end - start) * t2;
 	}
 
-	public static getGlobalGraph(minRadius: number, maxRadius: number): {positions: Victor[], radii: number[], colors: number[], labels: string[], linkSources: number[], linkTargets: number[], linkCounts: number[]}
+	public static getGlobalGraph(minRadius: number, maxRadius: number): {nodeCount: number, linkCount: number, accentColor: number, radii: number[], labels: string[], linkSources: number[], linkTargets: number[]}
 	{
-		let positions: Victor[] = [];
+		let nodeCount = 0;
 		let indexedRadii: {index: number, radius: number}[] = [];
-		let colors: number[] = [];
 		let labels: string[] = [];
 		let linkSources: number[] = [];
 		let linkTargets: number[] = [];
@@ -30,19 +23,15 @@ export class GraphGenerator
 		let paths: string[] = [];
 
 		// generate all posible nodes from files
-		let index = 0;
 		for (let file of app.vault.getFiles())
 		{
 			if (file.extension != "md" && file.extension != "canvas") continue;
 
-			positions.push(new Victor(0,0));
-			indexedRadii.push({index: index, radius: minRadius});
-			colors.push(0x999999);
+			indexedRadii.push({index: nodeCount, radius: minRadius});
 			labels.push(file.basename);
 			paths.push(file.path);
 			linkCounts.push(0);
-
-			index++;
+			nodeCount++;
 		}
 
 		// count the number of links for each node
@@ -61,6 +50,7 @@ export class GraphGenerator
 				{
 					continue;
 				}
+				
 
 				linkCounts[sourceIndex]++;
 				linkCounts[targetIndex]++;
@@ -77,23 +67,26 @@ export class GraphGenerator
 		{
 			let sourceIndex = paths.indexOf(link[0]);
 
-			indexedRadii[sourceIndex].radius = GraphGenerator.InOutQuadBlend(minRadius, maxRadius, linkCounts[sourceIndex] / maxLinks);
+			indexedRadii[sourceIndex].radius = GraphGenerator.InOutQuadBlend(minRadius, maxRadius, Math.min(linkCounts[sourceIndex] / (maxLinks * 0.8), 1.0));
 		}
 
 		// sort radii and then sort others based on radii
 		indexedRadii.sort((a, b) => b.radius - a.radius);
 
 		let radii = indexedRadii.map(r => r.radius);
-		colors = indexedRadii.map(r => colors[r.index]);
 		labels = indexedRadii.map(r => labels[r.index]);
 		linkSources = linkSources.map(s => indexedRadii.findIndex(r => r.index == s));
 		linkTargets = linkTargets.map(t => indexedRadii.findIndex(r => r.index == t));
 		linkCounts = indexedRadii.map(r => linkCounts[r.index]);
 
-		let data = {positions: positions, radii: radii, colors: colors, labels: labels, linkSources: linkSources, linkTargets: linkTargets, linkCounts: linkCounts};
+		// @ts-ignore
+		let accentColor = parseInt(app.vault.config.accentColor.replaceAll("#", "0x"), 16);
+
+		let data = {nodeCount: nodeCount, linkCount: linkSources.length, accentColor: accentColor, radii: radii, labels: labels, linkSources: linkSources, linkTargets: linkTargets, linkCounts: linkCounts};
 
 		console.log(data);
 
 		return data;
 	}
+
 }
