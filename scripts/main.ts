@@ -72,9 +72,6 @@ export default class HTMLExportPlugin extends Plugin
 	{
 		console.log('loading webpage-html-export plugin');
 
-		console.log(app);
-
-
 		// init settings
 		this.addSettingTab(new ExportSettings(this));
 		ExportSettings.loadSettings();
@@ -131,8 +128,7 @@ export default class HTMLExportPlugin extends Plugin
 				});
 			})
 		);
-		
-		console.log(GraphGenerator.getGlobalGraph(3, 20));
+
 	}
 
 	onunload()

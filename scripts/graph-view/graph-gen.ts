@@ -11,7 +11,7 @@ export class GraphGenerator
 		return start + (end - start) * t2;
 	}
 
-	public static getGlobalGraph(minRadius: number, maxRadius: number): {nodeCount: number, linkCount: number, accentColor: number, radii: number[], labels: string[], linkSources: number[], linkTargets: number[]}
+	public static getGlobalGraph(minRadius: number, maxRadius: number): {nodeCount: number, linkCount: number, radii: number[], labels: string[], linkSources: number[], linkTargets: number[]}
 	{
 		let nodeCount = 0;
 		let indexedRadii: {index: number, radius: number}[] = [];
@@ -79,10 +79,7 @@ export class GraphGenerator
 		linkTargets = linkTargets.map(t => indexedRadii.findIndex(r => r.index == t));
 		linkCounts = indexedRadii.map(r => linkCounts[r.index]);
 
-		// @ts-ignore
-		let accentColor = parseInt(app.vault.config.accentColor.replaceAll("#", "0x"), 16);
-
-		let data = {nodeCount: nodeCount, linkCount: linkSources.length, accentColor: accentColor, radii: radii, labels: labels, linkSources: linkSources, linkTargets: linkTargets, linkCounts: linkCounts};
+		let data = {nodeCount: nodeCount, linkCount: linkSources.length, radii: radii, labels: labels, linkSources: linkSources, linkTargets: linkTargets, linkCounts: linkCounts};
 
 		console.log(data);
 

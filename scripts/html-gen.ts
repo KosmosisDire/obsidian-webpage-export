@@ -321,7 +321,9 @@ export class HTMLGenerator
 		if (ExportSettings.settings.includeGraphView)
 		{
 			// graph = this.generateLocalGraphView(view.file, 10, 30);
-			graph = document.createDiv({ cls: "graph-view-placeholder"});
+			graph = document.createElement("div");
+			graph.className = "graph-view-placeholder";
+
 			graph.innerHTML = 
 			`
 			<div class="graph-view-container">
@@ -337,7 +339,7 @@ export class HTMLGenerator
 
 		let rightSidebarContent = document.createElement("div");
 		rightSidebarContent.classList.add("sidebar-content");
-		if (graph != null && outline != null) outline.appendChild(graph);
+		if (graph != null && outline != null) outline.prepend(graph);
 		if (graph != null && outline == null) rightSidebarContent.appendChild(graph);
 		if (outline != null) rightSidebarContent.appendChild(outline);
 
@@ -458,13 +460,25 @@ export class HTMLGenerator
     	<script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.6.0/tinycolor.js" integrity="sha512-4zLVma2et+Ww6WRDMUOjjETyQpMsSLhFO+2zRrH/dmBNh2RRBQzRj89Ll2d5qL4HGFaxr7g9p+ggLjIImBYf9Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 		`
 
+		let pathToRoot = Utils.getRelativePath(view.file.path, ExportSettings.settings.lastExportPath);
+		console.log(pathToRoot);
+
 		if (view instanceof MarkdownView)
 			await Utils.doFullRender(view);
 
 		let mathStyles = this.getMathStyles();
 		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
-		let scripts = `\n<script type='module'>\n ${await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "webpage.js"))} \n</script>\n`;
-		if (!ExportSettings.settings.inlineJS) scripts = "<script type='module' src='webpage.js'></script>\n";
+		let scripts = "";
+		if (ExportSettings.settings.includeGraphView) scripts += `<script>${"let nodes = \n" + JSON.stringify(GraphGenerator.getGlobalGraph(3, 20))}\n</script>`;
+		if (ExportSettings.settings.inlineJS)
+		{
+			let webpageJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "webpage.js")) ?? "";
+			scripts += `\n<script type='module'>\n${webpageJS}\n</script>\n`;
+		}
+		else 
+		{
+			scripts += `\n<script type='module' src='webpage.js'></script>\n`;
+		}
 
 		if (ExportSettings.settings.inlineCSS)
 		{
