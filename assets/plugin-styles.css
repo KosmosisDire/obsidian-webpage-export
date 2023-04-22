@@ -555,3 +555,93 @@ th[sortable-style="sortable-desc"]::after {
     transform: translate3d(calc(var(--handle-translation) * -1), 0, 0);
     background: url('https://api.iconify.design/lucide/sun.svg') no-repeat center center;
 }
+
+
+
+
+/* Graph View */
+
+
+#graph-canvas
+{
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--modal-border-color);
+    border-radius: var(--modal-radius);
+    aspect-ratio: 1/1;
+}
+
+.graph-view-container.expanded
+{
+    position: fixed;
+    width: 90%;
+    height: 90%;
+    right: 5%;
+    top: 5%;
+    backdrop-filter: blur(30px);
+    z-index: 1000;
+}
+
+.theme-dark #graph-canvas.expanded
+{
+    backdrop-filter: blur(30px) brightness(0.7);
+}
+
+.graph-view-container 
+{
+    position: relative;
+    width: -webkit-fill-available;
+    aspect-ratio: 1/1;
+    display: flex;
+}
+
+.graph-icon {
+    cursor: pointer;
+    color: var(--text-muted);
+}
+
+.graph-view-container .graph-icon > svg
+{
+    width: 24px;
+    height: 24px;
+
+    background-color: var(--color-base-00);
+    outline-width: 6px;
+    outline-color: var(--color-base-00);
+    outline-offset: -1px;
+    outline-style: solid;
+    border-radius: 100px;
+    margin: 10px;
+}
+
+.graph-view-placeholder {
+    padding: 0;
+    width: -webkit-fill-available;
+    aspect-ratio: 1/1;
+    position: relative;
+    flex: none;
+    margin: 12px;
+}
+
+.graph-view-placeholder:has(.expanded)
+{
+    border-radius: var(--modal-radius);
+    border: 1px solid var(--modal-border-color);
+}
+
+.scale-down {
+    transition: transform 0.2s ease-in-out;
+    transform: scale(0.9);
+}
+
+.scale-up {
+    transition: transform 0.2s ease-in-out;
+    transform: scale(1);
+}
+
+.graph-expand {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+}
+
