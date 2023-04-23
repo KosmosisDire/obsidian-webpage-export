@@ -47,7 +47,7 @@ export class HTMLGenerator
 	webpageJS: string = "";
 	graphViewJS: string = "";
 	graphWASMJS: string = "";
-	graphWASM: string = "";
+	graphWASM: Buffer;
 	renderWorkerJS: string = "";
 	tinyColorJS: string = "";
 
@@ -150,7 +150,7 @@ export class HTMLGenerator
 		this.webpageJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "webpage.js")) ?? "";
 		this.graphViewJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_view.js")) ?? "";
 		this.graphWASMJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.js")) ?? "";
-		this.graphWASM = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.wasm")) ?? "";
+		this.graphWASM = await Utils.getFileBuffer(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.wasm")) ?? Buffer.from([]);
 		this.renderWorkerJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph-render-worker.js")) ?? "";
 		this.tinyColorJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "tinycolor.js")) ?? "";
 	}
@@ -341,6 +341,7 @@ export class HTMLGenerator
 	public async getDocumentHTML(file: TFile): Promise<{htmlEl: HTMLElement, outlinedImages: {localImagePath: string, relativeExportImagePath: string}[]}>
 	{
 		let contentEl = document.createElement("div");
+		contentEl.detach();
 
 		if(ExportSettings.settings.exportInBackground)
 		{
@@ -757,6 +758,7 @@ export class HTMLGenerator
 			}
 
 			mediaEl.attr("src", relativeImagePath);
+			// mediaEl.attr("loading", "lazy");
 
 			let imagePathFromVault = Utils.joinPaths(Utils.getRelativePath(mediaPath, Utils.getVaultPath()), parsedMediaPath.base);
 

@@ -11,12 +11,12 @@ const dialog: Electron.Dialog = require('electron').remote.dialog;
 export class Downloadable
 {
 	filename: string = "";
-	content: string = "";
+	content: string | Buffer = "";
 	type: string = "text/plain";
 	relativePath: string | undefined = undefined;
 	useUnicode: boolean = true;
 
-	constructor(filename: string, content: string, type: string = "text/plain", vaultRelativeDestination: string | undefined = undefined, useUnicode: boolean = true)
+	constructor(filename: string, content: string | Buffer, type: string = "text/plain", vaultRelativeDestination: string | undefined = undefined, useUnicode: boolean = true)
 	{
 		this.filename = filename;
 		this.content = content;
@@ -233,6 +233,26 @@ export class Utils
 		});
 	}
 
+	static async getFileBuffer(path: string): Promise<Buffer | undefined>
+	{
+		let absolutePath = this.getAbsolutePath(path);
+		if (!absolutePath) return undefined;
+
+		return new Promise((resolve, reject) =>
+		{
+			readFile(absolutePath as string, (err, data) =>
+			{
+				if (err)
+				{
+					new Notice("Error: could not read file at path: \n\n" + path + "\n\n" + err, 10000);
+					console.error("Error: could not read file at path: \n\n" + path + "\n\n" + err);
+					resolve(undefined);
+				}
+				else resolve(data);
+			});
+		});
+	}
+
 	static changeViewMode(view: MarkdownView, modeName: "preview" | "source")
 	{
 		/*@ts-ignore*/
@@ -354,9 +374,11 @@ export class Utils
 	{
 		for (let i = 0; i < files.length; i++)
 		{
-			let array = (files[i].useUnicode ?? true) ? files[i].content : Buffer.from(files[i].content, 'base64');
+			let file = files[i];
+			let array = file.content;
+			if (!file.useUnicode && file.content instanceof String) array = Buffer.from(file.content, 'base64');
 			
-			let parsedPath = this.parsePath(this.joinPaths(folderPath, files[i].relativePath ?? "", files[i].filename));
+			let parsedPath = this.parsePath(this.joinPaths(folderPath, file.relativePath ?? "", file.filename));
 			
 			this.createDirectory(parsedPath.fullPath);
 			
