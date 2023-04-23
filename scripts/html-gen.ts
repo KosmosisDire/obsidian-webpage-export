@@ -49,6 +49,7 @@ export class HTMLGenerator
 	graphWASMJS: string = "";
 	graphWASM: string = "";
 	renderWorkerJS: string = "";
+	tinyColorJS: string = "";
 
 	// the raw github urls for the extra files
 	private webpagejsURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/webpage.js";
@@ -58,7 +59,8 @@ export class HTMLGenerator
 	private graphWASMJSURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_wasm.js";
 	private graphWASMURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_wasm.wasm";
 	private renderWorkerURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph-render-worker.js";
-	
+	private tinycolorURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/tinycolor.js";
+
 	private async downloadAssets()
 	{
 		Utils.createDirectory(HTMLGenerator.assetsPath);
@@ -97,6 +99,11 @@ export class HTMLGenerator
 		let renderWorker = await fetch(this.renderWorkerURL);
 		let renderWorkerText = await renderWorker.text();
 		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "graph-render-worker.js"), renderWorkerText).catch((err) => { console.log(err); });
+		
+		//Download tinycolor.js
+		let tinycolor = await fetch(this.tinycolorURL);
+		let tinycolorText = await tinycolor.text();
+		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "tinycolor.js"), tinycolorText).catch((err) => { console.log(err); });
 	}
 
 	private async loadAppStyles()
@@ -145,6 +152,7 @@ export class HTMLGenerator
 		this.graphWASMJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.js")) ?? "";
 		this.graphWASM = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.wasm")) ?? "";
 		this.renderWorkerJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph-render-worker.js")) ?? "";
+		this.tinyColorJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "tinycolor.js")) ?? "";
 	}
 
 	private async getThirdPartyPluginCSS() : Promise<string>
@@ -231,16 +239,21 @@ export class HTMLGenerator
 		{
 			let webpagejsDownload = new Downloadable("webpage.js", this.webpageJS, "text/javascript", HTMLGenerator.jsFolderName);
 			let graphViewJSDownload = new Downloadable("graph_view.js", this.graphViewJS, "text/javascript", HTMLGenerator.jsFolderName);
-			// wasm js is always inlined because it needs a different path per file
 			let graphWASMJSDownload = new Downloadable("graph_wasm.js", this.graphWASMJS, "text/javascript", HTMLGenerator.jsFolderName);
-			let graphWASMDownload = new Downloadable("graph_wasm.wasm", this.graphWASM, "text/wasm", HTMLGenerator.jsFolderName, false);
-			let renderWorkerJSDownload = new Downloadable("graph-render-worker.js", this.renderWorkerJS, "text/javascript", HTMLGenerator.jsFolderName);
+			let tinyColorJS = new Downloadable("tinycolor.js", this.tinyColorJS, "text/javascript", HTMLGenerator.jsFolderName);
 
 			toDownload.push(webpagejsDownload);
 			toDownload.push(graphViewJSDownload);
 			toDownload.push(graphWASMJSDownload);
-			toDownload.push(graphWASMDownload);
+			toDownload.push(tinyColorJS);
+		}
+
+		if(ExportSettings.settings.includeGraphView)
+		{
+			let graphWASMDownload = new Downloadable("graph_wasm.wasm", this.graphWASM, "application/wasm", HTMLGenerator.jsFolderName, false);
+			let renderWorkerJSDownload = new Downloadable("graph-render-worker.js", this.renderWorkerJS, "text/javascript", HTMLGenerator.jsFolderName);
 			toDownload.push(renderWorkerJSDownload);
+			toDownload.push(graphWASMDownload);
 		}
 
 		if (!ExportSettings.settings.inlineImages)
@@ -462,6 +475,8 @@ export class HTMLGenerator
 
 	private async generateHead(file: TFile): Promise<HTMLHeadElement>
 	{
+		let relativePaths = this.getRelativePaths(file);
+
 		let meta =
 		`
 		<title>${file.basename}</title>
@@ -478,10 +493,7 @@ export class HTMLGenerator
 		<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js" integrity="sha256-xLD7nhI62fcsEZK2/v8LsBcb4lG7dgULkuXoXB/j91c=" crossorigin="anonymous"></script></script>
 		<script src="https://code.iconify.design/iconify-icon/1.0.3/iconify-icon.min.js"></script>
 		<script src="https://pixijs.download/v7.2.4/pixi.js"></script>
-    	<script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.6.0/tinycolor.js" integrity="sha512-4zLVma2et+Ww6WRDMUOjjETyQpMsSLhFO+2zRrH/dmBNh2RRBQzRj89Ll2d5qL4HGFaxr7g9p+ggLjIImBYf9Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 		`;
-
-		let relativePaths = this.getRelativePaths(file);
 
 		// --- JS ---
 		let scripts = "";
@@ -490,21 +502,17 @@ export class HTMLGenerator
 			// TODO: outline the nodes to a file
 			scripts += `<script>${"let nodes = \n" + JSON.stringify(GraphGenerator.getGlobalGraph(3, 20))}\n</script>`;
 
-			
-
 			if (ExportSettings.settings.inlineJS) 
 			{
 				scripts += `\n<script type='module'>\n${this.graphViewJS}\n</script>\n`;
-				// scripts += `\n<script>\n${this.renderWorkerJS}\n</script>\n`;
-
-				// let graphWasmJS = this.graphWASMJS;
-				// graphWasmJS = graphWasmJS.replaceAll("graph_wasm.wasm", Utils.joinPaths(relativePaths.jsPath, "graph_wasm.wasm"));
 				scripts += `\n<script>${this.graphWASMJS}</script>\n`;
+				scripts += `\n<script>${this.tinyColorJS}</script>\n`;
 			}
 			else 
 			{
 				scripts += `\n<script type='module' src='${relativePaths.jsPath}/graph_view.js'></script>\n`;
 				scripts += `\n<script src='${relativePaths.jsPath}/graph_wasm.js'></script>\n`;
+				scripts += `\n<script src="${relativePaths.jsPath}/tinycolor.js"></script>\n`;
 			}
 		}
 
