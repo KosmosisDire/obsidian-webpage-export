@@ -195,7 +195,7 @@ async function RunGraphView()
             console.log(this.canvas);
             this.view = this.canvas.transferControlToOffscreen();
 
-            this.worker = new Worker(new URL("./graph_render_worker.js", import.meta.url));
+            this.worker = new Worker(new URL("./graph-render-worker.js", import.meta.url));
 
             
             
