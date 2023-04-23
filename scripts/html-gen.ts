@@ -313,7 +313,9 @@ export class HTMLGenerator
 
 		htmlEl = this.postprocessHTML(htmlEl);
 
-		let htmlString = html_beautify("<!DOCTYPE html>\n" + htmlEl.outerHTML);
+		let htmlString = "<!DOCTYPE html>\n" + htmlEl.outerHTML;
+		if (ExportSettings.settings.beautifyHTML) htmlString = html_beautify(htmlString, { indent_size: 2 });
+		
 		let externalFiles = await this.getSeperateFilesToDownload(documentData.outlinedImages);
 
 		let parsedPath = Utils.parsePath(file.path);

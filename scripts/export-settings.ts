@@ -10,6 +10,7 @@ export interface ExportSettingsData
 	inlineImages: boolean;
 	makeNamesWebStyle: boolean;
 	exportInBackground: boolean;
+	beautifyHTML: boolean;
 	includePluginCSS: string;
 
 	addDarkModeToggle: boolean;
@@ -28,6 +29,7 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	inlineImages: true,
 	makeNamesWebStyle: false,
 	exportInBackground: false,
+	beautifyHTML: false,
 	includePluginCSS: '',
 
 	addDarkModeToggle: true,
@@ -205,6 +207,18 @@ export class ExportSettings extends PluginSettingTab
 				.onChange(async (value) =>
 				{
 					ExportSettings.settings.exportInBackground = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		new Setting(containerEl)
+			.setName('Beautify HTML')
+			.setHeading()
+			.setDesc('Beautify the HTML text to make it more human readable, at the cost of export speed.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.beautifyHTML)
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.beautifyHTML = value;
 					await ExportSettings.saveSettings();
 				}));
 
