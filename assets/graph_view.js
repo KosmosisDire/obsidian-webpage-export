@@ -12,12 +12,9 @@ async function RunGraphView()
     let batchFraction = 1;
     let minBatchFraction = 0.3;
 
+    repulsionForce /= batchFraction;
+
     let dt = 1;
-    let attractionForce = 1;
-    let linkLength = 1;
-    let repulsionForce = 30 / batchFraction;
-    let centralForce = 2;
-    let edgePruning = 20;
 
     let targetFPS = 30;
 
