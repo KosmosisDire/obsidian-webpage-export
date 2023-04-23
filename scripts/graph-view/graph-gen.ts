@@ -81,7 +81,7 @@ export class GraphGenerator
 
 		let data = {nodeCount: nodeCount, linkCount: linkSources.length, radii: radii, labels: labels, linkSources: linkSources, linkTargets: linkTargets, linkCounts: linkCounts};
 
-		console.log(data);
+		// console.log(data);
 
 		return data;
 	}

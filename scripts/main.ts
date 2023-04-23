@@ -1,18 +1,14 @@
 // imports from obsidian API
-import { MarkdownRenderer, Notice, Plugin, TFile, TFolder} from 'obsidian';
+import { Notice, Plugin, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
 import { ExportModal, ExportSettings } from './export-settings';
-import { Utils } from './utils';
-import { LeafHandler } from './leaf-handler';
+import { Utils, Downloadable } from './utils';
 import { HTMLGenerator } from './html-gen';
-import { GraphGenerator } from './graph-view/graph-gen';
 const {shell} = require('electron') 
-const pathTools = require('path');
 
 export default class HTMLExportPlugin extends Plugin
 {
-	leafHandler: LeafHandler = new LeafHandler();
 	htmlGenerator: HTMLGenerator = new HTMLGenerator("webpage-html-export");
 
 	addTogglePostprocessor()
@@ -38,7 +34,6 @@ export default class HTMLExportPlugin extends Plugin
 		});
 	}
 
-
 	async addCommands()
 	{
 		this.addCommand({
@@ -51,7 +46,7 @@ export default class HTMLExportPlugin extends Plugin
 				{
 					if(checking) return true;
 
-					this.exportFile(file);
+					this.exportFileAndDownload(file);
 				}
 
 				return false;
@@ -105,7 +100,7 @@ export default class HTMLExportPlugin extends Plugin
 						{
 							if(file instanceof TFile)
 							{
-								let success = await this.exportFile(file);
+								let success = await this.exportFileAndDownload(file);
 								if (success && ExportSettings.settings.openAfterExport)
 								{
 									shell.openPath(ExportSettings.settings.lastExportPath);
@@ -136,72 +131,49 @@ export default class HTMLExportPlugin extends Plugin
 		console.log('unloading webpage-html-export plugin');
 	}
 
-	async exportFile(file: TFile, fullPath: string = "", showSettings: boolean = true) : Promise<boolean>
+	async exportFileAndDownload(file: TFile, showSettings: boolean = true): Promise<{success: boolean, externalFiles: Downloadable[], exportPath: string}>
+	{
+		let result = await this.exportFile(file, "", showSettings);
+		if (result.success)
+		{
+			Utils.downloadFiles(result.externalFiles, result.exportPath);
+		}
+
+		return result;
+	}
+
+	async exportFile(file: TFile, exportPath: string = "", showSettings: boolean = true) : Promise<{success: boolean, externalFiles: Downloadable[], exportPath: string}>
 	{
 		// Open the settings modal and wait until it's closed
-		let copyDocToClipboard = false;
 		if (showSettings)
 		{
 			let validSelection = false;
 			while (!validSelection)
 			{
 				let result = await new ExportModal().open();
-				if (result.canceled) return false;
-
-				copyDocToClipboard = result.copyToClipboard;
-
-				if(copyDocToClipboard && (!ExportSettings.settings.inlineCSS || !ExportSettings.settings.inlineJS || !ExportSettings.settings.inlineImages))
-				{
-					let error = "To copy to the clipboard please enable inline CSS, JS and Images";
-					console.error(error);
-					new Notice(error, 5000);
-					validSelection = false;
-					continue;
-				}
+				if (result.canceled) return {success: false, externalFiles: [], exportPath: ""};
 
 				validSelection = true;
 			}
 		}
 
-		let parsedPath = Utils.parsePath(fullPath);
-		if (fullPath == "" && !copyDocToClipboard) 
+		let parsedPath = Utils.parsePath(exportPath);
+		if (exportPath == "") // if no export path is specified, show a save dialog
 		{
 			let defaultFileName = (ExportSettings.settings.makeNamesWebStyle ? Utils.makePathWebStyle(file.basename) : file.basename) + ".html";
 			let saveDialogPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), defaultFileName, false) ?? undefined;
-			if (saveDialogPath == undefined) return false;
+			if (saveDialogPath == undefined) return {success: false, externalFiles: [], exportPath: ""};
 			parsedPath = Utils.parsePath(saveDialogPath);
 		}
 
-		let fileTab = this.leafHandler.openFileInNewLeaf(file as TFile, true);
+		let webpageData = await this.htmlGenerator.generateWebpage(file);
+		// let htmlString = webpageData.html;
+		let filesToDownload = webpageData.externalFiles;
 
-		let htmlEl : string | HTMLHtmlElement | null = await this.htmlGenerator.getCurrentFileHTML();
-		if (htmlEl == null) 
-		{
-			console.error("Failed to get HTML for file " + file.name);
-			new Notice("Failed to get HTML for file " + file.name, 5000);
-			return false;
-		}
-
-		let htmlText = (htmlEl instanceof HTMLHtmlElement) ? htmlEl.outerHTML : htmlEl;
-
-		let filesToDownload = await this.htmlGenerator.getSeperateFilesToDownload();
-
-		// Close the file tab after HTML is generated
-		fileTab.detach();
-
-		// if onlyCopy is true, then we don't want to download the file, we just want to copy it to the clipboard
-		if (copyDocToClipboard)
-		{
-			navigator.clipboard.writeText(htmlText);
-			return false;
-		}
-
-		// Download files
-		let htmlDownload = { filename: file.basename + ".html", data: htmlText, type: "text/html" };
-		filesToDownload.unshift(htmlDownload);
+		// let htmlDownload = new Downloadable(parsedPath.fullPath, htmlString, "text/html");
+		// filesToDownload.unshift(htmlDownload);
 
 		let filename = parsedPath.base;
-		let folderPath = parsedPath.dir;
 
 		filesToDownload[0].filename = filename;
 
@@ -214,11 +186,9 @@ export default class HTMLExportPlugin extends Plugin
 			});
 		}
 
-		await Utils.downloadFiles(filesToDownload, folderPath);
-
 		new Notice("Exported " + file.name + " to " + parsedPath.fullPath, 5000);
 
-		return true;
+		return {success: true, externalFiles: filesToDownload, exportPath: parsedPath.dir};
 	}
 
 	async exportFolder(folderPath: string, showSettings: boolean = true) : Promise<boolean>
@@ -234,15 +204,6 @@ export default class HTMLExportPlugin extends Plugin
 				let result = await new ExportModal().open();
 				if (result.canceled) return false;
 				
-				if (result.copyToClipboard) 
-				{
-					let error = "You cannot export a folder or vault to the clipboard.";
-					console.error(error);
-					new Notice(error, 5000);
-					validSelection = false;
-					continue;
-				}
-
 				validSelection = true;
 			}
 		}
@@ -251,6 +212,8 @@ export default class HTMLExportPlugin extends Plugin
 		if (!htmlPath) return false;
 
 		let files = this.app.vault.getFiles();
+
+		let externalFiles: Downloadable[] = [];
 
 		for (let i = 0; i < files.length; i++)
 		{
@@ -262,9 +225,15 @@ export default class HTMLExportPlugin extends Plugin
 					fullPath = Utils.joinPaths(htmlPath, Utils.makePathWebStyle(Utils.parsePath(file.path).dir), Utils.makePathWebStyle(file.basename + ".html"));
 				else
 					fullPath = Utils.joinPaths(htmlPath, Utils.parsePath(file.path).dir, file.basename + ".html");
-				await this.exportFile(file, fullPath, false);
+				let exportInfo = await this.exportFile(file, fullPath, false);
+				if (exportInfo.success) externalFiles.push(...exportInfo.externalFiles);
 			}
 		}
+
+		// remove duplicates
+		externalFiles = externalFiles.filter((file, index) => externalFiles.findIndex((f) => f.relativePath == file.relativePath && f.filename == file.filename) == index);
+
+		await Utils.downloadFiles(externalFiles, htmlPath);
 
 		new Notice("Folder exported " + folderPath + " to " + htmlPath, 10000);
 

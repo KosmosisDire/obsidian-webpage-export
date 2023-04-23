@@ -1,21 +1,33 @@
 import { writeFile } from "fs/promises";
-import { MarkdownView, Notice, TextFileView, TFile } from "obsidian";
+import { Component, MarkdownRenderer, MarkdownView, Notice, TFile } from "obsidian";
 import { ExportSettings } from "./export-settings";
-import { Utils } from "./utils";
-import { existsSync, mkdirSync } from "fs";
+import { Utils, Downloadable } from "./utils";
 import jQuery from 'jquery';
 import { GraphGenerator } from "./graph-view/graph-gen";
 import { html_beautify } from "js-beautify";
 const $ = jQuery;
+import { LeafHandler } from './leaf-handler';
 
 export class HTMLGenerator
 {
+	leafHandler: LeafHandler = new LeafHandler();
+
 	// When this is enabled the plugin will download the extra .css and .js files from github.
 	autoDownloadExtras = true;
 
 	public static vaultPluginsPath: string = Utils.getAbsolutePath(Utils.joinPaths(Utils.getVaultPath(), app.vault.configDir, "plugins/")) as string;
 	public static thisPluginPath: string;
 	public static assetsPath: string;
+
+	// this path is used to generate the relative path to the images folder, likewise for the other paths
+	static mediaFolderName: string = "media";
+	static jsFolderName: string = "scripts";
+	static cssFolderName: string = "styles";
+	static mediaPathComparison: string = Utils.joinPaths(Utils.getVaultPath(), HTMLGenerator.mediaFolderName);
+	static jsPathComparison: string = Utils.joinPaths(Utils.getVaultPath(), HTMLGenerator.jsFolderName);
+	static cssPathComparison: string = Utils.joinPaths(Utils.getVaultPath(), HTMLGenerator.cssFolderName);
+
+	//#region Loading
 
 	constructor(pluginID: string)
 	{
@@ -24,50 +36,30 @@ export class HTMLGenerator
 		Utils.createDirectory(HTMLGenerator.assetsPath);
 	}
 
-	// this is a list of images that is populated during generation and then downloaded upon export
-	// I am sure there is a better way to handle this data flow but I am not sure what to do.
-	private outlinedImages: { localImagePath: string, relativeExportImagePath: string }[] = [];
-
 	// this is a string containing the filtered app.css file. It is populated on load. 
-	// The math styles are attempted to load on every export until they are succesfully loaded. 
-	// This is because they only load when a file containing latex is opened.
 	appStyles: string = "";
+	pluginStyles: string = "";
+	themeStyles: string = "";
+	snippetStyles: string[] = [];
+	lastEnabledSnippets: string[] = [];
+	lastEnabledTheme: string = "";
 
-	public generateDarkmodeToggle(inline : boolean = true) : HTMLElement
-	{
-		// programatically generates the above html snippet
-		let toggle = document.createElement("div");
-		let label = document.createElement("label");
-		label.classList.add(inline ? "theme-toggle-inline" : "theme-toggle");
-		label.setAttribute("for", "theme_toggle");
-		let input = document.createElement("input");
-		input.classList.add("toggle__input");
-		input.setAttribute("type", "checkbox");
-		input.setAttribute("id", "theme_toggle");
-		let div = document.createElement("div");
-		div.classList.add("toggle__fill");
-		label.appendChild(input);
-		label.appendChild(div);
-		toggle.appendChild(label);
-		return toggle;
-	}
-
-	// public generateLocalGraphView(file: TFile, minRadius:number, maxRadius:number) : HTMLElement
-	// {
-	// 	let graphViewRoot = document.createElement("div");
-	// 	graphViewRoot.id = "graph-view-root";
-
-	// 	graphViewRoot.setAttr("graph-data", GraphGenerator.getLocalGraph(file, minRadius, maxRadius));
-
-	// 	return graphViewRoot;
-	// }
+	webpageJS: string = "";
+	graphViewJS: string = "";
+	graphWASMJS: string = "";
+	graphWASM: string = "";
+	renderWorkerJS: string = "";
 
 	// the raw github urls for the extra files
-	private webpagejsURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/webpage.js";
-	private pluginStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/plugin-styles.css";
-	private obsidianStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/obsidian-styles.css";
-
-	private async downloadExtras()
+	private webpagejsURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/webpage.js";
+	private pluginStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/plugin-styles.css";
+	private obsidianStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/obsidian-styles.css";
+	private graphViewJSURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_view.js";
+	private graphWASMJSURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_wasm.js";
+	private graphWASMURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_wasm.wasm";
+	private renderWorkerURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph-render-worker.js";
+	
+	private async downloadAssets()
 	{
 		Utils.createDirectory(HTMLGenerator.assetsPath);
 
@@ -85,6 +77,26 @@ export class HTMLGenerator
 		let obsidianStyles = await fetch(this.obsidianStylesURL);
 		let obsidianStylesText = await obsidianStyles.text();
 		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "obsidian-styles.css"), obsidianStylesText).catch((err) => { console.log(err); });
+	
+		//Download graph_view.js
+		let graphViewJS = await fetch(this.graphViewJSURL);
+		let graphViewJSText = await graphViewJS.text();
+		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_view.js"), graphViewJSText).catch((err) => { console.log(err); });
+
+		//Download graph_wasm.js
+		let graphWASMJS = await fetch(this.graphWASMJSURL);
+		let graphWASMJSText = await graphWASMJS.text();
+		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.js"), graphWASMJSText).catch((err) => { console.log(err); });
+
+		//Download graph_wasm.wasm
+		let graphWASM = await fetch(this.graphWASMURL);
+		let graphWASMBuffer = await graphWASM.arrayBuffer();
+		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.wasm"), Buffer.from(graphWASMBuffer)).catch((err) => { console.log(err); });
+
+		//Download graph-render-worker.js
+		let renderWorker = await fetch(this.renderWorkerURL);
+		let renderWorkerText = await renderWorker.text();
+		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "graph-render-worker.js"), renderWorkerText).catch((err) => { console.log(err); });
 	}
 
 	private async loadAppStyles()
@@ -122,8 +134,17 @@ export class HTMLGenerator
 
 	public async initialize()
 	{
-		if (this.autoDownloadExtras) await this.downloadExtras();
+		if (this.autoDownloadExtras) await this.downloadAssets();
 		await this.loadAppStyles();
+
+		this.pluginStyles = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "plugin-styles.css")) ?? "";
+		this.themeStyles = await Utils.getThemeContent(Utils.getCurrentThemeName());
+
+		this.webpageJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "webpage.js")) ?? "";
+		this.graphViewJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_view.js")) ?? "";
+		this.graphWASMJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.js")) ?? "";
+		this.graphWASM = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.wasm")) ?? "";
+		this.renderWorkerJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph-render-worker.js")) ?? "";
 	}
 
 	private async getThirdPartyPluginCSS() : Promise<string>
@@ -151,32 +172,54 @@ export class HTMLGenerator
 		return pluginCSS;
 	}
 
-	async getSeperateFilesToDownload() : Promise<{filename: string, data: string, type: string, relativePath?: string, unicode?: boolean}[]>
+	private async getSnippetsCSS(snippetNames: string[]) : Promise<string>
 	{
-		let toDownload: {filename: string, data: string, type: string, relativePath?: string, unicode?: boolean}[] = [];
+		let snippetsList = await Utils.getStyleSnippetsContent();
+		let snippets = "";
+
+		for (let i = 0; i < snippetsList.length; i++)
+		{
+			snippets += `/* --- ${snippetNames[i]}.css --- */  \n ${snippetsList[i]}  \n\n\n`;
+		}
+
+		return snippets;
+	}
+
+	private async updateCSSCache()
+	{
+		let snippetsNames = await Utils.getEnabledSnippets();
+		let themeName = Utils.getCurrentThemeName();
+
+		if (snippetsNames != this.lastEnabledSnippets)
+		{
+			this.lastEnabledSnippets = snippetsNames;
+			this.snippetStyles = await Utils.getStyleSnippetsContent();
+		}
+
+		if (themeName != this.lastEnabledTheme)
+		{
+			this.lastEnabledTheme = themeName;
+			this.themeStyles = await Utils.getThemeContent(themeName);
+		}	
+	}
+
+	private async getSeperateFilesToDownload(outlinedImages: {localImagePath: string, relativeExportImagePath: string}[]) : Promise<Downloadable[]>
+	{
+		let toDownload: Downloadable[] = [];
 
 		if (!ExportSettings.settings.inlineCSS)
 		{
-			let appcss = this.appStyles;
-			let plugincss = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "plugin-styles.css")) ?? "";
-			let themecss = await Utils.getThemeContent(Utils.getCurrentTheme());
+			this.updateCSSCache();
 
-			let snippetsList = await Utils.getStyleSnippetsContent();
-			let snippetsNames = await Utils.getEnabledSnippets();
-			let snippets = "";
-
-			for (let i = 0; i < snippetsList.length; i++)
-			{
-				snippets += `/* --- ${snippetsNames[i]}.css --- */  \n ${snippetsList[i]}  \n\n\n`;
-			}
+			let pluginCSS = this.pluginStyles;
 
 			let thirdPartyPluginCSS = await this.getThirdPartyPluginCSS();
-			plugincss += "\n" + thirdPartyPluginCSS + "\n";
+			pluginCSS += "\n" + thirdPartyPluginCSS + "\n";
 
-			let appcssDownload = { filename: "obsidian-styles.css", data: appcss, type: "text/css" };
-			let plugincssDownload = { filename: "plugin-styles.css", data: plugincss, type: "text/css" };
-			let themecssDownload = { filename: "theme.css", data: themecss, type: "text/css" };
-			let snippetsDownload = { filename: "snippets.css", data: snippets, type: "text/css" };
+			let appcssDownload = new Downloadable("obsidian-styles.css", this.appStyles, "text/css", HTMLGenerator.cssFolderName);
+			let plugincssDownload = new Downloadable("plugin-styles.css", pluginCSS, "text/css", HTMLGenerator.cssFolderName);
+			let themecssDownload = new Downloadable("theme.css", this.themeStyles, "text/css", HTMLGenerator.cssFolderName);
+			let snippetsDownload = new Downloadable("snippets.css", this.snippetStyles.join("\n\n"), "text/css", HTMLGenerator.cssFolderName);
 
 			toDownload.push(appcssDownload);
 			toDownload.push(plugincssDownload);
@@ -186,16 +229,25 @@ export class HTMLGenerator
 
 		if (!ExportSettings.settings.inlineJS)
 		{
-			let webpagejs = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "webpage.js")) ?? "";
-			let webpagejsDownload = { filename: "webpage.js", data: webpagejs, type: "text/javascript" };
+			let webpagejsDownload = new Downloadable("webpage.js", this.webpageJS, "text/javascript", HTMLGenerator.jsFolderName);
+			let graphViewJSDownload = new Downloadable("graph_view.js", this.graphViewJS, "text/javascript", HTMLGenerator.jsFolderName);
+			// wasm js is always inlined because it needs a different path per file
+			let graphWASMJSDownload = new Downloadable("graph_wasm.js", this.graphWASMJS, "text/javascript", HTMLGenerator.jsFolderName);
+			let graphWASMDownload = new Downloadable("graph_wasm.wasm", this.graphWASM, "text/javascript", HTMLGenerator.jsFolderName);
+			let renderWorkerJSDownload = new Downloadable("graph-render-worker.js", this.renderWorkerJS, "text/javascript", HTMLGenerator.jsFolderName);
+
 			toDownload.push(webpagejsDownload);
+			toDownload.push(graphViewJSDownload);
+			toDownload.push(graphWASMJSDownload);
+			toDownload.push(graphWASMDownload);
+			toDownload.push(renderWorkerJSDownload);
 		}
 
 		if (!ExportSettings.settings.inlineImages)
 		{
-			for (let i = 0; i < this.outlinedImages.length; i++)
+			for (let i = 0; i < outlinedImages.length; i++)
 			{
-				let image = this.outlinedImages[i];
+				let image = outlinedImages[i];
 				if (!Utils.pathExists(Utils.parseFullPath(image.localImagePath), false))
 				{
 					console.log("Could not find image at " + image.localImagePath);
@@ -203,14 +255,7 @@ export class HTMLGenerator
 				}
 				let data = await Utils.getTextBase64(image.localImagePath);
 				let destinationPath = Utils.parsePath(image.relativeExportImagePath);
-				let imageDownload =
-				{
-					filename: destinationPath.base,
-					data: data,
-					type: "image/png",
-					relativePath: destinationPath.dir,
-					unicode: false
-				};
+				let imageDownload = new Downloadable(destinationPath.base, data, "image/png", destinationPath.dir, false);
 				toDownload.push(imageDownload);
 			}
 		}
@@ -218,9 +263,317 @@ export class HTMLGenerator
 		return toDownload;
 	}
 
-	//#region General HTML
+	//#endregion
 
-	postprocessHTML(html: HTMLHtmlElement) : HTMLHtmlElement
+	//#region Main Generation Functions
+
+	public async generateWebpage(file: TFile): Promise<{html: string, externalFiles: Downloadable[]}>
+	{
+		let documentData = await this.getDocumentHTML(file);
+		let documentContent = documentData.htmlEl;
+
+		let sidebars = this.generateSideBars(documentContent);
+		let rightSidebar = sidebars.right;
+		let leftSidebar = sidebars.left;
+
+		// inject darkmode toggle
+		if (ExportSettings.settings.addDarkModeToggle)
+		{
+			let toggle = this.generateFixedToggle(documentContent, file.extension != "md");
+			leftSidebar.appendChild(toggle);
+		}
+
+		// inject outline
+		if (ExportSettings.settings.includeOutline)
+		{
+			let headers = this.getHeaderList(documentContent);
+			if (headers)
+			{
+				var outline : HTMLElement | undefined = this.generateOutline(headers);
+				rightSidebar.appendChild(outline);
+			}
+		}
+
+		// inject graph view
+		if (ExportSettings.settings.includeGraphView)
+		{
+			let graph = this.generateGraphView();
+
+			if(outline) outline.prepend(graph);
+			else        rightSidebar.appendChild(graph);
+		}
+
+		let htmlEl : HTMLHtmlElement = document.createElement("html");
+		let headEl: HTMLHeadElement = await this.generateHead(file);
+		let bodyEl : HTMLBodyElement = this.generateBodyElement();
+
+		bodyEl.appendChild(sidebars.container);
+		htmlEl.appendChild(headEl);
+		htmlEl.appendChild(bodyEl);
+
+		htmlEl = this.postprocessHTML(htmlEl);
+
+		let htmlString = html_beautify("<!DOCTYPE html>\n" + htmlEl.outerHTML);
+		let externalFiles = await this.getSeperateFilesToDownload(documentData.outlinedImages);
+
+		let parsedPath = Utils.parsePath(file.path);
+
+		externalFiles.unshift(new Downloadable(parsedPath.name, htmlString, "text/html", parsedPath.dir, true));
+
+		return {html : htmlString, externalFiles: externalFiles};
+	}
+
+	public async getDocumentHTML(file: TFile): Promise<{htmlEl: HTMLElement, outlinedImages: {localImagePath: string, relativeExportImagePath: string}[]}>
+	{
+		let contentEl = document.createElement("div");
+
+		if(ExportSettings.settings.exportInBackground)
+		{
+			contentEl.addClasses(["markdown-preview-view", "markdown-rendered"]);
+			let sizer = contentEl.createDiv({ cls: "markdown-preview-sizer" });
+			let fileContents = await app.vault.read(file);
+			await MarkdownRenderer.renderMarkdown(fileContents, sizer, file.path, new Component());
+		}
+		else
+		{
+			let fileTab = this.leafHandler.openFileInNewLeaf(file as TFile, true);
+			await Utils.delay(200);
+			let view = Utils.getActiveTextView();
+			if (!view)
+			{
+				contentEl.innerHTML = 
+				`<center><h1>
+				Failed to render file, check obsidian log for details and report an issue on GitHub: 
+				<a href="https://github.com/KosmosisDire/obsidian-webpage-export/issues">Github Issues</a>
+				</h1></center>`
+			}
+
+			if (view instanceof MarkdownView)
+			{
+				await Utils.doFullRender(view);
+			}
+
+			let obsidianDocEl = (document.querySelector(".workspace-leaf.mod-active .markdown-reading-view") as HTMLElement);
+			if (!obsidianDocEl) obsidianDocEl = (document.querySelector(".workspace-leaf.mod-active .view-content") as HTMLElement);
+
+			let customLineWidthActive = false;
+			let width = "var(--line-width)";
+			if(ExportSettings.settings.customLineWidth.trim() != "")
+			{
+				width = ExportSettings.settings.customLineWidth;
+				if (!isNaN(Number(width))) width = width + "px";
+				customLineWidthActive = true;
+			}
+
+			contentEl.setAttribute("class", obsidianDocEl.getAttribute("class") ?? "");
+			contentEl.innerHTML = obsidianDocEl.innerHTML;
+			
+			$(contentEl).css("flex-basis", `min(${width}, 100vw)`);
+			$(contentEl).css("height", "100%");
+
+			if(customLineWidthActive) $(contentEl).css("--line-width", width);
+			$(contentEl).css("--line-width-adaptive", width);
+			$(contentEl).css("--file-line-width", width);
+
+			// Close the file tab after HTML is generated
+			if(fileTab) fileTab.detach();
+		}
+
+		// collapse uncollapsed callouts
+		let callouts = $(contentEl).find(".callout.is-collapsible:not(.is-collapsed)");
+		callouts.each((index, element) =>
+		{
+			$(element).addClass("is-collapsed");
+			$(element).find(".callout-content").css("display", "none");
+		});
+
+		this.fixLinks(contentEl); // modify links to work outside of obsidian (including relative links)
+		this.repairOnClick(contentEl); // replace data-onlick with onclick
+
+		// inline / outline images
+		let outlinedImages : {localImagePath: string, relativeExportImagePath: string}[] = [];
+		if (ExportSettings.settings.inlineImages)
+		{
+			await this.inlineMedia(contentEl);
+		}
+		else
+		{
+			outlinedImages = await this.outlineMedia(contentEl, file);
+		}
+
+		return {htmlEl: contentEl, outlinedImages: outlinedImages};
+	}
+
+	private generateSideBars(middleContent: HTMLElement): {container: HTMLElement, left: HTMLElement, right: HTMLElement}
+	{
+		let leftContent = document.createElement("div");
+		let rightContent = document.createElement("div");
+
+		let flexContainer = document.createElement("div");
+		flexContainer.setAttribute("class", "flex-container");
+
+		let leftBar = document.createElement("div");
+		leftBar.setAttribute("id", "sidebar");
+		leftBar.setAttribute("class", "sidebar-left");
+		leftBar.appendChild(leftContent);
+
+		let rightBar = document.createElement("div");
+		rightBar.setAttribute("id", "sidebar");
+		rightBar.setAttribute("class", "sidebar-right");
+		rightBar.appendChild(rightContent);
+
+		flexContainer.appendChild(leftBar);
+		flexContainer.appendChild(middleContent);
+		flexContainer.appendChild(rightBar);
+
+		return {container: flexContainer, left: leftContent, right: rightContent};
+	}
+
+	private generateBodyElement(): HTMLBodyElement
+	{
+		let bodyClasses = document.body.getAttribute("class") ?? "";
+		let bodyStyle = document.body.getAttribute("style") ?? "";
+		bodyClasses = bodyClasses.replaceAll("\"", "'");
+		bodyStyle = bodyStyle.replaceAll("\"", "'");
+
+		let bodyEl = document.createElement("body");
+		bodyEl.setAttribute("class", bodyClasses);
+		bodyEl.setAttribute("style", bodyStyle);
+
+		return bodyEl;
+	}
+
+	private getMathStyles(): string
+	{
+		let mathStyles = document.getElementById('MJX-CHTML-styles');
+		return (mathStyles?.innerHTML ?? "").replaceAll("app://obsidian.md/", "https://publish.obsidian.md/");
+	}
+
+	private getRelativePaths(file: TFile): {mediaPath: string, jsPath: string, cssPath: string}
+	{
+		let imagePath = Utils.getRelativePath(HTMLGenerator.mediaPathComparison, file.path);
+		let jsPath = Utils.getRelativePath(HTMLGenerator.jsPathComparison, file.path);
+		let cssPath = Utils.getRelativePath(HTMLGenerator.cssPathComparison, file.path);
+
+		return {mediaPath: imagePath, jsPath: jsPath, cssPath: cssPath};
+	}
+
+	private async generateHead(file: TFile): Promise<HTMLHeadElement>
+	{
+		let meta =
+		`
+		<title>${file.basename}</title>
+
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+		<meta name="apple-mobile-web-app-capable" content="yes">
+		<meta name="apple-mobile-web-app-status-bar-style" content="black">
+		<meta name="mobile-web-app-capable" content="yes">
+		<meta charset="UTF-8">
+
+		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
+
+		<script src='https://code.jquery.com/jquery-3.6.0.js'></script>
+		<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js" integrity="sha256-xLD7nhI62fcsEZK2/v8LsBcb4lG7dgULkuXoXB/j91c=" crossorigin="anonymous"></script></script>
+		<script src="https://code.iconify.design/iconify-icon/1.0.3/iconify-icon.min.js"></script>
+		<script src="https://pixijs.download/v7.2.4/pixi.js"></script>
+    	<script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.6.0/tinycolor.js" integrity="sha512-4zLVma2et+Ww6WRDMUOjjETyQpMsSLhFO+2zRrH/dmBNh2RRBQzRj89Ll2d5qL4HGFaxr7g9p+ggLjIImBYf9Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+		`;
+
+		let relativePaths = this.getRelativePaths(file);
+
+		// --- JS ---
+		let scripts = "";
+		if (ExportSettings.settings.includeGraphView) 
+		{
+			// TODO: outline the nodes to a file
+			scripts += `<script>${"let nodes = \n" + JSON.stringify(GraphGenerator.getGlobalGraph(3, 20))}\n</script>`;
+
+			
+
+			if (ExportSettings.settings.inlineJS) 
+			{
+				scripts += `\n<script type='module'>\n${this.graphViewJS}\n</script>\n`;
+				// scripts += `\n<script>\n${this.renderWorkerJS}\n</script>\n`;
+
+				// let graphWasmJS = this.graphWASMJS;
+				// graphWasmJS = graphWasmJS.replaceAll("graph_wasm.wasm", Utils.joinPaths(relativePaths.jsPath, "graph_wasm.wasm"));
+				scripts += `\n<script>${this.graphWASMJS}</script>\n`;
+			}
+			else 
+			{
+				scripts += `\n<script type='module' src='${relativePaths.jsPath}/graph_view.js'></script>\n`;
+				scripts += `\n<script src='${relativePaths.jsPath}/graph_wasm.js'></script>\n`;
+			}
+		}
+
+		if (ExportSettings.settings.inlineJS)
+		{
+			scripts += `\n<script type='module'>\n${this.webpageJS}\n</script>\n`;
+		}
+		else 
+		{
+			scripts += `\n<script src='${relativePaths.jsPath}/webpage.js'></script>\n`;
+		}
+
+
+		// --- CSS ---
+		let mathStyles = this.getMathStyles();
+		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
+
+		this.updateCSSCache();
+
+		if (ExportSettings.settings.inlineCSS)
+		{
+			let pluginCSS = this.pluginStyles;
+			let thirdPartyPluginStyles = await this.getThirdPartyPluginCSS();
+			pluginCSS += thirdPartyPluginStyles;
+			
+			var header =
+			`
+			${meta}
+			
+			<!-- Obsidian App Styles / Other Built-in Styles -->
+			<style> ${this.appStyles} </style>
+			<style> ${mathStyles} </style>
+			<style> ${cssSettings} </style>
+
+			<!-- Plugin Styles -->
+			<style> ${pluginCSS} </style>
+
+			<!-- Theme Styles ( ${Utils.getCurrentThemeName()} ) -->
+			<style> ${this.themeStyles} </style>
+
+			<!-- Snippets: ${Utils.getEnabledSnippets().join(", ")} -->
+			<style> ${this.snippetStyles.join("</style><style>")} </style>
+		
+			${scripts}
+			`;
+		}
+		else
+		{
+			header =
+			`
+			${meta}
+
+			<link rel="stylesheet" href="${relativePaths.cssPath}/obsidian-styles.css">
+			<link rel="stylesheet" href="${relativePaths.cssPath}/plugin-styles.css">
+			<link rel="stylesheet" href="${relativePaths.cssPath}/theme.css">
+			<link rel="stylesheet" href="${relativePaths.cssPath}/snippets.css">
+
+			<style> ${cssSettings} </style>
+			<style> ${mathStyles} </style>
+
+			${scripts}
+			`;
+		}
+
+		let headerEl = document.createElement("head");
+		headerEl.innerHTML = header;
+
+		return headerEl;
+	}
+
+	private postprocessHTML(html: HTMLHtmlElement) : HTMLHtmlElement
 	{
 		// stop sizer from setting width and margin
 		let sizer = $(html).find(".markdown-preview-sizer");
@@ -244,300 +597,13 @@ export class HTMLGenerator
 			body.css("--file-line-width", lineWidth);
 		}
 
-		// change the class on body to theme-dark or theme-light depending on the ExportSettings.settings.themeChoice enum
-
-		// if (ExportSettings.settings.themeChoice == ThemeOptions.Dark)
-		// {
-		// 	if (body.hasClass("theme-light"))
-		// 		body.removeClass("theme-light");
-		// 		body.addClass("theme-dark");
-		// }
-
-		// if (ExportSettings.settings.themeChoice == ThemeOptions.Light)
-		// {
-		// 	if (body.hasClass("theme-dark"))
-		// 		body.removeClass("theme-dark");
-		// 		body.addClass("theme-light");
-		// }
-
-		// uncollapse collapsed callouts
-		let callouts = $(html).find(".callout.is-collapsible.is-collapsed");
-		callouts.each((index, element) =>
-		{
-			$(element).removeClass("is-collapsed");
-			$(element).find(".callout-content").css("display", "block");
-		});
-
 		return html;
-	}
-
-	public async getCurrentFileHTML(returnEl : boolean = false): Promise<string | HTMLHtmlElement | null>
-	{
-		await Utils.delay(200);
-
-		let view = Utils.getActiveTextView();
-		if (!view) return null;
-
-		if (view instanceof MarkdownView)
-		{
-			await Utils.doFullRender(view);
-		}
-
-		let contentEl : HTMLElement = this.generateBodyContents();
-
-		this.fixLinks(contentEl); // modify links to work outside of obsidian (including relative links)
-		this.repairOnClick(contentEl); // replace data-onlick with onclick
-
-		// inline / outline images
-		if (ExportSettings.settings.inlineImages)
-		{
-			await this.inlineMedia(contentEl);
-		}
-		else
-		{
-			await this.outlineImages(contentEl, view);
-		}
-
-		// inject darkmode toggle
-		let toggle : HTMLElement | null = null;
-		if (ExportSettings.settings.addDarkModeToggle)
-		{
-			toggle = this.generateFixedToggle(contentEl, view.file.extension != "md");
-		}
-
-		// inject outline
-		let outline : HTMLElement | null = null;
-		if (ExportSettings.settings.includeOutline)
-		{
-			let headers = this.getHeaderList(contentEl);
-			if (headers)
-			{
-				outline = this.generateOutline(headers);
-			}
-		}
-
-		// inject graph view
-		let graph : HTMLElement | null = null;
-		if (ExportSettings.settings.includeGraphView)
-		{
-			// graph = this.generateLocalGraphView(view.file, 10, 30);
-			graph = document.createElement("div");
-			graph.className = "graph-view-placeholder";
-
-			graph.innerHTML = 
-			`
-			<div class="graph-view-container">
-				<div class="graph-icon graph-expand" role="button" aria-label="Expand" data-tooltip-position="top"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-arrow-up-right"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg></div>
-				<canvas id="graph-canvas" width="512px" height="512px"></canvas>
-			</div>
-			`
-		}
-
-		let htmlEl : HTMLHtmlElement = document.createElement("html");
-		let headEl: HTMLHeadElement = await this.generateHead(view);
-		let bodyRootEl : HTMLBodyElement = this.generateBodyRoot();
-
-		let rightSidebarContent = document.createElement("div");
-		rightSidebarContent.classList.add("sidebar-content");
-		if (graph != null && outline != null) outline.prepend(graph);
-		if (graph != null && outline == null) rightSidebarContent.appendChild(graph);
-		if (outline != null) rightSidebarContent.appendChild(outline);
-
-		let leftSidebarContent = document.createElement("div");
-		leftSidebarContent.classList.add("sidebar-content");
-		if (toggle != null) leftSidebarContent.appendChild(toggle);
-
-		let sidebars = this.generateSideBars(contentEl, leftSidebarContent, rightSidebarContent);
-		
-		let finalContent : HTMLElement = sidebars;
-		if(toggle == null && outline == null) finalContent = contentEl;
-
-		bodyRootEl.appendChild(finalContent);
-		htmlEl.appendChild(headEl);
-		htmlEl.appendChild(bodyRootEl);
-
-		htmlEl = this.postprocessHTML(htmlEl);
-
-		if (returnEl == true)
-		{
-			return htmlEl;
-		}
-		else
-			return html_beautify("<!DOCTYPE html>\n" + htmlEl.outerHTML);
-	}
-
-	private generateSideBars(middleContent: HTMLElement, leftContent: HTMLElement, rightContent: HTMLElement): HTMLDivElement
-	{
-		let flexContainer = document.createElement("div");
-		flexContainer.setAttribute("class", "flex-container");
-
-		let leftBar = document.createElement("div");
-		leftBar.setAttribute("id", "sidebar");
-		leftBar.setAttribute("class", "sidebar-left");
-		leftBar.appendChild(leftContent);
-
-		let rightBar = document.createElement("div");
-		rightBar.setAttribute("id", "sidebar");
-		rightBar.setAttribute("class", "sidebar-right");
-		rightBar.appendChild(rightContent);
-
-		flexContainer.appendChild(leftBar);
-		flexContainer.appendChild(middleContent);
-		flexContainer.appendChild(rightBar);
-
-		return flexContainer;
-	}
-
-	private generateBodyContents(): HTMLElement
-	{
-		let obsidianDocEl = (document.querySelector(".workspace-leaf.mod-active .markdown-reading-view") as HTMLElement);
-		if (!obsidianDocEl) obsidianDocEl = (document.querySelector(".workspace-leaf.mod-active .view-content") as HTMLElement);
-
-		let customLineWidthActive = false;
-		let width = "var(--line-width)";
-		if(ExportSettings.settings.customLineWidth.trim() != "")
-		{
-			width = ExportSettings.settings.customLineWidth;
-			if (!isNaN(Number(width))) width = width + "px";
-			customLineWidthActive = true;
-		}
-
-		let contentEl = document.createElement("div");
-		contentEl.setAttribute("class", obsidianDocEl.getAttribute("class") ?? "");
-		contentEl.innerHTML = obsidianDocEl.innerHTML;
-		
-		$(contentEl).css("flex-basis", `min(${width}, 100vw)`);
-		$(contentEl).css("height", "100%");
-
-		if(customLineWidthActive) $(contentEl).css("--line-width", width);
-		$(contentEl).css("--line-width-adaptive", width);
-		$(contentEl).css("--file-line-width", width);
-
-		return contentEl;
-	}
-
-	private generateBodyRoot(): HTMLBodyElement
-	{
-		let bodyClasses = document.body.getAttribute("class") ?? "";
-		let bodyStyle = document.body.getAttribute("style") ?? "";
-		bodyClasses = bodyClasses.replaceAll("\"", "'");
-		bodyStyle = bodyStyle.replaceAll("\"", "'");
-
-		let bodyEl = document.createElement("body");
-		bodyEl.setAttribute("class", bodyClasses);
-		bodyEl.setAttribute("style", bodyStyle);
-
-		return bodyEl;
-	}
-
-	private getMathStyles(): string
-	{
-
-		let mathStyles = document.getElementById('MJX-CHTML-styles');
-		console.log(mathStyles);
-		return mathStyles?.innerHTML ?? "";
-	}
-
-	private async generateHead(view: TextFileView): Promise<HTMLHeadElement>
-	{
-		let meta =
-		`
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-		<meta name="apple-mobile-web-app-capable" content="yes">
-		<meta name="apple-mobile-web-app-status-bar-style" content="black">
-		<meta name="mobile-web-app-capable" content="yes">
-		<meta charset="UTF-8">
-		<title>${view.file.basename}</title>
-
-		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
-		<script src='https://code.jquery.com/jquery-3.6.0.js'></script>
-		<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js" integrity="sha256-xLD7nhI62fcsEZK2/v8LsBcb4lG7dgULkuXoXB/j91c=" crossorigin="anonymous"></script>
-		</script>
-
-		<script src="https://code.iconify.design/iconify-icon/1.0.3/iconify-icon.min.js"></script>
-
-		<script src="https://pixijs.download/v7.2.4/pixi.js"></script>
-    	<script src="https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.6.0/tinycolor.js" integrity="sha512-4zLVma2et+Ww6WRDMUOjjETyQpMsSLhFO+2zRrH/dmBNh2RRBQzRj89Ll2d5qL4HGFaxr7g9p+ggLjIImBYf9Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-		`
-
-		let pathToRoot = Utils.getRelativePath(view.file.path, ExportSettings.settings.lastExportPath);
-		console.log(pathToRoot);
-
-		if (view instanceof MarkdownView)
-			await Utils.doFullRender(view);
-
-		let mathStyles = this.getMathStyles();
-		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
-		let scripts = "";
-		if (ExportSettings.settings.includeGraphView) scripts += `<script>${"let nodes = \n" + JSON.stringify(GraphGenerator.getGlobalGraph(3, 20))}\n</script>`;
-		if (ExportSettings.settings.inlineJS)
-		{
-			let webpageJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "webpage.js")) ?? "";
-			scripts += `\n<script type='module'>\n${webpageJS}\n</script>\n`;
-		}
-		else 
-		{
-			scripts += `\n<script type='module' src='webpage.js'></script>\n`;
-		}
-
-		if (ExportSettings.settings.inlineCSS)
-		{
-			let pluginStyles = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "plugin-styles.css"));
-			let snippets = await Utils.getStyleSnippetsContent();
-			let snippetNames = Utils.getEnabledSnippets();
-			let theme = await Utils.getThemeContent(Utils.getCurrentTheme());
-
-			let thirdPartyPluginStyles = await this.getThirdPartyPluginCSS();
-			pluginStyles += thirdPartyPluginStyles;
-			
-			var header =
-			`
-			${meta}
-			
-			<!-- Obsidian App Styles / Other Built-in Styles -->
-			<style> ${this.appStyles} </style>
-			<style> ${mathStyles} </style>
-			<style> ${cssSettings} </style>
-
-			<!-- Plugin Styles -->
-			<style> ${pluginStyles} </style>
-
-			<!-- Theme Styles ( ${Utils.getCurrentTheme()} ) -->
-			<style> ${theme} </style>
-
-			<!-- Snippets: ${snippetNames.join(", ")} -->
-			<style> ${snippets.join("</style><style>")} </style>
-		
-			${scripts}
-			`;
-		}
-		else
-		{
-			header =
-			`
-			${meta}
-
-			<link rel="stylesheet" href="obsidian-styles.css">
-			<link rel="stylesheet" href="plugin-styles.css">
-			<link rel="stylesheet" href="theme.css">
-			<link rel="stylesheet" href="snippets.css">
-
-			<style> ${cssSettings} </style>
-			<style> ${mathStyles} </style>
-
-			${scripts}
-			`;
-		}
-
-		let headerEl = document.createElement("head");
-		headerEl.innerHTML = header;
-
-		return headerEl;
 	}
 
 	//#endregion
 
 	//#region Links and Images
+
 	private fixLinks(page: HTMLElement)
 	{
 		let query = jQuery(page);
@@ -640,33 +706,37 @@ export class HTMLGenerator
 		}
 	}
 
-	private async outlineImages(page: HTMLElement, view: TextFileView)
+	private async outlineMedia(page: HTMLElement, file: TFile): Promise<{localImagePath: string, relativeExportImagePath: string}[]>
 	{
+		let relativePaths = this.getRelativePaths(file);
 		let query = jQuery(page);
+		let media = query.find("img, audio").toArray();
 
-		this.outlinedImages = [];
+		let imagesToOutline: { localImagePath: string, relativeExportImagePath: string}[] = [];
 
-		let imagesToOutline: { localImagePath: string, relativeExportImagePath: string }[] = [];
-
-		query.find("img").each(function ()
+		for (let i = 0; i < media.length; i++)
 		{
-			let imagePath = $(this).attr("src") ?? "";
-			if (imagePath == "") return;
-
-			if (!imagePath.startsWith("app://local") || imagePath.contains("data:")) return;
-
-			imagePath = Utils.trimStart(imagePath, "app://local").split("?")[0];
-			imagePath = Utils.forceAbsolutePath(imagePath);
+			let mediaEl = $(media[i]);
+			if (!mediaEl.attr("src")?.startsWith("app://local")) continue;
 			
-			let filePath = Utils.getAbsolutePath(view.file.path) ?? "";
-			
-			let imageBase = Utils.parsePath(imagePath).base;
-			let relativeImagePath = Utils.joinPaths(Utils.getRelativePath(imagePath, filePath), imageBase);
+			let mediaPath = mediaEl.attr("src")?.replace("app://local", "").split("?")[0];
 
-			// we won't save images at a relative path lower than or equal to the document, so we just group them all in an "images" folder
-			if (relativeImagePath.startsWith("..") || relativeImagePath == "/" || relativeImagePath == "")
+			if(!mediaPath) continue;
+
+			mediaPath = Utils.forceAbsolutePath(mediaPath);
+			let parsedMediaPath = Utils.parsePath(mediaPath);
+			
+			let filePath = Utils.getAbsolutePath(file.path) ?? "";
+			let parsedFilePath = Utils.parsePath(filePath);
+			let relativeImagePath = Utils.joinPaths(Utils.getRelativePath(parsedMediaPath.dir, parsedFilePath.dir), parsedMediaPath.base);
+
+			// console.log(relativeImagePath);
+
+			// if path is outside of the vault, outline it into the media folder
+			if (!parsedMediaPath.dir.startsWith(Utils.getVaultPath()))
 			{
-				relativeImagePath = Utils.joinPaths("images", imageBase);
+				console.log(parsedMediaPath.dir);
+				relativeImagePath = Utils.joinPaths(relativePaths.mediaPath, parsedMediaPath.base);
 			}
 			
 			relativeImagePath = Utils.forceRelativePath(relativeImagePath, true);
@@ -676,12 +746,14 @@ export class HTMLGenerator
 				relativeImagePath = Utils.makePathWebStyle(relativeImagePath);
 			}
 
-			$(this).attr("src", relativeImagePath);
+			mediaEl.attr("src", relativeImagePath);
 
-			imagesToOutline.push({ localImagePath: imagePath, relativeExportImagePath: relativeImagePath });
-		});
+			let imagePathFromVault = Utils.joinPaths(Utils.getRelativePath(mediaPath, Utils.getVaultPath()), parsedMediaPath.base);
 
-		this.outlinedImages = imagesToOutline;
+			imagesToOutline.push({localImagePath: mediaPath, relativeExportImagePath: imagePathFromVault});
+		}
+
+		return imagesToOutline;
 	}
 
 	//#endregion
@@ -701,9 +773,23 @@ export class HTMLGenerator
 		return document.createElement("div");
 	}
 
-	private repairOnClick(page: HTMLElement)
+	public generateDarkmodeToggle(inline : boolean = true) : HTMLElement
 	{
-		page.innerHTML = page.innerHTML.replaceAll("data-onclick", "onclick");
+		// programatically generates the above html snippet
+		let toggle = document.createElement("div");
+		let label = document.createElement("label");
+		label.classList.add(inline ? "theme-toggle-inline" : "theme-toggle");
+		label.setAttribute("for", "theme_toggle");
+		let input = document.createElement("input");
+		input.classList.add("toggle__input");
+		input.setAttribute("type", "checkbox");
+		input.setAttribute("id", "theme_toggle");
+		let div = document.createElement("div");
+		div.classList.add("toggle__fill");
+		label.appendChild(input);
+		label.appendChild(div);
+		toggle.appendChild(label);
+		return toggle;
 	}
 
 	private getHeaderList(page: HTMLElement): { size: number, title: string, href: string }[] | null
@@ -835,6 +921,26 @@ export class HTMLGenerator
 		}
 
 		return outlineEl;
+	}
+
+	private generateGraphView(): HTMLDivElement
+	{
+		let graphEl = document.createElement("div");
+		graphEl.className = "graph-view-placeholder";
+		graphEl.innerHTML = 
+		`
+		<div class="graph-view-container">
+			<div class="graph-icon graph-expand" role="button" aria-label="Expand" data-tooltip-position="top"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-arrow-up-right"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg></div>
+			<canvas id="graph-canvas" width="512px" height="512px"></canvas>
+		</div>
+		`
+
+		return graphEl;
+	}
+
+	private repairOnClick(page: HTMLElement)
+	{
+		page.innerHTML = page.innerHTML.replaceAll("data-onclick", "onclick");
 	}
 
 	//#endregion

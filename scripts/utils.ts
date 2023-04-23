@@ -8,6 +8,24 @@ const pathTools = require('upath');
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;
 
+export class Downloadable
+{
+	filename: string = "";
+	content: string = "";
+	type: string = "text/plain";
+	relativePath: string | undefined = undefined;
+	useUnicode: boolean = true;
+
+	constructor(filename: string, content: string, type: string = "text/plain", vaultRelativeDestination: string | undefined = undefined, useUnicode: boolean = true)
+	{
+		this.filename = filename;
+		this.content = content;
+		this.type = type;
+		this.relativePath = vaultRelativeDestination;
+		this.useUnicode = useUnicode;
+	}
+}
+
 export class Utils
 {
 	static async delay (ms: number)
@@ -141,8 +159,8 @@ export class Utils
 
 	static getRelativePath(path: string, workingDirectory: string = this.getVaultPath()) : string
 	{
-		let absolutePath = this.getAbsolutePath(Utils.parsePath(path).dir);
-		let absoluteWorkingDirectory = this.getAbsolutePath(Utils.parsePath(workingDirectory).dir);
+		let absolutePath = this.getAbsolutePath(Utils.parsePath(path).dir, false);
+		let absoluteWorkingDirectory = this.getAbsolutePath(Utils.parsePath(workingDirectory).dir, false);
 
 		if (!absolutePath || !absoluteWorkingDirectory) return path;
 
@@ -332,11 +350,11 @@ export class Utils
 		});
 	}
 
-	static async downloadFiles(files: {filename: string, data: string, type?: string, relativePath?: string, unicode?: boolean}[], folderPath: string)
+	static async downloadFiles(files: Downloadable[], folderPath: string)
 	{
 		for (let i = 0; i < files.length; i++)
 		{
-			let array = (files[i].unicode ?? true) ? files[i].data : Buffer.from(files[i].data, 'base64');
+			let array = (files[i].useUnicode ?? true) ? files[i].content : Buffer.from(files[i].content, 'base64');
 			
 			let parsedPath = this.parsePath(this.joinPaths(folderPath, files[i].relativePath ?? "", files[i].filename));
 			
@@ -400,7 +418,7 @@ export class Utils
 		return themeContent;
 	}
 
-	static getCurrentTheme(): string
+	static getCurrentThemeName(): string
 	{
 		/*@ts-ignore*/
 		let themeName = app.vault.config?.cssTheme;
@@ -443,7 +461,9 @@ export class Utils
 
 		for (let i = 0; i < enabledSnippets.length; i++)
 		{
-			snippetContents.push(await Utils.getText(this.forceRelativePath(`.obsidian/snippets/${enabledSnippets[i]}.css`)) ?? "\n");
+			let path = this.forceRelativePath(`.obsidian/snippets/${enabledSnippets[i]}.css`);
+			if (this.pathExists(path, false))
+				snippetContents.push(await Utils.getText(path) ?? "\n");
 		}
 
 		return snippetContents;
@@ -461,6 +481,7 @@ export class Utils
 	{
 		Utils.changeViewMode(view, "preview");
 		await this.delay(200);
+
 		/*@ts-ignore*/
 		view.previewMode.renderer.showAll = true;
 		/*@ts-ignore*/

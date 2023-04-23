@@ -9,6 +9,7 @@ export interface ExportSettingsData
 	inlineJS: boolean;
 	inlineImages: boolean;
 	makeNamesWebStyle: boolean;
+	exportInBackground: boolean;
 	includePluginCSS: string;
 
 	addDarkModeToggle: boolean;
@@ -18,7 +19,6 @@ export interface ExportSettingsData
 	openAfterExport: boolean;
 
 	lastExportPath: string;
-
 }
 
 const DEFAULT_SETTINGS: ExportSettingsData =
@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	inlineJS: true,
 	inlineImages: true,
 	makeNamesWebStyle: false,
+	exportInBackground: false,
 	includePluginCSS: '',
 
 	addDarkModeToggle: true,
@@ -196,6 +197,18 @@ export class ExportSettings extends PluginSettingTab
 				}));
 
 		new Setting(containerEl)
+			.setName('Export in Background')
+			.setHeading()
+			.setDesc('Export files in the background, MUCH faster and less intrusive. However, embedded content may not be exported, like audio, GIFs, videos, some special plugin blocks, some images, etc.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.exportInBackground)
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.exportInBackground = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		new Setting(containerEl)
 			.setName('Include Plugin CSS')
 			.setHeading()
 
@@ -233,7 +246,6 @@ export class ExportModal extends Modal
 {
 	static isClosed: boolean = true;
 	static canceled: boolean = true;
-	static onlyCopy: boolean = false;
 
 	constructor()
 	{
@@ -245,11 +257,10 @@ export class ExportModal extends Modal
 	 * @returns True if the EXPORT button was pressed, false is the export was canceled.
 	 * @override
 	*/
-	async open(): Promise<{canceled: boolean, copyToClipboard: boolean}>
+	async open(): Promise<{canceled: boolean}>
 	{
 		ExportModal.isClosed = false;
 		ExportModal.canceled = true;
-		ExportModal.onlyCopy = false;
 
 		super.open();
 
@@ -344,16 +355,6 @@ export class ExportModal extends Modal
 				})
 			)
 
-			// .addButton((button) => button
-			// 	.setButtonText('Copy HTML')
-			// 	.onClick(async () =>
-			// 	{
-			// 		ExportModal.canceled = false;
-			// 		ExportModal.onlyCopy = true;
-			// 		this.close();
-			// 	})
-			// );
-
 		new Setting(contentEl)
 			.setDesc("More options located on the plugin settings page.")
 			.addExtraButton((button) => button.setTooltip('Open plugin settings').onClick(() =>
@@ -367,7 +368,7 @@ export class ExportModal extends Modal
 
 		await Utils.waitUntil(() => ExportModal.isClosed, 60 * 60 * 1000, 10);
 
-		return { canceled: ExportModal.canceled, copyToClipboard: ExportModal.onlyCopy };
+		return { canceled: ExportModal.canceled };
 	}
 
 	onClose()
