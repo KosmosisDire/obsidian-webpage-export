@@ -1848,7 +1848,7 @@ function isHex(x) {
   return ('0123456789ABCDEFabcdef'.indexOf(x) > -1);
 }
 
-if(window) window.w3color = w3color;
+if(typeof window === undefined) window.w3color = w3color;
 
 function w3SetColorsByAttribute() {
 var z, i, att;
