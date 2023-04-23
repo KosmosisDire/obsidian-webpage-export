@@ -1,7 +1,7 @@
 // Import Pixi.js library
 if( 'function' === typeof importScripts) 
 {
-    importScripts('https://d157l7jdn8e5sf.cloudfront.net/v7.2.0/webworker.js', './tinycolor.js');
+    importScripts('https://d157l7jdn8e5sf.cloudfront.net/v7.2.0/webworker.js', 'https://cdnjs.cloudflare.com/ajax/libs/tinycolor/1.6.0/tinycolor.js');
 
     addEventListener('message', onMessage);
 

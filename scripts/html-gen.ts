@@ -233,7 +233,7 @@ export class HTMLGenerator
 			let graphViewJSDownload = new Downloadable("graph_view.js", this.graphViewJS, "text/javascript", HTMLGenerator.jsFolderName);
 			// wasm js is always inlined because it needs a different path per file
 			let graphWASMJSDownload = new Downloadable("graph_wasm.js", this.graphWASMJS, "text/javascript", HTMLGenerator.jsFolderName);
-			let graphWASMDownload = new Downloadable("graph_wasm.wasm", this.graphWASM, "text/javascript", HTMLGenerator.jsFolderName);
+			let graphWASMDownload = new Downloadable("graph_wasm.wasm", this.graphWASM, "text/wasm", HTMLGenerator.jsFolderName, false);
 			let renderWorkerJSDownload = new Downloadable("graph-render-worker.js", this.renderWorkerJS, "text/javascript", HTMLGenerator.jsFolderName);
 
 			toDownload.push(webpagejsDownload);
@@ -315,7 +315,7 @@ export class HTMLGenerator
 
 		let htmlString = "<!DOCTYPE html>\n" + htmlEl.outerHTML;
 		if (ExportSettings.settings.beautifyHTML) htmlString = html_beautify(htmlString, { indent_size: 2 });
-		
+
 		let externalFiles = await this.getSeperateFilesToDownload(documentData.outlinedImages);
 
 		let parsedPath = Utils.parsePath(file.path);
