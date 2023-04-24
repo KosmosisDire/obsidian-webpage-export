@@ -238,22 +238,23 @@ export class HTMLGenerator
 		if (!ExportSettings.settings.inlineJS)
 		{
 			let webpagejsDownload = new Downloadable("webpage.js", this.webpageJS, "text/javascript", HTMLGenerator.jsFolderName);
-			let graphViewJSDownload = new Downloadable("graph_view.js", this.graphViewJS, "text/javascript", HTMLGenerator.jsFolderName);
-			let graphWASMJSDownload = new Downloadable("graph_wasm.js", this.graphWASMJS, "text/javascript", HTMLGenerator.jsFolderName);
-			let tinyColorJS = new Downloadable("tinycolor.js", this.tinyColorJS, "text/javascript", HTMLGenerator.jsFolderName);
 
 			toDownload.push(webpagejsDownload);
-			toDownload.push(graphViewJSDownload);
-			toDownload.push(graphWASMJSDownload);
-			toDownload.push(tinyColorJS);
 		}
 
 		if(ExportSettings.settings.includeGraphView)
 		{
 			let graphWASMDownload = new Downloadable("graph_wasm.wasm", this.graphWASM, "application/wasm", HTMLGenerator.jsFolderName, false);
 			let renderWorkerJSDownload = new Downloadable("graph-render-worker.js", this.renderWorkerJS, "text/javascript", HTMLGenerator.jsFolderName);
+			let graphWASMJSDownload = new Downloadable("graph_wasm.js", this.graphWASMJS, "text/javascript", HTMLGenerator.jsFolderName);
+			let graphViewJSDownload = new Downloadable("graph_view.js", this.graphViewJS, "text/javascript", HTMLGenerator.jsFolderName);
+			let tinyColorJS = new Downloadable("tinycolor.js", this.tinyColorJS, "text/javascript", HTMLGenerator.jsFolderName);
+			
 			toDownload.push(renderWorkerJSDownload);
 			toDownload.push(graphWASMDownload);
+			toDownload.push(graphWASMJSDownload);
+			toDownload.push(graphViewJSDownload);
+			toDownload.push(tinyColorJS);
 		}
 
 		if (!ExportSettings.settings.inlineImages)
@@ -501,20 +502,29 @@ export class HTMLGenerator
 		if (ExportSettings.settings.includeGraphView) 
 		{
 			// TODO: outline the nodes to a file
-			scripts += `<script>${"let nodes = \n" + JSON.stringify(GraphGenerator.getGlobalGraph(3, 20))}\n</script>`;
+			scripts += 
+			`
+			<!-- Graph View Data -->
+			<script>
+			let nodes=\n${JSON.stringify(GraphGenerator.getGlobalGraph(ExportSettings.settings.graphMinNodeSize, ExportSettings.settings.graphMaxNodeSize))};
+			let attractionForce = ${ExportSettings.settings.graphAttractionForce};
+			let linkLength = ${ExportSettings.settings.graphLinkLength};
+			let repulsionForce = ${ExportSettings.settings.graphRepulsionForce};
+			let centralForce = ${ExportSettings.settings.graphCentralForce};
+			let edgePruning = ${ExportSettings.settings.graphEdgePruning};
+			</script>
+			`;
 
-			if (ExportSettings.settings.inlineJS) 
-			{
-				scripts += `\n<script type='module'>\n${this.graphViewJS}\n</script>\n`;
-				scripts += `\n<script>${this.graphWASMJS}</script>\n`;
-				scripts += `\n<script>${this.tinyColorJS}</script>\n`;
-			}
-			else 
-			{
-				scripts += `\n<script type='module' src='${relativePaths.jsPath}/graph_view.js'></script>\n`;
-				scripts += `\n<script src='${relativePaths.jsPath}/graph_wasm.js'></script>\n`;
-				scripts += `\n<script src="${relativePaths.jsPath}/tinycolor.js"></script>\n`;
-			}
+			scripts += `\n<script type='module' src='${relativePaths.jsPath}/graph_view.js'></script>\n`;
+			scripts += `\n<script src='${relativePaths.jsPath}/graph_wasm.js'></script>\n`;
+			scripts += `\n<script src="${relativePaths.jsPath}/tinycolor.js"></script>\n`;
+
+			// if (ExportSettings.settings.inlineJS) 
+			// {
+			// 	scripts += `\n<script type='module'>\n${this.graphViewJS}\n</script>\n`;
+			// 	scripts += `\n<script>${this.graphWASMJS}</script>\n`;
+			// 	scripts += `\n<script>${this.tinyColorJS}</script>\n`;
+			// }
 		}
 
 		if (ExportSettings.settings.inlineJS)

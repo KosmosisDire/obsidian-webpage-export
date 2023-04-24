@@ -1,4 +1,4 @@
-import { App, ExtraButtonComponent, Modal, Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { Modal, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { Utils } from './utils';
 import { writeFile } from "fs/promises";
 import { HTMLGenerator } from './html-gen';
@@ -12,6 +12,14 @@ export interface ExportSettingsData
 	exportInBackground: boolean;
 	beautifyHTML: boolean;
 	includePluginCSS: string;
+
+	graphAttractionForce: number;
+    graphLinkLength: number;
+    graphRepulsionForce: number;
+    graphCentralForce: number;
+    graphEdgePruning: number;
+	graphMinNodeSize: number;
+	graphMaxNodeSize: number;
 
 	addDarkModeToggle: boolean;
 	includeOutline: boolean;
@@ -29,12 +37,20 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	inlineImages: true,
 	makeNamesWebStyle: false,
 	exportInBackground: false,
-	beautifyHTML: false,
+	beautifyHTML: true,
 	includePluginCSS: '',
+
+	graphAttractionForce: 50,
+	graphLinkLength: 10,
+	graphRepulsionForce: 60,
+	graphCentralForce: 20,
+	graphEdgePruning: 100,
+	graphMinNodeSize: 5,
+	graphMaxNodeSize: 10,
 
 	addDarkModeToggle: true,
 	includeOutline: true,
-	includeGraphView: true,
+	includeGraphView: false,
 	customLineWidth: "",
 	openAfterExport: true,
 
@@ -146,7 +162,7 @@ export class ExportSettings extends PluginSettingTab
 		let supportLink = containerEl.createEl('a');
 		// @ts-ignore
 		supportLink.outerHTML = `<a href="https://www.buymeacoffee.com/nathangeorge"><img style="height:40px;" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=${app.vault.getConfig("accentColor").replace("#", "")}&font_colour=ffffff&font_family=Poppins&outline_colour=000000&coffee_colour=FFDD00"></a>`;
-		let supportHeader = containerEl.createDiv({ text: 'Support my development of this plugin.', cls: "setting-item-description"});
+		let supportHeader = containerEl.createDiv({ text: 'Support the continued development of this plugin.', cls: "setting-item-description"});
 		supportHeader.style.display = 'block';
 		supportHeader.style.marginBottom = '20px';
 
@@ -186,9 +202,12 @@ export class ExportSettings extends PluginSettingTab
 					await ExportSettings.saveSettings();
 				}));
 
+
+		containerEl.createEl('h3', { text: 'Formatting Options:' });
+		
+
 		new Setting(containerEl)
 			.setName('Make names web style')
-			.setHeading()
 			.setDesc('Make the names of files and folders lowercase and replace spaces with dashes.')
 			.addToggle((toggle) => toggle
 				.setValue(ExportSettings.settings.makeNamesWebStyle)
@@ -199,20 +218,7 @@ export class ExportSettings extends PluginSettingTab
 				}));
 
 		new Setting(containerEl)
-			.setName('Export in Background')
-			.setHeading()
-			.setDesc('Export files in the background, MUCH faster and less intrusive. However, embedded content may not be exported, like audio, GIFs, videos, some special plugin blocks, some images, etc.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.exportInBackground)
-				.onChange(async (value) =>
-				{
-					ExportSettings.settings.exportInBackground = value;
-					await ExportSettings.saveSettings();
-				}));
-
-		new Setting(containerEl)
 			.setName('Beautify HTML')
-			.setHeading()
 			.setDesc('Beautify the HTML text to make it more human readable, at the cost of export speed.')
 			.addToggle((toggle) => toggle
 				.setValue(ExportSettings.settings.beautifyHTML)
@@ -253,6 +259,136 @@ export class ExportSettings extends PluginSettingTab
 				ExportSettings.saveSettings();
 			});
 		});
+
+		containerEl.createEl('h3', { text: 'Experimental:'}).style.color = "var(--color-red)";
+
+		new Setting(containerEl)
+		.setName('Export in Background')
+		.setDesc('Export files in the background, MUCH faster and less intrusive. However, embedded content may not be exported, like audio, GIFs, videos, some special plugin blocks, some images, etc.')
+		.addToggle((toggle) => toggle
+			.setValue(ExportSettings.settings.exportInBackground)
+			.onChange(async (value) =>
+			{
+				ExportSettings.settings.exportInBackground = value;
+				await ExportSettings.saveSettings();
+			}));
+
+		new Setting(containerEl)
+			.setName('Include global graph view')
+			.setDesc('Will include an interactive graph view sim of the WHOLE vault simmilar to obsidian\'s. Currently the scripts for this cannot be inlined into a single HTML file. Also currently only supports a sim of the whole vault.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.includeGraphView)
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.includeGraphView = value;
+					await ExportSettings.saveSettings();
+				}
+				));
+
+		containerEl.createEl('h3', { text: 'Graph View Settings:'});
+
+		new Setting(containerEl)
+			.setName('Attraction Force')
+			.addSlider((slider) => slider
+				.setLimits(0, 100, 1)
+				.setValue(ExportSettings.settings.graphAttractionForce / (2 / 100))
+				.setDynamicTooltip()
+				.onChange(async (value) =>
+				{
+					// remap to 0 - 2;
+					let remapMultiplier = 2 / 100;
+					ExportSettings.settings.graphAttractionForce = value * remapMultiplier;
+					await ExportSettings.saveSettings();
+				})
+				.showTooltip()
+			);
+		
+		new Setting(containerEl)
+			.setName('Repulsion Force')
+			.addSlider((slider) => slider
+				.setLimits(0, 100, 1)
+				.setValue(ExportSettings.settings.graphRepulsionForce / 3)
+				.setDynamicTooltip()
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.graphRepulsionForce = value * 3;
+					await ExportSettings.saveSettings();
+				})
+				.showTooltip()
+			);
+
+		new Setting(containerEl)
+			.setName('Central Force')
+			.addSlider((slider) => slider
+				.setLimits(0, 100, 1)
+				.setValue(ExportSettings.settings.graphCentralForce / (5 / 100))
+				.setDynamicTooltip()
+				.onChange(async (value) =>
+				{
+					// remap to 0 - 5;
+					let remapMultiplier = 5 / 100;
+					ExportSettings.settings.graphCentralForce = value * remapMultiplier;
+					await ExportSettings.saveSettings();
+				})
+				.showTooltip()
+			);
+
+		new Setting(containerEl)
+			.setName('Link Length')
+			.addSlider((slider) => slider
+				.setLimits(0, 100, 1)
+				.setValue(ExportSettings.settings.graphLinkLength)
+				.setDynamicTooltip()
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.graphLinkLength = value;
+					await ExportSettings.saveSettings();
+				})
+				.showTooltip()
+			);
+
+		new Setting(containerEl)
+			.setName('Max Node Radius')
+			.addSlider((slider) => slider
+				.setLimits(3, 15, 1)
+				.setValue(ExportSettings.settings.graphMaxNodeSize)
+				.setDynamicTooltip()
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.graphMaxNodeSize = value;
+					await ExportSettings.saveSettings();
+				})
+				.showTooltip()
+			);
+
+		new Setting(containerEl)
+			.setName('Min Node Radius')
+			.addSlider((slider) => slider
+				.setLimits(3, 15, 1)
+				.setValue(ExportSettings.settings.graphMinNodeSize)
+				.setDynamicTooltip()
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.graphMinNodeSize = value;
+					await ExportSettings.saveSettings();
+				})
+				.showTooltip()
+			);
+
+		new Setting(containerEl)
+			.setName('Edge Pruning Factor')
+			.setDesc("Edges with a length below this threshold will not be rendered, however they will still contribute to the simulation. This can help large graphs look more organised. Hovering over a node will still display these links.")
+			.addSlider((slider) => slider
+				.setLimits(0, 100, 1)
+				.setValue(100 - ExportSettings.settings.graphEdgePruning)
+				.setDynamicTooltip()
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.graphEdgePruning = 100 - value;
+					await ExportSettings.saveSettings();
+				})
+				.showTooltip()
+			);
 	}
 }
 
@@ -305,18 +441,6 @@ export class ExportModal extends Modal
 				.onChange(async (value) =>
 				{
 					ExportSettings.settings.includeOutline = value;
-					await ExportSettings.saveSettings();
-				}
-				));
-
-		new Setting(contentEl)
-			.setName('Include graph view')
-			.setDesc('Will include an interactive graph view sim of the document simmilar to obsidian\'s.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.includeGraphView)
-				.onChange(async (value) =>
-				{
-					ExportSettings.settings.includeGraphView = value;
 					await ExportSettings.saveSettings();
 				}
 				));
