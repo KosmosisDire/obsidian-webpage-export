@@ -11,7 +11,7 @@ export class GraphGenerator
 		return start + (end - start) * t2;
 	}
 
-	public static getGlobalGraph(minRadius: number, maxRadius: number): {nodeCount: number, linkCount: number, radii: number[], labels: string[], linkSources: number[], linkTargets: number[]}
+	public static getGlobalGraph(minRadius: number, maxRadius: number): {nodeCount: number, linkCount: number, radii: number[], labels: string[], paths: string[], linkSources: number[], linkTargets: number[]}
 	{
 		let nodeCount = 0;
 		let indexedRadii: {index: number, radius: number}[] = [];
@@ -19,7 +19,6 @@ export class GraphGenerator
 		let linkSources: number[] = [];
 		let linkTargets: number[] = [];
 		let linkCounts: number[] = [];
-
 		let paths: string[] = [];
 
 		// generate all posible nodes from files
@@ -78,10 +77,11 @@ export class GraphGenerator
 		linkSources = linkSources.map(s => indexedRadii.findIndex(r => r.index == s));
 		linkTargets = linkTargets.map(t => indexedRadii.findIndex(r => r.index == t));
 		linkCounts = indexedRadii.map(r => linkCounts[r.index]);
+		paths = indexedRadii.map(r => paths[r.index]);
 
-		let data = {nodeCount: nodeCount, linkCount: linkSources.length, radii: radii, labels: labels, linkSources: linkSources, linkTargets: linkTargets, linkCounts: linkCounts};
+		console.log(paths);
 
-		// console.log(data);
+		let data = {nodeCount: nodeCount, linkCount: linkSources.length, radii: radii, labels: labels, paths: paths, linkSources: linkSources, linkTargets: linkTargets, linkCounts: linkCounts};
 
 		return data;
 	}

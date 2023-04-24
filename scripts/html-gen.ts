@@ -466,13 +466,14 @@ export class HTMLGenerator
 		return (mathStyles?.innerHTML ?? "").replaceAll("app://obsidian.md/", "https://publish.obsidian.md/");
 	}
 
-	private getRelativePaths(file: TFile): {mediaPath: string, jsPath: string, cssPath: string}
+	private getRelativePaths(file: TFile): {mediaPath: string, jsPath: string, cssPath: string, rootPath: string}
 	{
 		let imagePath = Utils.getRelativePath(HTMLGenerator.mediaPathComparison, file.path);
 		let jsPath = Utils.getRelativePath(HTMLGenerator.jsPathComparison, file.path);
 		let cssPath = Utils.getRelativePath(HTMLGenerator.cssPathComparison, file.path);
+		let rootPath = Utils.getRelativePath(Utils.getVaultPath(), file.path);
 
-		return {mediaPath: imagePath, jsPath: jsPath, cssPath: cssPath};
+		return {mediaPath: imagePath, jsPath: jsPath, cssPath: cssPath, rootPath: rootPath};
 	}
 
 	private async generateHead(file: TFile): Promise<HTMLHeadElement>
@@ -499,6 +500,17 @@ export class HTMLGenerator
 
 		// --- JS ---
 		let scripts = "";
+
+		scripts += 
+		`
+		<script>
+			let rootPath = "${relativePaths.rootPath}";
+			let mediaPath = "${relativePaths.mediaPath}";
+			let jsPath = "${relativePaths.jsPath}";
+			let cssPath = "${relativePaths.cssPath}";
+		</script>
+		`;
+
 		if (ExportSettings.settings.includeGraphView) 
 		{
 			// TODO: outline the nodes to a file

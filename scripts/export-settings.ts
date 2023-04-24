@@ -260,7 +260,22 @@ export class ExportSettings extends PluginSettingTab
 			});
 		});
 
-		containerEl.createEl('h3', { text: 'Experimental:'}).style.color = "var(--color-red)";
+		let experimentalContainer = containerEl.createDiv();
+		let experimentalHR1 = experimentalContainer.createEl('hr');
+		let experimentalHeader = experimentalContainer.createEl('h2', { text: 'Experimental'});
+		let experimentalHR2 = experimentalContainer.createEl('hr');
+
+		experimentalContainer.style.display = 'flex';
+		experimentalContainer.style.marginTop = '5em';
+
+		experimentalHR1.style.borderColor = "var(--color-red)";
+		experimentalHR2.style.borderColor = "var(--color-red)";
+		experimentalHeader.style.color = "var(--color-red)";
+
+		experimentalHR1.style.flexGrow = "1";
+		experimentalHR2.style.flexGrow = "1";
+		experimentalHeader.style.flexGrow = "0.1";
+		experimentalHeader.style.textAlign = "center";
 
 		new Setting(containerEl)
 		.setName('Export in Background')
@@ -389,6 +404,10 @@ export class ExportSettings extends PluginSettingTab
 				})
 				.showTooltip()
 			);
+
+		let experimentalHREnd = containerEl.createEl('hr');
+		experimentalHREnd.style.borderColor = "var(--color-red)";
+		
 	}
 }
 

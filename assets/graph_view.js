@@ -38,7 +38,7 @@ async function RunGraphView()
         static minRadius = 0;
 
         /**  
-         * @param {{nodeCount: number, linkCount:number, radii: number[], labels: string[], linkSources: number[], linkTargets: number[], linkCounts: number[]}} nodes
+         * @param {{nodeCount: number, linkCount:number, radii: number[], labels: string[], paths: string[], linkSources: number[], linkTargets: number[], linkCounts: number[]}} nodes
         */
         static init(nodes)
         {
@@ -509,11 +509,15 @@ async function RunGraphView()
     let mousePositionWorld = { x: undefined, y: undefined };
     let mousePositionScreen = { x: undefined, y: undefined };
     let scrollVelocity = 0;
-    let mouseDown = false;
     let lastMousePos = { x: 0, y: 0 };
     let averageFPS = targetFPS;
+
     let mouseInside = false;
     let graphExpanded = false;
+    let leftButtonDown = false;
+    let rightButtonDown = false;
+    let middleButtonDown = false;
+    let panning = false;
 
     setTimeout(() => app.ticker.add(() => 
     {
@@ -600,41 +604,50 @@ async function RunGraphView()
 
         let delta = { x: lastMousePos.x - event.clientX, y: lastMousePos.y - event.clientY };
 
-        if (mouseDown && renderWorker.hoveredNode == -1)
+        if (leftButtonDown && renderWorker.hoveredNode != -1 && Math.max(delta.x, delta.y) > 2)
+        {
+            renderWorker.grabbedNode = renderWorker.hoveredNode;
+        }
+
+        if (middleButtonDown || (leftButtonDown && renderWorker.hoveredNode == -1))
         {
             let camOffset = renderWorker.cameraOffset;
             renderWorker.cameraOffset = { x: camOffset.x - delta.x, y: camOffset.y - delta.y };
+            panning = true;
+        }
+        else
+        {
+            panning = false;
         }
 
         lastMousePos = { x: event.clientX, y: event.clientY };
     }
 
-    $("*").on("mousemove",function(event)
+    $("*:not(#graph-canvas)").on("mousemove",function(event)
     {
-        if(mouseDown || renderWorker.grabbedNode != -1)
+        if(panning || renderWorker.grabbedNode != -1)
         {
             handleMouseMove(event);
         }
+
+        mouseInside = false;
     });
 
     $("#graph-canvas").on("mousemove", function(event)
     {
-        if(!mouseDown && renderWorker.grabbedNode == -1)
-        {
-            handleMouseMove(event);
-        }
+        handleMouseMove(event);
+
+        mouseInside = true;
     });
 
     $("#graph-canvas").on("mousedown", function(e) 
     {
         e.preventDefault();
         e.stopPropagation();
-        
-        // only grab with the left mouse button
-        if (e.button == 0)
-            renderWorker.grabbedNode = renderWorker.hoveredNode;
             
-        mouseDown = true;
+        if (e.button == 0) leftButtonDown = true;
+        if (e.button == 1) middleButtonDown = true;
+        if (e.button == 2) rightButtonDown = true;
 
         if(!mouseInside && graphExpanded)
         {
@@ -647,8 +660,17 @@ async function RunGraphView()
         e.preventDefault();
         e.stopPropagation();
 
+        if (e.button == 0) leftButtonDown = false;
+        if (e.button == 1) middleButtonDown = false;
+        if (e.button == 2) rightButtonDown = false;
+
+        // we must have just clicked on a node without dragging it
+        if (!panning && renderWorker.grabbedNode == -1 && renderWorker.hoveredNode != -1)
+        {
+            window.location.replace("/" + nodes.paths[renderWorker.hoveredNode]);
+        }
+
         renderWorker.grabbedNode = -1;
-        mouseDown = false;
     });
 
     // also mouse up if mouse leaves canvas
@@ -657,7 +679,7 @@ async function RunGraphView()
         e.preventDefault();
         e.stopPropagation();
 
-        if (renderWorker.grabbedNode == -1 && !mouseDown)
+        if (renderWorker.grabbedNode == -1 && !(middleButtonDown || leftButtonDown))
         {
             mousePositionScreen = { x: undefined, y: undefined };
             mousePositionWorld = { x: undefined, y: undefined };
