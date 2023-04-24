@@ -96,7 +96,7 @@ async function RunGraphView()
 
         static savePositions()
         {
-            localStorage.setItem("positions", JSON.stringify(GraphAssembly.positions));
+            localStorage.setItem("positions", JSON.stringify(new Float32Array(GraphAssembly.positions)));
         }
 
         /**
@@ -104,7 +104,7 @@ async function RunGraphView()
          */
         static loadPositions()
         {
-            let loadedPositions = JSON.parse(localStorage.getItem("positions"));
+            let loadedPositions = new Float32Array(Object.values(JSON.parse(localStorage.getItem("positions"))));
             if (!loadedPositions || loadedPositions.length != GraphAssembly.nodeCount * 2)
             {
                 loadedPositions = new Float32Array(GraphAssembly.nodeCount * 2);
