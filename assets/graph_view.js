@@ -62,7 +62,7 @@ async function RunGraphView()
             GraphAssembly.averageRadius = GraphAssembly.radii.reduce((a, b) => a + b) / GraphAssembly.radii.length;
             GraphAssembly.minRadius = GraphAssembly.radii.reduce((a, b) => Math.min(a, b));
 
-            this.loadState();
+            positions = this.loadState();
 
             // copy the data to the heap
             Module.HEAP32.set(new Int32Array(positions.buffer), GraphAssembly.#positionsPtr / positions.BYTES_PER_ELEMENT);
@@ -101,23 +101,28 @@ async function RunGraphView()
             localStorage.setItem("cameraScale", JSON.stringify(cameraScale));
         }
 
+        /**
+         * @returns {Float32Array}
+         * */
         static loadState()
         {
-            GraphAssembly.positions = new Float32Array(Object.values(JSON.parse(localStorage.getItem("positions"))));
-            if (!GraphAssembly.positions || GraphAssembly.positions.length != GraphAssembly.nodeCount * 2)
+            let positions = new Float32Array(Object.values(JSON.parse(localStorage.getItem("positions"))));
+            if (!positions || positions.length != GraphAssembly.nodeCount * 2)
             {
-                GraphAssembly.positions = new Float32Array(GraphAssembly.nodeCount * 2);
+                positions = new Float32Array(GraphAssembly.nodeCount * 2);
                 let spawnRadius = (GraphAssembly.averageRadius * Math.sqrt(GraphAssembly.nodeCount)) * 2;
                 for (let i = 0; i < GraphAssembly.nodeCount; i++) 
                 {
                     let distance = (1 - GraphAssembly.radii[i] / GraphAssembly.maxRadius) * spawnRadius;
-                    GraphAssembly.positions[i * 2] = Math.cos(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
-                    GraphAssembly.positions[i * 2 + 1] = Math.sin(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
+                    positions[i * 2] = Math.cos(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
+                    positions[i * 2 + 1] = Math.sin(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
                 }
             }
 
             cameraOffset = new Vector2(Object.values(JSON.parse(localStorage.getItem("cameraOffset"))));
             cameraScale = parseFloat(localStorage.getItem("cameraScale"));
+
+            return positions;
         }
 
         /**
