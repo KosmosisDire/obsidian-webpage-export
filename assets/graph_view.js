@@ -621,7 +621,7 @@ async function RunGraphView()
 
         let delta = { x: lastMousePos.x - event.clientX, y: lastMousePos.y - event.clientY };
 
-        if (leftButtonDown && renderWorker.hoveredNode != -1 && Math.max(delta.x, delta.y) > 2)
+        if (leftButtonDown && renderWorker.hoveredNode != -1)
         {
             renderWorker.grabbedNode = renderWorker.hoveredNode;
         }
