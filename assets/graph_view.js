@@ -686,6 +686,7 @@ async function RunGraphView()
         // we must have just clicked on a node without dragging it
         if (!panning && renderWorker.grabbedNode == -1 && renderWorker.hoveredNode != -1)
         {
+            GraphAssembly.savePositions();
             window.location.replace(rootPath + "/" + nodes.paths[renderWorker.hoveredNode]);
             console.log(rootPath + "/" + nodes.paths[renderWorker.hoveredNode]);
         }
