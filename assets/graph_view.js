@@ -119,8 +119,8 @@ async function RunGraphView()
                 }
             }
 
-            cameraOffset = new Vector2(Object.values(JSON.parse(localStorage.getItem("cameraOffset"))));
-            cameraScale = parseFloat(localStorage.getItem("cameraScale"));
+            cameraOffset = JSON.parse(localStorage.getItem("cameraOffset"));
+            cameraScale = JSON.parse(localStorage.getItem("cameraScale"));
 
             return positions;
         }
