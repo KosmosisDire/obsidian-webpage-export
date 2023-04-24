@@ -62,14 +62,7 @@ async function RunGraphView()
             GraphAssembly.averageRadius = GraphAssembly.radii.reduce((a, b) => a + b) / GraphAssembly.radii.length;
             GraphAssembly.minRadius = GraphAssembly.radii.reduce((a, b) => Math.min(a, b));
 
-            // generate positions on a circle
-            let spawnRadius = (GraphAssembly.averageRadius * Math.sqrt(GraphAssembly.nodeCount)) * 2;
-            for (let i = 0; i < GraphAssembly.nodeCount; i++) 
-            {
-                let distance = (1 - GraphAssembly.radii[i] / GraphAssembly.maxRadius) * spawnRadius;
-                positions[i * 2] = Math.cos(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
-                positions[i * 2 + 1] = Math.sin(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
-            }
+            positions = this.loadPositions();
 
             // copy the data to the heap
             Module.HEAP32.set(new Int32Array(positions.buffer), GraphAssembly.#positionsPtr / positions.BYTES_PER_ELEMENT);
@@ -99,6 +92,32 @@ async function RunGraphView()
         static get positions()
         {
             return Module.HEAP32.buffer.slice(GraphAssembly.#positionsPtr, GraphAssembly.#positionsPtr + GraphAssembly.#positionsByteLength);
+        }
+
+        static savePositions()
+        {
+            localStorage.setItem("positions", JSON.stringify(GraphAssembly.positions));
+        }
+
+        /**
+         * @returns {Float32Array}
+         */
+        static loadPositions()
+        {
+            let loadedPositions = JSON.parse(localStorage.getItem("positions"));
+            if (!loadedPositions || loadedPositions.length != GraphAssembly.nodeCount * 2)
+            {
+                loadedPositions = new Float32Array(GraphAssembly.nodeCount * 2);
+                let spawnRadius = (GraphAssembly.averageRadius * Math.sqrt(GraphAssembly.nodeCount)) * 2;
+                for (let i = 0; i < GraphAssembly.nodeCount; i++) 
+                {
+                    let distance = (1 - GraphAssembly.radii[i] / GraphAssembly.maxRadius) * spawnRadius;
+                    loadedPositions[i * 2] = Math.cos(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
+                    loadedPositions[i * 2 + 1] = Math.sin(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
+                }
+            }
+
+            return loadedPositions;
         }
 
         /**
