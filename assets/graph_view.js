@@ -552,7 +552,7 @@ async function RunGraphView()
 
             renderWorker.cameraScale = Math.max(Math.min(renderWorker.cameraScale + scrollVelocity * renderWorker.cameraScale, 10.0), 0.1);
 
-            if(renderWorker.cameraScale != 0.1 && renderWorker.cameraScale != 10 && scrollVelocity > 0)
+            if(renderWorker.cameraScale != 0.1 && renderWorker.cameraScale != 10 && scrollVelocity > 0 && mousePositionWorld.x != undefined && mousePositionWorld.y != undefined)
             {
                 // zoom towards cursor position
                 let mouseDiff = {x: mousePositionWorld.x - cameraCenter.x, y: mousePositionWorld.y - cameraCenter.y};
