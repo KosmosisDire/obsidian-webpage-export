@@ -103,16 +103,16 @@ async function RunGraphView()
 
         static loadState()
         {
-            positions = new Float32Array(Object.values(JSON.parse(localStorage.getItem("positions"))));
-            if (!positions || positions.length != GraphAssembly.nodeCount * 2)
+            GraphAssembly.positions = new Float32Array(Object.values(JSON.parse(localStorage.getItem("positions"))));
+            if (!GraphAssembly.positions || GraphAssembly.positions.length != GraphAssembly.nodeCount * 2)
             {
-                positions = new Float32Array(GraphAssembly.nodeCount * 2);
+                GraphAssembly.positions = new Float32Array(GraphAssembly.nodeCount * 2);
                 let spawnRadius = (GraphAssembly.averageRadius * Math.sqrt(GraphAssembly.nodeCount)) * 2;
                 for (let i = 0; i < GraphAssembly.nodeCount; i++) 
                 {
                     let distance = (1 - GraphAssembly.radii[i] / GraphAssembly.maxRadius) * spawnRadius;
-                    positions[i * 2] = Math.cos(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
-                    positions[i * 2 + 1] = Math.sin(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
+                    GraphAssembly.positions[i * 2] = Math.cos(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
+                    GraphAssembly.positions[i * 2 + 1] = Math.sin(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
                 }
             }
 
