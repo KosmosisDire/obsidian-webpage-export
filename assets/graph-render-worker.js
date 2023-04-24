@@ -300,17 +300,10 @@ if( 'function' === typeof importScripts)
         {
             colors = event.data.colors;
 
-            
             if(labelText) 
             {
                 labelText.style.fill = invertColor(colors.background, true);
-                console.log(labelText);
             }
-            // if(app)
-            // { 
-            //     app.renderer.backgroundColor = colors.background;
-            //     app.renderer.update();
-            // }
         }
         else if(event.data.type == "init")
         {

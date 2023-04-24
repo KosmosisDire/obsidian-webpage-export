@@ -187,9 +187,7 @@ async function RunGraphView()
 
         constructor()
         {
-            console.log($("#graph-canvas"));
             this.canvas = $("#graph-canvas")[0];
-            console.log(this.canvas);
             this.view = this.canvas.transferControlToOffscreen();
 
             this.worker = new Worker(new URL("./graph-render-worker.js", import.meta.url));
@@ -218,10 +216,7 @@ async function RunGraphView()
             this.grabbedNode = -1;
             this.resampleColors();
 
-            console.log(this.#colors);
-
             this.#pixiInit();
-
 
             this.width = this.canvas.width;
             this.height = this.canvas.height;
@@ -537,8 +532,6 @@ async function RunGraphView()
             batchFraction = Math.max(batchFraction - 0.5 * 1/targetFPS, minBatchFraction);
             GraphAssembly.batchFraction = batchFraction;
             GraphAssembly.repulsionForce = repulsionForce / batchFraction;
-            // GraphAssembly.dt = dt * batchFraction;
-            // console.log(batchFraction);
         }
 
         if (scrollVelocity != 0)
