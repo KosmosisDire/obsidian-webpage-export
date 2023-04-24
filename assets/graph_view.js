@@ -547,7 +547,7 @@ async function RunGraphView()
     let middleButtonDown = false;
     let panning = false;
 
-    setTimeout(() => app.ticker.add(() => 
+    app.ticker.add(() => 
     {
         GraphAssembly.update(mousePositionWorld, renderWorker.grabbedNode, renderWorker.cameraScale);
 
@@ -591,7 +591,7 @@ async function RunGraphView()
             scrollVelocity *= 0.8;
         }
 
-    }), 1000);
+    });
 
     //#region Event listeners
 
@@ -790,8 +790,10 @@ async function RunGraphView()
 
         toggleExpandedGraph();
     });
+
+    //#endregion    
 }
 
 Module['onRuntimeInitialized'] = RunGraphView;
 
-setTimeout(() => Module['onRuntimeInitialized'](), 100);
+setTimeout(() => Module['onRuntimeInitialized'](), 300);
