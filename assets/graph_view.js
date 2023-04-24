@@ -18,6 +18,9 @@ async function RunGraphView()
 
     let targetFPS = 30;
 
+    let startingCameraScale = undefined;
+    let startingCameraOffset = undefined;
+
     class GraphAssembly
     {
         static nodeCount = 0;
@@ -119,8 +122,8 @@ async function RunGraphView()
                 }
             }
 
-            cameraOffset = JSON.parse(localStorage.getItem("cameraOffset"));
-            cameraScale = JSON.parse(localStorage.getItem("cameraScale"));
+            startingCameraOffset = JSON.parse(localStorage.getItem("cameraOffset"));
+            startingCameraScale = JSON.parse(localStorage.getItem("cameraScale"));
 
             return positions;
         }
@@ -232,8 +235,8 @@ async function RunGraphView()
             this.#width = 0;
             this.#height = 0;
 
-            this.cameraOffset = {x: this.canvas.width / 2, y: this.canvas.height / 2};
-            this.cameraScale = 1;
+            this.cameraOffset = startingCameraOffset || {x: this.canvas.width / 2, y: this.canvas.height / 2};
+            this.cameraScale = startingCameraScale || 1;
             this.hoveredNode = -1;
             this.grabbedNode = -1;
             this.resampleColors();
