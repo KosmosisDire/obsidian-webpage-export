@@ -1,5 +1,5 @@
 import { writeFile } from "fs/promises";
-import { Component, MarkdownRenderer, MarkdownView, Notice, TFile } from "obsidian";
+import { MarkdownRenderer, MarkdownView, Notice, TFile } from "obsidian";
 import { ExportSettings } from "./export-settings";
 import { Utils, Downloadable } from "./utils";
 import jQuery from 'jquery';
@@ -7,13 +7,14 @@ import { GraphGenerator } from "./graph-view/graph-gen";
 import { html_beautify } from "js-beautify";
 const $ = jQuery;
 import { LeafHandler } from './leaf-handler';
+import HTMLExportPlugin from "./main";
 
 export class HTMLGenerator
 {
 	leafHandler: LeafHandler = new LeafHandler();
 
 	// When this is enabled the plugin will download the extra .css and .js files from github.
-	autoDownloadExtras = true;
+	autoDownloadExtras = false;
 
 	public static vaultPluginsPath: string = Utils.getAbsolutePath(Utils.joinPaths(Utils.getVaultPath(), app.vault.configDir, "plugins/")) as string;
 	public static thisPluginPath: string;
@@ -267,9 +268,9 @@ export class HTMLGenerator
 					console.log("Could not find image at " + image.localImagePath);
 					continue;
 				}
-				let data = await Utils.getTextBase64(image.localImagePath);
+				let data = await Utils.getFileBuffer(image.localImagePath) ?? Buffer.from([]);
 				let destinationPath = Utils.parsePath(image.relativeExportImagePath);
-				let imageDownload = new Downloadable(destinationPath.base, data, "image/png", destinationPath.dir, false);
+				let imageDownload = new Downloadable(destinationPath.base, data, "image/" + destinationPath.ext, destinationPath.dir, false);
 				toDownload.push(imageDownload);
 			}
 		}
@@ -281,29 +282,32 @@ export class HTMLGenerator
 
 	//#region Main Generation Functions
 
-	public async generateWebpage(file: TFile): Promise<{html: string, externalFiles: Downloadable[]}>
+
+
+	public async generateWebpage(file: TFile): Promise<{html: string, externalFiles: Downloadable[], document: Document}>
 	{
 		let documentData = await this.getDocumentHTML(file);
-		let documentContent = documentData.htmlEl;
+		let usingDocument = documentData.document;
 
-		let sidebars = this.generateSideBars(documentContent);
+		let sidebars = this.generateSideBars(documentData.htmlEl, usingDocument);
 		let rightSidebar = sidebars.right;
 		let leftSidebar = sidebars.left;
+		usingDocument.body.appendChild(sidebars.container);
 
 		// inject darkmode toggle
-		if (ExportSettings.settings.addDarkModeToggle)
+		if (ExportSettings.settings.addDarkModeToggle && !usingDocument.querySelector(".theme-toggle-inline, .theme-toggle"))
 		{
-			let toggle = this.generateFixedToggle(documentContent, file.extension != "md");
+			let toggle = this.generateDarkmodeToggle(false, usingDocument);
 			leftSidebar.appendChild(toggle);
 		}
 
 		// inject outline
 		if (ExportSettings.settings.includeOutline)
 		{
-			let headers = this.getHeaderList(documentContent);
+			let headers = this.getHeaderList(usingDocument);
 			if (headers)
 			{
-				var outline : HTMLElement | undefined = this.generateOutline(headers);
+				var outline : HTMLElement | undefined = this.generateOutline(headers, usingDocument);
 				rightSidebar.appendChild(outline);
 			}
 		}
@@ -311,50 +315,55 @@ export class HTMLGenerator
 		// inject graph view
 		if (ExportSettings.settings.includeGraphView)
 		{
-			let graph = this.generateGraphView();
+			let graph = this.generateGraphView(usingDocument);
 
 			if(outline) outline.prepend(graph);
-			else        rightSidebar.appendChild(graph);
+			else rightSidebar.appendChild(graph);
 		}
 
-		let htmlEl : HTMLHtmlElement = document.createElement("html");
-		let headEl: HTMLHeadElement = await this.generateHead(file);
-		let bodyEl : HTMLBodyElement = this.generateBodyElement();
+		await this.fillInHead(file, usingDocument);
+		this.fillInBody(usingDocument);
 
-		bodyEl.appendChild(sidebars.container);
-		htmlEl.appendChild(headEl);
-		htmlEl.appendChild(bodyEl);
+		this.postprocessHTML(usingDocument);
 
-		htmlEl = this.postprocessHTML(htmlEl);
-
-		let htmlString = "<!DOCTYPE html>\n" + htmlEl.outerHTML;
+		let htmlString = '<!DOCTYPE HTML>' + '\n' + usingDocument.documentElement.outerHTML;
 		if (ExportSettings.settings.beautifyHTML) htmlString = html_beautify(htmlString, { indent_size: 2 });
 
-		let externalFiles = await this.getSeperateFilesToDownload(documentData.outlinedImages);
-
 		let parsedPath = Utils.parsePath(file.path);
+		let externalFiles = await this.getSeperateFilesToDownload(documentData.outlinedImages);
+		externalFiles.unshift(new Downloadable(parsedPath.name + ".html", htmlString, "text/html", parsedPath.dir, true));
 
-		externalFiles.unshift(new Downloadable(parsedPath.name, htmlString, "text/html", parsedPath.dir, true));
-
-		return {html : htmlString, externalFiles: externalFiles};
+		return {html : htmlString, externalFiles: externalFiles, document: usingDocument};
 	}
 
-	public async getDocumentHTML(file: TFile): Promise<{htmlEl: HTMLElement, outlinedImages: {localImagePath: string, relativeExportImagePath: string}[]}>
+	public async getDocumentHTML(file: TFile, usingDocument: Document | undefined = undefined): Promise<{htmlEl: HTMLElement, outlinedImages: {localImagePath: string, relativeExportImagePath: string}[], document: Document}>
 	{
-		let contentEl = document.createElement("div");
-		contentEl.detach();
+		if (usingDocument === undefined) usingDocument = document.implementation.createHTMLDocument(file.basename);
+
+		let contentEl = usingDocument.body.createEl('div');
+		contentEl.addClasses(["markdown-preview-view", "markdown-rendered"]);
+		let sizer = contentEl.createDiv({ cls: "markdown-preview-sizer" });
+		contentEl.style.maxWidth = 'var(--line-width)';
 
 		if(ExportSettings.settings.exportInBackground)
 		{
-			contentEl.addClasses(["markdown-preview-view", "markdown-rendered"]);
-			let sizer = contentEl.createDiv({ cls: "markdown-preview-sizer" });
+			let renderEl = document.createElement('div');
+
 			let fileContents = await app.vault.read(file);
-			await MarkdownRenderer.renderMarkdown(fileContents, sizer, file.path, new Component());
+			await MarkdownRenderer.renderMarkdown(fileContents, renderEl, file.path, HTMLExportPlugin.plugin);
+			
+			sizer.innerHTML = renderEl.innerHTML;
+
+			this.renderMissingMediaFiles(file, usingDocument);
+
+			renderEl.remove();
 		}
 		else
 		{
 			let fileTab = this.leafHandler.openFileInNewLeaf(file as TFile, true);
+
 			await Utils.delay(200);
+
 			let view = Utils.getActiveTextView();
 			if (!view)
 			{
@@ -370,27 +379,10 @@ export class HTMLGenerator
 				await Utils.doFullRender(view);
 			}
 
-			let obsidianDocEl = (document.querySelector(".workspace-leaf.mod-active .markdown-reading-view") as HTMLElement);
+			let obsidianDocEl = (document.querySelector(".workspace-leaf.mod-active .markdown-preview-sizer") as HTMLElement);
 			if (!obsidianDocEl) obsidianDocEl = (document.querySelector(".workspace-leaf.mod-active .view-content") as HTMLElement);
 
-			let customLineWidthActive = false;
-			let width = "var(--line-width)";
-			if(ExportSettings.settings.customLineWidth.trim() != "")
-			{
-				width = ExportSettings.settings.customLineWidth;
-				if (!isNaN(Number(width))) width = width + "px";
-				customLineWidthActive = true;
-			}
-
-			contentEl.setAttribute("class", obsidianDocEl.getAttribute("class") ?? "");
-			contentEl.innerHTML = obsidianDocEl.innerHTML;
-			
-			$(contentEl).css("flex-basis", `min(${width}, 100vw)`);
-			$(contentEl).css("height", "100%");
-
-			if(customLineWidthActive) $(contentEl).css("--line-width", width);
-			$(contentEl).css("--line-width-adaptive", width);
-			$(contentEl).css("--file-line-width", width);
+			sizer.innerHTML = obsidianDocEl.innerHTML;
 
 			// Close the file tab after HTML is generated
 			if(fileTab) fileTab.detach();
@@ -404,60 +396,104 @@ export class HTMLGenerator
 			$(element).find(".callout-content").css("display", "none");
 		});
 
-		this.fixLinks(contentEl); // modify links to work outside of obsidian (including relative links)
-		this.repairOnClick(contentEl); // replace data-onlick with onclick
+
+		this.fixLinks(usingDocument); // modify links to work outside of obsidian (including relative links)
 
 		// inline / outline images
 		let outlinedImages : {localImagePath: string, relativeExportImagePath: string}[] = [];
 		if (ExportSettings.settings.inlineImages)
 		{
-			await this.inlineMedia(contentEl);
+			await this.inlineMedia(usingDocument);
 		}
 		else
 		{
-			outlinedImages = await this.outlineMedia(contentEl, file);
+			outlinedImages = await this.outlineMedia(usingDocument, file);
 		}
 
-		return {htmlEl: contentEl, outlinedImages: outlinedImages};
+		return {htmlEl: contentEl, outlinedImages: outlinedImages, document: usingDocument};
+	}
+	
+	private renderMissingMediaFiles(file: TFile, usingDocument: Document)
+	{
+		let imageFormats = ["png", "webp", "jpg", "jpeg", "gif", "bmp", "svg"];
+		let audioFormats = ["mp3", "wav", "m4a", "ogg", "3gp", "flac"];
+		let videoFormats = ["mp4", "webm", "ogv", "mov", "mkv"];
+
+		let missingMedia = $(usingDocument).find(".internal-embed");
+		missingMedia.each((index, element) =>
+		{
+			let el = $(element);
+
+			let source = $(element).attr("src") ?? "";
+			let parsedSource = Utils.parsePath(source);
+			let ext = parsedSource.ext.split("#")[0].trim().replaceAll(".", "");
+			let isImage = imageFormats.includes(ext);
+			let isAudio = audioFormats.includes(ext);
+			let isVideo = videoFormats.includes(ext);
+
+			console.log("Missing media: " + source + "  ext: " + ext + "  img:" + isImage + "  aud:" + isAudio + "  vid:" + isVideo);
+
+			if (isImage || isVideo || isAudio)
+			{
+				let bestPath = app.metadataCache.getFirstLinkpathDest(Utils.joinPaths(parsedSource.dir, parsedSource.name + "." + ext), file.path);
+
+				if (bestPath)
+				{
+					let path = "app://local/" + Utils.getAbsolutePath(bestPath.path);
+
+					console.log("Best path: " + path);
+					el.empty();
+
+					let mediaEl = usingDocument.body.createEl(isImage ? "img" : isAudio ? "audio" : "video");
+					mediaEl.setAttribute("src", path);
+					mediaEl.setAttribute("alt", bestPath.basename);
+					mediaEl.setAttribute("controls", "");
+					
+					el.append(mediaEl);
+					el.addClass("media-embed");
+					el.addClass("is-loaded");
+					el.addClass(isImage ? "image-embed" : isAudio ? "audio-embed" : "video-embed");
+				}
+			}
+		});
 	}
 
-	private generateSideBars(middleContent: HTMLElement): {container: HTMLElement, left: HTMLElement, right: HTMLElement}
+	private generateSideBars(middleContent: HTMLElement, usingDocument: Document): {container: HTMLElement, left: HTMLElement, right: HTMLElement, center: HTMLElement}
 	{
-		let leftContent = document.createElement("div");
-		let rightContent = document.createElement("div");
+		let leftContent = usingDocument.createElement("div");
+		let rightContent = usingDocument.createElement("div");
+		let centerContent = usingDocument.createElement("div");
+		let flexContainer = usingDocument.createElement("div");
 
-		let flexContainer = document.createElement("div");
 		flexContainer.setAttribute("class", "flex-container");
 
-		let leftBar = document.createElement("div");
+		let leftBar = usingDocument.createElement("div");
 		leftBar.setAttribute("id", "sidebar");
 		leftBar.setAttribute("class", "sidebar-left");
 		leftBar.appendChild(leftContent);
 
-		let rightBar = document.createElement("div");
+		let rightBar = usingDocument.createElement("div");
 		rightBar.setAttribute("id", "sidebar");
 		rightBar.setAttribute("class", "sidebar-right");
 		rightBar.appendChild(rightContent);
 
+		centerContent.appendChild(middleContent);
 		flexContainer.appendChild(leftBar);
-		flexContainer.appendChild(middleContent);
+		flexContainer.appendChild(centerContent);
 		flexContainer.appendChild(rightBar);
 
-		return {container: flexContainer, left: leftContent, right: rightContent};
+		return {container: flexContainer, left: leftContent, right: rightContent, center: centerContent};
 	}
 
-	private generateBodyElement(): HTMLBodyElement
+	private fillInBody(usingDocument: Document)
 	{
 		let bodyClasses = document.body.getAttribute("class") ?? "";
 		let bodyStyle = document.body.getAttribute("style") ?? "";
 		bodyClasses = bodyClasses.replaceAll("\"", "'");
 		bodyStyle = bodyStyle.replaceAll("\"", "'");
 
-		let bodyEl = document.createElement("body");
-		bodyEl.setAttribute("class", bodyClasses);
-		bodyEl.setAttribute("style", bodyStyle);
-
-		return bodyEl;
+		usingDocument.body.setAttribute("class", bodyClasses);
+		usingDocument.body.setAttribute("style", bodyStyle);
 	}
 
 	private getMathStyles(): string
@@ -476,7 +512,7 @@ export class HTMLGenerator
 		return {mediaPath: imagePath, jsPath: jsPath, cssPath: cssPath, rootPath: rootPath};
 	}
 
-	private async generateHead(file: TFile): Promise<HTMLHeadElement>
+	private async fillInHead(file: TFile, usingDocument: Document)
 	{
 		let relativePaths = this.getRelativePaths(file);
 
@@ -600,46 +636,38 @@ export class HTMLGenerator
 			`;
 		}
 
-		let headerEl = document.createElement("head");
-		headerEl.innerHTML = header;
-
-		return headerEl;
+		usingDocument.head.innerHTML = header;
 	}
 
-	private postprocessHTML(html: HTMLHtmlElement) : HTMLHtmlElement
+	private postprocessHTML(usingDocument: Document) : Document
 	{
-		// stop sizer from setting width and margin
-		let sizer = $(html).find(".markdown-preview-sizer");
+		// stop sizer from setting width or margin
+		let sizer = $(usingDocument).find(".markdown-preview-sizer");
 		sizer.css("margin", "0");
 		sizer.css("width", "100%");
 		sizer.css("max-width", "100%");
 
-		// set real margin on the .markdown-preview-view (using padding)
-		let view = $(html).find(".markdown-preview-view");
-		view.css("padding", "5%");
-
-		let body = $(html).find('body');
+		let body = $(usingDocument.body);
 
 		// set --line-width, --line-width-adaptive, and --file-line-width to the ExportSettings.settings.customLineWidth
-		if(ExportSettings.settings.customLineWidth != "")
-		{
-			let lineWidth = ExportSettings.settings.customLineWidth;
-			if (!isNaN(Number(lineWidth))) lineWidth += "px";
-			body.css("--line-width", lineWidth);
-			body.css("--line-width-adaptive", lineWidth);
-			body.css("--file-line-width", lineWidth);
-		}
+		let lineWidth = "50em";
+		if(ExportSettings.settings.customLineWidth != "") lineWidth = ExportSettings.settings.customLineWidth;
+		if (!isNaN(Number(lineWidth))) lineWidth += "px";
+		body.css("--line-width", lineWidth);
+		body.css("--line-width-adaptive", lineWidth);
+		body.css("--file-line-width", lineWidth);
 
-		return html;
+		return usingDocument;
 	}
 
 	//#endregion
 
 	//#region Links and Images
 
-	private fixLinks(page: HTMLElement)
+	private fixLinks(usingDocument: Document)
 	{
-		let query = jQuery(page);
+		let query = $(usingDocument);
+
 		query.find("a.internal-link").each(function ()
 		{
 			$(this).attr("target", "_self");
@@ -697,9 +725,9 @@ export class HTMLGenerator
 		});
 	}
 
-	private async inlineMedia(page: HTMLElement)
+	private async inlineMedia(usingDocument: Document)
 	{
-		let query = jQuery(page);
+		let query = $(usingDocument);
 		let media = query.find("img, audio").toArray();
 
 		for (let i = 0; i < media.length; i++)
@@ -739,11 +767,11 @@ export class HTMLGenerator
 		}
 	}
 
-	private async outlineMedia(page: HTMLElement, file: TFile): Promise<{localImagePath: string, relativeExportImagePath: string}[]>
+	private async outlineMedia(usingDocument: Document, file: TFile): Promise<{localImagePath: string, relativeExportImagePath: string}[]>
 	{
 		let relativePaths = this.getRelativePaths(file);
-		let query = jQuery(page);
-		let media = query.find("img, audio").toArray();
+		let query = $(usingDocument);
+		let media = query.find("img, audio, video").toArray();
 
 		let imagesToOutline: { localImagePath: string, relativeExportImagePath: string}[] = [];
 
@@ -780,7 +808,6 @@ export class HTMLGenerator
 			}
 
 			mediaEl.attr("src", relativeImagePath);
-			// mediaEl.attr("loading", "lazy");
 
 			let imagePathFromVault = Utils.joinPaths(Utils.getRelativePath(mediaPath, Utils.getVaultPath()), parsedMediaPath.base);
 
@@ -794,31 +821,18 @@ export class HTMLGenerator
 
 	//#region Special Features
 
-	private generateFixedToggle(page: HTMLElement, alwaysInject : boolean = false) : HTMLElement
-	{
-		if (!alwaysInject && page.querySelector(".theme-toggle-inline, .theme-toggle")) return document.createElement("div");
-
-		if(ExportSettings.settings.addDarkModeToggle)
-		{
-			//insert fixed toggle in corner
-			return this.generateDarkmodeToggle(false);
-		}
-
-		return document.createElement("div");
-	}
-
-	public generateDarkmodeToggle(inline : boolean = true) : HTMLElement
+	public generateDarkmodeToggle(inline : boolean = true, usingDocument: Document = document) : HTMLElement
 	{
 		// programatically generates the above html snippet
-		let toggle = document.createElement("div");
-		let label = document.createElement("label");
+		let toggle = usingDocument.createElement("div");
+		let label = usingDocument.createElement("label");
 		label.classList.add(inline ? "theme-toggle-inline" : "theme-toggle");
 		label.setAttribute("for", "theme_toggle");
-		let input = document.createElement("input");
+		let input = usingDocument.createElement("input");
 		input.classList.add("toggle__input");
 		input.setAttribute("type", "checkbox");
 		input.setAttribute("id", "theme_toggle");
-		let div = document.createElement("div");
+		let div = usingDocument.createElement("div");
 		div.classList.add("toggle__fill");
 		label.appendChild(input);
 		label.appendChild(div);
@@ -826,11 +840,11 @@ export class HTMLGenerator
 		return toggle;
 	}
 
-	private getHeaderList(page: HTMLElement): { size: number, title: string, href: string }[] | null
+	private getHeaderList(usingDocument: Document): { size: number, title: string, href: string }[] | null
 	{
 		let headers = [];
 
-		let headerElements = page.querySelectorAll("h1, h2, h3, h4, h5, h6");
+		let headerElements = usingDocument.querySelectorAll("h1, h2, h3, h4, h5, h6");
 
 		for (let i = 0; i < headerElements.length; i++)
 		{
@@ -844,32 +858,32 @@ export class HTMLGenerator
 		return headers;
 	}
 
-	private generateOutlineItem(header: { size: number, title: string, href: string }): HTMLDivElement
+	private generateOutlineItem(header: { size: number, title: string, href: string }, usingDocument: Document): HTMLDivElement
 	{
 		let arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path>`;
 
-		let outlineItemEl = document.createElement('div');
+		let outlineItemEl = usingDocument.createElement('div');
 		outlineItemEl.classList.add("outline-item");
 		outlineItemEl.setAttribute("data-size", header.size.toString());
 
-		let outlineItemContentsEl = document.createElement('a');
+		let outlineItemContentsEl = usingDocument.createElement('a');
 		outlineItemContentsEl.classList.add("outline-item-contents");
 		outlineItemContentsEl.classList.add("internal-link");
 		outlineItemContentsEl.setAttribute("href", "#" + header.href);
 		
-		let outlineItemIconEl = document.createElement('div');
+		let outlineItemIconEl = usingDocument.createElement('div');
 		outlineItemIconEl.classList.add("tree-item-icon");
 		outlineItemIconEl.classList.add("collapse-icon");
 		
-		let outlineItemIconSvgEl = document.createElement('svg');
+		let outlineItemIconSvgEl = usingDocument.createElement('svg');
 		outlineItemIconSvgEl.innerHTML = arrowIcon;
 		outlineItemIconSvgEl = outlineItemIconSvgEl.firstChild as HTMLElement;
 		
-		let outlineItemTitleEl = document.createElement('span');
+		let outlineItemTitleEl = usingDocument.createElement('span');
 		outlineItemTitleEl.classList.add("outline-item-title");
 		outlineItemTitleEl.innerText = header.title;
 
-		let outlineItemChildrenEl = document.createElement('div');
+		let outlineItemChildrenEl = usingDocument.createElement('div');
 		outlineItemChildrenEl.classList.add("outline-item-children");
 
 		outlineItemIconEl.appendChild(outlineItemIconSvgEl);
@@ -881,37 +895,37 @@ export class HTMLGenerator
 		return outlineItemEl;
 	}
 
-	private generateOutline(headers: { size: number, title: string, href: string }[]): HTMLDivElement
+	private generateOutline(headers: { size: number, title: string, href: string }[], usingDocument: Document): HTMLDivElement
 	{
-		if(headers.length <= 1) return document.createElement("div");
+		// if(headers.length <= 1) return usingDocument.createElement("div");
 
-		let outlineEl = document.createElement('div');
+		let outlineEl = usingDocument.createElement('div');
 		outlineEl.classList.add("outline-container");
 		outlineEl.setAttribute("data-size", "0");
 
-		let outlineHeader = document.createElement('div');
+		let outlineHeader = usingDocument.createElement('div');
 		outlineHeader.classList.add("outline-header");
 
-		let headerIconEl = document.createElement('svg');
+		let headerIconEl = usingDocument.createElement('svg');
 		headerIconEl.setAttribute("viewBox", "0 0 100 100");
 		headerIconEl.classList.add("bullet-list");
 		headerIconEl.setAttribute("width", "18px");
 		headerIconEl.setAttribute("height", "18px");
 
-		let headerIconPathEl = document.createElement('path');
+		let headerIconPathEl = usingDocument.createElement('path');
 		let headerPathData = "M16.4,16.4c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,16.4,16.4,16.4z M16.4,19.6 c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2C13.2,21,14.6,19.6,16.4,19.6z M29.2,21.2v3.2H90v-3.2H29.2z M16.4,43.6c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,43.6,16.4,43.6z M16.4,46.8c1.8,0,3.2,1.4,3.2,3.2 s-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2S14.6,46.8,16.4,46.8z M29.2,48.4v3.2H90v-3.2H29.2z M16.4,70.8c-3.5,0-6.4,2.9-6.4,6.4 c0,3.5,2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4C22.8,73.7,19.9,70.8,16.4,70.8z M16.4,74c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2 s-3.2-1.4-3.2-3.2C13.2,75.4,14.6,74,16.4,74z M29.2,75.6v3.2H90v-3.2H29.2z";
 		headerIconPathEl.setAttribute("fill", "currentColor");
 		headerIconPathEl.setAttribute("stroke", "currentColor");
 		headerIconPathEl.setAttribute("d", headerPathData);
 
-		let headerLabelEl = document.createElement('h6');
+		let headerLabelEl = usingDocument.createElement('h6');
 		headerLabelEl.style.margin = "1em";
 		headerLabelEl.innerText = "Table of Contents";
 
-		let headerCollapseAllEl = document.createElement('button');
+		let headerCollapseAllEl = usingDocument.createElement('button');
 		headerCollapseAllEl.classList.add("clickable-icon", "collapse-all");
 
-		let headerCollapseAllIconEl = document.createElement('iconify-icon');
+		let headerCollapseAllIconEl = usingDocument.createElement('iconify-icon');
 		headerCollapseAllIconEl.setAttribute("icon", "ph:arrows-in-line-horizontal-bold");
 		headerCollapseAllIconEl.setAttribute("width", "18px");
 		headerCollapseAllIconEl.setAttribute("height", "18px");
@@ -939,7 +953,7 @@ export class HTMLGenerator
 		for (let i = 0; i < headers.length; i++)
 		{
 			let header = headers[i];
-			let listItem : HTMLDivElement = this.generateOutlineItem(header);
+			let listItem : HTMLDivElement = this.generateOutlineItem(header, usingDocument);
 
 			while (getLastStackSize() >= header.size && listStack.length > 1)
 			{
@@ -957,9 +971,9 @@ export class HTMLGenerator
 		return outlineEl;
 	}
 
-	private generateGraphView(): HTMLDivElement
+	private generateGraphView(usingDocument: Document): HTMLDivElement
 	{
-		let graphEl = document.createElement("div");
+		let graphEl = usingDocument.createElement("div");
 		graphEl.className = "graph-view-placeholder";
 		graphEl.innerHTML = 
 		`
@@ -970,11 +984,6 @@ export class HTMLGenerator
 		`
 
 		return graphEl;
-	}
-
-	private repairOnClick(page: HTMLElement)
-	{
-		page.innerHTML = page.innerHTML.replaceAll("data-onclick", "onclick");
 	}
 
 	//#endregion

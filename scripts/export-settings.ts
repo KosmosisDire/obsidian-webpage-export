@@ -37,7 +37,7 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	inlineImages: true,
 	makeNamesWebStyle: false,
 	exportInBackground: false,
-	beautifyHTML: true,
+	beautifyHTML: false,
 	includePluginCSS: '',
 
 	graphAttractionForce: 50,

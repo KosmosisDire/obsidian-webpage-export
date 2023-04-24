@@ -90,8 +90,9 @@ hr
 #sidebar {
     background-color: var(--background-secondary);
     flex: 1 0 min-content;
-    flex-direction: column;
     min-width: 20em;
+    display: flex;
+    flex-direction: column;
 }
 
 .sidebar-content

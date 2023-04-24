@@ -375,8 +375,9 @@ export class Utils
 		for (let i = 0; i < files.length; i++)
 		{
 			let file = files[i];
-			let array = file.content;
+			let array: string | NodeJS.ArrayBufferView = file.content;
 			if (!file.useUnicode && file.content instanceof String) array = Buffer.from(file.content, 'base64');
+			if (file.useUnicode && file.content instanceof String) array = Utils.createUnicodeArray(file.content.toString());
 			
 			let parsedPath = this.parsePath(this.joinPaths(folderPath, file.relativePath ?? "", file.filename));
 			
@@ -541,38 +542,6 @@ export class Utils
 			return file.basename == name;
 		});
 	}
-
-	static beautifyHTML(html: string) : string
-	{
-		var div = document.createElement('div');
-		div.innerHTML = html.trim();
-	
-		return this._beautifyhtmlrecursive(div, 0).innerHTML;
-	}
-
-	static _beautifyhtmlrecursive(node: Element, level: number) : Element
-	{
-		var indentBefore = new Array(level++ + 1).join('  '),
-			indentAfter  = new Array(level - 1).join('  '),
-			textNode;
-	
-		for (var i = 0; i < node.children.length; i++) {
-	
-			textNode = document.createTextNode('\n' + indentBefore);
-			node.insertBefore(textNode, node.children[i]);
-	
-			this._beautifyhtmlrecursive(node.children[i], level);
-	
-			if (node.lastElementChild == node.children[i]) {
-				textNode = document.createTextNode('\n' + indentAfter);
-				node.appendChild(textNode);
-			}
-		}
-	
-		return node;
-	}
-	
-	
 
 	static trimEnd(inputString: string, trimString: string): string
 	{

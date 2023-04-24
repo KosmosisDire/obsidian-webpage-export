@@ -1,5 +1,5 @@
 // imports from obsidian API
-import { Notice, Plugin, TFile, TFolder} from 'obsidian';
+import { Component, Notice, Plugin, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
 import { ExportModal, ExportSettings } from './export-settings';
@@ -10,6 +10,7 @@ const {shell} = require('electron')
 export default class HTMLExportPlugin extends Plugin
 {
 	htmlGenerator: HTMLGenerator = new HTMLGenerator("webpage-html-export");
+	static plugin: HTMLExportPlugin;
 
 	addTogglePostprocessor()
 	{
@@ -46,7 +47,7 @@ export default class HTMLExportPlugin extends Plugin
 				{
 					if(checking) return true;
 
-					this.exportFileAndDownload(file);
+					this.exportFile(file);
 				}
 
 				return false;
@@ -66,6 +67,7 @@ export default class HTMLExportPlugin extends Plugin
 	async onload()
 	{
 		console.log('loading webpage-html-export plugin');
+		HTMLExportPlugin.plugin = this;
 
 		// init settings
 		this.addSettingTab(new ExportSettings(this));
@@ -100,7 +102,7 @@ export default class HTMLExportPlugin extends Plugin
 						{
 							if(file instanceof TFile)
 							{
-								let success = await this.exportFileAndDownload(file);
+								let success = await this.exportFile(file);
 								if (success && ExportSettings.settings.openAfterExport)
 								{
 									shell.openPath(ExportSettings.settings.lastExportPath);
@@ -131,18 +133,7 @@ export default class HTMLExportPlugin extends Plugin
 		console.log('unloading webpage-html-export plugin');
 	}
 
-	async exportFileAndDownload(file: TFile, showSettings: boolean = true): Promise<{success: boolean, externalFiles: Downloadable[], exportPath: string}>
-	{
-		let result = await this.exportFile(file, "", showSettings);
-		if (result.success)
-		{
-			Utils.downloadFiles(result.externalFiles, result.exportPath);
-		}
-
-		return result;
-	}
-
-	async exportFile(file: TFile, exportPath: string = "", showSettings: boolean = true) : Promise<{success: boolean, externalFiles: Downloadable[], exportPath: string}>
+	async exportFile(file: TFile, partOfBatch: boolean = false, exportPath: string | undefined = undefined, showSettings: boolean = true) : Promise<{success: boolean, externalFiles: Downloadable[], exportPath: string}>
 	{
 		// Open the settings modal and wait until it's closed
 		if (showSettings)
@@ -157,38 +148,34 @@ export default class HTMLExportPlugin extends Plugin
 			}
 		}
 
-		let parsedPath = Utils.parsePath(exportPath);
-		if (exportPath == "") // if no export path is specified, show a save dialog
+		let exportPathParsed = Utils.parsePath(exportPath ?? "");
+		if (exportPath === undefined) // if no export path is specified, show a save dialog
 		{
 			let defaultFileName = (ExportSettings.settings.makeNamesWebStyle ? Utils.makePathWebStyle(file.basename) : file.basename) + ".html";
 			let saveDialogPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), defaultFileName, false) ?? undefined;
 			if (saveDialogPath == undefined) return {success: false, externalFiles: [], exportPath: ""};
-			parsedPath = Utils.parsePath(saveDialogPath);
+			exportPathParsed = Utils.parsePath(saveDialogPath);
 		}
 
 		let webpageData = await this.htmlGenerator.generateWebpage(file);
-		// let htmlString = webpageData.html;
-		let filesToDownload = webpageData.externalFiles;
-
-		// let htmlDownload = new Downloadable(parsedPath.fullPath, htmlString, "text/html");
-		// filesToDownload.unshift(htmlDownload);
-
-		let filename = parsedPath.base;
-
-		filesToDownload[0].filename = filename;
+		let externalFiles = webpageData.externalFiles;
 
 		if(ExportSettings.settings.makeNamesWebStyle)
 		{
-			filesToDownload.forEach((file) =>
+			externalFiles.forEach((file) =>
 			{
 				file.filename = Utils.makePathWebStyle(file.filename);
 				file.relativePath = Utils.makePathWebStyle(file.relativePath ?? "");
 			});
 		}
 
-		new Notice("Exported " + file.name + " to " + parsedPath.fullPath, 5000);
+		if(!partOfBatch) 
+		{
+			new Notice("Exported " + file.name + " to " + exportPathParsed.fullPath, 5000);
+			Utils.downloadFiles(externalFiles, exportPathParsed.dir);
+		}
 
-		return {success: true, externalFiles: filesToDownload, exportPath: parsedPath.dir};
+		return {success: true, externalFiles: externalFiles, exportPath: exportPathParsed.dir};
 	}
 
 	async exportFolder(folderPath: string, showSettings: boolean = true) : Promise<boolean>
@@ -215,6 +202,10 @@ export default class HTMLExportPlugin extends Plugin
 
 		let externalFiles: Downloadable[] = [];
 
+
+		// 10 characters for the progress bar
+		let exportProgress = new Notice(`Generating HTML Files: ${files[0].name} \n\n[          ] 1 / ${files.length}`, 1000000);
+		
 		for (let i = 0; i < files.length; i++)
 		{
 			let file = files[i];
@@ -225,17 +216,21 @@ export default class HTMLExportPlugin extends Plugin
 					fullPath = Utils.joinPaths(htmlPath, Utils.makePathWebStyle(Utils.parsePath(file.path).dir), Utils.makePathWebStyle(file.basename + ".html"));
 				else
 					fullPath = Utils.joinPaths(htmlPath, Utils.parsePath(file.path).dir, file.basename + ".html");
-				let exportInfo = await this.exportFile(file, fullPath, false);
+				let exportInfo = await this.exportFile(file, true, fullPath, false);
 				if (exportInfo.success) externalFiles.push(...exportInfo.externalFiles);
+
+				// update progress bar
+				exportProgress.setMessage(`Generating HTML Files:\n\n[${"█".repeat(Math.floor((i / files.length) * 10))}${" ".repeat(10 - Math.floor((i / files.length) * 10))}]  ${i+1} / ${files.length}`);
 			}
 		}
 
-		// remove duplicates
-		externalFiles = externalFiles.filter((file, index) => externalFiles.findIndex((f) => f.relativePath == file.relativePath && f.filename == file.filename) == index);
+		exportProgress.hide();
 
+		// remove duplicates and download
+		externalFiles = externalFiles.filter((file, index) => externalFiles.findIndex((f) => f.relativePath == file.relativePath && f.filename == file.filename) == index);
 		await Utils.downloadFiles(externalFiles, htmlPath);
 
-		new Notice("Folder exported " + folderPath + " to " + htmlPath, 10000);
+		new Notice("Finished export to " + htmlPath, 5000);
 
 		return true;
 	}
