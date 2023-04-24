@@ -512,6 +512,8 @@ async function RunGraphView()
     let mouseDown = false;
     let lastMousePos = { x: 0, y: 0 };
     let averageFPS = targetFPS;
+    let mouseInside = false;
+    let graphExpanded = false;
 
     setTimeout(() => app.ticker.add(() => 
     {
@@ -607,7 +609,7 @@ async function RunGraphView()
         lastMousePos = { x: event.clientX, y: event.clientY };
     }
 
-    $("*").mousemove(function(event)
+    $("*").on("mousemove",function(event)
     {
         if(mouseDown || renderWorker.grabbedNode != -1)
         {
@@ -615,7 +617,7 @@ async function RunGraphView()
         }
     });
 
-    $("#graph-canvas").mousemove(function(event)
+    $("#graph-canvas").on("mousemove", function(event)
     {
         if(!mouseDown && renderWorker.grabbedNode == -1)
         {
@@ -623,7 +625,7 @@ async function RunGraphView()
         }
     });
 
-    $("#graph-canvas").mousedown(function(e) 
+    $("#graph-canvas").on("mousedown", function(e) 
     {
         e.preventDefault();
         e.stopPropagation();
@@ -633,9 +635,14 @@ async function RunGraphView()
             renderWorker.grabbedNode = renderWorker.hoveredNode;
             
         mouseDown = true;
+
+        if(!mouseInside && graphExpanded)
+        {
+            toggleExpandedGraph();
+        }
     });
 
-    $("*").mouseup(function(e)
+    $("*").on("mouseup", function(e)
     {
         e.preventDefault();
         e.stopPropagation();
@@ -645,7 +652,7 @@ async function RunGraphView()
     });
 
     // also mouse up if mouse leaves canvas
-    $("#graph-canvas").mouseleave(function(e)
+    $("#graph-canvas").on("mouseleave", function(e)
     {
         e.preventDefault();
         e.stopPropagation();
@@ -655,7 +662,16 @@ async function RunGraphView()
             mousePositionScreen = { x: undefined, y: undefined };
             mousePositionWorld = { x: undefined, y: undefined };
         }
-        
+
+        mouseInside = false;
+    });
+
+    $("#graph-canvas").on("mouseenter", function(e)
+    {
+        e.preventDefault();
+        e.stopPropagation();
+
+        mouseInside = true;
     });
 
 
@@ -685,16 +701,13 @@ async function RunGraphView()
         }
     });
 
-    $(".toggle__input").change(function(e)
+    $(".toggle__input").on("change",function(e)
     {
         renderWorker.resampleColors();
     });
 
-    $(".graph-expand.graph-icon").on("click", function(e)
+    function toggleExpandedGraph()
     {
-        e.preventDefault();
-        e.stopPropagation();
-
         let container = $(".graph-view-container");
 
         // scale and fade out animation:
@@ -715,6 +728,15 @@ async function RunGraphView()
             
         });
 
+        graphExpanded = !graphExpanded;
+    }
+
+    $(".graph-expand.graph-icon").on("click", function(e)
+    {
+        e.preventDefault();
+        e.stopPropagation();
+
+        toggleExpandedGraph();
     });
 }
 
