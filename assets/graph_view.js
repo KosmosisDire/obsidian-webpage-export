@@ -62,7 +62,7 @@ async function RunGraphView()
             GraphAssembly.averageRadius = GraphAssembly.radii.reduce((a, b) => a + b) / GraphAssembly.radii.length;
             GraphAssembly.minRadius = GraphAssembly.radii.reduce((a, b) => Math.min(a, b));
 
-            positions = this.loadPositions();
+            this.loadState();
 
             // copy the data to the heap
             Module.HEAP32.set(new Int32Array(positions.buffer), GraphAssembly.#positionsPtr / positions.BYTES_PER_ELEMENT);
@@ -94,30 +94,30 @@ async function RunGraphView()
             return Module.HEAP32.buffer.slice(GraphAssembly.#positionsPtr, GraphAssembly.#positionsPtr + GraphAssembly.#positionsByteLength);
         }
 
-        static savePositions()
+        static saveState()
         {
             localStorage.setItem("positions", JSON.stringify(new Float32Array(GraphAssembly.positions)));
+            localStorage.setItem("cameraOffset", JSON.stringify(cameraOffset));
+            localStorage.setItem("cameraScale", JSON.stringify(cameraScale));
         }
 
-        /**
-         * @returns {Float32Array}
-         */
-        static loadPositions()
+        static loadState()
         {
-            let loadedPositions = new Float32Array(Object.values(JSON.parse(localStorage.getItem("positions"))));
-            if (!loadedPositions || loadedPositions.length != GraphAssembly.nodeCount * 2)
+            positions = new Float32Array(Object.values(JSON.parse(localStorage.getItem("positions"))));
+            if (!positions || positions.length != GraphAssembly.nodeCount * 2)
             {
-                loadedPositions = new Float32Array(GraphAssembly.nodeCount * 2);
+                positions = new Float32Array(GraphAssembly.nodeCount * 2);
                 let spawnRadius = (GraphAssembly.averageRadius * Math.sqrt(GraphAssembly.nodeCount)) * 2;
                 for (let i = 0; i < GraphAssembly.nodeCount; i++) 
                 {
                     let distance = (1 - GraphAssembly.radii[i] / GraphAssembly.maxRadius) * spawnRadius;
-                    loadedPositions[i * 2] = Math.cos(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
-                    loadedPositions[i * 2 + 1] = Math.sin(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
+                    positions[i * 2] = Math.cos(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
+                    positions[i * 2 + 1] = Math.sin(i/GraphAssembly.nodeCount * 7.41 * 2 * Math.PI) * distance;
                 }
             }
 
-            return loadedPositions;
+            cameraOffset = new Vector2(Object.values(JSON.parse(localStorage.getItem("cameraOffset"))));
+            cameraScale = parseFloat(localStorage.getItem("cameraScale"));
         }
 
         /**
@@ -211,8 +211,6 @@ async function RunGraphView()
 
             this.worker = new Worker(new URL("./graph-render-worker.js", import.meta.url));
 
-            
-            
             this.#cameraOffset = {x: 0, y: 0};
             this.#cameraScale = 1;
             this.#hoveredNode = -1;
@@ -686,7 +684,7 @@ async function RunGraphView()
         // we must have just clicked on a node without dragging it
         if (!panning && renderWorker.grabbedNode == -1 && renderWorker.hoveredNode != -1)
         {
-            GraphAssembly.savePositions();
+            GraphAssembly.saveState();
             window.location.replace(rootPath + "/" + nodes.paths[renderWorker.hoveredNode]);
             console.log(rootPath + "/" + nodes.paths[renderWorker.hoveredNode]);
         }
