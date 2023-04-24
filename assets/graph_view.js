@@ -112,8 +112,10 @@ async function RunGraphView()
          * */
         static loadState()
         {
-            let positions = new Float32Array(Object.values(JSON.parse(localStorage.getItem("positions"))));
-            if (!positions || positions.length != GraphAssembly.nodeCount * 2)
+            let positionsLoad = localStorage.getItem("positions");
+            let positions = null;
+            if(positionsLoad) positions = new Float32Array(Object.values(JSON.parse(positionsLoad)));
+            if (!positions || !positionsLoad || positions.length != GraphAssembly.nodeCount * 2)
             {
                 positions = new Float32Array(GraphAssembly.nodeCount * 2);
                 let spawnRadius = (GraphAssembly.averageRadius * Math.sqrt(GraphAssembly.nodeCount)) * 2;
@@ -248,7 +250,6 @@ async function RunGraphView()
 
             this.width = this.canvas.width;
             this.height = this.canvas.height;
-
         }
 
         #pixiInit()
@@ -600,11 +601,11 @@ async function RunGraphView()
         GraphAssembly.free();
     });
 
-    window.addEventListener('resize', () =>
-    {
-        renderWorker.autoResizeCanvas();
-        renderWorker.centerCamera();
-    });
+    // window.addEventListener('resize', () =>
+    // {
+    //     renderWorker.autoResizeCanvas();
+    //     renderWorker.centerCamera();
+    // });
 
     // Get the mouse position relative to the canvas.
     function getMousePos(canvas, event)
