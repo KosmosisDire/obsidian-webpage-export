@@ -89,8 +89,9 @@ hr
 /* sidebars */
 #sidebar {
     background-color: var(--background-secondary);
-    flex: 1 0 fit-content;
+    flex: 1 0 min-content;
     flex-direction: column;
+    min-width: 20em;
 }
 
 .sidebar-content
