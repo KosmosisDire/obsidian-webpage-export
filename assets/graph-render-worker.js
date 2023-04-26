@@ -210,7 +210,7 @@ if( 'function' === typeof importScripts)
         graphics.endFill();
 
 
-        opacity = hoverFade * 0.4;
+        opacity = hoverFade * 0.7;
         graphics.lineStyle(1, mixColors(mixColors(colors.link, colors.accent, hoverFade * 100), colors.background, 20), opacity);
 
         for (let i = 0; i < topLines.length; i++)
@@ -317,7 +317,7 @@ if( 'function' === typeof importScripts)
             linkLength = event.data.linkLength;
             edgePruning = event.data.edgePruning;
 
-            app = new PIXI.Application({... event.data.options, antialias: true, backgroundAlpha: 0, transparent: true});
+            app = new PIXI.Application({... event.data.options, antialias: true, resolution: 2, backgroundAlpha: 0, transparent: true});
             container = new PIXI.Container();
             graphics = new PIXI.Graphics();
             app.stage.addChild(container);

@@ -157,12 +157,18 @@ export class Utils
 		return this.makePathUnicodeCompatible(reliablePath);
 	}
 
-	static getRelativePath(path: string, workingDirectory: string = this.getVaultPath()) : string
+	/**
+	 * 
+	 * @param to The destination path
+	 * @param from The source path / working directory (defaults to vault path)
+	 * @returns The relative path to the destination from the source
+	 */
+	static getRelativePath(to: string, from: string = this.getVaultPath()) : string
 	{
-		let absolutePath = this.getAbsolutePath(Utils.parsePath(path).dir, false);
-		let absoluteWorkingDirectory = this.getAbsolutePath(Utils.parsePath(workingDirectory).dir, false);
+		let absolutePath = this.getAbsolutePath(Utils.parsePath(to).dir, false);
+		let absoluteWorkingDirectory = this.getAbsolutePath(Utils.parsePath(from).dir, false);
 
-		if (!absolutePath || !absoluteWorkingDirectory) return path;
+		if (!absolutePath || !absoluteWorkingDirectory) return to;
 
 		return pathTools.relative(absoluteWorkingDirectory, absolutePath);
 	}

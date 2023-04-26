@@ -13,8 +13,17 @@ export class GraphGenerator
 		return start + (end - start) * t2;
 	}
 
+	static graphCache: {nodeCount: number, linkCount: number, radii: number[], labels: string[], paths: string[], linkSources: number[], linkTargets: number[]} | undefined;
+
+	public static clearGraphCache()
+	{
+		GraphGenerator.graphCache = undefined;
+	}
+
 	public static getGlobalGraph(minRadius: number, maxRadius: number): {nodeCount: number, linkCount: number, radii: number[], labels: string[], paths: string[], linkSources: number[], linkTargets: number[]}
 	{
+		if (this.graphCache != undefined) return this.graphCache;
+
 		let nodeCount = 0;
 		let indexedRadii: {index: number, radius: number}[] = [];
 		let labels: string[] = [];
@@ -86,9 +95,9 @@ export class GraphGenerator
 				return Utils.joinPaths(parsed.dir, parsed.name) + ".html";
 			});
 
-		let data = {nodeCount: nodeCount, linkCount: linkSources.length, radii: radii, labels: labels, paths: paths, linkSources: linkSources, linkTargets: linkTargets, linkCounts: linkCounts};
+		this.graphCache = {nodeCount: nodeCount, linkCount: linkSources.length, radii: radii, labels: labels, paths: paths, linkSources: linkSources, linkTargets: linkTargets};
 
-		return data;
+		return this.graphCache ?? {nodeCount: 0, linkCount: 0, radii: [], labels: [], paths: [], linkSources: [], linkTargets: []};
 	}
 
 }

@@ -2,6 +2,7 @@ import { Modal, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { Utils } from './utils';
 import { writeFile } from "fs/promises";
 import { HTMLGenerator } from './html-gen';
+import HTMLExportPlugin from './main';
 
 export interface ExportSettingsData 
 {
@@ -267,6 +268,7 @@ export class ExportSettings extends PluginSettingTab
 
 		experimentalContainer.style.display = 'flex';
 		experimentalContainer.style.marginTop = '5em';
+		experimentalContainer.style.alignItems = 'center';
 
 		experimentalHR1.style.borderColor = "var(--color-red)";
 		experimentalHR2.style.borderColor = "var(--color-red)";
@@ -438,6 +440,22 @@ export class ExportModal extends Modal
 		contentEl.empty();
 
 		this.titleEl.setText('Export to HTML');
+
+		if (HTMLExportPlugin.updateInfo.updateAvailable)
+		{
+			// create red notice showing the update is available
+			let updateNotice = contentEl.createEl('strong', { text: `Update Available: ${HTMLExportPlugin.updateInfo.currentVersion} ⟶ ${HTMLExportPlugin.updateInfo.latestVersion}` });
+			updateNotice.setAttribute("style", 
+			`margin-block-start: calc(var(--h3-size)/2);
+			background-color: var(--interactive-normal);
+			padding: 4px;
+			padding-left: 1em;
+			padding-right: 1em;
+			color: var(--color-red);
+			border-radius: 5px;
+			display: block;
+			width: fit-content;`)
+		}
 
 		contentEl.createEl('h3', { text: 'Document Settings:' });
 

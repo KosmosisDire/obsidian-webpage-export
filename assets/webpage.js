@@ -75,7 +75,7 @@ jQuery(function()
 		localStorage.setItem("theme_toggle", state ? "true" : "false");
 	}
 
-    $(".toggle__input").on("click", function()
+    $(".toggle__input").on("click tap", function()
     {
 		setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
     });
@@ -108,7 +108,7 @@ jQuery(function()
 
     // MAKE CALLOUTS COLLAPSIBLE
     // if the callout title is clicked, toggle the display of .callout-content
-    $(".callout.is-collapsible .callout-title").on("click", function()
+    $(".callout.is-collapsible .callout-title").on("click tap", function()
     {
         var isCollapsed = $(this).parent().hasClass("is-collapsed");
 
@@ -188,14 +188,14 @@ jQuery(function()
         }
 	}
 
-    $(".heading-collapse-indicator").on("click", function()
+    $(".heading-collapse-indicator").on("click tap", function()
     {
         var isCollapsed = $(this).parent().parent().hasClass("is-collapsed");
 		setHeaderCollapse($(this).parent().parent(), !isCollapsed);
     });
 
 	// open outline header when an internal link that points to that header is clicked
-	$(".internal-link").on("click", function()
+	$(".internal-link").on("click tap", function()
 	{
 		let target = $(this).attr("href");
 
@@ -234,7 +234,7 @@ jQuery(function()
 		setOutlineCollapse(header, !isCollapsed);
 	}
 
-    $(".outline-item-contents > .collapse-icon").on("click", function(e)
+    $(".outline-item-contents > .collapse-icon").on("click tap", function(e)
     {
         toggleOutlineCollapse($(this).parent().parent());
 
@@ -243,7 +243,7 @@ jQuery(function()
 		return false;
     });
 
-	$(".collapse-all").on("click", function()
+	$(".collapse-all").on("click tap", function()
 	{
 		let button = $(this);
 		$(".outline-container div.outline-item").each(function()
@@ -264,7 +264,7 @@ jQuery(function()
 
 
 	// Fix checkboxed toggling .is-checked
-	$(".task-list-item-checkbox").on("click", function()
+	$(".task-list-item-checkbox").on("click tap", function()
 	{
 		$(this).parent().toggleClass("is-checked");
 		$(this).parent().attr("data-task", $(this).parent().hasClass("is-checked") ? "x" : " ");
@@ -281,7 +281,7 @@ jQuery(function()
 	});
 
 	// make code snippet block copy button copy the code to the clipboard
-	$(".copy-code-button").on("click", function()
+	$(".copy-code-button").on("click tap", function()
 	{
 		let code = $(this).parent().find("code").text();
 		navigator.clipboard.writeText(code);
@@ -296,7 +296,7 @@ jQuery(function()
 	let focusedNode = null;
 
 	// make canvas nodes selectable
-	$(".canvas-node-content-blocker").on("click", function()
+	$(".canvas-node-content-blocker").on("click tap", function()
 	{
 		$(this).parent().parent().toggleClass("is-focused");
 		$(this).hide();
@@ -311,7 +311,7 @@ jQuery(function()
 	});
 
 	// make canvas node deselect when clicking outside
-	$(document).on("click", function(event)
+	$(document).on("click tap", function(event)
 	{
 		if (!$(event.target).closest(".canvas-node").length)
 		{

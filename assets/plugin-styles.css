@@ -86,27 +86,28 @@ hr
 	border-top: var(--hr-thickness) solid var(--divider-color);
 }
 
+.center-content
+{
+    flex-basis: var(--line-width);
+}
+
 /* sidebars */
 #sidebar {
     background-color: var(--background-secondary);
     flex: 1 0 min-content;
-    min-width: 20em;
     display: flex;
-    flex-direction: column;
+    align-items: flex-start;
 }
 
-.sidebar-content
-{
-	display: flex;
-	flex-direction: column;
-	flex: 1 0 fit-content;
-	overflow-y: auto;
-	overflow-x: hidden;
-	padding: 0;
-	margin: 0;
-	width: 100%;
-	height: 100%;
-	align-items: stretch;
+.sidebar-content {
+    max-width: 380px;
+    line-height: var(--line-height-tight);
+    display: flex;
+    flex-direction: column;
+    overflow-y: scroll;
+    padding: 10px;
+    padding-bottom: 0;
+    height: 100%;
 }
 
 .sidebar-left
@@ -114,6 +115,7 @@ hr
     border-right: 1px dashed var(--divider-color);
 	z-index: 1000;
 	align-items: flex-end;
+    flex-direction: row-reverse;
 }
 
 .sidebar-right
@@ -121,6 +123,7 @@ hr
     border-left: 1px dashed var(--divider-color);
 	z-index: 1000;
 	align-items: flex-start;
+    flex-direction: row;
 }
 
 .flex-container {
@@ -201,7 +204,7 @@ hr
 	}
 }
 
-@media screen and (max-width: 900px)
+@media screen and (max-width: 800px)
 {
     #sidebar, .sideabr-right, .sidebar-left, .outline-container
     {
@@ -209,13 +212,15 @@ hr
     }
 }
 
-@media screen and (max-width: 1200px)
+@media screen and (max-width: 950px)
 {
     .sidebar-left
     {
         display: none !important;
     }
 }
+
+
 
 .outline-item {
     display: flex;
@@ -231,17 +236,10 @@ hr
     margin-bottom: 0;
 }
 
-.outline-container {
-    width: 380px;
-    margin: 10px;
-    margin-right: auto;
-    height: fit-content;
-    line-height: var(--line-height-tight);
-    display: flex;
-    flex-direction: column;
-    overflow-y: scroll;
-    height: 100%;
-    padding-bottom: 20px;
+.outline-container
+{
+    min-width: 20em;
+    padding-bottom: 5em;
 }
 
 .outline-item-contents {
@@ -302,6 +300,11 @@ span.outline-item-title:hover
     color: var(--color-accent);
 }
 
+.markdown-preview-view
+{
+    max-width: var(--line-width);
+    padding-bottom: 30em;
+}
 
 /* Let links wrap anywhere so that the width isn't set by long links */
 a {
@@ -367,11 +370,11 @@ th[sortable-style="sortable-desc"]::after {
 /* Toggle Styles */
 .theme-toggle {
     --toggle-width: 50px;
-    --toggle-height: calc(var(--toggle-width) / 2.2);
+    --toggle-height: 23px;
     --border-radius: calc(var(--toggle-height) / 2);
-    --handle-width: calc(var(--toggle-height) * 0.6);
+    --handle-width: calc(var(--toggle-height) * 0.65);
     --handle-radius: calc(var(--handle-width) / 2);
-    --handle-margin: calc((var(--toggle-height) - var(--handle-width)) / 2);
+    --handle-margin: calc((var(--toggle-height) / 2.0) - var(--handle-radius));
     --handle-translation: calc(var(--toggle-width) - var(--handle-width) - (var(--handle-margin) * 2));
 
     display: inline-block;
@@ -381,11 +384,11 @@ th[sortable-style="sortable-desc"]::after {
 
 .theme-toggle-inline {
     --toggle-width: 50px;
-    --toggle-height: calc(var(--toggle-width) / 2.2);
+    --toggle-height: 23px;
     --border-radius: calc(var(--toggle-height) / 2);
-    --handle-width: calc(var(--toggle-height) * 0.6);
+    --handle-width: calc(var(--toggle-height) * 0.65);
     --handle-radius: calc(var(--handle-width) / 2);
-    --handle-margin: calc((var(--toggle-height) - var(--handle-width)) / 2);
+    --handle-margin: calc((var(--toggle-height) / 2.0) - var(--handle-radius));
     --handle-translation: calc(var(--toggle-width) - var(--handle-width) - (var(--handle-margin) * 2));
 
     display: inline-block;
@@ -486,20 +489,12 @@ th[sortable-style="sortable-desc"]::after {
     width: var(--toggle-width);
     height: var(--toggle-height);
     border-radius: var(--border-radius);
-	background-color: var(--background-primary-alt);
+	background-color: var(--background-modifier-border);
 
     transition: background-color 0.2s;
     z-index: 1000;
 
-    box-shadow: inset 0px 0px 10px 2px rgba(0, 0, 0, 0.4);
-
-	border: 1px solid var(--divider-color);
-
-}
-
-.theme-light .toggle__fill 
-{
-    box-shadow: inset 0px 0px 5px 2px hsla(var(--color-accent-hsl), 0.15);
+    /* box-shadow: inset 0px 0px 100px -70px var(--color-accent); */
 }
 
 /* Handle default */
@@ -508,7 +503,7 @@ th[sortable-style="sortable-desc"]::after {
     content: "";
     position: absolute;
     left: var(--handle-margin);
-    top: calc(var(--handle-margin) * 0.75);
+    top: var(--handle-margin);
     height: var(--handle-width);
     width: var(--handle-width);
     
@@ -542,19 +537,18 @@ th[sortable-style="sortable-desc"]::after {
     content: "";
     position: absolute;
     right: var(--handle-margin);
-    top: calc(var(--handle-margin) * 0.75);
+    top: calc(var(--handle-margin));
     height: var(--handle-width);
     width: var(--handle-width);
-    scale: 90%;
     transition: transform 0.3s;
-
     background: url('https://api.iconify.design/lucide/moon.svg?color=white') no-repeat center center;
+    transform: scale(0.9);
 }
 
 /* sun moon icon icon light */
 .toggle__input:checked ~ .toggle__fill::after
 {
-    transform: translate3d(calc(var(--handle-translation) * -1), 0, 0);
+    transform: translateX(calc(var(--handle-translation) * -1)) scale(0.9);
     background: url('https://api.iconify.design/lucide/sun.svg') no-repeat center center;
 }
 
@@ -576,17 +570,12 @@ th[sortable-style="sortable-desc"]::after {
 .graph-view-container.expanded
 {
     position: fixed;
-    width: 90%;
+    width: 60%;
     height: 90%;
-    right: 5%;
+    right: 20%;
     top: 5%;
-    backdrop-filter: blur(30px);
+    background-color: var(--background-secondary);
     z-index: 1000;
-}
-
-.theme-dark #graph-canvas.expanded
-{
-    backdrop-filter: blur(30px) brightness(0.7);
 }
 
 .graph-view-container 

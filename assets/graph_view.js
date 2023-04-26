@@ -601,11 +601,14 @@ async function RunGraphView()
         GraphAssembly.free();
     });
 
-    // window.addEventListener('resize', () =>
-    // {
-    //     renderWorker.autoResizeCanvas();
-    //     renderWorker.centerCamera();
-    // });
+    window.addEventListener('resize', () =>
+    {
+        if(graphExpanded)
+        {
+            renderWorker.autoResizeCanvas();
+            renderWorker.centerCamera();
+        }
+    });
 
     // Get the mouse position relative to the canvas.
     function getMousePos(canvas, event)
@@ -677,11 +680,6 @@ async function RunGraphView()
         if (e.button == 0) leftButtonDown = true;
         if (e.button == 1) middleButtonDown = true;
         if (e.button == 2) rightButtonDown = true;
-
-        if(!mouseInside && graphExpanded)
-        {
-            toggleExpandedGraph();
-        }
     });
 
     $("*").on("mouseup", function(e)
@@ -754,6 +752,58 @@ async function RunGraphView()
         }
     });
 
+
+
+    // touch controls
+    document.getElementById("graph-canvas").addEventListener("touchstart", function(e)
+    {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.touches.length == 1)
+        {
+            lastMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+
+            leftButtonDown = true;
+        }
+        else if (e.touches.length == 2)
+        {
+            middleButtonDown = true;
+        }
+    });
+
+    document.getElementById("graph-canvas").addEventListener("touchmove", function(e)
+    {
+        handleMouseMove(e.touches[0]);
+    });
+
+    document.addEventListener("touchend", function(e)
+    {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (e.touches.length == 0)
+        {
+            leftButtonDown = false;
+            middleButtonDown = false;
+
+            if (!panning && renderWorker.grabbedNode == -1 && renderWorker.hoveredNode != -1)
+            {
+                GraphAssembly.saveState(renderWorker);
+                window.location.replace(rootPath + "/" + nodes.paths[renderWorker.hoveredNode]);
+                console.log(rootPath + "/" + nodes.paths[renderWorker.hoveredNode]);
+            }
+
+            renderWorker.grabbedNode = -1;
+        }
+        else if (e.touches.length == 1)
+        {
+            middleButtonDown = false;
+        }
+    });    
+
+
+
     $(".toggle__input").on("change",function(e)
     {
         renderWorker.resampleColors();
@@ -784,7 +834,7 @@ async function RunGraphView()
         graphExpanded = !graphExpanded;
     }
 
-    $(".graph-expand.graph-icon").on("click", function(e)
+    $(".graph-expand.graph-icon").on("click tap", function(e)
     {
         e.preventDefault();
         e.stopPropagation();
