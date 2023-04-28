@@ -1,7 +1,7 @@
 import { writeFile } from "fs/promises";
-import { MarkdownRenderer, MarkdownView, Notice, TFile } from "obsidian";
+import { MarkdownRenderer, MarkdownView, Notice, TFile, TFolder, loadMathJax, loadMermaid } from "obsidian";
 import { ExportSettings } from "./export-settings";
-import { Utils, Downloadable } from "./utils";
+import { Utils, Downloadable, Path } from "./utils";
 import jQuery from 'jquery';
 import { GraphGenerator } from "./graph-view/graph-gen";
 import { html_beautify } from "js-beautify";
@@ -12,52 +12,78 @@ import HTMLExportPlugin from "./main";
 export class ExportFile
 {
 	/**
-	 * The original markdown file to export
+	 * The original markdown file to export.
 	 */
 	public markdownFile: TFile;
 
 	/**
-	 * The document to use to generate the HTML
+	 * The absolute path to the FOLDER we are exporting to
 	 */
-	public document: Document;
+	public exportToFolder: Path;
 
 	/**
-	 * The absolute path we are exporting to, this is the root of the vault
+	 * The relative path from the vault root to the FOLDER being exported
 	 */
-	public rootFolder: string;
+	public exportFromFolder: Path;
 
 	/**
-	 * The path to export the file to, relative to rootFolder
+	 * Is this file part of a batch export, or is it being exported independently?
 	 */
-	public exportPath: string;
+	public partOfBatch: boolean;
 
 	/**
-	 * The name of the file, with the .html extension
+	 * The name of the file being exported, with the .html extension
 	 */
 	public name: string;
 
 	/**
-	 * The external files that need to be downloaded for this file to work including the file itself
+	 * The relative path from the export folder to the file being exported; includes the file name and extension.
+	 */
+	public exportPath: Path;
+
+	/**
+	 * The document to use to generate the HTML.
+	 */
+	public document: Document;
+
+	/**
+	 * The external files that need to be downloaded for this file to work including the file itself.
 	 */
 	public downloads: Downloadable[] = [];
 
 	/**
-	 * @param file The original markdown file to export
-	 * @param rootExportFolder The absolute path we are exporting to, this is the root of the vault
-	 * @param forceExportToRoot Force the file to be saved at the root of the vault even if it's in a subfolder
+	 * Same as downloads but does not include the file itself.
 	 */
-	constructor(file: TFile, rootExportFolder: string, forceExportToRoot: boolean = false)
+	public externalDownloads: Downloadable[] = [];
+
+
+	/**
+	 * @param file The original markdown file to export
+	 * @param exportToFolder The absolute path to the FOLDER we are exporting to
+	 * @param exportFromFolder The relative path from the vault root to the FOLDER being exported
+	 * @param partOfBatch Is this file part of a batch export, or is it being exported independently?
+	 * @param fileName The name of the file being exported, with the .html extension
+	 * @param forceExportToRoot Force the file to be saved directly int eh export folder rather than in it's subfolder.
+	 */
+	constructor(file: TFile, exportToFolder: Path, exportFromFolder: Path, partOfBatch: boolean, fileName: string = "", forceExportToRoot: boolean = false)
 	{
+		if(exportToFolder.isFile || !exportToFolder.isAbsolute) throw new Error("rootExportFolder must be an absolute path to a folder");
+		if(!fileName.endsWith(".html")) throw new Error("fileName must be a .html file");
+
 		this.markdownFile = file;
-		this.name = file.basename + ".html";
-		this.rootFolder = rootExportFolder;
-		this.exportPath = Utils.joinPaths(file.parent.path, this.name);
-		if (forceExportToRoot) this.exportPath = this.name;
+		this.exportToFolder = exportToFolder;
+		this.exportFromFolder = exportFromFolder;
+		this.partOfBatch = partOfBatch;
+
+		this.name = (fileName === "" ? (file.basename + ".html") : fileName);
+		this.exportPath = Path.joinStrings(file.parent.path, this.name);
+		if (forceExportToRoot) this.exportPath.reparse(this.name);
+		this.exportPath.setWorkingDirectory(this.exportToFolder.asString);
 
 		if (ExportSettings.settings.makeNamesWebStyle)
 		{
-			this.name = Utils.makePathWebStyle(this.name);
-			this.exportPath = Utils.makePathWebStyle(this.exportPath);
+			this.name = Path.toWebStyle(this.name);
+			this.exportPath.makeWebStyle();
 		}
 
 		this.document = document.implementation.createHTMLDocument(this.markdownFile.basename);
@@ -84,17 +110,17 @@ export class ExportFile
 	/**
 	 * The absolute path that the file will be saved to
 	 */
-	get exportPathAbsolute(): string
+	get exportPathAbsolute(): Path
 	{
-		return Utils.joinPaths(this.rootFolder, this.exportPath);
+		return this.exportToFolder.join(this.exportPath);
 	}
 
 	/**
 	 * The relative path from exportPath to rootFolder
 	 */
-	get pathToRoot(): string
+	get pathToRoot(): Path
 	{
-		return Utils.getRelativePath("/", "/" + this.exportPath);
+		return Path.getRelativePath(this.exportPath, new Path(this.exportPath.workingDirectory), true);
 	}
 
 	/**
@@ -102,27 +128,39 @@ export class ExportFile
 	 */
 	public getSelfDownloadable(): Downloadable
 	{
-		return new Downloadable(this.name, this.html, "text/html", Utils.parsePath(this.exportPath).dir, true);
+		return new Downloadable(this.name, this.html, "text/html", this.exportPath.directory, true);
+	}
+
+	public async generateHTML(addSelfToDownloads: boolean = false): Promise<ExportFile>
+	{
+		HTMLGenerator.getDocumentHTML(this, addSelfToDownloads);
+		return this;
+	}
+
+	public async generateWebpage(): Promise<ExportFile>
+	{
+		HTMLGenerator.generateWebpage(this);
+		return this;
 	}
 }
 
 export class HTMLGenerator
 {
-	leafHandler: LeafHandler = new LeafHandler();
+	static leafHandler: LeafHandler = new LeafHandler();
 
 	// When this is enabled the plugin will download the extra .css and .js files from github.
-	autoDownloadExtras = false;
+	static autoDownloadExtras = false;
 
-	public static vaultPluginsPath: string = Utils.getAbsolutePath(Utils.joinPaths(Utils.getVaultPath(), app.vault.configDir, "plugins/")) as string;
-	public static thisPluginPath: string;
-	public static assetsPath: string;
+	private static vaultPluginsPath: Path = Path.vaultPath.joinString(app.vault.configDir, "plugins/").makeAbsolute();
+	private static thisPluginPath: Path;
+	static assetsPath: Path;
 
 	// this path is used to generate the relative path to the images folder, likewise for the other paths
-	static mediaFolderName: string = "media";
-	static jsFolderName: string = "scripts";
-	static cssFolderName: string = "styles";
+	private static mediaFolderName: Path = new Path("media");
+	private static jsFolderName: Path = new Path("scripts");
+	private static cssFolderName: Path = new Path("styles");
 
-	errorHTML: string = 
+	private static errorHTML: string = 
 	`<center>
 		<h1>
 		Failed to render file, check obsidian log for details and report an issue on GitHub: 
@@ -132,84 +170,78 @@ export class HTMLGenerator
 
 	//#region Loading
 
-	constructor(pluginID: string)
-	{
-		HTMLGenerator.thisPluginPath = Utils.getAbsolutePath(Utils.joinPaths(HTMLGenerator.vaultPluginsPath, pluginID, "/")) as string;
-		HTMLGenerator.assetsPath = Utils.getAbsolutePath(Utils.joinPaths(HTMLGenerator.thisPluginPath, "assets/"), false) as string;
-		Utils.createDirectory(HTMLGenerator.assetsPath);
-	}
-
 	// this is a string containing the filtered app.css file. It is populated on load. 
-	appStyles: string = "";
-	pluginStyles: string = "";
-	themeStyles: string = "";
-	snippetStyles: string[] = [];
-	lastEnabledSnippets: string[] = [];
-	lastEnabledTheme: string = "";
+	private static appStyles: string = "";
+	private static mathStyles: string = "";
+	private static pluginStyles: string = "";
+	private static themeStyles: string = "";
+	private static snippetStyles: string = "";
+	private static lastEnabledSnippets: string[] = [];
+	private static lastEnabledTheme: string = "";
 
-	webpageJS: string = "";
-	graphViewJS: string = "";
-	graphWASMJS: string = "";
-	graphWASM: Buffer;
-	renderWorkerJS: string = "";
-	tinyColorJS: string = "";
+	private static webpageJS: string = "";
+	private static graphViewJS: string = "";
+	private static graphWASMJS: string = "";
+	private static graphWASM: Buffer;
+	private static renderWorkerJS: string = "";
+	private static tinyColorJS: string = "";
 
 	// the raw github urls for the extra files
-	private webpagejsURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/webpage.js";
-	private pluginStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/plugin-styles.css";
-	private obsidianStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/obsidian-styles.css";
-	private graphViewJSURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_view.js";
-	private graphWASMJSURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_wasm.js";
-	private graphWASMURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_wasm.wasm";
-	private renderWorkerURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph-render-worker.js";
-	private tinycolorURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/tinycolor.js";
+	private static webpagejsURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/webpage.js";
+	private static pluginStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/plugin-styles.css";
+	private static obsidianStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/obsidian-styles.css";
+	private static graphViewJSURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_view.js";
+	private static graphWASMJSURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_wasm.js";
+	private static graphWASMURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_wasm.wasm";
+	private static renderWorkerURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph-render-worker.js";
+	private static tinycolorURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/tinycolor.js";
 
-	private async downloadAssets()
+	private static async downloadAssets()
 	{
-		Utils.createDirectory(HTMLGenerator.assetsPath);
+		HTMLGenerator.assetsPath.createDirectory();
 
 		//Download webpage.js
-		let webpagejs = await fetch(this.webpagejsURL);
+		let webpagejs = await fetch(HTMLGenerator.webpagejsURL);
 		let webpagejsText = await webpagejs.text();
-		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "webpage.js"), webpagejsText).catch((err) => { console.log(err); });
+		await writeFile(HTMLGenerator.assetsPath.joinString("webpage.js").asString, webpagejsText).catch((err) => { console.log(err); });
 
 		//Download plugin-styles.css
-		let pluginStyles = await fetch(this.pluginStylesURL);
+		let pluginStyles = await fetch(HTMLGenerator.pluginStylesURL);
 		let pluginStylesText = await pluginStyles.text();
-		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "plugin-styles.css"), pluginStylesText).catch((err) => { console.log(err); });
+		await writeFile(HTMLGenerator.assetsPath.joinString("plugin-styles.css").asString, pluginStylesText).catch((err) => { console.log(err); });
 
 		//Download obsidian-styles.css
-		let obsidianStyles = await fetch(this.obsidianStylesURL);
+		let obsidianStyles = await fetch(HTMLGenerator.obsidianStylesURL);
 		let obsidianStylesText = await obsidianStyles.text();
-		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "obsidian-styles.css"), obsidianStylesText).catch((err) => { console.log(err); });
+		await writeFile(HTMLGenerator.assetsPath.joinString("obsidian-styles.css").asString, obsidianStylesText).catch((err) => { console.log(err); });
 	
 		//Download graph_view.js
-		let graphViewJS = await fetch(this.graphViewJSURL);
+		let graphViewJS = await fetch(HTMLGenerator.graphViewJSURL);
 		let graphViewJSText = await graphViewJS.text();
-		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_view.js"), graphViewJSText).catch((err) => { console.log(err); });
+		await writeFile(HTMLGenerator.assetsPath.joinString("graph_view.js").asString, graphViewJSText).catch((err) => { console.log(err); });
 
 		//Download graph_wasm.js
-		let graphWASMJS = await fetch(this.graphWASMJSURL);
+		let graphWASMJS = await fetch(HTMLGenerator.graphWASMJSURL);
 		let graphWASMJSText = await graphWASMJS.text();
-		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.js"), graphWASMJSText).catch((err) => { console.log(err); });
+		await writeFile(HTMLGenerator.assetsPath.joinString("graph_wasm.js").asString, graphWASMJSText).catch((err) => { console.log(err); });
 
 		//Download graph_wasm.wasm
-		let graphWASM = await fetch(this.graphWASMURL);
+		let graphWASM = await fetch(HTMLGenerator.graphWASMURL);
 		let graphWASMBuffer = await graphWASM.arrayBuffer();
-		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.wasm"), Buffer.from(graphWASMBuffer)).catch((err) => { console.log(err); });
+		await writeFile(HTMLGenerator.assetsPath.joinString("graph_wasm.wasm").asString, Buffer.from(graphWASMBuffer)).catch((err) => { console.log(err); });
 
 		//Download graph-render-worker.js
-		let renderWorker = await fetch(this.renderWorkerURL);
+		let renderWorker = await fetch(HTMLGenerator.renderWorkerURL);
 		let renderWorkerText = await renderWorker.text();
-		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "graph-render-worker.js"), renderWorkerText).catch((err) => { console.log(err); });
+		await writeFile(HTMLGenerator.assetsPath.joinString("graph-render-worker.js").asString, renderWorkerText).catch((err) => { console.log(err); });
 		
 		//Download tinycolor.js
-		let tinycolor = await fetch(this.tinycolorURL);
+		let tinycolor = await fetch(HTMLGenerator.tinycolorURL);
 		let tinycolorText = await tinycolor.text();
-		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "tinycolor.js"), tinycolorText).catch((err) => { console.log(err); });
+		await writeFile(HTMLGenerator.assetsPath.joinString("tinycolor.js").asString, tinycolorText).catch((err) => { console.log(err); });
 	}
 
-	private async loadAppStyles()
+	private static async loadAppStyles()
 	{
 		let appSheet = document.styleSheets[1];
 		let stylesheets = document.styleSheets;
@@ -222,7 +254,7 @@ export class HTMLGenerator
 			}
 		}
 
-		this.appStyles += await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "obsidian-styles.css"));
+		HTMLGenerator.appStyles += await Utils.getText(HTMLGenerator.assetsPath.joinString("obsidian-styles.css"));
 
 		for (let i = 0; i < appSheet.cssRules.length; i++)
 		{
@@ -237,28 +269,32 @@ export class HTMLGenerator
 				cssText = cssText.replaceAll("public/", "https://publish.obsidian.md/public/");
 				cssText = cssText.replaceAll("lib/", "https://publish.obsidian.md/lib/")
 				
-				this.appStyles += cssText;
+				HTMLGenerator.appStyles += cssText;
 			}
 		}
 	}
 
-	public async initialize()
+	public static async initialize(pluginID: string)
 	{
-		if (this.autoDownloadExtras) await this.downloadAssets();
-		await this.loadAppStyles();
+		HTMLGenerator.thisPluginPath = HTMLGenerator.vaultPluginsPath.joinString(pluginID + "/").makeAbsolute();
+		HTMLGenerator.assetsPath = HTMLGenerator.thisPluginPath.joinString("assets/").makeAbsolute();
+		HTMLGenerator.assetsPath.createDirectory();
 
-		this.pluginStyles = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "plugin-styles.css")) ?? "";
-		this.themeStyles = await Utils.getThemeContent(Utils.getCurrentThemeName());
+		if (HTMLGenerator.autoDownloadExtras) await HTMLGenerator.downloadAssets();
+		await HTMLGenerator.loadAppStyles();
+		
+		HTMLGenerator.pluginStyles = await Utils.getText(HTMLGenerator.assetsPath.joinString("plugin-styles.css")) ?? "";
+		HTMLGenerator.themeStyles = await Utils.getThemeContent(Utils.getCurrentThemeName());
 
-		this.webpageJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "webpage.js")) ?? "";
-		this.graphViewJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_view.js")) ?? "";
-		this.graphWASMJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.js")) ?? "";
-		this.graphWASM = await Utils.getFileBuffer(Utils.joinPaths(HTMLGenerator.assetsPath, "graph_wasm.wasm")) ?? Buffer.from([]);
-		this.renderWorkerJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "graph-render-worker.js")) ?? "";
-		this.tinyColorJS = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "tinycolor.js")) ?? "";
+		HTMLGenerator.webpageJS = await Utils.getText(HTMLGenerator.assetsPath.joinString("webpage.js")) ?? "";
+		HTMLGenerator.graphViewJS = await Utils.getText(HTMLGenerator.assetsPath.joinString("graph_view.js")) ?? "";
+		HTMLGenerator.graphWASMJS = await Utils.getText(HTMLGenerator.assetsPath.joinString("graph_wasm.js")) ?? "";
+		HTMLGenerator.graphWASM = await Utils.getFileBuffer(HTMLGenerator.assetsPath.joinString("graph_wasm.wasm")) ?? Buffer.from([]);
+		HTMLGenerator.renderWorkerJS = await Utils.getText(HTMLGenerator.assetsPath.joinString("graph-render-worker.js")) ?? "";
+		HTMLGenerator.tinyColorJS = await Utils.getText(HTMLGenerator.assetsPath.joinString("tinycolor.js")) ?? "";
 	}
 
-	private async getThirdPartyPluginCSS() : Promise<string>
+	private static async getThirdPartyPluginCSS() : Promise<string>
 	{
 		// load 3rd party plugin css
 		let pluginCSS = "";
@@ -268,10 +304,8 @@ export class HTMLGenerator
 		{
 			if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
 			
-			let path = Utils.joinPaths(HTMLGenerator.vaultPluginsPath, thirdPartyPluginStyleNames[i].replace("\n", ""), "styles.css");
-			
-			if (!Utils.pathExists(path, true)) continue;
-			
+			let path = HTMLGenerator.vaultPluginsPath.joinString(thirdPartyPluginStyleNames[i].replace("\n", ""), "styles.css");
+			if (!path.exists) continue;
 			
 			let style = await Utils.getText(path);
 			if (style)
@@ -283,7 +317,7 @@ export class HTMLGenerator
 		return pluginCSS;
 	}
 
-	private async getSnippetsCSS(snippetNames: string[]) : Promise<string>
+	private static async getSnippetsCSS(snippetNames: string[]) : Promise<string>
 	{
 		let snippetsList = await Utils.getStyleSnippetsContent();
 		let snippets = "";
@@ -296,41 +330,44 @@ export class HTMLGenerator
 		return snippets;
 	}
 
-	private async updateCSSCache()
+	private static async updateCSSCache()
 	{
 		let snippetsNames = await Utils.getEnabledSnippets();
 		let themeName = Utils.getCurrentThemeName();
 
-		if (snippetsNames != this.lastEnabledSnippets)
+		if (snippetsNames != HTMLGenerator.lastEnabledSnippets)
 		{
-			this.lastEnabledSnippets = snippetsNames;
-			this.snippetStyles = await Utils.getStyleSnippetsContent();
+			HTMLGenerator.lastEnabledSnippets = snippetsNames;
+			HTMLGenerator.snippetStyles = await HTMLGenerator.getSnippetsCSS(snippetsNames);
 		}
 
-		if (themeName != this.lastEnabledTheme)
+		if (themeName != HTMLGenerator.lastEnabledTheme)
 		{
-			this.lastEnabledTheme = themeName;
-			this.themeStyles = await Utils.getThemeContent(themeName);
-		}	
+			HTMLGenerator.lastEnabledTheme = themeName;
+			HTMLGenerator.themeStyles = await Utils.getThemeContent(themeName);
+		}
+
+		// @ts-ignore
+		HTMLGenerator.mathStyles = window.MathJax.chtmlStylesheet().innerHTML;
 	}
 
-	private async getSeperateFilesToDownload(outlinedImages: {localImagePath: string, relativeExportImagePath: string}[]) : Promise<Downloadable[]>
+	private static async getAssetDownloads() : Promise<Downloadable[]>
 	{
 		let toDownload: Downloadable[] = [];
 
 		if (!ExportSettings.settings.inlineCSS)
 		{
-			this.updateCSSCache();
+			HTMLGenerator.updateCSSCache();
 
-			let pluginCSS = this.pluginStyles;
+			let pluginCSS = HTMLGenerator.pluginStyles;
 
-			let thirdPartyPluginCSS = await this.getThirdPartyPluginCSS();
+			let thirdPartyPluginCSS = await HTMLGenerator.getThirdPartyPluginCSS();
 			pluginCSS += "\n" + thirdPartyPluginCSS + "\n";
 
-			let appcssDownload = new Downloadable("obsidian-styles.css", this.appStyles, "text/css", HTMLGenerator.cssFolderName);
+			let appcssDownload = new Downloadable("obsidian-styles.css", HTMLGenerator.appStyles, "text/css", HTMLGenerator.cssFolderName);
 			let plugincssDownload = new Downloadable("plugin-styles.css", pluginCSS, "text/css", HTMLGenerator.cssFolderName);
-			let themecssDownload = new Downloadable("theme.css", this.themeStyles, "text/css", HTMLGenerator.cssFolderName);
-			let snippetsDownload = new Downloadable("snippets.css", this.snippetStyles.join("\n\n"), "text/css", HTMLGenerator.cssFolderName);
+			let themecssDownload = new Downloadable("theme.css", HTMLGenerator.themeStyles, "text/css", HTMLGenerator.cssFolderName);
+			let snippetsDownload = new Downloadable("snippets.css", HTMLGenerator.snippetStyles, "text/css", HTMLGenerator.cssFolderName);
 
 			toDownload.push(appcssDownload);
 			toDownload.push(plugincssDownload);
@@ -340,41 +377,24 @@ export class HTMLGenerator
 
 		if (!ExportSettings.settings.inlineJS)
 		{
-			let webpagejsDownload = new Downloadable("webpage.js", this.webpageJS, "text/javascript", HTMLGenerator.jsFolderName);
+			let webpagejsDownload = new Downloadable("webpage.js", HTMLGenerator.webpageJS, "text/javascript", HTMLGenerator.jsFolderName);
 
 			toDownload.push(webpagejsDownload);
 		}
 
 		if(ExportSettings.settings.includeGraphView)
 		{
-			let graphWASMDownload = new Downloadable("graph_wasm.wasm", this.graphWASM, "application/wasm", HTMLGenerator.jsFolderName, false);
-			let renderWorkerJSDownload = new Downloadable("graph-render-worker.js", this.renderWorkerJS, "text/javascript", HTMLGenerator.jsFolderName);
-			let graphWASMJSDownload = new Downloadable("graph_wasm.js", this.graphWASMJS, "text/javascript", HTMLGenerator.jsFolderName);
-			let graphViewJSDownload = new Downloadable("graph_view.js", this.graphViewJS, "text/javascript", HTMLGenerator.jsFolderName);
-			let tinyColorJS = new Downloadable("tinycolor.js", this.tinyColorJS, "text/javascript", HTMLGenerator.jsFolderName);
+			let graphWASMDownload = new Downloadable("graph_wasm.wasm", HTMLGenerator.graphWASM, "application/wasm", HTMLGenerator.jsFolderName, false);
+			let renderWorkerJSDownload = new Downloadable("graph-render-worker.js", HTMLGenerator.renderWorkerJS, "text/javascript", HTMLGenerator.jsFolderName);
+			let graphWASMJSDownload = new Downloadable("graph_wasm.js", HTMLGenerator.graphWASMJS, "text/javascript", HTMLGenerator.jsFolderName);
+			let graphViewJSDownload = new Downloadable("graph_view.js", HTMLGenerator.graphViewJS, "text/javascript", HTMLGenerator.jsFolderName);
+			let tinyColorJS = new Downloadable("tinycolor.js", HTMLGenerator.tinyColorJS, "text/javascript", HTMLGenerator.jsFolderName);
 			
 			toDownload.push(renderWorkerJSDownload);
 			toDownload.push(graphWASMDownload);
 			toDownload.push(graphWASMJSDownload);
 			toDownload.push(graphViewJSDownload);
 			toDownload.push(tinyColorJS);
-		}
-
-		if (!ExportSettings.settings.inlineImages)
-		{
-			for (let i = 0; i < outlinedImages.length; i++)
-			{
-				let image = outlinedImages[i];
-				if (!Utils.pathExists(Utils.parseFullPath(image.localImagePath), false))
-				{
-					console.log("Could not find image at " + image.localImagePath);
-					continue;
-				}
-				let data = await Utils.getFileBuffer(image.localImagePath) ?? Buffer.from([]);
-				let destinationPath = Utils.parsePath(image.relativeExportImagePath);
-				let imageDownload = new Downloadable(destinationPath.base, data, "image/" + destinationPath.ext, destinationPath.dir, false);
-				toDownload.push(imageDownload);
-			}
 		}
 
 		return toDownload;
@@ -384,12 +404,12 @@ export class HTMLGenerator
 
 	//#region Main Generation Functions
 
-	public async generateWebpage(file: ExportFile): Promise<ExportFile>
+	public static async generateWebpage(file: ExportFile): Promise<ExportFile>
 	{
-		await this.getDocumentHTML(file);
+		await HTMLGenerator.getDocumentHTML(file);
 		let usingDocument = file.document;
 
-		let sidebars = this.generateSideBars(file.contentElement, file);
+		let sidebars = HTMLGenerator.generateSideBars(file.contentElement, file);
 		let rightSidebar = sidebars.right;
 		let leftSidebar = sidebars.left;
 		usingDocument.body.appendChild(sidebars.container);
@@ -397,17 +417,17 @@ export class HTMLGenerator
 		// inject darkmode toggle
 		if (ExportSettings.settings.addDarkModeToggle && !usingDocument.querySelector(".theme-toggle-inline, .theme-toggle"))
 		{
-			let toggle = this.generateDarkmodeToggle(false, usingDocument);
+			let toggle = HTMLGenerator.generateDarkmodeToggle(false, usingDocument);
 			leftSidebar.appendChild(toggle);
 		}
 
 		// inject outline
 		if (ExportSettings.settings.includeOutline)
 		{
-			let headers = this.getHeaderList(usingDocument);
+			let headers = HTMLGenerator.getHeaderList(usingDocument);
 			if (headers)
 			{
-				var outline : HTMLElement | undefined = this.generateOutline(headers, usingDocument);
+				var outline : HTMLElement | undefined = HTMLGenerator.generateOutline(headers, usingDocument);
 				rightSidebar.appendChild(outline);
 			}
 		}
@@ -415,7 +435,7 @@ export class HTMLGenerator
 		// inject graph view
 		if (ExportSettings.settings.includeGraphView)
 		{
-			let graph = this.generateGraphView(usingDocument);
+			let graph = HTMLGenerator.generateGraphView(usingDocument);
 			let graphHeader = usingDocument.createElement("h6");
 			graphHeader.style.margin = "1em";
 			graphHeader.style.marginLeft = "12px";
@@ -425,14 +445,14 @@ export class HTMLGenerator
 			rightSidebar.prepend(graphHeader);
 		}
 
-		await this.fillInHead(file);
+		await HTMLGenerator.fillInHead(file);
 
 		file.downloads.unshift(file.getSelfDownloadable());
 
 		return file;
 	}
 
-	public async getDocumentHTML(file: ExportFile, addSelfToDownloads: boolean = false): Promise<ExportFile>
+	public static async getDocumentHTML(file: ExportFile, addSelfToDownloads: boolean = false): Promise<ExportFile>
 	{
 		// set custom line width on body
 		let body = $(file.document.body);
@@ -450,6 +470,7 @@ export class HTMLGenerator
 
 		// create obsidian document containers
 		let markdownViewEl = file.document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
+		if(ExportSettings.settings.allowFoldingHeadings) markdownViewEl.addClass("allow-fold-headings");
 
 		if(ExportSettings.settings.exportInBackground)
 		{
@@ -463,27 +484,27 @@ export class HTMLGenerator
 			}
 			catch (e)
 			{
-				markdownViewEl.innerHTML = this.errorHTML;
+				markdownViewEl.innerHTML = HTMLGenerator.errorHTML;
 				renderEl.remove();
 				return file;
 			}
 
 			markdownViewEl.innerHTML = renderEl.innerHTML;
 
-			this.renderMissingFromBackgroundExport(file);
+			await HTMLGenerator.renderMissingFromBackgroundExport(file);
 
 			renderEl.remove();
 		}
 		else
 		{
-			let fileTab = this.leafHandler.openFileInNewLeaf(file.markdownFile, true);
+			let fileTab = HTMLGenerator.leafHandler.openFileInNewLeaf(file.markdownFile, true);
 
 			await Utils.delay(200);
 
 			let view = Utils.getActiveTextView();
 			if (!view)
 			{
-				markdownViewEl.innerHTML = this.errorHTML;
+				markdownViewEl.innerHTML = HTMLGenerator.errorHTML;
 			}
 
 			if (view instanceof MarkdownView)
@@ -508,38 +529,47 @@ export class HTMLGenerator
 			if(fileTab) fileTab.detach();
 		}
 
-		this.fixLinks(file); // modify links to work outside of obsidian (including relative links)
+		HTMLGenerator.fixLinks(file); // modify links to work outside of obsidian (including relative links)
+
+		// delete all mjx-math objects. This seems to fix some mathjax rendering issues. But it may cause other issues.
+		// let math = $(file.document).find("mjx-math");
+		// math.each((index, element) =>
+		// {
+		// 	let el = $(element);
+		// 	el.remove();
+		// });
 
 		// inline / outline images
-		let outlinedImages : {localImagePath: string, relativeExportImagePath: string}[] = [];
+		let outlinedImages : Downloadable[] = [];
 		if (ExportSettings.settings.inlineImages)
 		{
-			await this.inlineMedia(file);
+			await HTMLGenerator.inlineMedia(file);
 		}
 		else
 		{
-			outlinedImages = await this.outlineMedia(file);
+			outlinedImages = await HTMLGenerator.outlineMedia(file);
 		}
 
 		if(addSelfToDownloads) file.downloads.push(file.getSelfDownloadable());
-		file.downloads.push(... await this.getSeperateFilesToDownload(outlinedImages));
+		file.downloads.push(...outlinedImages);
+		file.downloads.push(... await HTMLGenerator.getAssetDownloads());
 
 		if(ExportSettings.settings.makeNamesWebStyle)
 		{
 			file.downloads.forEach((file) =>
 			{
-				file.filename = Utils.makePathWebStyle(file.filename);
-				file.relativePath = Utils.makePathWebStyle(file.relativePath ?? "");
+				file.filename = Path.toWebStyle(file.filename);
+				file.relativeDownloadPath = file.relativeDownloadPath?.makeWebStyle();
 			});
 		}
 
 		return file;
 	}
 	
-	private renderMissingFromBackgroundExport(file: ExportFile)
+	private static async renderMissingFromBackgroundExport(file: ExportFile)
 	{
 		// we need this function because obsidian's markdown renderer doesn't render any media elements
-		// it just exports the span elements that wouldusually surround the media elements
+		// it just exports the span elements that would usually surround the media elements
 
 		let imageFormats = ["png", "webp", "jpg", "jpeg", "gif", "bmp", "svg"];
 		let audioFormats = ["mp3", "wav", "m4a", "ogg", "3gp", "flac"];
@@ -551,8 +581,8 @@ export class HTMLGenerator
 			let el = $(element);
 
 			let source = $(element).attr("src") ?? "";
-			let parsedSource = Utils.parsePath(source);
-			let ext = parsedSource.ext.split("#")[0].trim().replaceAll(".", "");
+			let parsedSource = new Path(source);
+			let ext = parsedSource.extenstion.split("#")[0].trim().replaceAll(".", "");
 			let isImage = imageFormats.includes(ext);
 			let isAudio = audioFormats.includes(ext);
 			let isVideo = videoFormats.includes(ext);
@@ -560,11 +590,11 @@ export class HTMLGenerator
 
 			if (isImage || isVideo || isAudio)
 			{
-				let bestPath = app.metadataCache.getFirstLinkpathDest(Utils.joinPaths(parsedSource.dir, parsedSource.name + "." + ext), file.markdownFile.path);
+				let bestPath = app.metadataCache.getFirstLinkpathDest(parsedSource.directory.joinString(parsedSource.basename + "." + ext).asString, file.markdownFile.path);
 
 				if (bestPath)
 				{
-					let path = "app://local/" + Utils.getAbsolutePath(bestPath.path);
+					let path = "app://local/" + new Path(bestPath.path).absolute().asString;
 
 					el.empty();
 
@@ -582,9 +612,45 @@ export class HTMLGenerator
 				}
 			}
 		});
+
+		// add heading fold arrows
+		let arrowHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='svg-icon right-triangle'><path d='M3 8L12 17L21 8'></path></svg>";
+		let headings = $(file.document).find("div h1, div h2, div h3, div h4, div h5, div h6");
+		headings.each((index, element) =>
+		{
+			let el = file.document.createElement("div");
+			el.setAttribute("class", "heading-collapse-indicator collapse-indicator collapse-icon");
+			el.innerHTML = arrowHTML;
+			element.prepend(el);
+		});
+
+		// assemble and rander mermaid diagrams
+		let mermaidDiagrams = $(file.document).find("pre.language-mermaid code");
+		mermaidDiagrams.each((index, element) =>
+		{
+			let el = $(element);
+			let diagram = el.text();
+			let diagramEl = file.document.createElement("div");
+			diagramEl.setAttribute("class", "mermaid");
+			//@ts-ignore
+			let result = window.mermaid.render(`mermaid-${file.exportPath.basename}-${index}`, diagram);
+			el.parent().replaceWith(diagramEl);
+			diagramEl.innerHTML = result;
+		});
+
+		// put every direct child of the markdown-preview-view into a div
+		let children = $(file.document).find(".markdown-preview-view > *");
+		children.each((index, element) =>
+		{
+			let el = $(element);
+			let div = file.document.createElement("div");
+			el.replaceWith(div);
+			div.appendChild(el[0]);
+		});
+
 	}
 
-	private generateSideBars(middleContent: HTMLElement, file: ExportFile): {container: HTMLElement, left: HTMLElement, right: HTMLElement, center: HTMLElement}
+	private static generateSideBars(middleContent: HTMLElement, file: ExportFile): {container: HTMLElement, left: HTMLElement, right: HTMLElement, center: HTMLElement}
 	{
 		let docEl = file.document;
 
@@ -616,25 +682,19 @@ export class HTMLGenerator
 		return {container: flexContainer, left: leftContent, right: rightContent, center: centerContent};
 	}
 
-	private getMathStyles(): string
-	{
-		let mathStyles = document.getElementById('MJX-CHTML-styles');
-		return (mathStyles?.innerHTML ?? "").replaceAll("app://obsidian.md/", "https://publish.obsidian.md/");
-	}
-
-	private getRelativePaths(file: ExportFile): {mediaPath: string, jsPath: string, cssPath: string, rootPath: string}
+	private static getRelativePaths(file: ExportFile): {mediaPath: Path, jsPath: Path, cssPath: Path, rootPath: Path}
 	{
 		let rootPath = file.pathToRoot;
-		let imagePath = Utils.joinPaths(rootPath, HTMLGenerator.mediaFolderName);
-		let jsPath = Utils.joinPaths(rootPath, HTMLGenerator.jsFolderName);
-		let cssPath = Utils.joinPaths(rootPath, HTMLGenerator.cssFolderName);
+		let imagePath = rootPath.join(HTMLGenerator.mediaFolderName);
+		let jsPath = rootPath.join(HTMLGenerator.jsFolderName);
+		let cssPath = rootPath.join(HTMLGenerator.cssFolderName);
 
 		return {mediaPath: imagePath, jsPath: jsPath, cssPath: cssPath, rootPath: rootPath};
 	}
 
-	private async fillInHead(file: ExportFile)
+	private static async fillInHead(file: ExportFile)
 	{
-		let relativePaths = this.getRelativePaths(file);
+		let relativePaths = HTMLGenerator.getRelativePaths(file);
 
 		let meta =
 		`
@@ -686,15 +746,15 @@ export class HTMLGenerator
 
 			// if (ExportSettings.settings.inlineJS) 
 			// {
-			// 	scripts += `\n<script type='module'>\n${this.graphViewJS}\n</script>\n`;
-			// 	scripts += `\n<script>${this.graphWASMJS}</script>\n`;
-			// 	scripts += `\n<script>${this.tinyColorJS}</script>\n`;
+			// 	scripts += `\n<script type='module'>\n${HTMLGenerator.graphViewJS}\n</script>\n`;
+			// 	scripts += `\n<script>${HTMLGenerator.graphWASMJS}</script>\n`;
+			// 	scripts += `\n<script>${HTMLGenerator.tinyColorJS}</script>\n`;
 			// }
 		}
 
 		if (ExportSettings.settings.inlineJS)
 		{
-			scripts += `\n<script type='module'>\n${this.webpageJS}\n</script>\n`;
+			scripts += `\n<script>\n${HTMLGenerator.webpageJS}\n</script>\n`;
 		}
 		else 
 		{
@@ -703,15 +763,14 @@ export class HTMLGenerator
 
 
 		// --- CSS ---
-		let mathStyles = this.getMathStyles();
 		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
 
-		this.updateCSSCache();
+		HTMLGenerator.updateCSSCache();
 
 		if (ExportSettings.settings.inlineCSS)
 		{
-			let pluginCSS = this.pluginStyles;
-			let thirdPartyPluginStyles = await this.getThirdPartyPluginCSS();
+			let pluginCSS = HTMLGenerator.pluginStyles;
+			let thirdPartyPluginStyles = await HTMLGenerator.getThirdPartyPluginCSS();
 			pluginCSS += thirdPartyPluginStyles;
 			
 			var header =
@@ -719,18 +778,18 @@ export class HTMLGenerator
 			${meta}
 			
 			<!-- Obsidian App Styles / Other Built-in Styles -->
-			<style> ${this.appStyles} </style>
-			<style> ${mathStyles} </style>
+			<style> ${HTMLGenerator.appStyles} </style>
+			<style> ${HTMLGenerator.mathStyles} </style>
 			<style> ${cssSettings} </style>
 
 			<!-- Plugin Styles -->
 			<style> ${pluginCSS} </style>
 
 			<!-- Theme Styles ( ${Utils.getCurrentThemeName()} ) -->
-			<style> ${this.themeStyles} </style>
+			<style> ${HTMLGenerator.themeStyles} </style>
 
 			<!-- Snippets: ${Utils.getEnabledSnippets().join(", ")} -->
-			<style> ${this.snippetStyles.join("</style><style>")} </style>
+			<style> ${HTMLGenerator.snippetStyles} </style>
 		
 			${scripts}
 			`;
@@ -747,7 +806,7 @@ export class HTMLGenerator
 			<link rel="stylesheet" href="${relativePaths.cssPath}/snippets.css">
 
 			<style> ${cssSettings} </style>
-			<style> ${mathStyles} </style>
+			<style> ${HTMLGenerator.mathStyles} </style>
 
 			${scripts}
 			`;
@@ -760,8 +819,9 @@ export class HTMLGenerator
 
 	//#region Links and Images
 
-	private fixLinks(file: ExportFile)
+	private static fixLinks(file: ExportFile)
 	{
+		let htmlCompatibleExt = ["canvas", "md"];
 		let query = $(file.document);
 
 		query.find("a.internal-link").each(function ()
@@ -783,9 +843,10 @@ export class HTMLGenerator
 				let targetFile = app.metadataCache.getFirstLinkpathDest(target, file.markdownFile.path);
 				if (!targetFile) return;
 
-				let targetPath = targetFile.path;
-				let targetRelativePath = Utils.joinPaths(Utils.getRelativePath(targetPath, file.exportPath), targetFile.basename + ".html");
-				if (ExportSettings.settings.makeNamesWebStyle) targetRelativePath = Utils.makePathWebStyle(targetRelativePath);
+				let targetPath = new Path(targetFile.path);
+				let targetRelativePath = Path.getRelativePath(file.exportPath, targetPath);
+				if (htmlCompatibleExt.includes(targetRelativePath.extensionName)) targetRelativePath.setExtension("html");
+				if (ExportSettings.settings.makeNamesWebStyle) targetRelativePath.makeWebStyle();
 
 				let finalHref = (targetRelativePath + targetHeader).replaceAll(" ", "_");
 				$(this).attr("href", finalHref);
@@ -804,7 +865,7 @@ export class HTMLGenerator
 		});
 	}
 
-	private async inlineMedia(file: ExportFile)
+	private static async inlineMedia(file: ExportFile)
 	{
 		let query = $(file.document);
 		let media = query.find("img, audio").toArray();
@@ -814,10 +875,10 @@ export class HTMLGenerator
 			let mediaEl = media[i];
 			if (!$(mediaEl).attr("src")?.startsWith("app://local")) continue;
 			
-			let path = $(mediaEl).attr("src")?.replace("app://local", "").split("?")[0];
-			if(!path) continue;
+			let src = $(mediaEl).attr("src")?.replace("app://local", "").split("?")[0];
+			if(!src) continue;
 
-			path = Utils.forceAbsolutePath(path);
+			let path = new Path(src).makeRootAbsolute();
 
 			let base64 = "";
 			try
@@ -832,75 +893,70 @@ export class HTMLGenerator
 				continue;
 			}
 
-			let pathInfo = Utils.parsePath(path);
-
-
-			let ext = pathInfo.ext.replace("\.", "");
+			let ext = path.extenstion.replaceAll(".", "");
 			//@ts-ignore
 			let type = app.viewRegistry.typeByExtension[ext] ?? "audio";
 
 			if(ext == "svg") ext += "+xml";
-			
 
 			$(mediaEl).attr("src", `data:${type}/${ext};base64,${base64}`);
 		}
 	}
 
-	private async outlineMedia(file: ExportFile): Promise<{localImagePath: string, relativeExportImagePath: string}[]>
+	private static async outlineMedia(file: ExportFile): Promise<Downloadable[]>
 	{
-		let relativePaths = this.getRelativePaths(file);
+		let downloads: Downloadable[] = [];
 		let query = $(file.document);
 		let media = query.find("img, audio, video").toArray();
-
-		let imagesToOutline: { localImagePath: string, relativeExportImagePath: string}[] = [];
 
 		for (let i = 0; i < media.length; i++)
 		{
 			let mediaEl = $(media[i]);
-			if (!mediaEl.attr("src")?.startsWith("app://local")) continue;
-			
-			let mediaPath = mediaEl.attr("src")?.replace("app://local", "").split("?")[0];
+			let src = (mediaEl.attr("src") ?? "");
+			if (!src.startsWith("app://local")) continue;
+			src = src.replace("app://local", "").split("?")[0];
 
-			if(!mediaPath) continue;
-
-			mediaPath = Utils.forceAbsolutePath(mediaPath);
-			let parsedMediaPath = Utils.parsePath(mediaPath);
-			
-			let filePath = Utils.getAbsolutePath(file.markdownFile.path) ?? "";
-			let parsedFilePath = Utils.parsePath(filePath);
-			let relativeImagePath = Utils.joinPaths(Utils.getRelativePath(parsedMediaPath.dir, parsedFilePath.dir), parsedMediaPath.base);
-
-			// console.log(relativeImagePath);
-
-			// if path is outside of the vault, outline it into the media folder
-			if (!parsedMediaPath.dir.startsWith(Utils.getVaultPath()))
+			let mediaPath = new Path(src).makeRootAbsolute();
+			if (!mediaPath.exists)
 			{
-				console.log(parsedMediaPath.dir);
-				relativeImagePath = Utils.joinPaths(relativePaths.mediaPath, parsedMediaPath.base);
+				console.log("Could not find image at " + mediaPath);
+				continue;
 			}
-			
-			relativeImagePath = Utils.forceRelativePath(relativeImagePath, true);
+
+			let vaultToMedia = Path.getRelativePathFromVault(mediaPath);
+			let exportLocation = vaultToMedia;
+
+			// if the media is inside the exported folder then keep it in the same place
+			let mediaPathInExport = Path.getRelativePath(file.exportFromFolder, vaultToMedia);
+			if (mediaPathInExport.asString.startsWith(".."))
+			{
+				// if path is outside of the vault, outline it into the media folder
+				exportLocation = HTMLGenerator.mediaFolderName.joinString(vaultToMedia.fullName);
+			}
+
+			let relativeImagePath = Path.getRelativePath(file.exportPath, exportLocation)
 
 			if(ExportSettings.settings.makeNamesWebStyle)
 			{
-				relativeImagePath = Utils.makePathWebStyle(relativeImagePath);
+				relativeImagePath.makeWebStyle();
+				exportLocation.makeWebStyle();
 			}
 
-			mediaEl.attr("src", relativeImagePath);
+			mediaEl.attr("src", relativeImagePath.asString);
 
-			let imagePathFromVault = Utils.joinPaths(Utils.getRelativePath(mediaPath, Utils.getVaultPath()), parsedMediaPath.base);
-
-			imagesToOutline.push({localImagePath: mediaPath, relativeExportImagePath: imagePathFromVault});
+			let data = await Utils.getFileBuffer(mediaPath) ?? Buffer.from([]);
+			let imageDownload = new Downloadable(exportLocation.fullName, data, "image/" + exportLocation.extensionName, exportLocation.directory, false);
+			downloads.push(imageDownload);
 		}
 
-		return imagesToOutline;
+		return downloads;
 	}
 
 	//#endregion
 
 	//#region Special Features
 
-	public generateDarkmodeToggle(inline : boolean = true, usingDocument: Document = document) : HTMLElement
+	public static generateDarkmodeToggle(inline : boolean = true, usingDocument: Document = document) : HTMLElement
 	{
 		// programatically generates the above html snippet
 		let toggle = usingDocument.createElement("div");
@@ -919,7 +975,7 @@ export class HTMLGenerator
 		return toggle;
 	}
 
-	private getHeaderList(usingDocument: Document): { size: number, title: string, href: string }[] | null
+	private static getHeaderList(usingDocument: Document): { size: number, title: string, href: string }[] | null
 	{
 		let headers = [];
 
@@ -937,7 +993,7 @@ export class HTMLGenerator
 		return headers;
 	}
 
-	private generateOutlineItem(header: { size: number, title: string, href: string }, usingDocument: Document): HTMLDivElement
+	private static generateOutlineItem(header: { size: number, title: string, href: string }, usingDocument: Document): HTMLDivElement
 	{
 		let arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path>`;
 
@@ -974,7 +1030,7 @@ export class HTMLGenerator
 		return outlineItemEl;
 	}
 
-	private generateOutline(headers: { size: number, title: string, href: string }[], usingDocument: Document): HTMLDivElement
+	private static generateOutline(headers: { size: number, title: string, href: string }[], usingDocument: Document): HTMLDivElement
 	{
 		// if(headers.length <= 1) return usingDocument.createElement("div");
 
@@ -1033,7 +1089,7 @@ export class HTMLGenerator
 		for (let i = 0; i < headers.length; i++)
 		{
 			let header = headers[i];
-			let listItem : HTMLDivElement = this.generateOutlineItem(header, usingDocument);
+			let listItem : HTMLDivElement = HTMLGenerator.generateOutlineItem(header, usingDocument);
 
 			while (getLastStackSize() >= header.size && listStack.length > 1)
 			{
@@ -1051,7 +1107,7 @@ export class HTMLGenerator
 		return outlineEl;
 	}
 
-	private generateGraphView(usingDocument: Document): HTMLDivElement
+	private static generateGraphView(usingDocument: Document): HTMLDivElement
 	{
 		let graphEl = usingDocument.createElement("div");
 		graphEl.className = "graph-view-placeholder";

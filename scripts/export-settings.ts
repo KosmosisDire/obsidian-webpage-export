@@ -1,5 +1,5 @@
 import { Modal, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import { Utils } from './utils';
+import { Path, Utils } from './utils';
 import { writeFile } from "fs/promises";
 import { HTMLGenerator } from './html-gen';
 import HTMLExportPlugin from './main';
@@ -9,10 +9,13 @@ export interface ExportSettingsData
 	inlineCSS: boolean;
 	inlineJS: boolean;
 	inlineImages: boolean;
+	includePluginCSS: string;
+
 	makeNamesWebStyle: boolean;
+	allowFoldingHeadings: boolean;
+
 	exportInBackground: boolean;
 	beautifyHTML: boolean;
-	includePluginCSS: string;
 
 	graphAttractionForce: number;
     graphLinkLength: number;
@@ -27,6 +30,7 @@ export interface ExportSettingsData
 	includeGraphView: boolean;
 	customLineWidth: string;
 	openAfterExport: boolean;
+	keepNestedFolderStructure: boolean;
 
 	lastExportPath: string;
 }
@@ -36,10 +40,13 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	inlineCSS: true,
 	inlineJS: true,
 	inlineImages: true,
+	includePluginCSS: '',
+
 	makeNamesWebStyle: false,
+	allowFoldingHeadings: true,
+
 	exportInBackground: false,
 	beautifyHTML: false,
-	includePluginCSS: '',
 
 	graphAttractionForce: 50,
 	graphLinkLength: 10,
@@ -54,6 +61,7 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	includeGraphView: false,
 	customLineWidth: "",
 	openAfterExport: true,
+	keepNestedFolderStructure: false,
 
 	lastExportPath: '',
 }
@@ -118,7 +126,7 @@ export class ExportSettings extends PluginSettingTab
 	{
 		if (this.blacklistedPluginIDs.length > 0) return this.blacklistedPluginIDs;
 		
-		let blacklist = await Utils.getText(Utils.joinPaths(HTMLGenerator.assetsPath, "third-party-styles-blacklist.txt"));
+		let blacklist = await Utils.getText(HTMLGenerator.assetsPath.joinString("third-party-styles-blacklist.txt"));
 		if (blacklist)
 		{
 			this.blacklistedPluginIDs = blacklist.split("\n");
@@ -142,7 +150,7 @@ export class ExportSettings extends PluginSettingTab
 		//Download third-party-styles-blacklist.txt
 		let thirdPartyStylesBlacklist = await fetch(ExportSettings.thirdPartyStylesBlacklistURL);
 		let thirdPartyStylesBlacklistText = await thirdPartyStylesBlacklist.text();
-		await writeFile(Utils.joinPaths(HTMLGenerator.assetsPath, "third-party-styles-blacklist.txt"), thirdPartyStylesBlacklistText).catch((err) => { console.log(err); });
+		await writeFile(HTMLGenerator.assetsPath.joinString("third-party-styles-blacklist.txt").asString, thirdPartyStylesBlacklistText).catch((err) => { console.log(err); });
 	}
 
 	static async saveSettings() 
@@ -219,6 +227,17 @@ export class ExportSettings extends PluginSettingTab
 				}));
 
 		new Setting(containerEl)
+			.setName('Allow Folding Headings')
+			.setDesc('Allow headings to be folded with an arrow icon beside each heading, just as in Obsidian.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.allowFoldingHeadings)
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.allowFoldingHeadings = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		new Setting(containerEl)
 			.setName('Beautify HTML')
 			.setDesc('Beautify the HTML text to make it more human readable, at the cost of export speed.')
 			.addToggle((toggle) => toggle
@@ -244,12 +263,11 @@ export class ExportSettings extends PluginSettingTab
 				return;
 			}
 
-			let pluginPath = pluginManifest.dir;
-			if (!pluginPath) return;
-			pluginPath = Utils.getAbsolutePath(pluginPath);
-			if (!pluginPath) return;
+			let pluginDir = pluginManifest.dir;
+			if (!pluginDir) return;
+			let pluginPath = new Path(pluginDir);
 
-			let hasCSS = Utils.pathExists(Utils.joinPaths(pluginPath, 'styles.css'), false);
+			let hasCSS = pluginPath.joinString('styles.css').exists;
 			if (!hasCSS) return;
 
 			let isChecked = ExportSettings.settings.includePluginCSS.match(new RegExp(`^${plugin}`, 'm')) != null;

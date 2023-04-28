@@ -1,16 +1,15 @@
 // imports from obsidian API
-import { Component, Notice, Plugin, TFile, TFolder} from 'obsidian';
+import { Notice, Plugin, TFile, TFolder, loadMathJax, loadMermaid} from 'obsidian';
 
 // modules that are part of the plugin
 import { ExportModal, ExportSettings } from './export-settings';
-import { Utils, Downloadable } from './utils';
+import { Utils, Downloadable, Path } from './utils';
 import { ExportFile, HTMLGenerator } from './html-gen';
 import { GraphGenerator } from './graph-view/graph-gen';
 const {shell} = require('electron') 
 
 export default class HTMLExportPlugin extends Plugin
 {
-	htmlGenerator: HTMLGenerator = new HTMLGenerator("webpage-html-export");
 	static plugin: HTMLExportPlugin;
 	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string};
 
@@ -18,7 +17,7 @@ export default class HTMLExportPlugin extends Plugin
 	{
 		this.registerMarkdownCodeBlockProcessor("theme-toggle", (source, el, ctx) =>
 		{
-			let toggleEl = this.htmlGenerator.generateDarkmodeToggle();
+			let toggleEl = HTMLGenerator.generateDarkmodeToggle();
 			el.replaceWith(toggleEl);
 		});
 
@@ -30,7 +29,7 @@ export default class HTMLExportPlugin extends Plugin
 			{
 				if (codeBlock instanceof HTMLElement && codeBlock.innerText == "theme-toggle")
 				{
-					let toggleEl = this.htmlGenerator.generateDarkmodeToggle();
+					let toggleEl = HTMLGenerator.generateDarkmodeToggle();
 					codeBlock.replaceWith(toggleEl);
 				}
 			});
@@ -49,7 +48,7 @@ export default class HTMLExportPlugin extends Plugin
 				{
 					if(checking) return true;
 
-					this.exportFile(file);
+					this.exportFile(file, new Path(file.path));
 				}
 
 				return false;
@@ -61,7 +60,7 @@ export default class HTMLExportPlugin extends Plugin
 			name: 'Export vault to HTML',
 			callback: () =>
 			{
-				this.exportFolder("");
+				this.exportFolder(Path.emptyPath);
 			}
 		});
 	}
@@ -70,6 +69,9 @@ export default class HTMLExportPlugin extends Plugin
 	{
 		console.log('loading webpage-html-export plugin');
 		HTMLExportPlugin.plugin = this;
+
+		// init html generator
+		HTMLGenerator.initialize("webpage-html-export");
 
 		await this.checkForUpdates();
 
@@ -80,10 +82,10 @@ export default class HTMLExportPlugin extends Plugin
 		// add export vault icon to ribbon
 		this.addRibbonIcon("folder-up", "Export Vault to HTML", async () =>
 		{
-			let exportInfo = await this.exportFolder("");
+			let exportInfo = await this.exportFolder(Path.emptyPath);
 			if (exportInfo.success && ExportSettings.settings.openAfterExport)
 			{
-				window.require('electron').remote.shell.openPath(exportInfo.exportedPath);
+				window.require('electron').remote.shell.openPath(exportInfo.exportedPath.asString);
 			}
 		});
 
@@ -92,9 +94,6 @@ export default class HTMLExportPlugin extends Plugin
 
 		// add commands
 		this.addCommands();
-
-		// init html generator
-		this.htmlGenerator.initialize();
 
 		// Register the Export As HTML button in the file menu
 		this.registerEvent(
@@ -110,18 +109,19 @@ export default class HTMLExportPlugin extends Plugin
 						{
 							if(file instanceof TFile)
 							{
-								let exportedFile = await this.exportFile(file);
+								let path = new Path(file.path);
+								let exportedFile = await this.exportFile(file, path);
 								if (exportedFile && ExportSettings.settings.openAfterExport)
 								{
-									shell.openPath(exportedFile.pathToRoot);
+									window.require('electron').remote.shell.openPath(exportedFile.exportPathAbsolute.asString);
 								}
 							}
 							else if(file instanceof TFolder)
 							{
-								let exportInfo = await this.exportFolder(file.path);
+								let exportInfo = await this.exportFolder(new Path(file.path));
 								if (exportInfo.success && ExportSettings.settings.openAfterExport)
 								{
-									window.require('electron').remote.shell.openPath(exportInfo.exportedPath);
+									window.require('electron').remote.shell.showPath(exportInfo.exportedPath.asString);
 								}
 							}
 							else
@@ -136,109 +136,110 @@ export default class HTMLExportPlugin extends Plugin
 
 	}
 
-	onunload()
-	{
-		console.log('unloading webpage-html-export plugin');
-	}
-
-	generateProgressbar(title: string, progress: number, max: number, barLength: number, fullChar: string, emptyChar: string): string
-	{
-		function padStringBeggining(str: string, length: number, char: string)
-		{
-			return char.repeat(length - str.length) + str;
-		}
-
-		return `${title}: ${padStringBeggining(progress + "/" + max, 13, " ")}\n\n${fullChar.repeat(Math.floor((progress / max) * barLength))}${emptyChar.repeat(barLength - Math.floor((progress / max) * barLength))}`;
-	}
-
-	async exportFile(file: TFile, partOfBatch: boolean = false, exportPath: string | undefined = undefined, showSettings: boolean = true) : Promise<ExportFile | undefined>
+	async exportFile(file: TFile, exportFromPath: Path, partOfBatch: boolean = false, exportToPath: Path | undefined = undefined, showSettings: boolean = true) : Promise<ExportFile | undefined>
 	{
 		// Open the settings modal and wait until it's closed
 		if (showSettings)
 		{
-			let validSelection = false;
-			while (!validSelection)
-			{
-				let result = await new ExportModal().open();
-				if (result.canceled) return undefined;
-
-				validSelection = true;
-			}
+			let result = await new ExportModal().open();
+			if (result.canceled) return undefined;
 		}
 
-		let exportPathParsed = Utils.parsePath(exportPath ?? "");
-		if (exportPath === undefined) // if no export path is specified, show a save dialog
+		// if no export path is specified, show a save dialog
+		if (exportToPath === undefined) 
 		{
-			let defaultFileName = (ExportSettings.settings.makeNamesWebStyle ? Utils.makePathWebStyle(file.basename) : file.basename) + ".html";
-			let saveDialogPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), defaultFileName, false) ?? undefined;
-			if (saveDialogPath == undefined) return undefined;
-			exportPathParsed = Utils.parsePath(saveDialogPath);
+			let defaultFileName = file.basename + ".html";
+			if (ExportSettings.settings.makeNamesWebStyle) defaultFileName = Path.toWebStyle(defaultFileName);
+			let saveDialogPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), defaultFileName, false);
+			if (!saveDialogPath) return undefined;
+			exportToPath = saveDialogPath;
 		}
 
 		if (!partOfBatch)
 		{
+			// if we are starting a new export then we need to regenerate the graph in case it changed.
 			GraphGenerator.clearGraphCache();
 		}
 
-		let exportedFile = new ExportFile(file, exportPathParsed.fullPath, !partOfBatch);
-		await this.htmlGenerator.generateWebpage(exportedFile);
+		// the !partOfBatch is passed to forceExportToRoot. 
+		// If this is a single file export then export it to the folder specified rather than into it's subfolder.
+		let exportedFile = new ExportFile(file, exportToPath.directory.absolute(), exportFromPath.directory, partOfBatch, exportToPath.fullName, !partOfBatch);
+		await HTMLGenerator.generateWebpage(exportedFile);
 
 		if(!partOfBatch) 
 		{
-			new Notice("Exported " + file.name + " to " + exportPathParsed.fullPath, 5000);
-			Utils.downloadFiles(exportedFile.downloads, exportPathParsed.dir);
+			// file downloads are handled outside of the export function if we are exporting a batch.
+			// If this is not a batch export, then we need to download the files here instead.
+			await Utils.downloadFiles(exportedFile.downloads, exportToPath.directory, false);
+			new Notice("✅ Finished HTML Export:\n\n" + exportToPath.asString, 5000);
 		}
 
 		return exportedFile;
 	}
 
-	async exportFolder(folderPath: string, showSettings: boolean = true) : Promise<{success: boolean, exportedPath: string}>
+	async exportFolder(folderPath: Path, showSettings: boolean = true) : Promise<{success: boolean, exportedPath: Path}>
 	{
-		// folder path is the path relative to the vault that we are exporting
-
 		// Open the settings modal and wait until it's closed
 		if (showSettings)
 		{
-			let validSelection = false;
-			while (!validSelection)
-			{
-				let result = await new ExportModal().open();
-				if (result.canceled) return {success: false, exportedPath: ""};
-				
-				validSelection = true;
-			}
+			let result = await new ExportModal().open();
+			if (result.canceled) return {success: false, exportedPath: Path.emptyPath};
 		}
 
-		let htmlPath = await Utils.showSelectFolderDialog(Utils.parsePath(Utils.idealDefaultPath()).dir);
-		if (!htmlPath) return {success: false, exportedPath: ""};
+		let htmlPath = await Utils.showSelectFolderDialog(Utils.idealDefaultPath());
+		if (!htmlPath) return {success: false, exportedPath: Path.emptyPath};
 
+		// get files to export
 		let allFiles = this.app.vault.getMarkdownFiles();
-		let filesToExport = allFiles.filter((file) => file.path.startsWith(folderPath) && file.extension == "md");
-		let externalFiles: Downloadable[] = [];
-		let progressNotice = new Notice(this.generateProgressbar("Generating HTML", 1, filesToExport.length, 15, "▰","▱"), 0);
+		// if we are at the root path export all files, otherwise only export files in the folder we are exporting
+		let filesToExport = folderPath.isEmpty ? allFiles : allFiles.filter((file) => file.path.startsWith(folderPath.asString) && file.extension == "md");
+
+		if (filesToExport.length > 100000 || filesToExport.length <= 0)
+		{
+			new Notice(`❗Invalid number of files to export: ${filesToExport.length}.\n\nPlease report on GitHub.`, 0);
+			return {success: false, exportedPath: htmlPath};
+		}
 
 		GraphGenerator.clearGraphCache();
 
-		for (let i = 0; i < filesToExport.length; i++)
+		let lastProgressMessage = Utils.generateProgressbar("Generating HTML", 1, filesToExport.length, 15, "▰","▱");
+		let progressNotice = new Notice(lastProgressMessage, 0);
+
+		let externalFiles: Downloadable[] = [];
+
+		try
 		{
-			let file = filesToExport[i];
-			
-			let exportedFile = await this.exportFile(file, true, htmlPath, false);
-			if (exportedFile) externalFiles.push(...exportedFile.downloads);
-			
-			// remove duplicates
-			externalFiles = externalFiles.filter((file, index) => externalFiles.findIndex((f) => f.relativePath == file.relativePath && f.filename == file.filename) == index);
-			
-			progressNotice.setMessage(this.generateProgressbar("Generating HTML", i+1, filesToExport.length, 15, "▰","▱"));
+			for (let i = 0; i < filesToExport.length; i++)
+			{
+				let file = filesToExport[i];
+				let filePath = htmlPath.joinString(file.name).setExtension("html");
+				let exportedFile = await this.exportFile(file, folderPath, true, filePath, false);
+				if (exportedFile) 
+				{
+					externalFiles.push(...exportedFile.downloads);
+
+					// remove duplicates
+					externalFiles = externalFiles.filter((file, index) => externalFiles.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath && f.filename == file.filename) == index);
+				}
+
+				lastProgressMessage = Utils.generateProgressbar("Generating HTML", i+1, filesToExport.length, 15, "▰","▱");
+				progressNotice.setMessage(lastProgressMessage);
+			}
+		}
+		catch (e)
+		{
+			console.error(e);
+			progressNotice.setMessage("❗ " + lastProgressMessage);
+			return {success: false, exportedPath: htmlPath};
 		}
 
 		await Utils.delay(100);
+		progressNotice.hide();
 
-		await Utils.downloadFiles(externalFiles, htmlPath);
+		await Utils.downloadFiles(externalFiles, htmlPath, true);
 
 		new Notice("✅ Finished HTML Export:\n\n" + htmlPath, 5000);
 		console.log("Finished HTML Export: " + htmlPath);
-		progressNotice.hide();
 
 		return {success: true, exportedPath: htmlPath};
 	}
@@ -267,5 +268,10 @@ export default class HTMLExportPlugin extends Plugin
 			HTMLExportPlugin.updateInfo = {updateAvailable: false, latestVersion: currentVersion, currentVersion: currentVersion};
 			return HTMLExportPlugin.updateInfo;
 		}
+	}
+
+	onunload()
+	{
+		console.log('unloading webpage-html-export plugin');
 	}
 }

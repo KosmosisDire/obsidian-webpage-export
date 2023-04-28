@@ -129,6 +129,7 @@ async function RunGraphView()
 
             startingCameraOffset = JSON.parse(localStorage.getItem("cameraOffset"));
             startingCameraScale = JSON.parse(localStorage.getItem("cameraScale"));
+            // console.log(startingCameraOffset, startingCameraScale);
 
             return positions;
         }
@@ -240,8 +241,8 @@ async function RunGraphView()
             this.#width = 0;
             this.#height = 0;
 
-            this.cameraOffset = startingCameraOffset || {x: this.canvas.width / 2, y: this.canvas.height / 2};
-            this.cameraScale = startingCameraScale || 1;
+            this.cameraOffset = {x: this.canvas.width / 2, y: this.canvas.height / 2};
+            this.cameraScale = 1;
             this.hoveredNode = -1;
             this.grabbedNode = -1;
             this.resampleColors();
@@ -527,9 +528,18 @@ async function RunGraphView()
     }
 
     const renderWorker = new GraphRenderWorker();
-
+    
     renderWorker.autoResizeCanvas();
-    renderWorker.centerCamera();
+
+    if (startingCameraOffset && startingCameraScale)
+    {
+        renderWorker.cameraOffset = startingCameraOffset;
+        renderWorker.cameraScale = startingCameraScale;
+    }
+    else
+    {
+        renderWorker.centerCamera();
+    }
 
     const app = new PIXI.Application();
 
@@ -682,6 +692,26 @@ async function RunGraphView()
         if (e.button == 2) rightButtonDown = true;
     });
 
+    function urlExists(url) {
+        fetch(url, { method: 'head' })
+        .then(function(status) 
+        {
+            return status.ok;
+        });
+      }
+
+    function navigateToNode(nodeIndex)
+    {
+        if (!graphExpanded) GraphAssembly.saveState(renderWorker);
+
+        let url = rootPath + "/" + nodes.paths[nodeIndex];
+        if (urlExists(url))
+        {
+            window.location.assign(url);
+        }
+        console.log(url);
+    }
+
     $("*").on("mouseup", function(e)
     {
         e.preventDefault();
@@ -694,9 +724,7 @@ async function RunGraphView()
         // we must have just clicked on a node without dragging it
         if (!panning && renderWorker.grabbedNode == -1 && renderWorker.hoveredNode != -1)
         {
-            GraphAssembly.saveState(renderWorker);
-            window.location.replace(rootPath + "/" + nodes.paths[renderWorker.hoveredNode]);
-            console.log(rootPath + "/" + nodes.paths[renderWorker.hoveredNode]);
+            navigateToNode(renderWorker.hoveredNode);
         }
 
         renderWorker.grabbedNode = -1;
@@ -789,9 +817,7 @@ async function RunGraphView()
 
             if (!panning && renderWorker.grabbedNode == -1 && renderWorker.hoveredNode != -1)
             {
-                GraphAssembly.saveState(renderWorker);
-                window.location.replace(rootPath + "/" + nodes.paths[renderWorker.hoveredNode]);
-                console.log(rootPath + "/" + nodes.paths[renderWorker.hoveredNode]);
+                navigateToNode(renderWorker.hoveredNode);
             }
 
             renderWorker.grabbedNode = -1;
@@ -812,6 +838,8 @@ async function RunGraphView()
     function toggleExpandedGraph()
     {
         let container = $(".graph-view-container");
+        let initialWidth = container.width();
+        let initialHeight = container.height();
 
         // scale and fade out animation:
         container.addClass("scale-down");
@@ -821,6 +849,10 @@ async function RunGraphView()
 
             renderWorker.autoResizeCanvas();
             renderWorker.centerCamera();
+
+            let finalWidth = container.width();
+            let finalHeight = container.height();
+            renderWorker.cameraScale *= ((finalWidth / initialWidth) + (finalHeight / initialHeight)) / 2;
 
             container.removeClass("scale-down");
             container.addClass("scale-up");
@@ -841,6 +873,18 @@ async function RunGraphView()
 
         toggleExpandedGraph();
     });
+
+    // reload the window if it is from the back button
+    // we have to do this to make sure the graph view still works
+    window.addEventListener('pageshow', function(event) {
+        var historyTraversal = event.persisted ||
+                               (typeof window.performance != 'undefined' &&
+                                    window.performance.navigation.type === 2);
+        if (historyTraversal) {
+          // Force reload of the page
+          window.location.reload();
+        }
+      });
 
     //#endregion    
 }

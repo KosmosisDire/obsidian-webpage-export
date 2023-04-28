@@ -1,5 +1,5 @@
 import { ExportSettings } from "scripts/export-settings";
-import { Utils } from "scripts/utils";
+import { Path } from "scripts/utils";
 
 export class GraphGenerator
 {
@@ -88,11 +88,10 @@ export class GraphGenerator
 		linkSources = linkSources.map(s => indexedRadii.findIndex(r => r.index == s));
 		linkTargets = linkTargets.map(t => indexedRadii.findIndex(r => r.index == t));
 		linkCounts = indexedRadii.map(r => linkCounts[r.index]);
-		paths = indexedRadii.map(r => ExportSettings.settings.makeNamesWebStyle ? Utils.makePathWebStyle(paths[r.index]) : paths[r.index]);
+		paths = indexedRadii.map(r => ExportSettings.settings.makeNamesWebStyle ? Path.toWebStyle(paths[r.index]) : paths[r.index]);
 		paths = paths.map(p => 
 			{
-				let parsed = Utils.parsePath(p);
-				return Utils.joinPaths(parsed.dir, parsed.name) + ".html";
+				return new Path(p).setExtension(".html").asString;
 			});
 
 		this.graphCache = {nodeCount: nodeCount, linkCount: linkSources.length, radii: radii, labels: labels, paths: paths, linkSources: linkSources, linkTargets: linkTargets};
