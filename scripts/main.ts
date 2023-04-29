@@ -99,10 +99,10 @@ export default class HTMLExportPlugin extends Plugin
 		console.log('loading webpage-html-export plugin');
 		HTMLExportPlugin.plugin = this;
 
+		await this.checkForUpdates();
+
 		// init html generator
 		HTMLGenerator.initialize("webpage-html-export");
-
-		await this.checkForUpdates();
 
 		// init settings
 		this.addSettingTab(new ExportSettings(this));
