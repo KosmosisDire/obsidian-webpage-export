@@ -4,9 +4,6 @@ Exports an obsidian document, folder, or vault as an HTML document / webpage / w
 
 ![image](https://user-images.githubusercontent.com/39423700/201875810-6d24c2b9-2e63-4d9b-a9d4-61840df659ac.png)
 
-## Canvas Support
-Canvas support is currently very preliminary. Your canvas documents will export, but large documents included wll not render fully, and documents larger than one screen will be cut off or documents will become invisible. Small simple canvas documents should work fine.
-
 ## Features:
 - Export files, folders, or the whole vault as html. [Explained in: General](#general)
 - Support for Kanban, and Canvas documents (and possibly other plugins that haven't been tested)!
@@ -51,7 +48,6 @@ or
 - This toggle does not work inside of obsidian, however once exported it will (this may change in the future)
 - If you do not include \`theme-toggle\` in a document and the `Add Dark Mode Toggle` setting is on then a toggle will be fixed to every page in the top left corner.
 
-
 </p>
 </details>
 
@@ -78,21 +74,6 @@ or
 - Locate the `Include Plugin CSS` setting
 - Ender a list of plugin `IDs` each on a seperate line (for example kanban's ID is `obsidian-kanban`)
 - This may get more user friendly in the future, but for now it's the fastest implementation.
-
-
-</p>
-</details>
-
-#### On Click Attributes
-
-<details><summary>How do I make buttons or other elements with an 'on-click' attribute work after export?</summary>
-<p>
-
-This is a somewhat niche feature; however, if you want to use the `onlick` attribute in your exported HTML without editing it afterwards you can use simple feature in this plugin to do that:
-1. Replace the `onclick` attribute in your source with `data-onclick`.
-2. Export the file, and this attribute will be replaced with onclick in the exported html.
-
-Note: This does not enable `onclick` inside of obsidian itself. 
 
 </p>
 </details>
