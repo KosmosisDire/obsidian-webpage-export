@@ -174,8 +174,6 @@ export class ExportSettings extends PluginSettingTab
 
 		let buttonColor = Utils.sampleCSSColorHex("--color-accent", document.body).hex;
 		let buttonTextColor = Utils.sampleCSSColorHex("--text-on-accent", document.body).hex;
-		let buttonOutlineColor = Utils.sampleCSSColorHex("--modal-border-color", document.body).hex;
-		console.log(buttonTextColor);
 		// @ts-ignore
 		supportLink.outerHTML = `<a href="https://www.buymeacoffee.com/nathangeorge"><img style="height:40px;" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=${buttonColor}&font_colour=${buttonTextColor}&font_family=Poppins&outline_colour=${buttonTextColor}&coffee_colour=FFDD00"></a>`;
 		let supportHeader = containerEl.createDiv({ text: 'Support the continued development of this plugin.', cls: "setting-item-description"});
@@ -550,7 +548,8 @@ export class ExportModal extends Modal
 			font-size: var(--font-ui-smaller);
 			border-radius: 5px;
 			display: block;
-			width: fit-content;`)
+			width: fit-content;
+			white-space: pre-wrap;`)
 		}
 
 		contentEl.createEl('h3', { text: 'Document Settings:' });

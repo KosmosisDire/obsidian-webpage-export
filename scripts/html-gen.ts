@@ -198,6 +198,9 @@ export class HTMLGenerator
 
 	private static async downloadAssets()
 	{
+		// if there is an update then do not download the new assets since they may not be compatible
+		if (HTMLExportPlugin.updateInfo.updateAvailable) return;
+
 		HTMLGenerator.assetsPath.createDirectory();
 
 		//Download webpage.js
