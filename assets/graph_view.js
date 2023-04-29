@@ -1,25 +1,20 @@
 // -------------------------- GRAPH VIEW --------------------------
 
-var started = false;
+var running = false;
+let batchFraction = 1;
+let minBatchFraction = 0.3;
+repulsionForce /= batchFraction;
+let dt = 1;
+let targetFPS = 30;
+let startingCameraScale = undefined;
+let startingCameraOffset = undefined;
 
 async function RunGraphView()
 {
-    if(started) return;
+    if(running) return;
 
-    started = true;
+    running = true;
     console.log("Module Ready");
-
-    let batchFraction = 1;
-    let minBatchFraction = 0.3;
-
-    repulsionForce /= batchFraction;
-
-    let dt = 1;
-
-    let targetFPS = 30;
-
-    let startingCameraScale = undefined;
-    let startingCameraOffset = undefined;
 
     class GraphAssembly
     {
@@ -201,11 +196,7 @@ async function RunGraphView()
         }
     }
 
-
-
     GraphAssembly.init(nodes);
-
-
 
     class GraphRenderWorker
     {
@@ -251,6 +242,18 @@ async function RunGraphView()
 
             this.width = this.canvas.width;
             this.height = this.canvas.height;
+
+            this.autoResizeCanvas();
+
+            if (startingCameraOffset && startingCameraScale)
+            {
+                this.cameraOffset = startingCameraOffset;
+                this.cameraScale = startingCameraScale;
+            }
+            else
+            {
+                this.centerCamera();
+            }
         }
 
         #pixiInit()
@@ -528,18 +531,6 @@ async function RunGraphView()
     }
 
     const renderWorker = new GraphRenderWorker();
-    
-    renderWorker.autoResizeCanvas();
-
-    if (startingCameraOffset && startingCameraScale)
-    {
-        renderWorker.cameraOffset = startingCameraOffset;
-        renderWorker.cameraScale = startingCameraScale;
-    }
-    else
-    {
-        renderWorker.centerCamera();
-    }
 
     const app = new PIXI.Application();
 
@@ -560,6 +551,8 @@ async function RunGraphView()
 
     app.ticker.add(() => 
     {
+        if(!running) return;
+
         GraphAssembly.update(mousePositionWorld, renderWorker.grabbedNode, renderWorker.cameraScale);
 
         if (GraphAssembly.hoveredNode != renderWorker.hoveredNode)
@@ -601,22 +594,31 @@ async function RunGraphView()
 
             scrollVelocity *= 0.8;
         }
-
     });
 
     //#region Event listeners
 
     window.addEventListener('beforeunload', () => 
     {
+        running = false;
         GraphAssembly.free();
     });
 
+    let lastCanvasWidth = renderWorker.canvas.width;
     window.addEventListener('resize', () =>
     {
         if(graphExpanded)
         {
             renderWorker.autoResizeCanvas();
             renderWorker.centerCamera();
+        }
+        else
+        {
+            if (renderWorker.canvas.width != lastCanvasWidth)
+            {
+                renderWorker.autoResizeCanvas();
+                renderWorker.centerCamera();
+            }
         }
     });
 
@@ -692,23 +694,15 @@ async function RunGraphView()
         if (e.button == 2) rightButtonDown = true;
     });
 
-    function urlExists(url) {
-        fetch(url, { method: 'head' })
-        .then(function(status) 
-        {
-            return status.ok;
-        });
-      }
-
-    function navigateToNode(nodeIndex)
+    async function navigateToNode(nodeIndex)
     {
         if (!graphExpanded) GraphAssembly.saveState(renderWorker);
+        else toggleExpandedGraph();
 
         let url = rootPath + "/" + nodes.paths[nodeIndex];
-        if (urlExists(url))
-        {
-            window.location.assign(url);
-        }
+        if(window.location.pathname.endsWith(nodes.paths[nodeIndex])) return;
+        await loadDocument(url);
+        
         console.log(url);
     }
 
@@ -873,18 +867,6 @@ async function RunGraphView()
 
         toggleExpandedGraph();
     });
-
-    // reload the window if it is from the back button
-    // we have to do this to make sure the graph view still works
-    window.addEventListener('pageshow', function(event) {
-        var historyTraversal = event.persisted ||
-                               (typeof window.performance != 'undefined' &&
-                                    window.performance.navigation.type === 2);
-        if (historyTraversal) {
-          // Force reload of the page
-          window.location.reload();
-        }
-      });
 
     //#endregion    
 }

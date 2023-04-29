@@ -13,6 +13,7 @@ export interface ExportSettingsData
 
 	makeNamesWebStyle: boolean;
 	allowFoldingHeadings: boolean;
+	addFilenameTitle: boolean;
 
 	exportInBackground: boolean;
 	beautifyHTML: boolean;
@@ -42,10 +43,11 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	inlineImages: true,
 	includePluginCSS: '',
 
-	makeNamesWebStyle: false,
+	makeNamesWebStyle: true,
 	allowFoldingHeadings: true,
+	addFilenameTitle: true,
 
-	exportInBackground: false,
+	exportInBackground: true,
 	beautifyHTML: false,
 
 	graphAttractionForce: 50,
@@ -169,14 +171,26 @@ export class ExportSettings extends PluginSettingTab
 		header.style.marginBottom = '15px';
 
 		let supportLink = containerEl.createEl('a');
+
+		let buttonColor = Utils.sampleCSSColorHex("--color-accent", document.body).hex;
+		let buttonTextColor = Utils.sampleCSSColorHex("--text-on-accent", document.body).hex;
+		let buttonOutlineColor = Utils.sampleCSSColorHex("--modal-border-color", document.body).hex;
+		console.log(buttonTextColor);
 		// @ts-ignore
-		supportLink.outerHTML = `<a href="https://www.buymeacoffee.com/nathangeorge"><img style="height:40px;" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=${app.vault.getConfig("accentColor").replace("#", "")}&font_colour=ffffff&font_family=Poppins&outline_colour=000000&coffee_colour=FFDD00"></a>`;
+		supportLink.outerHTML = `<a href="https://www.buymeacoffee.com/nathangeorge"><img style="height:40px;" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=${buttonColor}&font_colour=${buttonTextColor}&font_family=Poppins&outline_colour=${buttonTextColor}&coffee_colour=FFDD00"></a>`;
 		let supportHeader = containerEl.createDiv({ text: 'Support the continued development of this plugin.', cls: "setting-item-description"});
 		supportHeader.style.display = 'block';
 		supportHeader.style.marginBottom = '20px';
-
-
-		containerEl.createEl('h3', { text: 'Inlining Options:' });
+		
+		let hr = containerEl.createEl("hr");
+		hr.style.marginTop = "20px";
+		hr.style.marginBottom = "20px";
+		hr.style.borderColor = "var(--color-accent)";
+		hr.style.opacity = "0.5";
+		new Setting(containerEl)
+			.setName('Inlining Options:')
+			.setDesc("If all three of these are on the html files will be completely self-contained.")
+			.setHeading()
 
 		new Setting(containerEl)
 			.setName('Inline CSS')
@@ -210,11 +224,17 @@ export class ExportSettings extends PluginSettingTab
 					ExportSettings.settings.inlineImages = value;
 					await ExportSettings.saveSettings();
 				}));
-
-
-		containerEl.createEl('h3', { text: 'Formatting Options:' });
 		
 
+		hr = containerEl.createEl("hr");
+		hr.style.marginTop = "20px";
+		hr.style.marginBottom = "20px";
+		hr.style.borderColor = "var(--color-accent)";
+		hr.style.opacity = "0.5";
+		new Setting(containerEl)
+			.setName('Formatting Options:')
+			.setHeading()
+		
 		new Setting(containerEl)
 			.setName('Make names web style')
 			.setDesc('Make the names of files and folders lowercase and replace spaces with dashes.')
@@ -238,8 +258,40 @@ export class ExportSettings extends PluginSettingTab
 				}));
 
 		new Setting(containerEl)
+			.setName('Add Filename as Title')
+			.setDesc('If the first header is not an H1, include the file name as a title at the top of the page.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.addFilenameTitle)
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.addFilenameTitle = value;
+					await ExportSettings.saveSettings();
+				}));
+
+
+		hr = containerEl.createEl("hr");
+		hr.style.marginTop = "20px";
+		hr.style.marginBottom = "20px";
+		hr.style.borderColor = "var(--color-accent)";
+		hr.style.opacity = "0.5";
+		new Setting(containerEl)
+			.setName('Export Options:')
+			.setHeading()
+		
+		new Setting(containerEl)
+			.setName('Export in Background')
+			.setDesc('Export files in the background, this improves export times a HUGE amount and allows the files to export completely in the background.\n\nAs this is new, if you are encountering issues you can try turning this off, and report an issue on Github. There are a few types of embedded content it does not support yet.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.exportInBackground)
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.exportInBackground = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		new Setting(containerEl)
 			.setName('Beautify HTML')
-			.setDesc('Beautify the HTML text to make it more human readable, at the cost of export speed.')
+			.setDesc('Beautify the HTML text to make it more human readable at the cost of export speed.')
 			.addToggle((toggle) => toggle
 				.setValue(ExportSettings.settings.beautifyHTML)
 				.onChange(async (value) =>
@@ -248,10 +300,17 @@ export class ExportSettings extends PluginSettingTab
 					await ExportSettings.saveSettings();
 				}));
 
+
+		hr = containerEl.createEl("hr");
+		hr.style.marginTop = "20px";
+		hr.style.marginBottom = "20px";
+		hr.style.borderColor = "var(--color-accent)";
+		hr.style.opacity = "0.5";
 		new Setting(containerEl)
 			.setName('Include Plugin CSS')
+			.setDesc('Include the CSS from the following plugins in the exported HTML. If plugin features aren\'t rendering correctly, try adding the plugin to this list.')
 			.setHeading()
-
+			
 		let pluginsList = new FlowList(containerEl);
 		Utils.getPluginIDs().forEach(async (plugin) =>
 		{
@@ -278,6 +337,7 @@ export class ExportSettings extends PluginSettingTab
 				ExportSettings.saveSettings();
 			});
 		});
+				
 
 		let experimentalContainer = containerEl.createDiv();
 		let experimentalHR1 = experimentalContainer.createEl('hr');
@@ -297,20 +357,15 @@ export class ExportSettings extends PluginSettingTab
 		experimentalHeader.style.flexGrow = "0.1";
 		experimentalHeader.style.textAlign = "center";
 
+
 		new Setting(containerEl)
-		.setName('Export in Background')
-		.setDesc('Export files in the background, MUCH faster and less intrusive. However, embedded content may not be exported, like audio, GIFs, videos, some special plugin blocks, some images, etc.')
-		.addToggle((toggle) => toggle
-			.setValue(ExportSettings.settings.exportInBackground)
-			.onChange(async (value) =>
-			{
-				ExportSettings.settings.exportInBackground = value;
-				await ExportSettings.saveSettings();
-			}));
+			.setName('Graph View (PLEASE READ DESCRIPTION)')
+			.setDesc('This CANNOT be used with the file:// protocol, the assets for this also will not be inlined into the HTML file at this point.')
+			.setHeading()
 
 		new Setting(containerEl)
 			.setName('Include global graph view')
-			.setDesc('Will include an interactive graph view sim of the WHOLE vault simmilar to obsidian\'s. Currently the scripts for this cannot be inlined into a single HTML file. Also currently only supports a sim of the whole vault.')
+			.setDesc('Include an interactive graph view sim of the WHOLE vault similar to obsidian\'s. ')
 			.addToggle((toggle) => toggle
 				.setValue(ExportSettings.settings.includeGraphView)
 				.onChange(async (value) =>
@@ -320,10 +375,14 @@ export class ExportSettings extends PluginSettingTab
 				}
 				));
 
-		containerEl.createEl('h3', { text: 'Graph View Settings:'});
-
+		new Setting(containerEl)
+			.setName('Graph View Settings')
+			.setDesc('Settings to control the behavior and look of the graph view. For now there is no live preview of this, so you must export your files to see your changes.')
+			.setHeading()
+			
 		new Setting(containerEl)
 			.setName('Attraction Force')
+			.setDesc("How much should linked nodes attract each other? This will make the graph appear more clustered.")
 			.addSlider((slider) => slider
 				.setLimits(0, 100, 1)
 				.setValue(ExportSettings.settings.graphAttractionForce / (2 / 100))
@@ -337,9 +396,25 @@ export class ExportSettings extends PluginSettingTab
 				})
 				.showTooltip()
 			);
+
+		new Setting(containerEl)
+			.setName('Link Length')
+			.setDesc("How long should the links between nodes be? The shorter the links the closer connected nodes will cluster together.")
+			.addSlider((slider) => slider
+				.setLimits(0, 100, 1)
+				.setValue(ExportSettings.settings.graphLinkLength)
+				.setDynamicTooltip()
+				.onChange(async (value) =>
+				{
+					ExportSettings.settings.graphLinkLength = value;
+					await ExportSettings.saveSettings();
+				})
+				.showTooltip()
+			);
 		
 		new Setting(containerEl)
 			.setName('Repulsion Force')
+			.setDesc("How much should nodes repel each other? This will make the graph appear more spread out.")
 			.addSlider((slider) => slider
 				.setLimits(0, 100, 1)
 				.setValue(ExportSettings.settings.graphRepulsionForce / 3)
@@ -354,6 +429,7 @@ export class ExportSettings extends PluginSettingTab
 
 		new Setting(containerEl)
 			.setName('Central Force')
+			.setDesc("How much should nodes be attracted to the center? This will make the graph appear more dense and circular.")
 			.addSlider((slider) => slider
 				.setLimits(0, 100, 1)
 				.setValue(ExportSettings.settings.graphCentralForce / (5 / 100))
@@ -369,21 +445,8 @@ export class ExportSettings extends PluginSettingTab
 			);
 
 		new Setting(containerEl)
-			.setName('Link Length')
-			.addSlider((slider) => slider
-				.setLimits(0, 100, 1)
-				.setValue(ExportSettings.settings.graphLinkLength)
-				.setDynamicTooltip()
-				.onChange(async (value) =>
-				{
-					ExportSettings.settings.graphLinkLength = value;
-					await ExportSettings.saveSettings();
-				})
-				.showTooltip()
-			);
-
-		new Setting(containerEl)
 			.setName('Max Node Radius')
+			.setDesc("How large should the largest nodes be? Nodes are sized by how many links they have. The larger a node is the more it will attract other nodes. This can be used to create a good grouping around the most important nodes.")
 			.addSlider((slider) => slider
 				.setLimits(3, 15, 1)
 				.setValue(ExportSettings.settings.graphMaxNodeSize)
@@ -398,6 +461,7 @@ export class ExportSettings extends PluginSettingTab
 
 		new Setting(containerEl)
 			.setName('Min Node Radius')
+			.setDesc("How small should the smallest nodes be? The smaller a node is the less it will attract other nodes.")
 			.addSlider((slider) => slider
 				.setLimits(3, 15, 1)
 				.setValue(ExportSettings.settings.graphMinNodeSize)
@@ -412,7 +476,7 @@ export class ExportSettings extends PluginSettingTab
 
 		new Setting(containerEl)
 			.setName('Edge Pruning Factor')
-			.setDesc("Edges with a length below this threshold will not be rendered, however they will still contribute to the simulation. This can help large graphs look more organised. Hovering over a node will still display these links.")
+			.setDesc("Edges with a length above this threshold will not be rendered, however they will still contribute to the simulation. This can help large tangled graphs look more organised. Hovering over a node will still display these links.")
 			.addSlider((slider) => slider
 				.setLimits(0, 100, 1)
 				.setValue(100 - ExportSettings.settings.graphEdgePruning)
@@ -470,6 +534,20 @@ export class ExportModal extends Modal
 			padding-left: 1em;
 			padding-right: 1em;
 			color: var(--color-red);
+			border-radius: 5px;
+			display: block;
+			width: fit-content;`)
+
+			// create normal block with update notes
+			let updateNotes = contentEl.createEl('div', { text: HTMLExportPlugin.updateInfo.updateNote });
+			updateNotes.setAttribute("style",
+			`margin-block-start: calc(var(--h3-size)/2);
+			background-color: var(--background-secondary-alt);
+			padding: 4px;
+			padding-left: 1em;
+			padding-right: 1em;
+			color: var(--text-normal);
+			font-size: var(--font-ui-smaller);
 			border-radius: 5px;
 			display: block;
 			width: fit-content;`)

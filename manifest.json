@@ -8,5 +8,5 @@
 	"authorUrl": "https://github.com/KosmosisDire/obsidian-webpage-export",
 	"isDesktopOnly": true,
 	"fundingUrl": "https://www.buymeacoffee.com/nathangeorge",
-	"updateNote": "Experimental graph view and uber fast background export."
+	"updateNote": "- Experimental graph view\n- Uber fast background export\n- Instant link navigation with NO reload\n- Much more!"
 }

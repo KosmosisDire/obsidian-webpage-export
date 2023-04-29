@@ -11,7 +11,7 @@ const {shell} = require('electron')
 export default class HTMLExportPlugin extends Plugin
 {
 	static plugin: HTMLExportPlugin;
-	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string};
+	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string};
 
 	addTogglePostprocessor()
 	{
@@ -48,7 +48,36 @@ export default class HTMLExportPlugin extends Plugin
 				{
 					if(checking) return true;
 
-					this.exportFile(file, new Path(file.path));
+					this.exportFile(file, new Path(file.path)).then((exportedFile) =>
+					{
+						if (exportedFile && ExportSettings.settings.openAfterExport)
+						{
+							window.require('electron').remote.shell.openExternal(exportedFile.exportPathAbsolute.asString);
+						}
+					});
+				}
+
+				return false;
+			}
+		});
+
+		this.addCommand({
+			id: 'export-html-file-default',
+			name: 'Export current file to HTML - Previous Settings',
+			checkCallback: (checking: boolean) =>
+			{
+				let file = (Utils.getActiveTextView())?.file;
+				if(file instanceof TFile)
+				{
+					if(checking) return true;
+					let path = Utils.idealDefaultPath().joinString(file.name).setExtension("html");
+					this.exportFile(file, new Path(file.path), false, path, false).then((exportedFile) =>
+					{
+						if (exportedFile && ExportSettings.settings.openAfterExport)
+						{
+							window.require('electron').remote.shell.openExternal(exportedFile.exportPathAbsolute.asString);
+						}
+					});
 				}
 
 				return false;
@@ -85,7 +114,7 @@ export default class HTMLExportPlugin extends Plugin
 			let exportInfo = await this.exportFolder(Path.emptyPath);
 			if (exportInfo.success && ExportSettings.settings.openAfterExport)
 			{
-				window.require('electron').remote.shell.openPath(exportInfo.exportedPath.asString);
+				window.require('electron').remote.shell.openExternal(exportInfo.exportedPath.asString);
 			}
 		});
 
@@ -113,7 +142,7 @@ export default class HTMLExportPlugin extends Plugin
 								let exportedFile = await this.exportFile(file, path);
 								if (exportedFile && ExportSettings.settings.openAfterExport)
 								{
-									window.require('electron').remote.shell.openPath(exportedFile.exportPathAbsolute.asString);
+									window.require('electron').remote.shell.openExternal(exportedFile.exportPathAbsolute.asString);
 								}
 							}
 							else if(file instanceof TFolder)
@@ -121,7 +150,7 @@ export default class HTMLExportPlugin extends Plugin
 								let exportInfo = await this.exportFolder(new Path(file.path));
 								if (exportInfo.success && ExportSettings.settings.openAfterExport)
 								{
-									window.require('electron').remote.shell.showPath(exportInfo.exportedPath.asString);
+									window.require('electron').remote.shell.openExternal(exportInfo.exportedPath.asString);
 								}
 							}
 							else
@@ -133,11 +162,16 @@ export default class HTMLExportPlugin extends Plugin
 				});
 			})
 		);
-
 	}
 
 	async exportFile(file: TFile, exportFromPath: Path, partOfBatch: boolean = false, exportToPath: Path | undefined = undefined, showSettings: boolean = true) : Promise<ExportFile | undefined>
 	{
+		if(file.extension != "md")
+		{
+			new Notice(`❗ Unfortunately exporting ${file.extension.replaceAll(".", "")} files is not supported yet.`, 7000);
+			return undefined;
+		}
+
 		// Open the settings modal and wait until it's closed
 		if (showSettings)
 		{
@@ -244,7 +278,7 @@ export default class HTMLExportPlugin extends Plugin
 		return {success: true, exportedPath: htmlPath};
 	}
 
-	async checkForUpdates(): Promise<{updateAvailable: boolean, latestVersion: string, currentVersion: string}>
+	async checkForUpdates(): Promise<{updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string}>
 	{	
 		let currentVersion = this.manifest.version;
 
@@ -253,10 +287,11 @@ export default class HTMLExportPlugin extends Plugin
 			let url = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/manifest.json";
 			let manifest = await fetch(url, {cache: "no-store"}).then((response) => response.json());
 
-			let latestVersion = manifest.version;
+			let latestVersion = manifest.version ?? currentVersion;
 			let updateAvailable = currentVersion < latestVersion;
+			let updateNote = manifest.updateNote ?? "";
 			
-			HTMLExportPlugin.updateInfo = {updateAvailable: updateAvailable, latestVersion: latestVersion, currentVersion: currentVersion};
+			HTMLExportPlugin.updateInfo = {updateAvailable: updateAvailable, latestVersion: latestVersion, currentVersion: currentVersion, updateNote: updateNote};
 			
 			if(updateAvailable) console.log("Update available: " + latestVersion + " (current: " + currentVersion + ")");
 			
@@ -265,7 +300,7 @@ export default class HTMLExportPlugin extends Plugin
 		catch
 		{
 			console.log("Could not check for update");
-			HTMLExportPlugin.updateInfo = {updateAvailable: false, latestVersion: currentVersion, currentVersion: currentVersion};
+			HTMLExportPlugin.updateInfo = {updateAvailable: false, latestVersion: currentVersion, currentVersion: currentVersion, updateNote: ""};
 			return HTMLExportPlugin.updateInfo;
 		}
 	}

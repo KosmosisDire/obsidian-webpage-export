@@ -493,16 +493,49 @@ export class Utils
 		return new Promise( resolve => setTimeout(resolve, ms) );
 	}
 
+	static padStringBeggining(str: string, length: number, char: string)
+	{
+		return char.repeat(length - str.length) + str;
+	}
+
 	static generateProgressbar(title: string, progress: number, max: number, barLength: number, fullChar: string, emptyChar: string): string
 	{
+		return `${title}: ${Utils.padStringBeggining(progress + "/" + max, 13, " ")}\n\n${fullChar.repeat(Math.floor((progress / max) * barLength))}${emptyChar.repeat(barLength - Math.floor((progress / max) * barLength))}`;
+	}
 
-		function padStringBeggining(str: string, length: number, char: string)
+	static sampleCSSColorHex(variable: string, testParentEl: HTMLElement): { a: number, hex: string }
+	{
+		let testEl = document.createElement('div');
+		testEl.style.setProperty('display', 'none');
+		testEl.style.setProperty('color', 'var(' + variable + ')');
+		testParentEl.appendChild(testEl);
+
+		let col = getComputedStyle(testEl).color;
+		let opacity = getComputedStyle(testEl).opacity;
+
+		testEl.remove();
+
+		function toColorObject(str: string)
 		{
-			return char.repeat(length - str.length) + str;
+			var match = str.match(/rgb?\((\d+),\s*(\d+),\s*(\d+)\)/);
+			return match ? {
+				red: parseInt(match[1]),
+				green: parseInt(match[2]),
+				blue: parseInt(match[3]),
+				alpha: 1
+			} : null
 		}
 
-		return `${title}: ${padStringBeggining(progress + "/" + max, 13, " ")}\n\n${fullChar.repeat(Math.floor((progress / max) * barLength))}${emptyChar.repeat(barLength - Math.floor((progress / max) * barLength))}`;
-	}
+		var color = toColorObject(col), alpha = parseFloat(opacity);
+		return isNaN(alpha) && (alpha = 1),
+		color ? {
+			a: alpha * color.alpha,
+			hex: Utils.padStringBeggining(color.red.toString(16), 2, "0") + Utils.padStringBeggining(color.green.toString(16), 2, "0") + Utils.padStringBeggining(color.blue.toString(16), 2, "0")
+		} : {
+			a: alpha,
+			hex: "ffffff"
+		}
+	};
 
 
 	static async getText(path: Path): Promise<string | undefined>

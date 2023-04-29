@@ -320,7 +320,7 @@ export class HTMLGenerator
 	private static async getSnippetsCSS(snippetNames: string[]) : Promise<string>
 	{
 		let snippetsList = await Utils.getStyleSnippetsContent();
-		let snippets = "";
+		let snippets = "\n";
 
 		for (let i = 0; i < snippetsList.length; i++)
 		{
@@ -348,7 +348,7 @@ export class HTMLGenerator
 		}
 
 		// @ts-ignore
-		HTMLGenerator.mathStyles = window.MathJax.chtmlStylesheet().innerHTML;
+		HTMLGenerator.mathStyles = window.MathJax.chtmlStylesheet().innerHTML.replaceAll("app://obsidian.md/", "https://publish.obsidian.md/");
 	}
 
 	private static async getAssetDownloads() : Promise<Downloadable[]>
@@ -529,16 +529,25 @@ export class HTMLGenerator
 			if(fileTab) fileTab.detach();
 		}
 
+		if (ExportSettings.settings.addFilenameTitle)
+			HTMLGenerator.addTitle(file);
+
+		// add heading fold arrows
+		let arrowHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='svg-icon right-triangle'><path d='M3 8L12 17L21 8'></path></svg>";
+		let headings = $(file.document).find("div h1, div h2, div h3, div h4, div h5, div h6");
+		headings.each((index, element) =>
+		{
+			// continue if heading already has an arrow
+			if ($(element).find(".heading-collapse-indicator").length > 0) return;
+
+			let el = file.document.createElement("div");
+			el.setAttribute("class", "heading-collapse-indicator collapse-indicator collapse-icon");
+			el.innerHTML = arrowHTML;
+			element.prepend(el);
+		});
+
 		HTMLGenerator.fixLinks(file); // modify links to work outside of obsidian (including relative links)
-
-		// delete all mjx-math objects. This seems to fix some mathjax rendering issues. But it may cause other issues.
-		// let math = $(file.document).find("mjx-math");
-		// math.each((index, element) =>
-		// {
-		// 	let el = $(element);
-		// 	el.remove();
-		// });
-
+		
 		// inline / outline images
 		let outlinedImages : Downloadable[] = [];
 		if (ExportSettings.settings.inlineImages)
@@ -613,17 +622,6 @@ export class HTMLGenerator
 			}
 		});
 
-		// add heading fold arrows
-		let arrowHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='svg-icon right-triangle'><path d='M3 8L12 17L21 8'></path></svg>";
-		let headings = $(file.document).find("div h1, div h2, div h3, div h4, div h5, div h6");
-		headings.each((index, element) =>
-		{
-			let el = file.document.createElement("div");
-			el.setAttribute("class", "heading-collapse-indicator collapse-indicator collapse-icon");
-			el.innerHTML = arrowHTML;
-			element.prepend(el);
-		});
-
 		// assemble and rander mermaid diagrams
 		let mermaidDiagrams = $(file.document).find("pre.language-mermaid code");
 		mermaidDiagrams.each((index, element) =>
@@ -632,8 +630,10 @@ export class HTMLGenerator
 			let diagram = el.text();
 			let diagramEl = file.document.createElement("div");
 			diagramEl.setAttribute("class", "mermaid");
+
+			let className = `mermaid-${file.exportPath.copy.makeWebStyle().basename}-${index}`
 			//@ts-ignore
-			let result = window.mermaid.render(`mermaid-${file.exportPath.basename}-${index}`, diagram);
+			let result = window.mermaid.render(className, diagram);
 			el.parent().replaceWith(diagramEl);
 			diagramEl.innerHTML = result;
 		});
@@ -648,6 +648,18 @@ export class HTMLGenerator
 			div.appendChild(el[0]);
 		});
 
+	}
+
+	private static addTitle(file: ExportFile)
+	{
+		let currentTitle = file.document.querySelector("h1, h2, h3, h4, h5, h6");
+		if (!currentTitle || !["h1", "H1"].contains(currentTitle.tagName))
+		{
+			let divContainer = file.document.createElement("div");
+			let title = divContainer.createEl("h1");
+			title.innerText = file.markdownFile.basename;
+			file.contentElement.prepend(divContainer);
+		}
 	}
 
 	private static generateSideBars(middleContent: HTMLElement, file: ExportFile): {container: HTMLElement, left: HTMLElement, right: HTMLElement, center: HTMLElement}
@@ -716,7 +728,7 @@ export class HTMLGenerator
 
 		scripts += 
 		`
-		<script>
+		<script id="relative-paths">
 			let rootPath = "${relativePaths.rootPath}";
 			let mediaPath = "${relativePaths.mediaPath}";
 			let jsPath = "${relativePaths.jsPath}";
@@ -848,7 +860,7 @@ export class HTMLGenerator
 				if (htmlCompatibleExt.includes(targetRelativePath.extensionName)) targetRelativePath.setExtension("html");
 				if (ExportSettings.settings.makeNamesWebStyle) targetRelativePath.makeWebStyle();
 
-				let finalHref = (targetRelativePath + targetHeader).replaceAll(" ", "_");
+				let finalHref = targetRelativePath + targetHeader.replaceAll(" ", "_");
 				$(this).attr("href", finalHref);
 			}
 		});

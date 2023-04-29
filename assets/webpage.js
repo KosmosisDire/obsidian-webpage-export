@@ -1,9 +1,69 @@
-jQuery(function()
+async function loadDocument(url, pushHistory = true)
 {
-    // THEME TOGGLE
+	let response = await fetch(url);
+	let doc = document.implementation.createHTMLDocument();
 
-	// load saved theme state
-    if (localStorage.getItem("theme_toggle") != null)
+	
+
+	deinitializePage();
+
+	if (response.ok)
+	{
+		let html = (await response.text()).replaceAll("<!DOCTYPE html>", "").replaceAll("<html>", "").replaceAll("</html>", "");
+		doc.documentElement.innerHTML = html;
+
+		document.querySelector(".center-content").innerHTML = doc.querySelector(".center-content").innerHTML;
+		document.querySelector(".outline-container").innerHTML = doc.querySelector(".outline-container").innerHTML;
+		document.title = doc.title;
+
+		let pathsCode = doc.querySelector("#relative-paths").textContent;
+		// get a list of strings contained inside of ""
+		let paths = pathsCode.match(/"(.*?)"/g).map(function (val) { return val.replace(/"/g, ""); });
+		rootPath = paths[0];
+		mediaPath = paths[1];
+		jsPath = paths[2];
+		cssPath = paths[3];
+
+		let splitURL = url.split("#");
+		let pathnameTarget = splitURL[0] ?? url;
+		let headingTarget = splitURL.length > 1 ? splitURL[1] : null;
+
+		// if the url has a heading, scroll to it
+		if (headingTarget) document.getElementById(headingTarget).scrollIntoView();
+
+		if(pushHistory) window.history.pushState({ path: pathnameTarget }, '', pathnameTarget);
+	}
+	else
+	{
+		// if the page is not able to load instead add a header saying the page doesn't exist
+		document.querySelector(".markdown-preview-view").innerHTML = 
+		`
+		<div>
+			<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
+				<h1 style>Page does not exist!</h1>
+			</center>
+		</div>
+		`;
+
+		document.querySelector(".outline-container").innerHTML = "";
+
+		document.title = "Page Not Found";
+
+		if(pushHistory) window.history.pushState({ path: window.location.pathname }, '', window.location.pathname);
+	}
+
+	initializePage();
+
+	return doc;
+}
+
+//#region Initialization
+
+function setupThemeToggle()
+{
+	console.log("Setting up theme toggle");
+
+	if (localStorage.getItem("theme_toggle") != null)
     {
         setThemeToggle(localStorage.getItem("theme_toggle") == "true");
     }
@@ -105,32 +165,12 @@ jQuery(function()
 
 		lastScheme = newColorScheme;
     });
+}
 
-    // MAKE CALLOUTS COLLAPSIBLE
-    // if the callout title is clicked, toggle the display of .callout-content
-    $(".callout.is-collapsible .callout-title").on("click tap", function()
-    {
-        var isCollapsed = $(this).parent().hasClass("is-collapsed");
-
-        if (isCollapsed)
-        {
-            $(this).parent().toggleClass("is-collapsed");
-        }
-
-        $(this).parent().find(".callout-content").slideToggle(duration = 100, complete = function()
-        {
-            if (!isCollapsed)
-            {
-                $(this).parent().toggleClass("is-collapsed");
-            }
-        });
-    });
-
-    
-
+function setupHeaders()
+{
     // MAKE HEADERS COLLAPSIBLE
     // if "heading-collapse-indicator" is clicked, toggle the display of every div until the next heading of the same or lower level
-
     function getHeadingContentsSelector(header)
     {
         let headingLevel = $(header).children().first().prop("tagName").toLowerCase();
@@ -194,22 +234,26 @@ jQuery(function()
 		setHeaderCollapse($(this).parent().parent(), !isCollapsed);
     });
 
-	// open outline header when an internal link that points to that header is clicked
+	// unfold header when an internal link that points to that header is clicked
 	$(".internal-link").on("click tap", function()
 	{
 		let target = $(this).attr("href");
 
+		// if the target is a header uncollapse it
 		if (target.startsWith("#"))
 		{
 			let header = $(document.getElementById(target.substring(1)));
 
 			setHeaderCollapse($(header).parent(), false);
 		}
-	});
 
-    // MAKE OUTLINE COLLAPSIBLE
+	});
+}
+
+function setupOutline() 
+{
+	// MAKE OUTLINE COLLAPSIBLE
     // if "outline-header" is clicked, toggle the display of every div until the next heading of the same or lower level
-    
 	function setOutlineCollapse(header, collapse)
 	{
 		if (collapse)
@@ -261,8 +305,33 @@ jQuery(function()
     {
         $(this).parent().find(".collapse-icon").hide();
     });
+}
 
+function setupCallouts()
+{
+	// MAKE CALLOUTS COLLAPSIBLE
+    // if the callout title is clicked, toggle the display of .callout-content
+    $(".callout.is-collapsible .callout-title").on("click tap", function()
+    {
+        var isCollapsed = $(this).parent().hasClass("is-collapsed");
 
+        if (isCollapsed)
+        {
+            $(this).parent().toggleClass("is-collapsed");
+        }
+
+        $(this).parent().find(".callout-content").slideToggle(duration = 100, complete = function()
+        {
+            if (!isCollapsed)
+            {
+                $(this).parent().toggleClass("is-collapsed");
+            }
+        });
+    });
+}
+
+function setupCheckboxes()
+{
 	// Fix checkboxed toggling .is-checked
 	$(".task-list-item-checkbox").on("click tap", function()
 	{
@@ -279,20 +348,10 @@ jQuery(function()
 	{
 		$(this).find('input[type="checkbox"]').prop("checked", true);
 	});
+}
 
-	// make code snippet block copy button copy the code to the clipboard
-	$(".copy-code-button").on("click tap", function()
-	{
-		let code = $(this).parent().find("code").text();
-		navigator.clipboard.writeText(code);
-		$(this).text("Copied!");
-		// set a timeout to change the text back
-		setTimeout(function()
-		{
-			$(".copy-code-button").text("Copy");
-		}, 2000);
-	});
-
+function setupCanvas()
+{
 	let focusedNode = null;
 
 	// make canvas nodes selectable
@@ -319,8 +378,79 @@ jQuery(function()
 			$(".canvas-node-content-blocker").show();
 		}
 	});
+}
 
-	// unhide html elements that are hidden by default
-	// $("html").css("visibility", "visible");
-	// $("html").css("background-color", "var(--background-primary)");
-});
+function setupCodeblocks()
+{
+	// make code snippet block copy button copy the code to the clipboard
+	$(".copy-code-button").on("click tap", function()
+	{
+		let code = $(this).parent().find("code").text();
+		navigator.clipboard.writeText(code);
+		$(this).text("Copied!");
+		// set a timeout to change the text back
+		setTimeout(function()
+		{
+			$(".copy-code-button").text("Copy");
+		}, 2000);
+	});
+}
+
+function setupLinks()
+{
+	$(".internal-link, .footnote-link").on("click tap", function()
+	{
+		let target = $(this).attr("href");
+
+		// this is linking to a different page
+		if (!target.startsWith("#"))
+		{
+			console.log("Loading document: " + target);
+			// if the target is not a header, load the page
+			loadDocument(target);
+
+			// make sure link doesn't redirect
+			return false;
+		}
+		else
+		{
+			document.getElementById(target.substring(1)).scrollIntoView();
+			return false;
+		}
+	});
+
+    window.onpopstate = function(event)
+    {
+		loadDocument(window.location.pathname, false);
+    }
+}
+
+function initializePage()
+{
+    setupThemeToggle();
+    setupHeaders();
+    setupOutline();
+	setupCallouts();
+	setupCheckboxes();
+	setupCanvas();
+	setupCodeblocks();
+	setupLinks();
+}
+
+function deinitializePage()
+{
+	// remove all event listeners
+	$(".toggle__input").off("click tap");
+	$(".callout.is-collapsible .callout-title").off("click tap");
+	$(".heading-collapse-indicator").off("click tap");
+	$(".outline-item-contents > .collapse-icon").off("click tap");
+	$(".collapse-all").off("click tap");
+	$(".task-list-item-checkbox").off("click tap");
+	$(".copy-code-button").off("click tap");
+	$(".canvas-node-content-blocker").off("click tap");
+	$("center-content").find("*").off("click tap");
+}
+
+//#endregion
+
+jQuery(initializePage);
