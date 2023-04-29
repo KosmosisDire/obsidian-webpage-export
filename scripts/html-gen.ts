@@ -149,7 +149,7 @@ export class HTMLGenerator
 	static leafHandler: LeafHandler = new LeafHandler();
 
 	// When this is enabled the plugin will download the extra .css and .js files from github.
-	static autoDownloadExtras = false;
+	static autoDownloadExtras = true;
 
 	private static vaultPluginsPath: Path = Path.vaultPath.joinString(app.vault.configDir, "plugins/").makeAbsolute();
 	private static thisPluginPath: Path;
@@ -187,14 +187,14 @@ export class HTMLGenerator
 	private static tinyColorJS: string = "";
 
 	// the raw github urls for the extra files
-	private static webpagejsURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/webpage.js";
-	private static pluginStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/plugin-styles.css";
-	private static obsidianStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/obsidian-styles.css";
-	private static graphViewJSURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_view.js";
-	private static graphWASMJSURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_wasm.js";
-	private static graphWASMURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph_wasm.wasm";
-	private static renderWorkerURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/graph-render-worker.js";
-	private static tinycolorURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/assets/tinycolor.js";
+	private static webpagejsURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/webpage.js";
+	private static pluginStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/plugin-styles.css";
+	private static obsidianStylesURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/obsidian-styles.css";
+	private static graphViewJSURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/graph_view.js";
+	private static graphWASMJSURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/graph_wasm.js";
+	private static graphWASMURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/graph_wasm.wasm";
+	private static renderWorkerURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/graph-render-worker.js";
+	private static tinycolorURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/tinycolor.js";
 
 	private static async downloadAssets()
 	{

@@ -284,7 +284,7 @@ export default class HTMLExportPlugin extends Plugin
 
 		try
 		{
-			let url = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/graph-view/manifest.json";
+			let url = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/manifest.json";
 			let manifest = await fetch(url, {cache: "no-store"}).then((response) => response.json());
 
 			let latestVersion = manifest.version ?? currentVersion;
