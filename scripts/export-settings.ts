@@ -1,8 +1,9 @@
 import { Modal, Plugin, PluginSettingTab, Setting } from 'obsidian';
-import { Path, Utils } from './utils';
+import { Utils } from './utils';
 import { writeFile } from "fs/promises";
-import { HTMLGenerator } from './html-gen';
+import { HTMLGenerator } from './html-generator';
 import HTMLExportPlugin from './main';
+import { Path } from './UtilClasses';
 
 export interface ExportSettingsData 
 {
@@ -15,7 +16,6 @@ export interface ExportSettingsData
 	allowFoldingHeadings: boolean;
 	addFilenameTitle: boolean;
 
-	exportInBackground: boolean;
 	beautifyHTML: boolean;
 
 	graphAttractionForce: number;
@@ -47,7 +47,6 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	allowFoldingHeadings: true,
 	addFilenameTitle: true,
 
-	exportInBackground: true,
 	beautifyHTML: false,
 
 	graphAttractionForce: 50,
@@ -147,7 +146,7 @@ export class ExportSettings extends PluginSettingTab
 	{
 		ExportSettings.settings = Object.assign({}, DEFAULT_SETTINGS, await ExportSettings.plugin.loadData());
 		ExportSettings.settings.customLineWidth = ExportSettings.settings.customLineWidth.toString();
-		if (ExportSettings.settings.customLineWidth == "0") ExportSettings.settings.customLineWidth = ""; 
+		if (ExportSettings.settings.customLineWidth === "0") ExportSettings.settings.customLineWidth = ""; 
 
 		//Download third-party-styles-blacklist.txt
 		let thirdPartyStylesBlacklist = await fetch(ExportSettings.thirdPartyStylesBlacklistURL);
@@ -275,17 +274,6 @@ export class ExportSettings extends PluginSettingTab
 		new Setting(containerEl)
 			.setName('Export Options:')
 			.setHeading()
-		
-		new Setting(containerEl)
-			.setName('Export in Background')
-			.setDesc('Export files in the background, this improves export times a HUGE amount and allows the files to export completely in the background.\n\nAs this is new, if you are encountering issues you can try turning this off, and report an issue on Github. There are a few types of embedded content it does not support yet.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.exportInBackground)
-				.onChange(async (value) =>
-				{
-					ExportSettings.settings.exportInBackground = value;
-					await ExportSettings.saveSettings();
-				}));
 
 		new Setting(containerEl)
 			.setName('Beautify HTML')

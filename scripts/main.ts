@@ -1,11 +1,14 @@
 // imports from obsidian API
-import { Notice, Plugin, TFile, TFolder, loadMathJax, loadMermaid} from 'obsidian';
+import { MarkdownPreviewView, MarkdownRenderer, MarkdownView, Notice, Plugin, TFile, TFolder, View, loadMathJax, loadMermaid} from 'obsidian';
 
 // modules that are part of the plugin
 import { ExportModal, ExportSettings } from './export-settings';
-import { Utils, Downloadable, Path } from './utils';
-import { ExportFile, HTMLGenerator } from './html-gen';
+import { Utils } from './utils';
+import { ExportFile, HTMLGenerator } from './html-generator';
 import { GraphGenerator } from './graph-view/graph-gen';
+import { LeafHandler } from './leaf-handler';
+import { randomUUID } from 'crypto';
+import { Downloadable, Path } from './UtilClasses';
 const {shell} = require('electron') 
 
 export default class HTMLExportPlugin extends Plugin
@@ -27,7 +30,7 @@ export default class HTMLExportPlugin extends Plugin
 			let codeBlocks = element.querySelectorAll('code, span.cm-inline-code');
 			codeBlocks.forEach((codeBlock) =>
 			{
-				if (codeBlock instanceof HTMLElement && codeBlock.innerText == "theme-toggle")
+				if (codeBlock instanceof HTMLElement && codeBlock.innerText === "theme-toggle")
 				{
 					let toggleEl = HTMLGenerator.generateDarkmodeToggle();
 					codeBlock.replaceWith(toggleEl);
@@ -96,6 +99,50 @@ export default class HTMLExportPlugin extends Plugin
 
 	async onload()
 	{
+		
+		// let renderEl = document.createElement('div');
+		// renderEl.addClass("workspace-leaf-content");
+		// renderEl.setAttribute("data-type", "markdown");
+		// renderEl.setAttribute("data-mode", "preview");
+		// console.log(renderEl);
+		// return;
+		
+		// performance.mark("start");
+
+		
+
+		// console.log(leaf);
+
+
+		// let allFiles = app.vault.getMarkdownFiles();
+		// for (let i = 0; i < allFiles.length; i++)
+		// {
+		// 	console.log("\n\n" + i + allFiles[i].path + "\n\n");
+
+		// 	await leaf.openFile(allFiles[i]);
+
+		// 	if(!(leaf.view instanceof MarkdownView)) continue;
+		// 	let success = await Utils.waitUntil(() => leaf.view.previewMode, 2000, 10);
+		// 	if (!success) continue;
+		// 	Utils.changeViewMode(leaf.view, "preview");
+
+		// 	let lastRender = leaf.view.previewMode.renderer.lastRender;
+		// 	leaf.view.previewMode.renderer.rerender(true);
+		// 	await Utils.waitUntil(() => leaf.view.previewMode.renderer.lastRender != lastRender, 10000, 10);
+		// 	if (!success) continue;
+
+		// 	console.log(leaf.view.previewMode.containerEl.innerHTML);
+		// }
+
+		// leaf.detach();
+
+		// performance.mark("end");
+
+		// performance.measure("test", "start", "end");
+		// console.log(performance.getEntriesByName("test")[0].duration);
+
+		// return;
+
 		console.log('loading webpage-html-export plugin');
 		HTMLExportPlugin.plugin = this;
 
@@ -191,21 +238,33 @@ export default class HTMLExportPlugin extends Plugin
 
 		if (!partOfBatch)
 		{
-			// if we are starting a new export then we need to regenerate the graph in case it changed.
-			GraphGenerator.clearGraphCache();
+			// if we are starting a new export then begin a new batch
+			await HTMLGenerator.beginBatch();
+			HTMLGenerator.reportProgress(1, 2, "Generating HTML", file.basename, "var(--color-accent)");
 		}
 
 		// the !partOfBatch is passed to forceExportToRoot. 
 		// If this is a single file export then export it to the folder specified rather than into it's subfolder.
-		let exportedFile = new ExportFile(file, exportToPath.directory.absolute(), exportFromPath.directory, partOfBatch, exportToPath.fullName, !partOfBatch);
-		await HTMLGenerator.generateWebpage(exportedFile);
+		try
+		{
+			var exportedFile = new ExportFile(file, exportToPath.directory.absolute(), exportFromPath.directory, partOfBatch, exportToPath.fullName, !partOfBatch);
+			await HTMLGenerator.generateWebpage(exportedFile);
+		}
+		catch (e)
+		{
+			HTMLGenerator.reportError("Error while generating HTML!", e, "var(--color-red)");
+			return undefined;
+		}
 
 		if(!partOfBatch) 
 		{
 			// file downloads are handled outside of the export function if we are exporting a batch.
 			// If this is not a batch export, then we need to download the files here instead.
-			await Utils.downloadFiles(exportedFile.downloads, exportToPath.directory, false);
+			await Utils.downloadFiles(exportedFile.downloads, exportToPath.directory);
 			new Notice("✅ Finished HTML Export:\n\n" + exportToPath.asString, 5000);
+
+			// if we are the only file then end the batch
+			HTMLGenerator.endBatch();
 		}
 
 		return exportedFile;
@@ -213,6 +272,8 @@ export default class HTMLExportPlugin extends Plugin
 
 	async exportFolder(folderPath: Path, showSettings: boolean = true) : Promise<{success: boolean, exportedPath: Path}>
 	{
+		performance.mark("start");
+
 		// Open the settings modal and wait until it's closed
 		if (showSettings)
 		{
@@ -226,18 +287,16 @@ export default class HTMLExportPlugin extends Plugin
 		// get files to export
 		let allFiles = this.app.vault.getMarkdownFiles();
 		// if we are at the root path export all files, otherwise only export files in the folder we are exporting
-		let filesToExport = folderPath.isEmpty ? allFiles : allFiles.filter((file) => file.path.startsWith(folderPath.asString) && file.extension == "md");
+		let filesToExport = folderPath.isEmpty ? allFiles : allFiles.filter((file) => file.path.startsWith(folderPath.asString) && file.extension === "md");
 
 		if (filesToExport.length > 100000 || filesToExport.length <= 0)
 		{
-			new Notice(`❗Invalid number of files to export: ${filesToExport.length}.\n\nPlease report on GitHub.`, 0);
+			new Notice(`❗Invalid number of files to export: ${filesToExport.length}.\n\nPlease report on GitHub if there are markdown files in this folder.`, 0);
 			return {success: false, exportedPath: htmlPath};
 		}
 
-		GraphGenerator.clearGraphCache();
-
-		let lastProgressMessage = Utils.generateProgressbar("Generating HTML", 1, filesToExport.length, 15, "▰","▱");
-		let progressNotice = new Notice(lastProgressMessage, 0);
+		await HTMLGenerator.beginBatch();
+		HTMLGenerator.reportProgress(0, filesToExport.length, "Generating HTML", "...", "var(--color-accent)");
 
 		let externalFiles: Downloadable[] = [];
 
@@ -246,6 +305,9 @@ export default class HTMLExportPlugin extends Plugin
 			for (let i = 0; i < filesToExport.length; i++)
 			{
 				let file = filesToExport[i];
+
+				HTMLGenerator.reportProgress(i, filesToExport.length, "Generating HTML", file.basename, "var(--color-accent)");
+
 				let filePath = htmlPath.joinString(file.name).setExtension("html");
 				let exportedFile = await this.exportFile(file, folderPath, true, filePath, false);
 				if (exportedFile) 
@@ -253,27 +315,42 @@ export default class HTMLExportPlugin extends Plugin
 					externalFiles.push(...exportedFile.downloads);
 
 					// remove duplicates
-					externalFiles = externalFiles.filter((file, index) => externalFiles.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath && f.filename == file.filename) == index);
+					externalFiles = externalFiles.filter((file, index) => externalFiles.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath && f.filename === file.filename) == index);
 				}
 
-				lastProgressMessage = Utils.generateProgressbar("Generating HTML", i+1, filesToExport.length, 15, "▰","▱");
-				progressNotice.setMessage(lastProgressMessage);
 			}
 		}
 		catch (e)
 		{
 			console.error(e);
-			progressNotice.setMessage("❗ " + lastProgressMessage);
+			HTMLGenerator.reportError("Error while generating HTML!", e, "var(--color-red)");
 			return {success: false, exportedPath: htmlPath};
 		}
 
-		await Utils.delay(100);
-		progressNotice.hide();
+		let errorDuringDownload = false;
+		await Utils.downloadFiles(externalFiles, htmlPath, 
+			(progress, max, filename) =>
+			{
+				HTMLGenerator.reportProgress(progress, max, "Saving HTML files to disk", filename, "var(--color-green)");
+			},
+			(error) => 
+			{
+				HTMLGenerator.reportError("Error saving HTML files to disk!", error, "var(--color-red)");
+				errorDuringDownload = true;
+			});
 
-		await Utils.downloadFiles(externalFiles, htmlPath, true);
+		if (errorDuringDownload) return {success: false, exportedPath: htmlPath};
+
+		HTMLGenerator.endBatch();
+
+		await Utils.delay(200);
 
 		new Notice("✅ Finished HTML Export:\n\n" + htmlPath, 5000);
 		console.log("Finished HTML Export: " + htmlPath);
+
+		performance.mark("end");
+		performance.measure("exportFolder", "start", "end");
+		console.log(performance.getEntriesByName("exportFolder")[0].duration + "ms");
 
 		return {success: true, exportedPath: htmlPath};
 	}

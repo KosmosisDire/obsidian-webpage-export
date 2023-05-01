@@ -124,7 +124,6 @@ async function RunGraphView()
 
             startingCameraOffset = JSON.parse(localStorage.getItem("cameraOffset"));
             startingCameraScale = JSON.parse(localStorage.getItem("cameraScale"));
-            // console.log(startingCameraOffset, startingCameraScale);
 
             return positions;
         }
