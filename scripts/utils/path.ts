@@ -3,27 +3,21 @@ import {  existsSync } from 'fs';
 import { FileSystemAdapter, Notice } from 'obsidian';
 import { Utils } from './utils';
 import { promises as fs } from 'fs';
-
-export class Downloadable
-{
-	filename: string = "";
-	content: string | Buffer = "";
-	type: string = "text/plain";
-	relativeDownloadPath: Path;
-	useUnicode: boolean = true;
-
-	constructor(filename: string, content: string | Buffer, type: string = "text/plain", vaultRelativeDestination: Path, useUnicode: boolean = true)
-	{
-		this.filename = filename;
-		this.content = content;
-		this.type = type;
-		this.relativeDownloadPath = vaultRelativeDestination;
-		this.useUnicode = useUnicode;
-	}
-}
+import internal from 'stream';
 
 export class Path
 {
+	private static logQueue: { title: string, message: string, type: "info" | "warn" | "error" | "fatal" }[] = [];
+	private static log(title: string, message: string, type: "info" | "warn" | "error" | "fatal")
+	{
+		this.logQueue.push({ title: title, message: message, type: type });
+	}
+	public static dequeueLog(): { title: string, message: string, type: "info" | "warn" | "error" | "fatal" }[]
+	{
+		let queue = this.logQueue;
+		this.logQueue = [];
+		return queue;
+	}
 	
 	private _root: string = "";
 	private _dir: string = "";
@@ -62,26 +56,22 @@ export class Path
 		this._isFile = this._ext != "";
 		this._exists = undefined;
 
-		// if (this._isWindows)
-		// {
-		// 	this._root = this._root.replaceAll("/", "\\");
-		// 	this._dir = this._dir.replaceAll("/", "\\");
-		// 	this._parent = this._parent.replaceAll("/", "\\");
-		// 	this._fullPath = this._fullPath.replaceAll("/", "\\");
-		// }
+		if (this._isWindows)
+		{
+			this._root = this._root.replaceAll("/", "\\");
+			this._dir = this._dir.replaceAll("/", "\\");
+			this._parent = this._parent.replaceAll("/", "\\");
+			this._fullPath = this._fullPath.replaceAll("/", "\\");
+		}
 
 		this._exists; // force a re-evaluation of the exists property which will also throw an error if the path does not exist
 		return this;
 	}
 
-	private static makePathUnicodeCompatible(path: string): string
-	{
-		return decodeURI(path);
-	}
-
 	private static parsePath(path: string): { root: string, dir: string, parent: string, base: string, ext: string, name: string, fullPath: string }
 	{
-		path = this.makePathUnicodeCompatible(path);
+		path = decodeURI(path);
+
 		let parsed = pathTools.parse(path);
 
 		let parent = parsed.dir;
@@ -103,7 +93,7 @@ export class Path
 
 	private static joinStringPaths(...paths: string[]): string
 	{
-		return this.makePathUnicodeCompatible(pathTools.join(...paths));
+		return decodeURI(pathTools.join(...paths));
 	}
 
 	public static joinPath(...paths: Path[]): Path
@@ -151,6 +141,17 @@ export class Path
 		throw new Error("Vault path could not be determined");
 	}
 
+	private static vaultConfigDirCache: Path | undefined = undefined;
+	static get vaultConfigDir(): Path
+	{
+		if (this.vaultConfigDirCache == undefined) 
+		{
+			this.vaultConfigDirCache = new Path(app.vault.configDir, "");
+		}
+
+		return this.vaultConfigDirCache;
+	}
+
 	static get emptyPath(): Path
 	{
 		return new Path("", "");
@@ -176,11 +177,13 @@ export class Path
 		return new Path(Path.joinStringPaths(this.asString, ...paths.map(p => p.asString)), this._workingDirectory);
 	}
 
-	makeAbsolute(workingDirectory: string = this._workingDirectory): Path
+	makeAbsolute(workingDirectory: string | Path = this._workingDirectory): Path
 	{
+		if(workingDirectory instanceof Path && !workingDirectory.isAbsolute) throw new Error("workingDirectory must be an absolute path");
+
 		if (!this.isAbsolute)
 		{
-			this._fullPath = Path.joinStringPaths(workingDirectory, this.asString);
+			this._fullPath = Path.joinStringPaths(workingDirectory.toString(), this.asString);
 			this._workingDirectory = "";
 			this.reparse(this.asString);
 		}
@@ -424,7 +427,18 @@ export class Path
 	 */
 	get exists(): boolean
 	{
-		if(this._exists == undefined) this._exists = Path.pathExists(this.absolute().asString);
+		if(this._exists == undefined) 
+		{
+			try
+			{
+				this._exists = Path.pathExists(this.absolute().asString);
+			}
+			catch (error)
+			{
+				this._exists = false;
+				Path.log("Error checking if path exists: " + this.asString, error.stack, "error");
+			}
+		}
 
 		return this._exists;
 	}
@@ -465,7 +479,7 @@ export class Path
 		return new Path(this.asString, this._workingDirectory);
 	}
 
-	absolute(workingDirectory: string = this._workingDirectory): Path
+	absolute(workingDirectory: string | Path = this._workingDirectory): Path
 	{
 		return this.copy.makeAbsolute(workingDirectory);
 	}
@@ -474,11 +488,73 @@ export class Path
 	{
 		if (!this.exists)
 		{
-			await fs.mkdir(this.absolute().directory.asString, { recursive: true });
+			let path = this.absolute().directory.asString;
 
-			return true;
+			try
+			{
+				await fs.mkdir(path, { recursive: true });
+			}
+			catch (error)
+			{
+				Path.log("Error creating directory: " + path, error.stack, "error");
+				return false;
+			}
 		}
 
-		return false;
+		return true;
 	}
+
+	async readFileString(encoding: "ascii" | "utf8" | "utf-8" | "utf16le" | "ucs2" | "ucs-2" | "base64" | "base64url" | "latin1" | "binary" | "hex" = "utf-8"): Promise<string|undefined>
+	{
+		if(!this.exists || this.isDirectory) return undefined;
+
+		try
+		{
+			let data = await fs.readFile(this.absolute().asString, { encoding: encoding });
+			return data;
+		}
+		catch (error)
+		{
+			Path.log("Error reading file: " + this.asString, error.stack, "error");
+			return undefined;
+		}
+	}
+
+	async readFileBuffer(): Promise<Buffer|undefined>
+	{
+		if(!this.exists || this.isDirectory) return undefined;
+
+		try
+		{
+			let data = await fs.readFile(this.absolute().asString);
+			return data;
+		}
+		catch (error)
+		{
+			Path.log("Error reading file buffer: " + this.asString, error.stack, "error");
+			return undefined;
+		}
+	}
+
+	async writeFile(data: string | NodeJS.ArrayBufferView | Iterable<string | NodeJS.ArrayBufferView> | AsyncIterable<string | NodeJS.ArrayBufferView> | internal.Stream, encoding: "ascii" | "utf8" | "utf-8" | "utf16le" | "ucs2" | "ucs-2" | "base64" | "base64url" | "latin1" | "binary" | "hex" = "utf-8"): Promise<boolean>
+	{
+		if (this.isDirectory) return false;
+
+		let dirExists = await this.createDirectory();
+		if (!dirExists) return false;
+
+		try
+		{
+			await fs.writeFile(this.absolute().asString, data, { encoding: encoding });
+			return true;
+		}
+		catch (error)
+		{
+			Path.log("Error writing file: " + this.asString, error.stack, "error");
+			return false;
+		}
+	}
+
 }
+
+

@@ -1,7 +1,9 @@
 import { promises as fs } from 'fs';
 import {  MarkdownPreviewView, MarkdownView, Notice, PluginManifest, TextFileView, TFile } from 'obsidian';
-import { ExportSettings } from './export-settings';
-import { Downloadable, Path } from './UtilClasses';
+import { ExportSettings } from '../export-settings';
+import { Path } from './path';
+import { RenderLog } from '../html-generation/render-log';
+import { Downloadable } from './downloadable';
 
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;
@@ -56,46 +58,6 @@ export class Utils
 			hex: "ffffff"
 		}
 	};
-
-
-	static async getText(path: Path): Promise<string | undefined>
-	{
-		try
-		{
-			return await fs.readFile(path.absolute().asString, { encoding: 'utf8' });
-		}
-		catch (err)
-		{
-			new Notice("Error: could not read text file at path: \n\n" + path + "\n\n" + err, 10000);
-			console.error("Error: could not read text file at path: \n\n" + path + "\n\n" + err);
-		}
-	}
-
-	static async getTextBase64(path: Path): Promise<string | undefined>
-	{
-		try
-		{
-			return await fs.readFile(path.absolute().asString, { encoding: 'base64' });
-		}
-		catch (err)
-		{
-			new Notice("Error: could not read text file at path: \n\n" + path + "\n\n" + err, 10000);
-			console.error("Error: could not read text file at path: \n\n" + path + "\n\n" + err);
-		}
-	}
-
-	static async getFileBuffer(path: Path): Promise<Buffer | undefined>
-	{
-		try
-		{
-			return await fs.readFile(path.absolute().asString);
-		}
-		catch (err)
-		{
-			new Notice("Error: could not read file at path: \n\n" + path + "\n\n" + err, 10000);
-			console.error("Error: could not read file at path: \n\n" + path + "\n\n" + err);
-		}
-	}
 
 	static async changeViewMode(view: MarkdownView, modeName: "preview" | "source")
 	{
@@ -190,44 +152,24 @@ export class Utils
 		return Path.vaultPath;
 	}
 
-	static async downloadFiles(files: Downloadable[], folderPath: Path, progressCallback: ((progress: number, max: number, fileName: string) => void) | undefined = undefined, errorCallback: ((error: string) => void) | undefined = undefined)
+	static async downloadFiles(files: Downloadable[], folderPath: Path)
 	{
-		if(progressCallback) progressCallback(0, files.length, "...");
+		if (!folderPath.isAbsolute) throw new Error("folderPath must be absolute");
+
+		RenderLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)")
 
 		try
 		{
 			for (let i = 0; i < files.length; i++)
 			{
 				let file = files[i];
-				let array: string | NodeJS.ArrayBufferView = file.content;
-				if (!file.useUnicode && file.content instanceof String) array = Buffer.from(file.content, 'base64');
-				if (file.useUnicode && file.content instanceof String) array = Utils.createUnicodeArray(file.content.toString());
-
-
-				let parsedPath = folderPath.join(file.relativeDownloadPath).joinString(file.filename);
-
-				await parsedPath.createDirectory();
-
-				if (!parsedPath.directory.assertExists()) continue;
-
-				try
-				{
-					await fs.writeFile(parsedPath.asString, array);
-				}
-				catch(err)
-				{
-					console.error("Error: could not write file at path: \n\n" + parsedPath.asString + "\n\n" + err);
-					new Notice("Error: could not write file at path: \n\n" + parsedPath.asString + "\n\n" + err, 10000);
-					continue;
-				}
-
-				if(progressCallback) progressCallback(i, files.length, file.filename);
+				await file.download(folderPath.directory);
+				RenderLog.progress(0, files.length, "Saving HTML files to disk", "Saving: " + file.filename, "var(--color-green)")
 			}
 		}
 		catch (e)
 		{
-			if(errorCallback) errorCallback(e);
-			console.error("Error while saving HTML files: \n\n" + e);
+			RenderLog.error("Error saving HTML files to disk!", e.stack, true);
 			return;
 		}
 	}
@@ -252,35 +194,9 @@ export class Utils
 		});
 	}
 
-	static async getThemeContent(themeName: string): Promise<string>
-	{
-		if (themeName == "Default") return "/* Using default theme. */";
+	
 
-		// MIGHT NEED TO FORCE A RELATIVE PATH HERE IDKK
-		let themePath = new Path(`.obsidian/themes/${themeName}/theme.css`).absolute();
-		if (!themePath.exists)
-		{
-			console.warn("Warning: could not find theme at path: \n\n" + themePath);
-			new Notice("Warning: could not find theme at path: \n\n" + themePath, 1000);
-			return "";
-		}
 
-		let themeContent = await Utils.getText(themePath) ?? "";
-		return themeContent;
-	}
-
-	static getCurrentThemeName(): string
-	{
-		/*@ts-ignore*/
-		let themeName = app.vault.config?.cssTheme;
-		return (themeName ?? "") == "" ? "Default" : themeName;
-	}
-
-	static getEnabledSnippets(): string[]
-	{
-		/*@ts-ignore*/
-		return app.vault.config?.enabledCssSnippets ?? [];
-	}
 
 	static getPluginIDs(): string[]
 	{
@@ -305,19 +221,7 @@ export class Utils
 		return app.plugins.manifests[pluginID] ?? null;
 	}
 
-	static async getStyleSnippetsContent(): Promise<string[]>
-	{
-		let snippetContents : string[] = [];
-		let enabledSnippets = this.getEnabledSnippets();
-
-		for (let i = 0; i < enabledSnippets.length; i++)
-		{
-			let path = new Path(`.obsidian/snippets/${enabledSnippets[i]}.css`).absolute();
-			if (path.exists) snippetContents.push(await Utils.getText(path) ?? "\n");
-		}
-
-		return snippetContents;
-	}
+	
 
 	static async rerenderView(view: MarkdownView | MarkdownPreviewView)
 	{

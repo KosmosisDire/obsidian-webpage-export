@@ -1,15 +1,15 @@
 // imports from obsidian API
-import { MarkdownPreviewView, MarkdownRenderer, MarkdownView, Notice, Plugin, TFile, TFolder, View, loadMathJax, loadMermaid} from 'obsidian';
+import { Notice, Plugin, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
 import { ExportModal, ExportSettings } from './export-settings';
-import { Utils } from './utils';
-import { ExportFile, HTMLGenerator } from './html-generator';
-import { GraphGenerator } from './graph-view/graph-gen';
-import { LeafHandler } from './leaf-handler';
-import { randomUUID } from 'crypto';
-import { Downloadable, Path } from './UtilClasses';
-const {shell} = require('electron') 
+import { Utils } from './utils/utils';
+import { HTMLGenerator } from './html-generation/html-generator';
+import { Path } from './utils/path';
+import { ExportFile } from './html-generation/export-file';
+import { AssetHandler } from './html-generation/asset-handler';
+import { RenderLog } from './html-generation/render-log';
+import { Downloadable } from './utils/downloadable';
 
 export default class HTMLExportPlugin extends Plugin
 {
@@ -55,7 +55,7 @@ export default class HTMLExportPlugin extends Plugin
 					{
 						if (exportedFile && ExportSettings.settings.openAfterExport)
 						{
-							window.require('electron').remote.shell.openExternal(exportedFile.exportPathAbsolute.asString);
+							this.openPath(exportedFile.exportPathAbsolute);
 						}
 					});
 				}
@@ -78,7 +78,7 @@ export default class HTMLExportPlugin extends Plugin
 					{
 						if (exportedFile && ExportSettings.settings.openAfterExport)
 						{
-							window.require('electron').remote.shell.openExternal(exportedFile.exportPathAbsolute.asString);
+							this.openPath(exportedFile.exportPathAbsolute);
 						}
 					});
 				}
@@ -97,59 +97,21 @@ export default class HTMLExportPlugin extends Plugin
 		});
 	}
 
+	async openPath(path: Path)
+	{
+		// @ts-ignore
+		await window.electron.remote.shell.openPath(path.asString);
+	}
+
 	async onload()
 	{
-		
-		// let renderEl = document.createElement('div');
-		// renderEl.addClass("workspace-leaf-content");
-		// renderEl.setAttribute("data-type", "markdown");
-		// renderEl.setAttribute("data-mode", "preview");
-		// console.log(renderEl);
-		// return;
-		
-		// performance.mark("start");
-
-		
-
-		// console.log(leaf);
-
-
-		// let allFiles = app.vault.getMarkdownFiles();
-		// for (let i = 0; i < allFiles.length; i++)
-		// {
-		// 	console.log("\n\n" + i + allFiles[i].path + "\n\n");
-
-		// 	await leaf.openFile(allFiles[i]);
-
-		// 	if(!(leaf.view instanceof MarkdownView)) continue;
-		// 	let success = await Utils.waitUntil(() => leaf.view.previewMode, 2000, 10);
-		// 	if (!success) continue;
-		// 	Utils.changeViewMode(leaf.view, "preview");
-
-		// 	let lastRender = leaf.view.previewMode.renderer.lastRender;
-		// 	leaf.view.previewMode.renderer.rerender(true);
-		// 	await Utils.waitUntil(() => leaf.view.previewMode.renderer.lastRender != lastRender, 10000, 10);
-		// 	if (!success) continue;
-
-		// 	console.log(leaf.view.previewMode.containerEl.innerHTML);
-		// }
-
-		// leaf.detach();
-
-		// performance.mark("end");
-
-		// performance.measure("test", "start", "end");
-		// console.log(performance.getEntriesByName("test")[0].duration);
-
-		// return;
-
 		console.log('loading webpage-html-export plugin');
 		HTMLExportPlugin.plugin = this;
 
 		await this.checkForUpdates();
 
 		// init html generator
-		HTMLGenerator.initialize("webpage-html-export");
+		AssetHandler.initialize("webpage-html-export");
 
 		// init settings
 		this.addSettingTab(new ExportSettings(this));
@@ -161,7 +123,8 @@ export default class HTMLExportPlugin extends Plugin
 			let exportInfo = await this.exportFolder(Path.emptyPath);
 			if (exportInfo.success && ExportSettings.settings.openAfterExport)
 			{
-				window.require('electron').remote.shell.openExternal(exportInfo.exportedPath.asString);
+				console.log("Opening: "+exportInfo.exportedPath.asString);
+				this.openPath(exportInfo.exportedPath);
 			}
 		});
 
@@ -189,7 +152,8 @@ export default class HTMLExportPlugin extends Plugin
 								let exportedFile = await this.exportFile(file, path);
 								if (exportedFile && ExportSettings.settings.openAfterExport)
 								{
-									window.require('electron').remote.shell.openExternal(exportedFile.exportPathAbsolute.asString);
+									console.log("Opening: "+exportedFile.exportPathAbsolute.asString);
+									this.openPath(exportedFile.exportPathAbsolute);
 								}
 							}
 							else if(file instanceof TFolder)
@@ -197,7 +161,8 @@ export default class HTMLExportPlugin extends Plugin
 								let exportInfo = await this.exportFolder(new Path(file.path));
 								if (exportInfo.success && ExportSettings.settings.openAfterExport)
 								{
-									window.require('electron').remote.shell.openExternal(exportInfo.exportedPath.asString);
+									console.log("Opening: "+exportInfo.exportedPath.asString);
+									this.openPath(exportInfo.exportedPath);
 								}
 							}
 							else
@@ -240,7 +205,7 @@ export default class HTMLExportPlugin extends Plugin
 		{
 			// if we are starting a new export then begin a new batch
 			await HTMLGenerator.beginBatch();
-			HTMLGenerator.reportProgress(1, 2, "Generating HTML", file.basename, "var(--color-accent)");
+			RenderLog.progress(1, 2, "Generating HTML", "Exporting: " + file.path);
 		}
 
 		// the !partOfBatch is passed to forceExportToRoot. 
@@ -252,8 +217,12 @@ export default class HTMLExportPlugin extends Plugin
 		}
 		catch (e)
 		{
-			HTMLGenerator.reportError("Error while generating HTML!", e, "var(--color-red)");
-			return undefined;
+			if(!partOfBatch)
+			{
+				RenderLog.error("Uncaught error while exporting file: " + file.name, e.stack, true);
+			}
+
+			throw e;
 		}
 
 		if(!partOfBatch) 
@@ -262,8 +231,6 @@ export default class HTMLExportPlugin extends Plugin
 			// If this is not a batch export, then we need to download the files here instead.
 			await Utils.downloadFiles(exportedFile.downloads, exportToPath.directory);
 			new Notice("✅ Finished HTML Export:\n\n" + exportToPath.asString, 5000);
-
-			// if we are the only file then end the batch
 			HTMLGenerator.endBatch();
 		}
 
@@ -287,7 +254,7 @@ export default class HTMLExportPlugin extends Plugin
 		// get files to export
 		let allFiles = this.app.vault.getMarkdownFiles();
 		// if we are at the root path export all files, otherwise only export files in the folder we are exporting
-		let filesToExport = folderPath.isEmpty ? allFiles : allFiles.filter((file) => file.path.startsWith(folderPath.asString) && file.extension === "md");
+		let filesToExport = folderPath.isEmpty ? allFiles : allFiles.filter((file) => new Path(file.path).directory.asString.startsWith(folderPath.asString) && file.extension === "md");
 
 		if (filesToExport.length > 100000 || filesToExport.length <= 0)
 		{
@@ -296,17 +263,18 @@ export default class HTMLExportPlugin extends Plugin
 		}
 
 		await HTMLGenerator.beginBatch();
-		HTMLGenerator.reportProgress(0, filesToExport.length, "Generating HTML", "...", "var(--color-accent)");
+		RenderLog.progress(0, filesToExport.length, "Generating HTML", "...", "var(--color-accent)");
 
 		let externalFiles: Downloadable[] = [];
 
-		try
+		
+		for (let i = 0; i < filesToExport.length; i++)
 		{
-			for (let i = 0; i < filesToExport.length; i++)
-			{
-				let file = filesToExport[i];
+			let file = filesToExport[i];
 
-				HTMLGenerator.reportProgress(i, filesToExport.length, "Generating HTML", file.basename, "var(--color-accent)");
+			try
+			{
+				RenderLog.progress(i, filesToExport.length, "Generating HTML", "Exporting: " + file.path, "var(--color-accent)");
 
 				let filePath = htmlPath.joinString(file.name).setExtension("html");
 				let exportedFile = await this.exportFile(file, folderPath, true, filePath, false);
@@ -317,27 +285,18 @@ export default class HTMLExportPlugin extends Plugin
 					// remove duplicates
 					externalFiles = externalFiles.filter((file, index) => externalFiles.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath && f.filename === file.filename) == index);
 				}
-
 			}
-		}
-		catch (e)
-		{
-			console.error(e);
-			HTMLGenerator.reportError("Error while generating HTML!", e, "var(--color-red)");
-			return {success: false, exportedPath: htmlPath};
+			catch (e)
+			{
+				let message = "Error while exporting file: " + file.name;
+				RenderLog.error(message, e.stack);
+				return {success: false, exportedPath: htmlPath};
+			}
+
 		}
 
 		let errorDuringDownload = false;
-		await Utils.downloadFiles(externalFiles, htmlPath, 
-			(progress, max, filename) =>
-			{
-				HTMLGenerator.reportProgress(progress, max, "Saving HTML files to disk", filename, "var(--color-green)");
-			},
-			(error) => 
-			{
-				HTMLGenerator.reportError("Error saving HTML files to disk!", error, "var(--color-red)");
-				errorDuringDownload = true;
-			});
+		await Utils.downloadFiles(externalFiles, htmlPath);
 
 		if (errorDuringDownload) return {success: false, exportedPath: htmlPath};
 

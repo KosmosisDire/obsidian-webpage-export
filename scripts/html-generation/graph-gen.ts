@@ -1,4 +1,4 @@
-import { Path } from "scripts/UtilClasses";
+import { Path } from "scripts/utils/path";
 import { ExportSettings } from "scripts/export-settings";
 
 export class GraphGenerator
