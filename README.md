@@ -6,7 +6,7 @@ Webpage HTML Export is a plugin for Obsidian which lets you export single files 
 
 ## Features:
 - Export files, folders, or the whole vault as html
-- Export as a single file for document sharing
+- Export each document as a single .html file for document sharing
 - Export with embedded content exported externally for fast loading on the web
 - Table of contents
 - Theme Toggle
