@@ -409,7 +409,7 @@ function setupCodeblocks()
 
 function setupLinks()
 {
-	$(".internal-link, .footnote-link").on("click tap", async function()
+	$(".internal-link, .footnote-link").on("click tap", function()
 	{
 		let target = $(this).attr("href");
 
@@ -418,7 +418,7 @@ function setupLinks()
 		{
 			console.log("Loading document: " + target);
 			// if the target is not a header, load the page
-			await loadDocument(target);
+			loadDocument(target);
 
 			// make sure link doesn't redirect
 			return false;
@@ -430,9 +430,9 @@ function setupLinks()
 		}
 	});
 
-    window.onpopstate = async function(event)
+    window.onpopstate = function(event)
     {
-		await loadDocument(window.location.pathname, false);
+		loadDocument(window.location.pathname, false);
     }
 }
 
