@@ -51,7 +51,7 @@ async function loadDocument(url, pushHistory = true)
 		`
 		<div>
 			<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
-				<h1 style>Page does not exist!</h1>
+				<h1 style>Page Not Found</h1>
 			</center>
 		</div>
 		`;
@@ -409,7 +409,7 @@ function setupCodeblocks()
 
 function setupLinks()
 {
-	$(".internal-link, .footnote-link").on("click tap", function()
+	$(".internal-link, .footnote-link").on("click tap", async function()
 	{
 		let target = $(this).attr("href");
 
@@ -418,7 +418,7 @@ function setupLinks()
 		{
 			console.log("Loading document: " + target);
 			// if the target is not a header, load the page
-			loadDocument(target);
+			await loadDocument(target);
 
 			// make sure link doesn't redirect
 			return false;
@@ -430,9 +430,9 @@ function setupLinks()
 		}
 	});
 
-    window.onpopstate = function(event)
+    window.onpopstate = async function(event)
     {
-		loadDocument(window.location.pathname, false);
+		await loadDocument(window.location.pathname, false);
     }
 }
 

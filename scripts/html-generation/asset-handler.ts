@@ -7,7 +7,7 @@ import { Downloadable } from "scripts/utils/downloadable";
 
 export class AssetHandler
 {
-    private static autoDownloadExtras = true;
+    private static autoDownloadExtras = false;
 
 	private static vaultPluginsPath: Path;
 	private static thisPluginPath: Path;

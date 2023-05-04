@@ -416,7 +416,7 @@ export class ExportSettings extends PluginSettingTab {
 
 		let experimentalContainer = contentEl.createDiv();
 		let experimentalHR1 = experimentalContainer.createEl('hr');
-		let experimentalHeader = experimentalContainer.createEl('h2', { text: 'Experimental' });
+		let experimentalHeader = experimentalContainer.createEl('span', { text: 'Experimental' });
 		let experimentalHR2 = experimentalContainer.createEl('hr');
 
 		experimentalContainer.style.display = 'flex';
@@ -446,8 +446,7 @@ export class ExportSettings extends PluginSettingTab {
 				.onChange(async (value) => {
 					ExportSettings.settings.includeGraphView = value;
 					await ExportSettings.saveSettings();
-				}
-				));
+				}));
 
 		new Setting(contentEl)
 			.setName('Graph View Settings')
@@ -669,7 +668,7 @@ export class ExportModal extends Modal {
 		">Multi-File Website: For multiple files as a website.
 Self-contained Documents: For documents which should each be self contained as one file.
 
-<em>For more control open the plugin settings from the button below.</em></div>`
+<em>For more control open the plugin settings from the button at the bottom of this popup.</em></div>`
 
 		new Setting(contentEl)
 			.setName('Open after export')

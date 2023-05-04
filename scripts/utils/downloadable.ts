@@ -1,4 +1,3 @@
-import { RenderLog } from "../html-generation/render-log";
 import { Path } from "./path";
 
 export class Downloadable
@@ -20,9 +19,6 @@ export class Downloadable
 
 	async download(downloadDirectory: Path)
 	{
-		// let array: string | NodeJS.ArrayBufferView = this.content;
-		// if (!this.isText && this.content instanceof String) array = Buffer.from(this.content, 'base64');
-		// if (this.isText && this.content instanceof String) array = Utils.createUnicodeArray(this.content.toString());
 		let data = this.content instanceof Buffer ? this.content : Buffer.from(this.content.toString(), this.encoding);
 		let writePath = this.relativeDownloadPath.absolute(downloadDirectory).joinString(this.filename);
 		await writePath.writeFile(data);

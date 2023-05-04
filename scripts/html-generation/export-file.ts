@@ -118,7 +118,7 @@ export class ExportFile
 	 */
 	get pathToRoot(): Path
 	{
-		return Path.getRelativePath(this.exportPath, new Path(this.exportPath.workingDirectory), true);
+		return Path.getRelativePath(this.exportPath, new Path(this.exportPath.workingDirectory), true).makeUnixStyle();
 	}
 
 	/**

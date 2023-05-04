@@ -1,5 +1,4 @@
-import { promises as fs } from 'fs';
-import {  MarkdownPreviewView, MarkdownView, Notice, PluginManifest, TextFileView, TFile } from 'obsidian';
+import {  MarkdownView, PluginManifest, TextFileView } from 'obsidian';
 import { ExportSettings } from '../export-settings';
 import { Path } from './path';
 import { RenderLog } from '../html-generation/render-log';
@@ -18,11 +17,6 @@ export class Utils
 	static padStringBeggining(str: string, length: number, char: string)
 	{
 		return char.repeat(length - str.length) + str;
-	}
-
-	static generateProgressbar(title: string, progress: number, max: number, barLength: number, fullChar: string, emptyChar: string): string
-	{
-		return `${title}: ${Utils.padStringBeggining(progress + "/" + max, 13, " ")}\n\n${fullChar.repeat(Math.floor((progress / max) * barLength))}${emptyChar.repeat(barLength - Math.floor((progress / max) * barLength))}`;
 	}
 
 	static sampleCSSColorHex(variable: string, testParentEl: HTMLElement): { a: number, hex: string }
@@ -66,25 +60,6 @@ export class Utils
 		/*@ts-ignore*/
 		mode && await view.setMode(mode);
 	};
-
-	static createUnicodeArray(content: string) : Uint8Array
-	{
-		let charCode, byteArray = [];
-
-		// BE BOM
-		byteArray.push(254, 255);
-
-		for (let i = 0; i < content.length; ++i) 
-		{
-			charCode = content.charCodeAt(i);
-
-			// BE Bytes
-			byteArray.push((charCode & 0xFF00) >>> 8);
-			byteArray.push(charCode & 0xFF);
-		}
-
-		return new Uint8Array(byteArray);
-	}
 
 	static async showSaveDialog(defaultPath: Path, defaultFileName: string, showAllFilesOption: boolean = true): Promise<Path | undefined>
 	{
@@ -157,21 +132,23 @@ export class Utils
 		if (!folderPath.isAbsolute) throw new Error("folderPath must be absolute");
 
 		RenderLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)")
-
-		try
+		
+		for (let i = 0; i < files.length; i++)
 		{
-			for (let i = 0; i < files.length; i++)
+			let file = files[i];
+
+			try
 			{
-				let file = files[i];
 				await file.download(folderPath.directory);
-				RenderLog.progress(0, files.length, "Saving HTML files to disk", "Saving: " + file.filename, "var(--color-green)")
+				RenderLog.progress(i+1, files.length, "Saving HTML files to disk", "Saving: " + file.filename, "var(--color-green)");
+			}
+			catch (e)
+			{
+				RenderLog.error("Could not save file: " + file.filename, e.stack);
+				continue;
 			}
 		}
-		catch (e)
-		{
-			RenderLog.error("Error saving HTML files to disk!", e.stack, true);
-			return;
-		}
+		
 	}
 
 	//async function that awaits until a condition is met
@@ -193,10 +170,6 @@ export class Utils
 			}, interval);
 		});
 	}
-
-	
-
-
 
 	static getPluginIDs(): string[]
 	{
@@ -221,41 +194,6 @@ export class Utils
 		return app.plugins.manifests[pluginID] ?? null;
 	}
 
-	
-
-	static async rerenderView(view: MarkdownView | MarkdownPreviewView)
-	{
-		await Utils.delay(300);
-		/*@ts-ignore*/
-		await view.previewMode.renderer.rerender(true);
-		await Utils.delay(300);
-	}
-
-	static async doFullRender(view: MarkdownView | MarkdownPreviewView)
-	{
-		/*@ts-ignore*/
-		await view.previewMode.renderer.rerender(true);
-		// if (view instanceof MarkdownView) Utils.changeViewMode(view, "preview");
-		// await this.delay(200);
-
-		// /*@ts-ignore*/
-		// view.previewMode.renderer.showAll = true;
-		// /*@ts-ignore*/
-		// await view.previewMode.renderer.unfoldAllHeadings();
-		
-		// await this.rerenderView(view);
-	}
-
-	static async getRendererHeight(view: MarkdownView, rerender: boolean = false): Promise<number>
-	{
-		if(rerender) await Utils.doFullRender(view);
-
-		/*@ts-ignore*/
-		let height = view.previewMode.renderer.sizerEl.offsetHeight;
-
-		return height;
-	}
-
 	static getActiveTextView(): TextFileView | null
 	{
 		let view = app.workspace.getActiveViewOfType(TextFileView);
@@ -265,15 +203,6 @@ export class Utils
 		}
 
 		return view;
-	}
-
-	static findFileInVaultByName(name: string): TFile | undefined
-	{
-		return app.vault.getFiles().find(file =>
-		{
-			if(!name) return false;
-			return file.basename == name;
-		});
 	}
 
 	static trimEnd(inputString: string, trimString: string): string

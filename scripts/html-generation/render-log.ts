@@ -5,29 +5,29 @@ export namespace RenderLog
 {
     export function log(messageTitle: string, message: string)
     {
-        MarkdownRenderer._reportInfo(messageTitle, message);
-        console.log(messageTitle + ": \n" + message);
         pullPathLogs();
+        console.log(messageTitle + ": \n" + message);
+        MarkdownRenderer._reportInfo(messageTitle, message);
     }
 
     export function warning(messageTitle: string, message: string)
     {
-        MarkdownRenderer._reportWarning(messageTitle, message);
-        console.warn(messageTitle + ": \n" + message);
         pullPathLogs();
+        console.warn(messageTitle + ": \n" + message);
+        MarkdownRenderer._reportWarning(messageTitle, message);
     }
 
-    export function error(messageTitle: string, message: string, fatal: boolean = true)
+    export function error(messageTitle: string, message: string, fatal: boolean = false)
     {
-        MarkdownRenderer._reportError(messageTitle, message, fatal);
-        console.error(messageTitle + ": \n" + message);
         pullPathLogs();
+        console.error(messageTitle + ": \n" + message);
+        MarkdownRenderer._reportError(messageTitle, message, fatal);
     }
 
     export function progress(complete: number, total:number, message: string, subMessage: string, progressColor: string = "var(--color-accent)")
     {
-        MarkdownRenderer._reportProgress(complete, total, message, subMessage, progressColor);
         pullPathLogs();
+        MarkdownRenderer._reportProgress(complete, total, message, subMessage, progressColor);
     }
 
     function pullPathLogs()
@@ -50,6 +50,14 @@ export namespace RenderLog
                     error(thisLog.title, thisLog.message, true);
                     break;
             }
+        }
+    }
+
+    export function testThrowError(chance: number)
+    {
+        if (Math.random() < chance)
+        {
+            throw new Error("Test error");
         }
     }
 }

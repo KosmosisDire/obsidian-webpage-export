@@ -5,6 +5,7 @@ import { Utils } from "scripts/utils/utils";
 import { ExportFile } from "./export-file";
 import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
+const { clipboard } = require('electron')
 import jQuery from 'jquery';
 import { RenderLog } from "./render-log";
 const $ = jQuery;
@@ -18,6 +19,7 @@ export namespace MarkdownRenderer
 
     export async function renderMarkdown(file: ExportFile): Promise<string>
 	{
+
 		if (!renderLeaf)
 		{
 			throw new Error("Cannot render document without a render leaf! Please call beginBatch() before calling this function, and endBatch() after you are done exporting all files.");
@@ -31,14 +33,14 @@ export namespace MarkdownRenderer
 		{
 			let message = "Failed to open file! File: " + file.markdownFile.path;
 			RenderLog.warning("Cannot render file: ", message);
-			return generateErrorDocument(message);
+			return generateFailDocument();
 		}
 
 		if(!(renderLeaf.view instanceof MarkdownView))
 		{
 			let message = "This file was not a normal markdown file! File: " + file.markdownFile.path;
 			RenderLog.warning("Cannot render file: ", message);
-			return generateErrorDocument(message);
+			return generateFailDocument();
 		}
 
 		// @ts-ignore
@@ -47,7 +49,7 @@ export namespace MarkdownRenderer
 		{
 			let message = "Failed to open preview mode! File: " + file.markdownFile.path;
 			RenderLog.warning("Cannot render file: ", message);
-			return generateErrorDocument(message);
+			return generateFailDocument();
 		}
 
 		let preview = renderLeaf.view.previewMode;
@@ -72,12 +74,17 @@ export namespace MarkdownRenderer
 		});
 
 		// @ts-ignore
-		let renderfinished = await Utils.waitUntil(() => preview.renderer.lastRender != lastRender && isRendered, 10000, 10);
+		let renderfinished = await Utils.waitUntil(() => (preview.renderer.lastRender != lastRender && isRendered) || renderLeaf == undefined, 10000, 10);
 		if (!renderfinished)
 		{
 			let message = "Failed to render file within 10 seconds! File: " + file.markdownFile.path;
 			RenderLog.warning("Cannot render file: ", message);
-			return generateErrorDocument(message);
+			return generateFailDocument();
+		}
+		if (renderLeaf == undefined)
+		{
+			RenderLog.warning("Render cancelled! On file: ", file.markdownFile.path);
+			return generateFailDocument();
 		}
 
 		// wait for dataview blocks to render
@@ -95,7 +102,7 @@ export namespace MarkdownRenderer
 		let container = preview.containerEl;
 		if (container)
 		{
-			// don't set width, height, margin, padding, max-width, or max-height
+			// Makes ure the markdown-preview-sizer element is completely passive
 			$(container).find(".markdown-preview-sizer").css("width", "unset");
 			$(container).find(".markdown-preview-sizer").css("height", "unset");
 			$(container).find(".markdown-preview-sizer").css("margin", "unset");
@@ -120,7 +127,7 @@ export namespace MarkdownRenderer
 
 		let message = "Could not find container with rendered content! File: " + file.markdownFile.path;
 		RenderLog.warning("Cannot render file: ", message);
-		return generateErrorDocument(message);
+		return generateFailDocument();
 	}
 
     export async function beginBatch()
@@ -160,6 +167,8 @@ export namespace MarkdownRenderer
 		$(renderLeaf.parent.parent.containerEl).addClass("mod-horizontal");
 		renderLeaf.view.containerEl.win.resizeTo(900, 450);
 		renderLeaf.view.containerEl.win.moveTo(window.screen.width / 2 - 450, window.screen.height - 450 - 75);
+
+		console.log(renderLeaf);
 
 		await Utils.delay(1000);
 	}
@@ -235,7 +244,8 @@ export namespace MarkdownRenderer
 			{
 				copyButton.addEventListener("click", () => 
 				{
-					navigator.clipboard.writeText(problemLog);
+					console.log(problemLog);
+					clipboard.writeText(problemLog);
 					new Notice("Copied to clipboard! Please paste this into your github issue as is.");
 				});
 			}
@@ -267,20 +277,13 @@ export namespace MarkdownRenderer
 
 	export function _reportError(messageTitle: string, message: string, fatal: boolean)
 	{
-        errorInBatch = true;
-
-        if (fatal)
-        {
-            let e = new Error(message);
-            e.name = messageTitle;
-            throw e;
-        }
-
         messageTitle = (fatal ? "[Fatal Error] " : "[Error] ") + messageTitle;
-
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
 		if(!renderLeaf) return;
+
+        errorInBatch = true;
+
 		// @ts-ignore
 		let found = Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 2000, 10);
 		if (!found) return;
@@ -309,6 +312,11 @@ export namespace MarkdownRenderer
 			let logEl = generateLogEl(messageTitle, message, "var(--color-red)", "rgba(170, 10, 30, 0.1)");
 			logContainer.appendChild(logEl);
 		}
+
+		if (fatal)
+        {
+			renderLeaf = undefined;
+        }
 	}
 
 	export function _reportWarning(messageTitle: string, message: string)
@@ -362,23 +370,16 @@ export namespace MarkdownRenderer
 		}
 	}
     
-    export function generateErrorDocument(message: string): string
+    export function generateFailDocument(message: string = "Page Not Found"): string
 	{
 		return `
 		<div class="markdown-preview-view markdown-rendered">
-			<center>
-				<h1>
-				Failed to render file, check obsidian log for details and report an issue on GitHub: 
-				<a href="https://github.com/KosmosisDire/obsidian-webpage-export/issues">Github Issues</a>
-				</h1>
-			</center>
-			<br>
-			<br>
-			<center>
-				<h3>
-					${message}
-				</h3>
-			</center>
+			<div class="markdown-preview-sizer" style="width: 100%; height: 100%; margin: 0px; padding: 0px; max-width: 100%; min-height: 100%;">
+			<div>
+				<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
+					<h1 style>${message}</h1>
+				</center>
+			</div>
 		</div>
 		`;
 	}

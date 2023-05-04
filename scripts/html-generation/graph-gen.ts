@@ -91,7 +91,7 @@ export class GraphGenerator
 		paths = indexedRadii.map(r => ExportSettings.settings.makeNamesWebStyle ? Path.toWebStyle(paths[r.index]) : paths[r.index]);
 		paths = paths.map(p => 
 			{
-				return new Path(p).setExtension(".html").asString;
+				return new Path(p).setExtension(".html").makeUnixStyle().asString;
 			});
 
 		this.graphCache = {nodeCount: nodeCount, linkCount: linkSources.length, radii: radii, labels: labels, paths: paths, linkSources: linkSources, linkTargets: linkTargets};

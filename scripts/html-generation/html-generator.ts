@@ -7,6 +7,7 @@ import { MarkdownRenderer } from "./markdown-renderer";
 import { AssetHandler } from "./asset-handler";
 import { ExportFile } from "./export-file";
 import { Downloadable } from "scripts/utils/downloadable";
+import { RenderLog } from "./render-log";
 
 export class HTMLGenerator
 {
@@ -195,9 +196,9 @@ export class HTMLGenerator
 	private static getRelativePaths(file: ExportFile): {mediaPath: Path, jsPath: Path, cssPath: Path, rootPath: Path}
 	{
 		let rootPath = file.pathToRoot;
-		let imagePath = rootPath.join(AssetHandler.mediaFolderName);
-		let jsPath = rootPath.join(AssetHandler.jsFolderName);
-		let cssPath = rootPath.join(AssetHandler.cssFolderName);
+		let imagePath = rootPath.join(AssetHandler.mediaFolderName).makeUnixStyle();
+		let jsPath = rootPath.join(AssetHandler.jsFolderName).makeUnixStyle();
+		let cssPath = rootPath.join(AssetHandler.cssFolderName).makeUnixStyle();
 
 		return {mediaPath: imagePath, jsPath: jsPath, cssPath: cssPath, rootPath: rootPath};
 	}
@@ -356,7 +357,7 @@ export class HTMLGenerator
 				if (htmlCompatibleExt.includes(targetRelativePath.extensionName)) targetRelativePath.setExtension("html");
 				if (ExportSettings.settings.makeNamesWebStyle) targetRelativePath.makeWebStyle();
 
-				let finalHref = targetRelativePath + targetHeader.replaceAll(" ", "_");
+				let finalHref = targetRelativePath.makeUnixStyle() + targetHeader.replaceAll(" ", "_");
 				$(this).attr("href", finalHref);
 			}
 		});
@@ -381,21 +382,20 @@ export class HTMLGenerator
 		for (let i = 0; i < media.length; i++)
 		{
 			let mediaEl = media[i];
-			if (!$(mediaEl).attr("src")?.startsWith("app://local")) continue;
+			let rawSrc = $(mediaEl).attr("src") ?? "";
+			if (rawSrc.startsWith("http:") || rawSrc.startsWith("https:")) continue;
 			
-			let src = $(mediaEl).attr("src")?.replace("app://local", "").split("?")[0];
-			if(!src) continue;
+			// @ts-ignore
+			let filePath = new Path(app.vault.resolveFileUrl(rawSrc)?.path ?? "");
 
-			let path = new Path(src).makeRootAbsolute();
-
-			let base64 = await path.readFileString("base64") ?? "";
+			let base64 = await filePath.readFileString("base64") ?? "";
 			if (base64 === "") continue;
 
-			let ext = path.extenstion.replaceAll(".", "");
+			let ext = filePath.extensionName;
+			if(ext === "svg") ext += "+xml";
+
 			//@ts-ignore
 			let type = app.viewRegistry.typeByExtension[ext] ?? "audio";
-
-			if(ext === "svg") ext += "+xml";
 
 			$(mediaEl).attr("src", `data:${type}/${ext};base64,${base64}`);
 		}
@@ -470,6 +470,7 @@ export class HTMLGenerator
 		label.appendChild(input);
 		label.appendChild(div);
 		toggle.appendChild(label);
+
 		return toggle;
 	}
 

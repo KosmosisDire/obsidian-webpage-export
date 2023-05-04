@@ -105,6 +105,7 @@ export default class HTMLExportPlugin extends Plugin
 
 	async onload()
 	{
+		navigator.clipboard.writeText("Hello");
 		console.log('loading webpage-html-export plugin');
 		HTMLExportPlugin.plugin = this;
 
@@ -219,7 +220,7 @@ export default class HTMLExportPlugin extends Plugin
 		{
 			if(!partOfBatch)
 			{
-				RenderLog.error("Uncaught error while exporting file: " + file.name, e.stack, true);
+				RenderLog.error("Could not export file: " + file.name, e.stack, true);
 			}
 
 			throw e;
@@ -288,17 +289,13 @@ export default class HTMLExportPlugin extends Plugin
 			}
 			catch (e)
 			{
-				let message = "Error while exporting file: " + file.name;
+				let message = "Could not export file: " + file.name;
 				RenderLog.error(message, e.stack);
 				return {success: false, exportedPath: htmlPath};
 			}
-
 		}
 
-		let errorDuringDownload = false;
 		await Utils.downloadFiles(externalFiles, htmlPath);
-
-		if (errorDuringDownload) return {success: false, exportedPath: htmlPath};
 
 		HTMLGenerator.endBatch();
 
