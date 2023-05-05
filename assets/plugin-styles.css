@@ -97,6 +97,7 @@ hr
     flex: 1 0 min-content;
     display: flex;
     align-items: flex-start;
+    font-size: 14px;
 }
 
 .sidebar-content {
@@ -245,7 +246,7 @@ hr
 .outline-item-contents {
     display: flex;
     flex-direction: row;
-    align-items: baseline;
+    align-items: center;
     padding: 0.3em;
     border-radius: 0.4em;
     color: var(--nav-item-color);
