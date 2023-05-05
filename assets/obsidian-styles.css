@@ -263,6 +263,6 @@
 
 .collapse-icon::before 
 { 
-    content: "-" !important; 
+    content: "" !important; 
     visibility: hidden !important;
 }

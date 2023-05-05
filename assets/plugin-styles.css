@@ -273,6 +273,7 @@ span.outline-item-title {
     margin-left: 0.5em;
     text-decoration: none;
     color: inherit;
+    align-items: center;
 }
 
 span.outline-item-title:hover 
