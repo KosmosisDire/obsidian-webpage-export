@@ -294,14 +294,14 @@ function setupOutline()
         toggleOutlineCollapse($(this).parent().parent());
 
 		// Prevent the collapse button from triggering the parent <a> tag navigation.
-		// fix implented by 'zombony' from GitHub
+		// fix implented by 'zombony' on GitHub
 		return false;
     });
 
-	$(".collapse-all").on("click tap", function()
+	$(".outline-container > .outline-header > .collapse-all").on("click tap", function()
 	{
 		let button = $(this);
-		$(".outline-container div.outline-item").each(function()
+		button.closest(".outline-container").find(".outline-item").each(function()
 		{
 			setOutlineCollapse($(this), !button.hasClass("is-collapsed"));
 		});
@@ -316,6 +316,29 @@ function setupOutline()
     {
         $(this).parent().find(".collapse-icon").hide();
     });
+
+
+	// go through all outline items and collapse them if they start with the class "is-collapsed"
+	$(".outline-item").each(function()
+	{
+		if ($(this).hasClass("is-collapsed"))
+		{
+			setOutlineCollapse($(this), true);
+		}
+	});
+
+	// make sure the icons match their starting collaped state
+	$(".outline-container > .outline-header > .collapse-all").each(function()
+	{
+		if ($(this).hasClass("is-collapsed"))
+		{
+			$(this).find("iconify-icon").attr("icon", "ph:arrows-out-line-horizontal-bold");
+		}
+		else
+		{
+			$(this).find("iconify-icon").attr("icon", "ph:arrows-in-line-horizontal-bold");
+		}
+	});
 }
 
 function setupCallouts()
@@ -416,6 +439,14 @@ function setupLinks()
 		// this is linking to a different page
 		if (!target.startsWith("#"))
 		{
+			if ($(this).hasClass("outline-item-contents"))
+			{
+				console.log("Loading document: " + target);
+				target = rootPath + "/" + target;
+				loadDocument(target);
+				return false;
+			}
+
 			console.log("Loading document: " + target);
 			// if the target is not a header, load the page
 			loadDocument(target);
@@ -433,6 +464,7 @@ function setupLinks()
     window.onpopstate = function(event)
     {
 		loadDocument(window.location.pathname, false);
+		load
     }
 }
 

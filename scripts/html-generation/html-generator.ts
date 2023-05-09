@@ -1,12 +1,13 @@
 import { Path } from "../utils/path";
 import { ExportSettings } from "../export-settings";
-import { GraphGenerator } from "./graph-gen";
+import { GlobalDataGenerator, LinkTree, TreeItemType } from "./global-gen";
 import jQuery from 'jquery';
 const $ = jQuery;
 import { MarkdownRenderer } from "./markdown-renderer";
 import { AssetHandler } from "./asset-handler";
 import { ExportFile } from "./export-file";
 import { Downloadable } from "scripts/utils/downloadable";
+import { TFile } from "obsidian";
 import { RenderLog } from "./render-log";
 
 export class HTMLGenerator
@@ -14,8 +15,11 @@ export class HTMLGenerator
 
 	//#region Main Generation Functions
 	
-	public static async beginBatch()
+	public static async beginBatch(exportingFiles: TFile[])
 	{
+		GlobalDataGenerator.clearGraphCache();
+		GlobalDataGenerator.clearFileTreeCache();
+		GlobalDataGenerator.getFileTree(exportingFiles);
 		await AssetHandler.updateAssetCache();
 		await MarkdownRenderer.beginBatch();
 	}
@@ -35,6 +39,26 @@ export class HTMLGenerator
 		let leftSidebar = sidebars.left;
 		usingDocument.body.appendChild(sidebars.container);
 
+		// inject graph view
+		if (ExportSettings.settings.includeGraphView)
+		{
+			let graph = this.generateGraphView(usingDocument);
+			let graphHeader = usingDocument.createElement("span");
+			graphHeader.addClass("sidebar-section-header");
+			graphHeader.innerText = "Interactive Graph";
+			
+			rightSidebar.appendChild(graphHeader);
+			rightSidebar.appendChild(graph);
+		}
+
+		// inject outline
+		if (ExportSettings.settings.includeOutline)
+		{
+			let headerTree = LinkTree.headersFromFile(file.markdownFile, 1);
+			let outline : HTMLElement | undefined = this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", 1, false);
+			rightSidebar.appendChild(outline);
+		}
+
 		// inject darkmode toggle
 		if (ExportSettings.settings.addDarkModeToggle && !usingDocument.querySelector(".theme-toggle-inline, .theme-toggle"))
 		{
@@ -42,28 +66,16 @@ export class HTMLGenerator
 			leftSidebar.appendChild(toggle);
 		}
 
-		// inject outline
-		if (ExportSettings.settings.includeOutline)
+		//inject file tree
+		if (ExportSettings.settings.includeFileTree)
 		{
-			let headers = this.getHeaderList(usingDocument);
-			if (headers)
+			let tree = GlobalDataGenerator.getFileTree();
+			console.log(tree);
+			if (tree.children.length >= 1)
 			{
-				var outline : HTMLElement | undefined = this.generateOutline(headers, usingDocument);
-				rightSidebar.appendChild(outline);
+				let fileTree: HTMLDivElement = this.generateHTMLTree(tree, usingDocument, app.vault.getName(), 2, true);
+				leftSidebar.appendChild(fileTree);
 			}
-		}
-
-		// inject graph view
-		if (ExportSettings.settings.includeGraphView)
-		{
-			let graph = this.generateGraphView(usingDocument);
-			let graphHeader = usingDocument.createElement("h6");
-			graphHeader.style.margin = "1em";
-			graphHeader.style.marginLeft = "12px";
-			graphHeader.innerText = "Interactive Graph";
-			
-			rightSidebar.prepend(graph);
-			rightSidebar.prepend(graphHeader);
 		}
 
 		await this.fillInHead(file);
@@ -84,13 +96,19 @@ export class HTMLGenerator
 		body.attr("style", bodyStyle);
 
 		let lineWidth = ExportSettings.settings.customLineWidth || "50em";
+		let contentWidth = ExportSettings.settings.contentWidth || "50em";
+		let sidebarWidth = ExportSettings.settings.sidebarWidth || "20em";
 		if (!isNaN(Number(lineWidth))) lineWidth += "px";
+		if (!isNaN(Number(contentWidth))) contentWidth += "px";
+		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
 		body.css("--line-width", lineWidth);
 		body.css("--line-width-adaptive", lineWidth);
 		body.css("--file-line-width", lineWidth);
+		body.css("--content-width", contentWidth);
+		body.css("--sidebar-width", sidebarWidth);
 
 		// create obsidian document containers
-		let markdownViewEl = file.document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
+		let markdownViewEl = file.document.body.createDiv();
 		let content = await MarkdownRenderer.renderMarkdown(file);
 		markdownViewEl.outerHTML = content;
 
@@ -108,9 +126,11 @@ export class HTMLGenerator
 
 		// add heading fold arrows
 		let arrowHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='svg-icon right-triangle'><path d='M3 8L12 17L21 8'></path></svg>";
-		let headings = $(file.document).find("div h1, div h2, div h3, div h4, div h5, div h6");
+		let headings = $(file.document).find("div h2, div h3, div h4, div h5, div h6");
 		headings.each((index, element) =>
 		{
+			$(element).css("display", "flex");
+			
 			// continue if heading already has an arrow
 			if ($(element).find(".heading-collapse-indicator").length > 0) return;
 
@@ -118,6 +138,18 @@ export class HTMLGenerator
 			el.setAttribute("class", "heading-collapse-indicator collapse-indicator collapse-icon");
 			el.innerHTML = arrowHTML;
 			element.prepend(el);
+		});
+		
+		// remove collapsible arrows from h1 and inline titles
+		$(file.document).find("div h1, div .inline-title").each((index, element) =>
+		{
+			$(element).find(".heading-collapse-indicator").remove();
+		});
+
+		// set dataview lists to not have a static width
+		$(file.document).find(".dataview.list-view-ul").each((index, element) =>
+		{
+			$(element).css("width", "auto");
 		});
 
 		this.fixLinks(file); // modify links to work outside of obsidian (including relative links)
@@ -151,13 +183,23 @@ export class HTMLGenerator
 	
 	private static addTitle(file: ExportFile)
 	{
-		let currentTitle = file.document.querySelector("h1, h2, h3, h4, h5, h6");
-		if (!currentTitle || !["h1", "H1"].contains(currentTitle.tagName))
+		let hasTitle = file.document.body.querySelector("h1, .inline-title") != null;
+		let currentTitle = file.document.body.querySelector("h1, h2, .inline-title")?.textContent ?? "";
+		if (currentTitle != file.markdownFile.basename && !hasTitle)
 		{
-			let divContainer = file.document.createElement("div");
+			console.log("Adding title to document: " + file.markdownFile.basename);
+			let divContainer = file.document.querySelector("div.mod-header");
+			if (!divContainer) 
+			{
+				divContainer = file.document.createElement("div");
+				divContainer.setAttribute("class", "mod-header");
+				file.contentElement.querySelector(".markdown-preview-sizer")?.prepend(divContainer);
+			}
+
 			let title = divContainer.createEl("h1");
 			title.innerText = file.markdownFile.basename;
-			file.contentElement.prepend(divContainer);
+			title.setAttribute("class", "inline-title");
+			title.setAttribute("data-heading", title.innerText);
 		}
 	}
 
@@ -242,7 +284,7 @@ export class HTMLGenerator
 			`
 			<!-- Graph View Data -->
 			<script>
-			let nodes=\n${JSON.stringify(GraphGenerator.getGlobalGraph(ExportSettings.settings.graphMinNodeSize, ExportSettings.settings.graphMaxNodeSize))};
+			let nodes=\n${JSON.stringify(GlobalDataGenerator.getGlobalGraph(ExportSettings.settings.graphMinNodeSize, ExportSettings.settings.graphMaxNodeSize))};
 			let attractionForce = ${ExportSettings.settings.graphAttractionForce};
 			let linkLength = ${ExportSettings.settings.graphLinkLength};
 			let repulsionForce = ${ExportSettings.settings.graphRepulsionForce};
@@ -254,13 +296,6 @@ export class HTMLGenerator
 			scripts += `\n<script type='module' src='${relativePaths.jsPath}/graph_view.js'></script>\n`;
 			scripts += `\n<script src='${relativePaths.jsPath}/graph_wasm.js'></script>\n`;
 			scripts += `\n<script src="${relativePaths.jsPath}/tinycolor.js"></script>\n`;
-
-			// if (ExportSettings.settings.inlineJS) 
-			// {
-			// 	scripts += `\n<script type='module'>\n${this.graphViewJS}\n</script>\n`;
-			// 	scripts += `\n<script>${this.graphWASMJS}</script>\n`;
-			// 	scripts += `\n<script>${this.tinyColorJS}</script>\n`;
-			// }
 		}
 
 		if (ExportSettings.settings.inlineJS)
@@ -279,7 +314,7 @@ export class HTMLGenerator
 		if (ExportSettings.settings.inlineCSS)
 		{
 			let pluginCSS = AssetHandler.webpageStyles;
-			let thirdPartyPluginStyles = await AssetHandler.getPluginStyles();
+			let thirdPartyPluginStyles = AssetHandler.pluginStyles;
 			pluginCSS += thirdPartyPluginStyles;
 			
 			var header =
@@ -291,11 +326,11 @@ export class HTMLGenerator
 			<style> ${AssetHandler.mathStyles} </style>
 			<style> ${cssSettings} </style>
 
-			<!-- Plugin Styles -->
-			<style> ${pluginCSS} </style>
-
 			<!-- Theme Styles -->
 			<style> ${AssetHandler.themeStyles} </style>
+
+			<!-- Plugin Styles -->
+			<style> ${pluginCSS} </style>
 
 			<!-- Snippets -->
 			<style> ${AssetHandler.snippetStyles} </style>
@@ -310,8 +345,8 @@ export class HTMLGenerator
 			${meta}
 
 			<link rel="stylesheet" href="${relativePaths.cssPath}/obsidian-styles.css">
-			<link rel="stylesheet" href="${relativePaths.cssPath}/plugin-styles.css">
 			<link rel="stylesheet" href="${relativePaths.cssPath}/theme.css">
+			<link rel="stylesheet" href="${relativePaths.cssPath}/plugin-styles.css">
 			<link rel="stylesheet" href="${relativePaths.cssPath}/snippets.css">
 
 			<style> ${cssSettings} </style>
@@ -474,36 +509,18 @@ export class HTMLGenerator
 		return toggle;
 	}
 
-	private static getHeaderList(usingDocument: Document): { size: number, title: string, href: string }[] | null
-	{
-		let headers = [];
-
-		let headerElements = usingDocument.querySelectorAll("h1, h2, h3, h4, h5, h6");
-
-		for (let i = 0; i < headerElements.length; i++)
-		{
-			let header = headerElements[i];
-			let size = parseInt(header.tagName[1]);
-			let title = (header as HTMLElement).innerText;
-			let href = (header as HTMLHeadingElement).id;
-			headers.push({ size, title, href });
-		}
-
-		return headers;
-	}
-
-	private static generateOutlineItem(header: { size: number, title: string, href: string }, usingDocument: Document): HTMLDivElement
+	private static generateTreeItem(item: LinkTree, usingDocument: Document): HTMLDivElement
 	{
 		let arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path>`;
 
 		let outlineItemEl = usingDocument.createElement('div');
 		outlineItemEl.classList.add("outline-item");
-		outlineItemEl.setAttribute("data-size", header.size.toString());
+		outlineItemEl.setAttribute("data-depth", item.depth.toString());
 
 		let outlineItemContentsEl = usingDocument.createElement('a');
 		outlineItemContentsEl.classList.add("outline-item-contents");
 		outlineItemContentsEl.classList.add("internal-link");
-		outlineItemContentsEl.setAttribute("href", "#" + header.href);
+		if(item.href) outlineItemContentsEl.setAttribute("href", item.href);
 		
 		let outlineItemIconEl = usingDocument.createElement('div');
 		outlineItemIconEl.classList.add("tree-item-icon");
@@ -515,7 +532,16 @@ export class HTMLGenerator
 		
 		let outlineItemTitleEl = usingDocument.createElement('span');
 		outlineItemTitleEl.classList.add("outline-item-title");
-		outlineItemTitleEl.innerText = header.title;
+		outlineItemTitleEl.innerText = item.title;
+
+		if (item.type == TreeItemType.Folder)
+		{
+			outlineItemIconEl.style.width = "100%";
+			outlineItemIconEl.style.height = "100%";
+			outlineItemIconEl.style.position = "absolute";
+			outlineItemContentsEl.style.position = "relative";
+			outlineItemTitleEl.style.marginLeft = "calc(16px + 0.5em)";
+		}
 
 		let outlineItemChildrenEl = usingDocument.createElement('div');
 		outlineItemChildrenEl.classList.add("outline-item-children");
@@ -529,36 +555,24 @@ export class HTMLGenerator
 		return outlineItemEl;
 	}
 
-	private static generateOutline(headers: { size: number, title: string, href: string }[], usingDocument: Document): HTMLDivElement
+	private static generateHTMLTree(tree: LinkTree, usingDocument: Document, treeTitle: string, minDepth: number = 1, closeAllItems: boolean = false): HTMLDivElement
 	{
-		// if(headers.length <= 1) return usingDocument.createElement("div");
-
 		let outlineEl = usingDocument.createElement('div');
 		outlineEl.classList.add("outline-container");
-		outlineEl.setAttribute("data-size", "0");
+		outlineEl.setAttribute("data-depth", "0");
 
 		let outlineHeader = usingDocument.createElement('div');
 		outlineHeader.classList.add("outline-header");
 
-		// let headerIconEl = usingDocument.createElement('svg');
-		// headerIconEl.setAttribute("viewBox", "0 0 100 100");
-		// headerIconEl.classList.add("bullet-list");
-		// headerIconEl.setAttribute("width", "18px");
-		// headerIconEl.setAttribute("height", "18px");
-
-		// let headerIconPathEl = usingDocument.createElement('path');
-		// let headerPathData = "M16.4,16.4c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,16.4,16.4,16.4z M16.4,19.6 c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2C13.2,21,14.6,19.6,16.4,19.6z M29.2,21.2v3.2H90v-3.2H29.2z M16.4,43.6c-3.5,0-6.4,2.9-6.4,6.4s2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4S19.9,43.6,16.4,43.6z M16.4,46.8c1.8,0,3.2,1.4,3.2,3.2 s-1.4,3.2-3.2,3.2s-3.2-1.4-3.2-3.2S14.6,46.8,16.4,46.8z M29.2,48.4v3.2H90v-3.2H29.2z M16.4,70.8c-3.5,0-6.4,2.9-6.4,6.4 c0,3.5,2.9,6.4,6.4,6.4s6.4-2.9,6.4-6.4C22.8,73.7,19.9,70.8,16.4,70.8z M16.4,74c1.8,0,3.2,1.4,3.2,3.2c0,1.8-1.4,3.2-3.2,3.2 s-3.2-1.4-3.2-3.2C13.2,75.4,14.6,74,16.4,74z M29.2,75.6v3.2H90v-3.2H29.2z";
-		// headerIconPathEl.setAttribute("fill", "currentColor");
-		// headerIconPathEl.setAttribute("stroke", "currentColor");
-		// headerIconPathEl.setAttribute("d", headerPathData);
-
-		let headerLabelEl = usingDocument.createElement('h6');
+		let headerLabelEl = usingDocument.createElement('span');
 		headerLabelEl.style.margin = "1em";
 		headerLabelEl.style.marginLeft = "0";
-		headerLabelEl.innerText = "Table of Contents";
+		headerLabelEl.addClass("sidebar-section-header");
+		headerLabelEl.innerText = treeTitle;
 
 		let headerCollapseAllEl = usingDocument.createElement('button');
 		headerCollapseAllEl.classList.add("clickable-icon", "collapse-all");
+		if (closeAllItems) headerCollapseAllEl.classList.add("is-collapsed");
 
 		let headerCollapseAllIconEl = usingDocument.createElement('iconify-icon');
 		headerCollapseAllIconEl.setAttribute("icon", "ph:arrows-in-line-horizontal-bold");
@@ -566,31 +580,31 @@ export class HTMLGenerator
 		headerCollapseAllIconEl.setAttribute("height", "18px");
 		headerCollapseAllIconEl.setAttribute("rotate", "90deg");
 		headerCollapseAllIconEl.setAttribute("color", "currentColor");
-		
-		
 
 		headerCollapseAllEl.appendChild(headerCollapseAllIconEl);
-
-		// headerIconEl.appendChild(headerIconPathEl);
-		// outlineHeader.appendChild(headerIconEl);
 		outlineHeader.appendChild(headerLabelEl);
 		outlineHeader.appendChild(headerCollapseAllEl);
 		outlineEl.appendChild(outlineHeader);
 
 		let listStack = [outlineEl];
 		
-		// function to get the data-size of the previous list item as a number
+		// function to get the data-depth of the previous list item as a number
 		function getLastStackSize(): number
 		{
-			return parseInt(listStack[listStack.length - 1].getAttribute("data-size") ?? "0");
+			return parseInt(listStack[listStack.length - 1].getAttribute("data-depth") ?? "0");
 		}
 
-		for (let i = 0; i < headers.length; i++)
-		{
-			let header = headers[i];
-			let listItem : HTMLDivElement = this.generateOutlineItem(header, usingDocument);
+		let items = tree.flatten();
 
-			while (getLastStackSize() >= header.size && listStack.length > 1)
+		for (let i = 0; i < items.length; i++)
+		{
+			let item = items[i];
+
+			if (item.depth < minDepth) continue;
+
+			let listItem : HTMLDivElement = this.generateTreeItem(item, usingDocument);
+
+			while (getLastStackSize() >= item.depth && listStack.length > 1)
 			{
 				listStack.pop();
 			}
@@ -598,6 +612,8 @@ export class HTMLGenerator
 			let childContainer = listStack.last()?.querySelector(".outline-item-children");
 			if (getLastStackSize() === 0) childContainer = listStack.last();
 			if (!childContainer) continue;
+
+			if (closeAllItems) listItem.classList.add("is-collapsed");
 
 			childContainer.appendChild(listItem);
 			listStack.push(listItem);

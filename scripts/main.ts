@@ -105,7 +105,6 @@ export default class HTMLExportPlugin extends Plugin
 
 	async onload()
 	{
-		navigator.clipboard.writeText("Hello");
 		console.log('loading webpage-html-export plugin');
 		HTMLExportPlugin.plugin = this;
 
@@ -205,7 +204,7 @@ export default class HTMLExportPlugin extends Plugin
 		if (!partOfBatch)
 		{
 			// if we are starting a new export then begin a new batch
-			await HTMLGenerator.beginBatch();
+			await HTMLGenerator.beginBatch([]);
 			RenderLog.progress(1, 2, "Generating HTML", "Exporting: " + file.path);
 		}
 
@@ -263,7 +262,7 @@ export default class HTMLExportPlugin extends Plugin
 			return {success: false, exportedPath: htmlPath};
 		}
 
-		await HTMLGenerator.beginBatch();
+		await HTMLGenerator.beginBatch(filesToExport);
 		RenderLog.progress(0, filesToExport.length, "Generating HTML", "...", "var(--color-accent)");
 
 		let externalFiles: Downloadable[] = [];

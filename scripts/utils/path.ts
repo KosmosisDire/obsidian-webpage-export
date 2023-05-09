@@ -70,7 +70,14 @@ export class Path
 
 	private static parsePath(path: string): { root: string, dir: string, parent: string, base: string, ext: string, name: string, fullPath: string }
 	{
-		path = decodeURI(path);
+		try
+		{
+			path = decodeURI(path);
+		}
+		catch (e)
+		{
+			this.log("Could not parse path:" + path, e.stack, "error");
+		}
 
 		let parsed = pathTools.parse(path);
 
@@ -93,7 +100,16 @@ export class Path
 
 	private static joinStringPaths(...paths: string[]): string
 	{
-		return decodeURI(pathTools.join(...paths));
+		let joined = pathTools.join(...paths);
+		try
+		{
+			return decodeURI(joined);
+		}
+		catch (e)
+		{
+			this.log("Could not decode joined paths: " + joined, e.stack, "error");
+			return joined;
+		}
 	}
 
 	public static joinPath(...paths: Path[]): Path
@@ -179,7 +195,7 @@ export class Path
 
 	makeAbsolute(workingDirectory: string | Path = this._workingDirectory): Path
 	{
-		if(workingDirectory instanceof Path && !workingDirectory.isAbsolute) throw new Error("workingDirectory must be an absolute path");
+		if(workingDirectory instanceof Path && !workingDirectory.isAbsolute) throw new Error("workingDirectory must be an absolute path: " + workingDirectory.asString);
 
 		if (!this.isAbsolute)
 		{
@@ -477,6 +493,11 @@ export class Path
 	get copy(): Path
 	{
 		return new Path(this.asString, this._workingDirectory);
+	}
+
+	getDepth(): number
+	{
+		return this.asString.split("/").length - 1;
 	}
 
 	absolute(workingDirectory: string | Path = this._workingDirectory): Path

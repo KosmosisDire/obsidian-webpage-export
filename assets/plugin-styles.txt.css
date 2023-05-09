@@ -88,7 +88,7 @@ hr
 
 .center-content
 {
-    flex-basis: var(--line-width);
+    flex-basis: var(--content-width);
 }
 
 /* sidebars */
@@ -100,8 +100,16 @@ hr
     font-size: 14px;
 }
 
+.sidebar-section-header
+{
+  margin: 0em 0 0em 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
 .sidebar-content {
-    max-width: 380px;
+    width: var(--sidebar-width);
     line-height: var(--line-height-tight);
     display: flex;
     flex-direction: column;
@@ -172,7 +180,7 @@ hr
     }
 }
 
-@media screen and (max-width: 350px) and (min-width: 0px)
+/* @media screen and (max-width: 350px) and (min-width: 0px)
 {
 	*
 	{
@@ -203,7 +211,7 @@ hr
 	{
 		font-size: 0.9rem;
 	}
-}
+} */
 
 @media screen and (max-width: 800px)
 {
@@ -239,11 +247,11 @@ hr
 
 .outline-container
 {
-    min-width: 20em;
     padding-bottom: 5em;
 }
 
 .outline-item-contents {
+    position: relative;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -270,8 +278,15 @@ hr
     cursor: pointer;
 }
 
+.outline-container .outline-item-contents[href="."] .tree-item-icon.collapse-icon
+{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+
 span.outline-item-title {
-    margin-left: 0.5em;
+    margin-left: calc(10px + 0.5em);
     text-decoration: none;
     color: inherit;
     align-items: center;
@@ -297,15 +312,29 @@ span.outline-item-title:hover
     align-items: center;
 }
 
-.outline-item.is-collapsed .collapse-icon svg.svg-icon
+/* .outline-item.is-collapsed .collapse-icon svg.svg-icon
 {
     color: var(--color-accent);
-}
+} */
 
 .markdown-preview-view
 {
-    max-width: var(--line-width);
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    max-width: 100%;
     padding-bottom: 30em;
+}
+
+.center-content > .markdown-preview-view > .markdown-preview-sizer
+{
+    padding: unset;
+    width: unset;
+    height: unset;
+    margin: unset;
+    max-width: unset;
+    min-height: unset;
+    max-width: var(--line-width);
 }
 
 /* Let links wrap anywhere so that the width isn't set by long links */
@@ -637,4 +666,3 @@ th[sortable-style="sortable-desc"]::after {
     top: 5px;
     right: 5px;
 }
-

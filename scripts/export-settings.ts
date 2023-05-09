@@ -1,10 +1,8 @@
 import { Modal, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { Utils } from './utils/utils';
-import { writeFile } from "fs/promises";
-import { HTMLGenerator } from './html-generation/html-generator';
 import HTMLExportPlugin from './main';
 import { Path } from './utils/path';
-import { AssetHandler } from './html-generation/asset-handler';
+import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
 
 export interface ExportSettingsData {
 	// Inlining Options
@@ -18,6 +16,9 @@ export interface ExportSettingsData {
 	allowFoldingHeadings: boolean;
 	addFilenameTitle: boolean;
 	beautifyHTML: boolean;
+	customLineWidth: string;
+	contentWidth: string;
+	sidebarWidth: string;
 
 	// Export Options
 	dataviewBlockWaitTime: number;
@@ -26,14 +27,12 @@ export interface ExportSettingsData {
 	// Page Features
 	addDarkModeToggle: boolean;
 	includeOutline: boolean;
-	includeVaultOutline: boolean;
+	includeFileTree: boolean;
 	includeGraphView: boolean;
 
 	// Main Export Options
 	exportPreset: string;
-	customLineWidth: string;
 	openAfterExport: boolean;
-	keepNestedFolderStructure: boolean;
 
 	// Graph View Settings
 	graphAttractionForce: number;
@@ -61,6 +60,9 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	allowFoldingHeadings: true,
 	addFilenameTitle: true,
 	beautifyHTML: false,
+	customLineWidth: "",
+	contentWidth: "",
+	sidebarWidth: "",
 
 	// Export Options
 	dataviewBlockWaitTime: 700,
@@ -70,13 +72,11 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	addDarkModeToggle: true,
 	includeOutline: true,
 	includeGraphView: false,
-	includeVaultOutline: true,
+	includeFileTree: true,
 
 	// Main Export Options
 	exportPreset: '',
-	customLineWidth: "",
 	openAfterExport: true,
-	keepNestedFolderStructure: false,
 
 	// Graph View Settings
 	graphAttractionForce: 1,
@@ -135,16 +135,10 @@ export class ExportSettings extends PluginSettingTab {
 	static settings: ExportSettingsData = DEFAULT_SETTINGS;
 	static plugin: Plugin;
 
-	private static thirdPartyStylesBlacklistURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/third-party-styles-blacklist.txt";
-
 	private blacklistedPluginIDs: string[] = [];
 	public async getBlacklistedPluginIDs(): Promise<string[]> {
 		if (this.blacklistedPluginIDs.length > 0) return this.blacklistedPluginIDs;
-
-		let blacklist = await AssetHandler.assetsPath.joinString("third-party-styles-blacklist.txt").readFileString();
-		if (blacklist) {
-			this.blacklistedPluginIDs = blacklist.split("\n");
-		}
+		this.blacklistedPluginIDs = pluginStylesBlacklist.split("\n");
 
 		return this.blacklistedPluginIDs;
 	}
@@ -158,11 +152,6 @@ export class ExportSettings extends PluginSettingTab {
 		ExportSettings.settings = Object.assign({}, DEFAULT_SETTINGS, await ExportSettings.plugin.loadData());
 		ExportSettings.settings.customLineWidth = ExportSettings.settings.customLineWidth.toString();
 		if (ExportSettings.settings.customLineWidth === "0") ExportSettings.settings.customLineWidth = "";
-
-		//Download third-party-styles-blacklist.txt
-		let thirdPartyStylesBlacklist = await fetch(ExportSettings.thirdPartyStylesBlacklistURL);
-		let thirdPartyStylesBlacklistText = await thirdPartyStylesBlacklist.text();
-		await writeFile(AssetHandler.assetsPath.joinString("third-party-styles-blacklist.txt").asString, thirdPartyStylesBlacklistText).catch((err) => { console.log(err); });
 	}
 
 	static async saveSettings() {
@@ -220,6 +209,18 @@ export class ExportSettings extends PluginSettingTab {
 					await ExportSettings.saveSettings();
 				}
 				));
+
+		new Setting(contentEl)
+			.setName('Include file tree')
+			.setDesc('Adds an interactive file tree to the left sidebar of the document.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.includeFileTree)
+				.onChange(async (value) => {
+					ExportSettings.settings.includeFileTree = value;
+					await ExportSettings.saveSettings();
+				}
+				));
+
 
 		//#endregion
 
@@ -279,7 +280,7 @@ export class ExportSettings extends PluginSettingTab {
 			.setHeading()
 
 		new Setting(contentEl)
-			.setName('Page Width')
+			.setName('Document Width')
 			.setDesc('Sets the line width of the exported document. Use any css units.\nDefault units: px')
 			.addText((text) => text
 				.setValue(ExportSettings.settings.customLineWidth)
@@ -291,6 +292,40 @@ export class ExportSettings extends PluginSettingTab {
 				))
 			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
 				ExportSettings.settings.customLineWidth = "";
+				ExportSettings.saveSettings();
+				this.display();
+			}));
+
+		new Setting(contentEl)
+			.setName('Content Width')
+			.setDesc('Sets the width of the central content section of the document. This will push the sidebars towards the edges of the screen the larger it is leaving margins on either side of the document. Use any css units.\nDefault units: px')
+			.addText((text) => text
+				.setValue(ExportSettings.settings.contentWidth)
+				.setPlaceholder('Leave blank for default')
+				.onChange(async (value) => {
+					ExportSettings.settings.contentWidth = value;
+					await ExportSettings.saveSettings();
+				}
+				))
+			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
+				ExportSettings.settings.contentWidth = "";
+				ExportSettings.saveSettings();
+				this.display();
+			}));
+
+		new Setting(contentEl)
+			.setName('Sidebar Width')
+			.setDesc('Sets the width of the sidebar\'s content. Use any css units.\nDefault units: px')
+			.addText((text) => text
+				.setValue(ExportSettings.settings.sidebarWidth)
+				.setPlaceholder('Leave blank for default')
+				.onChange(async (value) => {
+					ExportSettings.settings.sidebarWidth = value;
+					await ExportSettings.saveSettings();
+				}
+				))
+			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
+				ExportSettings.settings.sidebarWidth = "";
 				ExportSettings.saveSettings();
 				this.display();
 			}));
@@ -644,6 +679,7 @@ export class ExportModal extends Modal {
 							ExportSettings.settings.inlineImages = true;
 							ExportSettings.settings.makeNamesWebStyle = false;
 							ExportSettings.settings.includeGraphView = false;
+							ExportSettings.settings.includeFileTree = false;
 							await ExportSettings.saveSettings();
 
 							break;
@@ -653,6 +689,7 @@ export class ExportModal extends Modal {
 							ExportSettings.settings.inlineImages = false;
 							ExportSettings.settings.makeNamesWebStyle = true;
 							ExportSettings.settings.includeGraphView = true;
+							ExportSettings.settings.includeFileTree = true;
 							await ExportSettings.saveSettings();
 
 							break;

@@ -1,6 +1,6 @@
-import { MarkdownView, Notice, WorkspaceLeaf } from "obsidian";
+import { Component, MarkdownView, Notice, WorkspaceLeaf } from "obsidian";
 import { ExportSettings } from "scripts/export-settings";
-import { GraphGenerator } from "scripts/html-generation/graph-gen";
+import { GlobalDataGenerator } from "scripts/html-generation/global-gen";
 import { Utils } from "scripts/utils/utils";
 import { ExportFile } from "./export-file";
 import { AssetHandler } from "./asset-handler";
@@ -19,7 +19,6 @@ export namespace MarkdownRenderer
 
     export async function renderMarkdown(file: ExportFile): Promise<string>
 	{
-
 		if (!renderLeaf)
 		{
 			throw new Error("Cannot render document without a render leaf! Please call beginBatch() before calling this function, and endBatch() after you are done exporting all files.");
@@ -102,23 +101,10 @@ export namespace MarkdownRenderer
 		let container = preview.containerEl;
 		if (container)
 		{
-			// Makes ure the markdown-preview-sizer element is completely passive
-			$(container).find(".markdown-preview-sizer").css("width", "unset");
-			$(container).find(".markdown-preview-sizer").css("height", "unset");
-			$(container).find(".markdown-preview-sizer").css("margin", "unset");
-			$(container).find(".markdown-preview-sizer").css("padding", "unset");
-			$(container).find(".markdown-preview-sizer").css("max-width", "unset");
-			$(container).find(".markdown-preview-sizer").css("min-height", "unset");
-
 			// load stylesheet for mathjax
 			let stylesheet = document.getElementById("MJX-CHTML-styles");
 			if (stylesheet)
 			{
-				if(document.getElementById("MJX-CHTML-styles"))
-				{
-					document.getElementById("MJX-CHTML-styles")?.remove();
-					document.head.appendChild(stylesheet);
-				}
 				AssetHandler.mathStyles = stylesheet.innerHTML.replaceAll("app://obsidian.md/", "https://publish.obsidian.md/").trim();
 			}
 
@@ -132,7 +118,6 @@ export namespace MarkdownRenderer
 
     export async function beginBatch()
 	{
-		GraphGenerator.clearGraphCache();
 		problemLog = "";
         errorInBatch = false;
 
@@ -167,6 +152,7 @@ export namespace MarkdownRenderer
 		$(renderLeaf.parent.parent.containerEl).addClass("mod-horizontal");
 		renderLeaf.view.containerEl.win.resizeTo(900, 450);
 		renderLeaf.view.containerEl.win.moveTo(window.screen.width / 2 - 450, window.screen.height - 450 - 75);
+		
 
 		console.log(renderLeaf);
 
@@ -375,10 +361,11 @@ export namespace MarkdownRenderer
 		return `
 		<div class="markdown-preview-view markdown-rendered">
 			<div class="markdown-preview-sizer" style="width: 100%; height: 100%; margin: 0px; padding: 0px; max-width: 100%; min-height: 100%;">
-			<div>
-				<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
-					<h1 style>${message}</h1>
-				</center>
+				<div>
+					<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
+						<h1 style>${message}</h1>
+					</center>
+				</div>
 			</div>
 		</div>
 		`;

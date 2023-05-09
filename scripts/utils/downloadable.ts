@@ -9,7 +9,7 @@ export class Downloadable
 
 	constructor(filename: string, content: string | Buffer, vaultRelativeDestination: Path, encoding: BufferEncoding | undefined = "utf8")
 	{
-		if(vaultRelativeDestination.isFile) throw new Error("vaultRelativeDestination must be a folder");
+		if(vaultRelativeDestination.isFile) throw new Error("vaultRelativeDestination must be a folder: " + vaultRelativeDestination.asString);
 
 		this.filename = filename;
 		this.content = content;

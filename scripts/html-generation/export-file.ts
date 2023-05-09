@@ -63,8 +63,8 @@ export class ExportFile
 	 */
 	constructor(file: TFile, exportToFolder: Path, exportFromFolder: Path, partOfBatch: boolean, fileName: string = "", forceExportToRoot: boolean = false)
 	{
-		if(exportToFolder.isFile || !exportToFolder.isAbsolute) throw new Error("rootExportFolder must be an absolute path to a folder");
-		if(!fileName.endsWith(".html")) throw new Error("fileName must be a .html file");
+		if(exportToFolder.isFile || !exportToFolder.isAbsolute) throw new Error("exportToFolder must be an absolute path to a folder: " + exportToFolder.asString);
+		if(!fileName.endsWith(".html")) throw new Error("fileName must be a .html file: " + fileName);
 
 		this.markdownFile = file;
 		this.exportToFolder = exportToFolder;
