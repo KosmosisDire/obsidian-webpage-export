@@ -14,8 +14,6 @@ async function loadDocument(url, pushHistory = true)
 	
 	let doc = document.implementation.createHTMLDocument();
 
-	
-
 	deinitializePage();
 
 	if (response.ok)
@@ -24,7 +22,7 @@ async function loadDocument(url, pushHistory = true)
 		doc.documentElement.innerHTML = html;
 
 		document.querySelector(".center-content").innerHTML = doc.querySelector(".center-content").innerHTML;
-		document.querySelector(".outline-container").innerHTML = doc.querySelector(".outline-container").innerHTML;
+		document.querySelector(".outline-tree").innerHTML = doc.querySelector(".outline-tree").innerHTML;
 		document.title = doc.title;
 
 		let pathsCode = doc.querySelector("#relative-paths").textContent;
@@ -56,7 +54,7 @@ async function loadDocument(url, pushHistory = true)
 		</div>
 		`;
 
-		document.querySelector(".outline-container").innerHTML = "";
+		document.querySelector(".tree-container").innerHTML = "";
 
 		document.title = "Page Not Found";
 
@@ -69,6 +67,8 @@ async function loadDocument(url, pushHistory = true)
 }
 
 //#region Initialization
+
+elementsWithEventListeners = [];
 
 function setupThemeToggle()
 {
@@ -146,36 +146,42 @@ function setupThemeToggle()
 		localStorage.setItem("theme_toggle", state ? "true" : "false");
 	}
 
-    $(".toggle__input").on("click tap", function()
-    {
-		setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
-    });
-
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => 
+    document.querySelectorAll(".toggle__input").forEach(function(element)
 	{
-		// return if we are printing
-		if (window.matchMedia('print').matches)
+		element.addEventListener("change", function()
 		{
-			printing = true;
-			return;
-		}
+			setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
+		});
 
-        let newColorScheme = event.matches ? "theme-dark" : "theme-light";
+		elementsWithEventListeners.push(element);
+	});
 
-		if (newColorScheme == lastScheme) return;
+    // window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => 
+	// {
+	// 	// return if we are printing
+	// 	if (window.matchMedia('print').matches)
+	// 	{
+	// 		printing = true;
+	// 		return;
+	// 	}
 
-        if (newColorScheme == "theme-dark")
-        {
-			setThemeToggle(false);
-        }
+    //     let newColorScheme = event.matches ? "theme-dark" : "theme-light";
 
-        if (newColorScheme == "theme-light")
-        {
-			setThemeToggle(true);
-        }
+	// 	if (newColorScheme == lastScheme) return;
 
-		lastScheme = newColorScheme;
-    });
+    //     if (newColorScheme == "theme-dark")
+    //     {
+	// 		setThemeToggle(false);
+    //     }
+
+    //     if (newColorScheme == "theme-light")
+    //     {
+	// 		setThemeToggle(true);
+    //     }
+
+	// 	lastScheme = newColorScheme;
+    // });
+
 }
 
 function setupHeaders()
@@ -239,96 +245,97 @@ function setupHeaders()
         }
 	}
 
-    $(".heading-collapse-indicator").on("click tap", function()
-    {
-        var isCollapsed = $(this).parent().parent().hasClass("is-collapsed");
-		setHeaderCollapse($(this).parent().parent(), !isCollapsed);
-    });
+	document.querySelectorAll(".heading-collapse-indicator").forEach(function (element) 
+	{
+		element.addEventListener("click", function () 
+		{
+			var isCollapsed = this.parentElement.parentElement.classList.contains("is-collapsed");
+			setHeaderCollapse(this.parentElement.parentElement, !isCollapsed);
+		});
+
+		elementsWithEventListeners.push(element);
+	});
 
 	// unfold header when an internal link that points to that header is clicked
-	$(".internal-link").on("click tap", function()
+	document.querySelectorAll(".internal-link").forEach(function (element) 
 	{
-		let target = $(this).attr("href");
-
-		// if the target is a header uncollapse it
-		if (target.startsWith("#"))
+		element.addEventListener("click", function (event) 
 		{
-			let header = $(document.getElementById(target.substring(1)));
+			event.preventDefault();
+			let target = this.getAttribute("href");
 
-			setHeaderCollapse($(header).parent(), false);
-		}
+			// if the target is a header uncollapse it
+			if (target.startsWith("#")) {
+				let header = document.getElementById(target.substring(1));
+				setHeaderCollapse(header.parentElement, false);
+			}
+		});
 
+		elementsWithEventListeners.push(element);
 	});
 }
 
 function setupOutline() 
 {
-	// MAKE OUTLINE COLLAPSIBLE
-    // if "outline-header" is clicked, toggle the display of every div until the next heading of the same or lower level
-	function setOutlineCollapse(header, collapse)
+	function setCollapsed(element, collapsed, animate = true)
 	{
-		if (collapse)
-		{
-			if (!$(header).hasClass("is-collapsed")) 
-				$(header).addClass("is-collapsed");
+		let children = element.querySelector(".tree-item-children");
 
-			$(header).children(".outline-item-children").slideUp(120);
+		if (collapsed)
+		{
+			element.classList.add("is-collapsed");
+			if(animate) $(children).slideUp(100);
+			else children.style.display = "none";
 		}
 		else
 		{
-			if ($(header).hasClass("is-collapsed"))
-				$(header).removeClass("is-collapsed");
-			
-			$(header).children(".outline-item-children").slideDown(120);
+			element.classList.remove("is-collapsed");
+			if(animate) $(children).slideDown(100);
+			else children.style.display = "flex";
 		}
 	}
 
-	function toggleOutlineCollapse(header)
+	function toggleCollapsed(element)
 	{
-		let isCollapsed = $(header).hasClass("is-collapsed");
-		setOutlineCollapse(header, !isCollapsed);
+		console.log(element);
+		if (!element) return;
+		setCollapsed(element, !element.classList.contains("is-collapsed"));
 	}
 
-    $(".outline-item-contents > .collapse-icon").on("click tap", function(e)
-    {
-        toggleOutlineCollapse($(this).parent().parent());
-
-		// Prevent the collapse button from triggering the parent <a> tag navigation.
-		// fix implented by 'zombony' on GitHub
-		return false;
-    });
-
-	$(".outline-container > .outline-header > .collapse-all").on("click tap", function()
+    document.querySelectorAll(".tree-item-contents > .collapse-icon").forEach(function(item)
 	{
-		let button = $(this);
-		button.closest(".outline-container").find(".outline-item").each(function()
+		item.addEventListener("click", function()
 		{
-			setOutlineCollapse($(this), !button.hasClass("is-collapsed"));
+			toggleCollapsed(item.parentElement.parentElement);
 		});
 
-		button.toggleClass("is-collapsed");
-
-		button.find("iconify-icon").attr("icon", button.hasClass("is-collapsed") ? "ph:arrows-out-line-horizontal-bold" : "ph:arrows-in-line-horizontal-bold");
+		elementsWithEventListeners.push(item);
 	});
 
-    // hide the control button if the header has no children
-    $(".outline-item-children:not(:has(*))").each(function()
-    {
-        $(this).parent().find(".collapse-icon").hide();
-    });
-
-
-	// go through all outline items and collapse them if they start with the class "is-collapsed"
-	$(".outline-item").each(function()
+	document.querySelectorAll(".tree-container > .tree-header > .collapse-tree-button").forEach(function(button)
 	{
-		if ($(this).hasClass("is-collapsed"))
+		button.addEventListener("click", function()
 		{
-			setOutlineCollapse($(this), true);
-		}
+			button.parentElement.parentElement.querySelectorAll(".tree-item").forEach(function(item)
+			{
+				setCollapsed(item, !button.classList.contains("is-collapsed"));
+			});
+
+			button.classList.toggle("is-collapsed");
+
+			button.querySelector("iconify-icon").setAttribute("icon", button.classList.contains("is-collapsed") ? "ph:arrows-out-line-horizontal-bold" : "ph:arrows-in-line-horizontal-bold");
+		});
+
+		elementsWithEventListeners.push(button);
+	});
+
+	document.querySelectorAll(".tree-container .tree-item").forEach(function(item)
+	{
+		if (item.classList.contains("is-collapsed")) setCollapsed(item, true, false);
 	});
 
 	// make sure the icons match their starting collaped state
-	$(".outline-container > .outline-header > .collapse-all").each(function()
+	$(".tree-container > .tree-header > .collapse-tree-button").each(function()
 	{
 		if ($(this).hasClass("is-collapsed"))
 		{
@@ -345,32 +352,42 @@ function setupCallouts()
 {
 	// MAKE CALLOUTS COLLAPSIBLE
     // if the callout title is clicked, toggle the display of .callout-content
-    $(".callout.is-collapsible .callout-title").on("click tap", function()
-    {
-        var isCollapsed = $(this).parent().hasClass("is-collapsed");
+	document.querySelectorAll(".callout.is-collapsible .callout-title").forEach(function (element) 
+	{
+		element.addEventListener("click", function () 
+		{
+			var parent = this.parentElement;
+			var isCollapsed = parent.classList.contains("is-collapsed");
 
-        if (isCollapsed)
-        {
-            $(this).parent().toggleClass("is-collapsed");
-        }
+			if (isCollapsed) {
+				parent.classList.toggle("is-collapsed");
+			}
 
-        $(this).parent().find(".callout-content").slideToggle(duration = 100, complete = function()
-        {
-            if (!isCollapsed)
-            {
-                $(this).parent().toggleClass("is-collapsed");
-            }
-        });
-    });
+			$(parent).find(".callout-content").slideToggle(duration = 100, complete = function () {
+				if (!isCollapsed) {
+					parent.classList.toggle("is-collapsed");
+				}
+			});
+		});
+
+		elementsWithEventListeners.push(element);
+	});
+
 }
 
 function setupCheckboxes()
 {
 	// Fix checkboxed toggling .is-checked
-	$(".task-list-item-checkbox").on("click tap", function()
+	document.querySelectorAll(".task-list-item-checkbox").forEach(function (element) 
 	{
-		$(this).parent().toggleClass("is-checked");
-		$(this).parent().attr("data-task", $(this).parent().hasClass("is-checked") ? "x" : " ");
+		element.addEventListener("click", function () 
+		{
+			var parent = this.parentElement;
+			parent.classList.toggle("is-checked");
+			parent.setAttribute("data-task", parent.classList.contains("is-checked") ? "x" : " ");
+		});
+
+		elementsWithEventListeners.push(element);
 	});
 
 	$(`.plugin-tasks-list-item input[type="checkbox"]`).each(function()
@@ -389,87 +406,111 @@ function setupCanvas()
 	let focusedNode = null;
 
 	// make canvas nodes selectable
-	$(".canvas-node-content-blocker").on("click tap", function()
+	document.querySelectorAll(".canvas-node-content-blocker").forEach(function (element) 
 	{
-		$(this).parent().parent().toggleClass("is-focused");
-		$(this).hide();
-
-		if (focusedNode)
+		element.addEventListener("click", function () 
 		{
-			focusedNode.removeClass("is-focused");
-			$(focusedNode).find(".canvas-node-content-blocker").show();
-		}
+			var parent = this.parentElement.parentElement;
+			parent.classList.toggle("is-focused");
+			this.style.display = "none";
 
-		focusedNode = $(this).parent().parent();
+			if (focusedNode) 
+			{
+				focusedNode.classList.remove("is-focused");
+				focusedNode.querySelector(".canvas-node-content-blocker").style.display = "";
+			}
+
+			focusedNode = parent;
+		});
+
+		elementsWithEventListeners.push(element);
 	});
 
 	// make canvas node deselect when clicking outside
-	$(document).on("click tap", function(event)
-	{
-		if (!$(event.target).closest(".canvas-node").length)
-		{
-			$(".canvas-node").removeClass("is-focused");
-			$(".canvas-node-content-blocker").show();
-		}
-	});
+	// document.addEventListener("click", function (event) 
+	// {
+	// 	if (!event.target.closest(".canvas-node")) 
+	// 	{
+	// 		document.querySelectorAll(".canvas-node").forEach(function (node) 
+	// 		{
+	// 			node.classList.remove("is-focused");
+	// 			node.querySelector(".canvas-node-content-blocker").style.display = "";
+	// 		});
+	// 	}
+	// });
+
 }
 
 function setupCodeblocks()
 {
 	// make code snippet block copy button copy the code to the clipboard
-	$(".copy-code-button").on("click tap", function()
+	document.querySelectorAll(".copy-code-button").forEach(function (element) 
 	{
-		let code = $(this).parent().find("code").text();
-		navigator.clipboard.writeText(code);
-		$(this).text("Copied!");
-		// set a timeout to change the text back
-		setTimeout(function()
+		element.addEventListener("click", function () 
 		{
-			$(".copy-code-button").text("Copy");
-		}, 2000);
+			var code = this.parentElement.querySelector("code").textContent;
+			navigator.clipboard.writeText(code);
+			this.textContent = "Copied!";
+			// set a timeout to change the text back
+			setTimeout(function () 
+			{
+				document.querySelectorAll(".copy-code-button").forEach(function (button) 
+				{
+					button.textContent = "Copy";
+				});
+			}, 2000);
+		});
+
+		elementsWithEventListeners.push(element);
 	});
 }
 
 function setupLinks()
 {
-	$(".internal-link, .footnote-link").on("click tap", function()
+	document.querySelectorAll(".internal-link, .footnote-link, .tree-item-link").forEach(function(link)
 	{
-		let target = $(this).attr("href");
-
-		// this is linking to a different page
-		if (!target.startsWith("#"))
+		link.addEventListener("click", function(event)
 		{
-			if ($(this).hasClass("outline-item-contents"))
+			let target = link.getAttribute("href");
+
+			event.preventDefault();
+
+			// this is linking to a different page
+			if (!target.startsWith("#"))
 			{
+				if (link.classList.contains("tree-item-link"))
+				{
+					console.log("Loading document: " + target);
+					target = rootPath + "/" + target;
+					loadDocument(target);
+					return;
+				}
+
 				console.log("Loading document: " + target);
-				target = rootPath + "/" + target;
+				// if the target is not a header, load the page
 				loadDocument(target);
-				return false;
+				return;
 			}
+			else
+			{
+				console.log("Scrolling to: " + target);
+				document.getElementById(target.substring(1)).scrollIntoView();
+			}
+		});
 
-			console.log("Loading document: " + target);
-			// if the target is not a header, load the page
-			loadDocument(target);
-
-			// make sure link doesn't redirect
-			return false;
-		}
-		else
-		{
-			document.getElementById(target.substring(1)).scrollIntoView();
-			return false;
-		}
+		elementsWithEventListeners.push(link);
 	});
 
     window.onpopstate = function(event)
     {
 		loadDocument(window.location.pathname, false);
-		load
     }
 }
 
 function initializePage()
 {
+	elementsWithEventListeners = [];
+
     setupThemeToggle();
     setupHeaders();
     setupOutline();
@@ -482,16 +523,14 @@ function initializePage()
 
 function deinitializePage()
 {
-	// remove all event listeners
-	$(".toggle__input").off("click tap");
-	$(".callout.is-collapsible .callout-title").off("click tap");
-	$(".heading-collapse-indicator").off("click tap");
-	$(".outline-item-contents > .collapse-icon").off("click tap");
-	$(".collapse-all").off("click tap");
-	$(".task-list-item-checkbox").off("click tap");
-	$(".copy-code-button").off("click tap");
-	$(".canvas-node-content-blocker").off("click tap");
-	$("center-content").find("*").off("click tap");
+	elementsWithEventListeners.forEach(function(element)
+	{
+		if(!element || !element.parentNode) return;
+		let copy = element.cloneNode(true);
+		element.parentNode.replaceChild(copy, element);
+	});	
+
+	elementsWithEventListeners = [];
 }
 
 //#endregion

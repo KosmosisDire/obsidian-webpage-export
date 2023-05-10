@@ -8,7 +8,6 @@ import { AssetHandler } from "./asset-handler";
 import { ExportFile } from "./export-file";
 import { Downloadable } from "scripts/utils/downloadable";
 import { TFile } from "obsidian";
-import { RenderLog } from "./render-log";
 
 export class HTMLGenerator
 {
@@ -55,7 +54,7 @@ export class HTMLGenerator
 		if (ExportSettings.settings.includeOutline)
 		{
 			let headerTree = LinkTree.headersFromFile(file.markdownFile, 1);
-			let outline : HTMLElement | undefined = this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", 1, false);
+			let outline : HTMLElement | undefined = this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", "outline-tree", 1, false);
 			rightSidebar.appendChild(outline);
 		}
 
@@ -70,10 +69,11 @@ export class HTMLGenerator
 		if (ExportSettings.settings.includeFileTree)
 		{
 			let tree = GlobalDataGenerator.getFileTree();
-			console.log(tree);
+			if (ExportSettings.settings.makeNamesWebStyle) tree.makeLinksWebStyle();
+
 			if (tree.children.length >= 1)
 			{
-				let fileTree: HTMLDivElement = this.generateHTMLTree(tree, usingDocument, app.vault.getName(), 2, true);
+				let fileTree: HTMLDivElement = this.generateHTMLTree(tree, usingDocument, app.vault.getName(), "file-tree", 2, true);
 				leftSidebar.appendChild(fileTree);
 			}
 		}
@@ -511,58 +511,91 @@ export class HTMLGenerator
 
 	private static generateTreeItem(item: LinkTree, usingDocument: Document): HTMLDivElement
 	{
-		let arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path>`;
+		let arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg>`;
 
-		let outlineItemEl = usingDocument.createElement('div');
-		outlineItemEl.classList.add("outline-item");
-		outlineItemEl.setAttribute("data-depth", item.depth.toString());
+		/*
+		- div.tree-item
+			- div.tree-item-contents
+				- div.tree-item-icon
+					- svg
+				- a.internal-link
+					- span.tree-item-title
+			- div.tree-item-children
+		*/
 
-		let outlineItemContentsEl = usingDocument.createElement('a');
-		outlineItemContentsEl.classList.add("outline-item-contents");
-		outlineItemContentsEl.classList.add("internal-link");
-		if(item.href) outlineItemContentsEl.setAttribute("href", item.href);
-		
-		let outlineItemIconEl = usingDocument.createElement('div');
-		outlineItemIconEl.classList.add("tree-item-icon");
-		outlineItemIconEl.classList.add("collapse-icon");
-		
-		let outlineItemIconSvgEl = usingDocument.createElement('svg');
-		outlineItemIconSvgEl.innerHTML = arrowIcon;
-		outlineItemIconSvgEl = outlineItemIconSvgEl.firstChild as HTMLElement;
-		
-		let outlineItemTitleEl = usingDocument.createElement('span');
-		outlineItemTitleEl.classList.add("outline-item-title");
-		outlineItemTitleEl.innerText = item.title;
+		let treeItemEl = usingDocument.createElement('div');
+		treeItemEl.classList.add("tree-item");
+		treeItemEl.classList.add(item.type == "folder" ? "mod-tree-folder" : (item.type == "file" ? "mod-tree-file" : (item.type == "heading" ? "mod-tree-heading" : "mod-tree-none")));
+		treeItemEl.setAttribute("data-depth", item.depth.toString());
 
-		if (item.type == TreeItemType.Folder)
+		let itemContentsEl = treeItemEl.createDiv("tree-item-contents");
+
+		if (item.children.length != 0)
 		{
-			outlineItemIconEl.style.width = "100%";
-			outlineItemIconEl.style.height = "100%";
-			outlineItemIconEl.style.position = "absolute";
-			outlineItemContentsEl.style.position = "relative";
-			outlineItemTitleEl.style.marginLeft = "calc(16px + 0.5em)";
+			let itemIconEl = itemContentsEl.createDiv("tree-item-icon collapse-icon");
+			let svgEl = usingDocument.createElement("svg");
+			itemIconEl.appendChild(svgEl).outerHTML = arrowIcon;
 		}
 
-		let outlineItemChildrenEl = usingDocument.createElement('div');
-		outlineItemChildrenEl.classList.add("outline-item-children");
+		let itemLinkEl = itemContentsEl.createEl("a", { cls: "tree-item-link" });
+		if (item.href) itemLinkEl.setAttribute("href", item.href);
+		itemLinkEl.createEl("span", { cls: "tree-item-title", text: item.title });
+		treeItemEl.createDiv("tree-item-children");
 
-		outlineItemIconEl.appendChild(outlineItemIconSvgEl);
-		outlineItemContentsEl.appendChild(outlineItemIconEl);
-		outlineItemContentsEl.appendChild(outlineItemTitleEl);
-		outlineItemEl.appendChild(outlineItemContentsEl);
-		outlineItemEl.appendChild(outlineItemChildrenEl);
+		return treeItemEl;
 
-		return outlineItemEl;
+		// let outlineItemEl = usingDocument.createElement('div');
+		// outlineItemEl.classList.add("tree-item");
+		// outlineItemEl.setAttribute("data-depth", item.depth.toString());
+
+		// let outlineItemContentsEl = usingDocument.createElement('div');
+		// outlineItemContentsEl.classList.add("tree-item-contents");
+
+		// let outlineItemLinkEl = usingDocument.createElement('a');
+		// outlineItemLinkEl.classList.add("internal-link");
+		// if(item.href) outlineItemLinkEl.setAttribute("href", item.href);
+		
+		// let outlineItemIconEl = usingDocument.createElement('div');
+		// outlineItemIconEl.classList.add("tree-item-icon");
+		// outlineItemIconEl.classList.add("collapse-icon");
+		
+		// let outlineItemIconSvgEl = usingDocument.createElement('svg');
+		// outlineItemIconSvgEl.innerHTML = arrowIcon;
+		// outlineItemIconSvgEl = outlineItemIconSvgEl.firstChild as HTMLElement;
+		
+		// let outlineItemTitleEl = usingDocument.createElement('span');
+		// outlineItemTitleEl.classList.add("tree-item-title");
+		// outlineItemTitleEl.innerText = item.title;
+
+		// if (item.type == TreeItemType.Folder)
+		// {
+		// 	outlineItemIconEl.style.width = "100%";
+		// 	outlineItemIconEl.style.height = "100%";
+		// 	outlineItemIconEl.style.position = "absolute";
+		// 	outlineItemContentsEl.style.position = "relative";
+		// 	outlineItemTitleEl.style.marginLeft = "calc(16px + 0.5em)";
+		// }
+
+		// let outlineItemChildrenEl = usingDocument.createElement('div');
+		// outlineItemChildrenEl.classList.add("tree-item-children");
+
+		// outlineItemIconEl.appendChild(outlineItemIconSvgEl);
+		// outlineItemContentsEl.appendChild(outlineItemIconEl);
+		// outlineItemContentsEl.appendChild(outlineItemTitleEl);
+		// outlineItemEl.appendChild(outlineItemContentsEl);
+		// outlineItemEl.appendChild(outlineItemChildrenEl);
+
+		// return outlineItemEl;
 	}
 
-	private static generateHTMLTree(tree: LinkTree, usingDocument: Document, treeTitle: string, minDepth: number = 1, closeAllItems: boolean = false): HTMLDivElement
+	private static generateHTMLTree(tree: LinkTree, usingDocument: Document, treeTitle: string, className: string, minDepth: number = 1, closeAllItems: boolean = false): HTMLDivElement
 	{
 		let outlineEl = usingDocument.createElement('div');
-		outlineEl.classList.add("outline-container");
+		outlineEl.classList.add('tree-container', className);
 		outlineEl.setAttribute("data-depth", "0");
 
 		let outlineHeader = usingDocument.createElement('div');
-		outlineHeader.classList.add("outline-header");
+		outlineHeader.classList.add("tree-header");
 
 		let headerLabelEl = usingDocument.createElement('span');
 		headerLabelEl.style.margin = "1em";
@@ -571,7 +604,7 @@ export class HTMLGenerator
 		headerLabelEl.innerText = treeTitle;
 
 		let headerCollapseAllEl = usingDocument.createElement('button');
-		headerCollapseAllEl.classList.add("clickable-icon", "collapse-all");
+		headerCollapseAllEl.classList.add("clickable-icon", "collapse-tree-button");
 		if (closeAllItems) headerCollapseAllEl.classList.add("is-collapsed");
 
 		let headerCollapseAllIconEl = usingDocument.createElement('iconify-icon');
@@ -609,7 +642,7 @@ export class HTMLGenerator
 				listStack.pop();
 			}
 
-			let childContainer = listStack.last()?.querySelector(".outline-item-children");
+			let childContainer = listStack.last()?.querySelector(".tree-item-children");
 			if (getLastStackSize() === 0) childContainer = listStack.last();
 			if (!childContainer) continue;
 

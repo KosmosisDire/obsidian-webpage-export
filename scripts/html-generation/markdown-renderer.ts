@@ -152,11 +152,6 @@ export namespace MarkdownRenderer
 		$(renderLeaf.parent.parent.containerEl).addClass("mod-horizontal");
 		renderLeaf.view.containerEl.win.resizeTo(900, 450);
 		renderLeaf.view.containerEl.win.moveTo(window.screen.width / 2 - 450, window.screen.height - 450 - 75);
-		
-
-		console.log(renderLeaf);
-
-		await Utils.delay(1000);
 	}
 
 	export function endBatch()

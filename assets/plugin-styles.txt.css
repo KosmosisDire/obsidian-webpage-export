@@ -229,93 +229,89 @@ hr
     }
 }
 
+.tree-container {
+    padding-bottom: 5em;
+    margin: 12px;
+}
 
+.tree-header {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
 
-.outline-item {
+.tree-item {
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    margin: 0.3em;
-    margin-left: 10px;
-    margin-right: 10px;
 }
 
-.outline-item:last-child 
-{
+.tree-item:last-child {
     margin-bottom: 0;
 }
 
-.outline-container
-{
-    padding-bottom: 5em;
-}
-
-.outline-item-contents {
+.tree-item-contents {
     position: relative;
     display: flex;
     flex-direction: row;
     align-items: center;
-    padding: 0.3em;
     border-radius: 0.4em;
     color: var(--nav-item-color);
-	text-decoration: none;
     width: 100%;
 }
 
-.outline-item-contents:hover 
-{
-    background-color: var(--nav-item-background-hover);
+.tree-item-contents:hover {
     color: var(--nav-item-color-hover);
-	text-decoration: none;
     cursor: pointer;
+    /* outline: solid 1px var(--active-line-bg); */
 }
 
-.outline-item-contents:active
+.tree-item-contents:active 
 {
-    background-color: var(--nav-item-background-active);
     color: var(--nav-item-color-active);
-	text-decoration: none;
-    cursor: pointer;
 }
 
-.outline-container .outline-item-contents[href="."] .tree-item-icon.collapse-icon
-{
-    position: absolute;
-    width: 100%;
-    height: 100%;
-}
-
-span.outline-item-title {
-    margin-left: calc(10px + 0.5em);
-    text-decoration: none;
-    color: inherit;
-    align-items: center;
-}
-
-span.outline-item-title:hover 
-{
-    color: inherit;
-    text-decoration: none;
-}
-
-.outline-item-children {
-    border-left: 1px solid var(--nav-indentation-guide-color);
-    margin-left: 10px;
-    width: 100%;
-}
-
-.outline-header 
-{
-    margin-left: 10px;
+.tree-item-icon.collapse-icon {
     display: flex;
-    flex-direction: row;
+    justify-content: flex-start;
     align-items: center;
+    border-radius: var(--radius-s);
+    transition: background-color 0.1s;
+    position: absolute;
+    height: 100%;
+    padding: var(--nav-item-children-padding-left);
 }
 
-/* .outline-item.is-collapsed .collapse-icon svg.svg-icon
+.tree-item.mod-tree-folder > .tree-item-contents > .tree-item-icon.collapse-icon
 {
-    color: var(--color-accent);
-} */
+    width: 100%;
+}
+
+.collapse-icon:hover {
+    /* background-color: var(--nav-item-background-hover); */
+    color: var(--nav-item-color-hover);
+}
+
+.collapse-icon > svg {
+    color: unset !important;
+}
+
+a.tree-item-link {
+    padding: 0.3em;
+    width: -webkit-fill-available;
+    height: 100%;
+    transition: background-color 0.1s;
+    border-radius: var(--radius-s);
+    margin-left: calc(10px + var(--nav-item-children-padding-left) * 2);
+    color: var(--nav-item-color);
+    text-decoration: none;
+}
+
+a.tree-item-link:hover 
+{
+    /* background-color: var(--nav-item-background-hover); */
+    text-decoration: underline;
+}
 
 .markdown-preview-view
 {
@@ -335,6 +331,7 @@ span.outline-item-title:hover
     max-width: unset;
     min-height: unset;
     max-width: var(--line-width);
+    flex-basis: var(--line-width);
 }
 
 /* Let links wrap anywhere so that the width isn't set by long links */
@@ -587,8 +584,6 @@ th[sortable-style="sortable-desc"]::after {
 
 
 /* Graph View */
-
-
 #graph-canvas
 {
     width: 100%;

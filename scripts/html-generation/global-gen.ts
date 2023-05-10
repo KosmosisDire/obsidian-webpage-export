@@ -44,10 +44,10 @@ export class LinkTree
 		}
 		else if (source instanceof TAbstractFile)
 		{
-			this.title = source.name;
 			let path = new Path(source.path).makeUnixStyle();
 			if (path.isFile) path.setExtension("html");
 			this.href = path.asString;
+			this.title = path.basename;
 		}
 		else
 		{
@@ -115,7 +115,8 @@ export class LinkTree
 			for (let i = 0; i < pathSections.length; i++)
 			{
 				let section = pathSections[i];
-				let child = parent.children.find(c => c.title == section.name);
+				let sectionType = section instanceof TFolder ? TreeItemType.Folder : (section instanceof TFile ? TreeItemType.File : TreeItemType.None);
+				let child = parent.children.find(c => c.title == section.name && c.type == sectionType);
 				if (child == undefined)
 				{
 					child = new LinkTree(section, parent, i + 1, root);
@@ -332,6 +333,7 @@ export class GlobalDataGenerator
 		let fileTree = LinkTree.fromFiles(exportedFiles);
 		fileTree.sortAlphabetically();
 		fileTree.sortByIsFolder(true);
+		if(ExportSettings.settings.makeNamesWebStyle) fileTree.makeLinksWebStyle();
 
 		this.fileTreeCache = fileTree;
 
