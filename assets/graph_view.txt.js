@@ -574,19 +574,24 @@ async function initializeGraphView()
             return (style.display === 'none')
         }
 
-        let hidden = (isHidden(document.querySelector(".graph-view-placeholder")) || isHidden(document.querySelector("#sidebar:has(.graph-view-placeholder)")));
+        try
+        {
+            var hidden = (isHidden(document.querySelector(".graph-view-placeholder")) || isHidden(document.querySelector(".sidebar:has(.graph-view-placeholder)")));
+        }
+        catch(e)
+        {
+            return;
+        }
 
         if(running && hidden)
         {
             running = false;
-            console.log("Graph view hidden, stopping update loop");
         }
         else if (!running && !hidden)
         {
             running = true;
             renderWorker.autoResizeCanvas();
             renderWorker.centerCamera();
-            console.log("Graph view visible, starting update loop");
         }
 
     }, 1000);
