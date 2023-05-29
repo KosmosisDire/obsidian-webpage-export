@@ -120,7 +120,6 @@ export class LinkTree
 			for (let i = 1; i < pathSections.length; i++)
 			{
 				let section = pathSections[i];
-				console.log("s: " + section.path);
 				let sectionType = section instanceof TFolder ? TreeItemType.Folder : (section instanceof TFile ? TreeItemType.File : TreeItemType.None);
 				let child = parent.children.find(c => c.title == section.name && c.type == sectionType && c.depth == i);
 				if (child == undefined)
@@ -145,6 +144,7 @@ export class LinkTree
 	public static headersFromFile(file: TFile, minDepth: number = 1): LinkTree
 	{
 		let headings = app.metadataCache.getFileCache(file)?.headings ?? [];
+		if(headings.length > 0 && (headings[0].level != 1 && minDepth <= 1 && headings[0].heading != file.basename)) headings.unshift({heading: file.basename, level: 1, position: {start: {col: 0, line: 0, offset: 0}, end: {col: 0, line: 0, offset: 0}}});
 		let minHeadingSize = Math.min(...headings.map(h => h.level));
 		let root = new LinkTree(undefined, undefined, minHeadingSize - 1);
 

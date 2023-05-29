@@ -104,7 +104,6 @@ export namespace MarkdownRenderer
 			// transclusions put a div inside a p tag, which is invalid html. Fix it here
 			container.querySelectorAll("p:has(div)").forEach((element) =>
 			{
-				console.log(element);
 				// replace the p tag with a span
 				let span = file.document.createElement("span");
 				span.innerHTML = element.innerHTML;
