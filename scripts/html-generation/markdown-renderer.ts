@@ -1,14 +1,11 @@
-import { Component, MarkdownView, Notice, WorkspaceLeaf } from "obsidian";
+import { MarkdownView, Notice, WorkspaceLeaf } from "obsidian";
 import { ExportSettings } from "scripts/export-settings";
-import { GlobalDataGenerator } from "scripts/html-generation/global-gen";
 import { Utils } from "scripts/utils/utils";
 import { ExportFile } from "./export-file";
 import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
 const { clipboard } = require('electron')
-import jQuery from 'jquery';
 import { RenderLog } from "./render-log";
-const $ = jQuery;
 
 
 export namespace MarkdownRenderer
@@ -19,10 +16,13 @@ export namespace MarkdownRenderer
 
     export async function renderMarkdown(file: ExportFile): Promise<string>
 	{
+		console.log(1);
 		if (!renderLeaf)
 		{
 			throw new Error("Cannot render document without a render leaf! Please call beginBatch() before calling this function, and endBatch() after you are done exporting all files.");
 		}
+
+		console.log(2);
 
 		try
 		{
@@ -35,12 +35,16 @@ export namespace MarkdownRenderer
 			return generateFailDocument();
 		}
 
+		console.log(3);
+
 		if(!(renderLeaf.view instanceof MarkdownView))
 		{
 			let message = "This file was not a normal markdown file! File: " + file.markdownFile.path;
 			RenderLog.warning("Cannot render file: ", message);
 			return generateFailDocument();
 		}
+
+		console.log(4);
 
 		// @ts-ignore
 		let previewModeFound = await Utils.waitUntil(() => renderLeaf != undefined && renderLeaf.view.previewMode, 2000, 10);
@@ -51,9 +55,13 @@ export namespace MarkdownRenderer
 			return generateFailDocument();
 		}
 
+		console.log(5);
+
 		let preview = renderLeaf.view.previewMode;
 
 		await Utils.changeViewMode(renderLeaf.view, "preview");
+
+		console.log(6);
 
 		// @ts-ignore
 		preview.renderer.showAll = true;
@@ -72,19 +80,27 @@ export namespace MarkdownRenderer
 			isRendered = true;
 		});
 
+		console.log(7);
+
 		// @ts-ignore
-		let renderfinished = await Utils.waitUntil(() => (preview.renderer.lastRender != lastRender && isRendered) || renderLeaf == undefined, 10000, 10);
-		if (!renderfinished)
-		{
-			let message = "Failed to render file within 10 seconds! File: " + file.markdownFile.path;
-			RenderLog.warning("Cannot render file: ", message);
-			return generateFailDocument();
-		}
+		let renderfinished = await Utils.waitUntil(() => (preview.renderer.lastRender != lastRender && isRendered) || renderLeaf == undefined, 30000, 50);
+		
+		console.log(8);
+
 		if (renderLeaf == undefined)
 		{
 			RenderLog.warning("Render cancelled! On file: ", file.markdownFile.path);
 			return generateFailDocument();
 		}
+
+		if (!renderfinished)
+		{
+			let message = "Failed to render file within 30 seconds! File: " + file.markdownFile.path;
+			RenderLog.warning("Cannot render file: ", message);
+			return generateFailDocument();
+		}
+
+		console.log(9);
 
 		// wait for dataview blocks to render
 		let text = renderLeaf.view.data;
@@ -97,16 +113,32 @@ export namespace MarkdownRenderer
 			await Utils.delay(ExportSettings.settings.dataviewBlockWaitTime * dataviewCount);
 		}
 
+		console.log(10);
+
 		// If everything worked then do a bit of postprocessing
 		let container = preview.containerEl;
 		if (container)
 		{
+
+			// transclusions put a div inside a p tag, which is invalid html. Fix it here
+			container.querySelectorAll("p:has(div)").forEach((element) =>
+			{
+				console.log(element);
+				// replace the p tag with a span
+				let span = file.document.createElement("span");
+				span.innerHTML = element.innerHTML;
+				element.replaceWith(span);
+			});
+
 			// load stylesheet for mathjax
+			await Utils.delay(100);
 			let stylesheet = document.getElementById("MJX-CHTML-styles");
 			if (stylesheet)
 			{
 				AssetHandler.mathStyles = stylesheet.innerHTML.replaceAll("app://obsidian.md/", "https://publish.obsidian.md/").trim();
 			}
+
+			console.log(11);
 
 			return container.innerHTML;
 		}
@@ -143,15 +175,28 @@ export namespace MarkdownRenderer
 		// @ts-ignore
 		renderLeaf.parent.containerEl.style.height = "0";
 		// @ts-ignore
-		$(renderLeaf.parent.parent.containerEl).find(".clickable-icon, .workspace-tab-header-container-inner").css("display", "none");
+		renderLeaf.parent.parent.containerEl.querySelector(".clickable-icon, .workspace-tab-header-container-inner").style.display = "none";
 		// @ts-ignore
-		$(renderLeaf.parent.containerEl).css("max-height", "var(--header-height)");
+		renderLeaf.parent.containerEl.style.maxHeight = "var(--header-height)";
 		// @ts-ignore
-		$(renderLeaf.parent.parent.containerEl).removeClass("mod-vertical");
+		renderLeaf.parent.parent.containerEl.classList.remove("mod-vertical");
 		// @ts-ignore
-		$(renderLeaf.parent.parent.containerEl).addClass("mod-horizontal");
-		renderLeaf.view.containerEl.win.resizeTo(900, 450);
+		renderLeaf.parent.parent.containerEl.classList.add("mod-horizontal");
+		renderLeaf.view.containerEl.win.resizeTo(600, 300);
 		renderLeaf.view.containerEl.win.moveTo(window.screen.width / 2 - 450, window.screen.height - 450 - 75);
+
+		// @ts-ignore
+		let renderBrowserWindow = window.electron.remote.BrowserWindow.getFocusedWindow();
+		renderBrowserWindow.setAlwaysOnTop(true, "floating", 1);
+		renderBrowserWindow.webContents.setFrameRate(120);
+		console.log(renderBrowserWindow);
+
+		// @ts-ignore
+		let allWindows = window.electron.remote.BrowserWindow.getAllWindows()
+		for (const win of allWindows)
+		{
+			win.webContents.setBackgroundThrottling(false);
+		}
 	}
 
 	export function endBatch()
@@ -160,6 +205,13 @@ export namespace MarkdownRenderer
 		{
             if (!errorInBatch)
 			    renderLeaf.detach();
+		}
+
+		// @ts-ignore
+		let allWindows = window.electron.remote.BrowserWindow.getAllWindows()
+		for (const win of allWindows)
+		{
+			win.webContents.setBackgroundThrottling(false);
 		}
 	}
 
@@ -258,6 +310,11 @@ export namespace MarkdownRenderer
 
 	export function _reportError(messageTitle: string, message: string, fatal: boolean)
 	{
+		if(problemLog == "")
+		{
+			this.renderLeaf.view.containerEl.win.resizeTo(900, 500);
+		}
+
         messageTitle = (fatal ? "[Fatal Error] " : "[Error] ") + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
@@ -302,6 +359,11 @@ export namespace MarkdownRenderer
 
 	export function _reportWarning(messageTitle: string, message: string)
 	{
+		if(problemLog == "" && ExportSettings.settings.showWarningsInExportLog)
+		{
+			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
+		}
+
         messageTitle = "[Warning] " + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
@@ -328,6 +390,11 @@ export namespace MarkdownRenderer
 
     export function _reportInfo(messageTitle: string, message: string)
 	{
+		if(problemLog == "")
+		{
+			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
+		}
+
         messageTitle = "[Info] " + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 

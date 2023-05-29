@@ -45,15 +45,18 @@ export class LinkTree
 		else if (source instanceof TAbstractFile)
 		{
 			let path = new Path(source.path).makeUnixStyle();
-			if (path.isFile) path.setExtension("html");
+			if (source instanceof TFolder) path.makeForceFolder();
+			else path.setExtension("html");
+
 			this.href = path.asString;
-			this.title = path.basename;
+			this.title = path.basename == "." ? "" : path.basename;
 		}
 		else
 		{
 			this.title = "";
 			this.href = undefined;
 		}
+
 
 		this.#source = source;
 	}
@@ -85,7 +88,9 @@ export class LinkTree
 			searchRoot = searchRoot.parent;
 		}
 
-		if (searchRoot == this) this.isRoot = true;
+		searchRoot = searchRoot.parent ?? searchRoot;
+
+		searchRoot.isRoot = true;
 
 		return searchRoot;
 	}
@@ -96,7 +101,7 @@ export class LinkTree
 	 */
 	public static fromFiles(files: TFile[]): LinkTree
 	{
-		let root = new LinkTree(undefined, undefined, -1);
+		let root = new LinkTree(undefined, undefined, 0);
 
 		for (let file of files)
 		{
@@ -112,14 +117,15 @@ export class LinkTree
 			pathSections.reverse();
 
 			let parent = root;
-			for (let i = 0; i < pathSections.length; i++)
+			for (let i = 1; i < pathSections.length; i++)
 			{
 				let section = pathSections[i];
+				console.log("s: " + section.path);
 				let sectionType = section instanceof TFolder ? TreeItemType.Folder : (section instanceof TFile ? TreeItemType.File : TreeItemType.None);
-				let child = parent.children.find(c => c.title == section.name && c.type == sectionType);
+				let child = parent.children.find(c => c.title == section.name && c.type == sectionType && c.depth == i);
 				if (child == undefined)
 				{
-					child = new LinkTree(section, parent, i + 1, root);
+					child = new LinkTree(section, parent, i, root);
 					parent.children.push(child);
 				}
 				parent = child;
@@ -138,8 +144,9 @@ export class LinkTree
 	 */
 	public static headersFromFile(file: TFile, minDepth: number = 1): LinkTree
 	{
-		let root = new LinkTree(undefined, undefined, 0);
 		let headings = app.metadataCache.getFileCache(file)?.headings ?? [];
+		let minHeadingSize = Math.min(...headings.map(h => h.level));
+		let root = new LinkTree(undefined, undefined, minHeadingSize - 1);
 
 		let parent = root;
 		for (let heading of headings)
@@ -150,7 +157,7 @@ export class LinkTree
 			{
 				let child = new LinkTree(heading, parent, heading.level, root);
 				parent.children.push(child);
-				if(heading.level == parent.depth + 1) parent = child;
+				if(heading.level == parent.depth + 1 || parent == root) parent = child;
 			}
 			else if (heading.level == parent.depth)
 			{

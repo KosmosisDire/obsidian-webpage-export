@@ -1,8 +1,6 @@
 import { Path } from "../utils/path";
 import { ExportSettings } from "../export-settings";
-import { GlobalDataGenerator, LinkTree, TreeItemType } from "./global-gen";
-import jQuery from 'jquery';
-const $ = jQuery;
+import { GlobalDataGenerator, LinkTree } from "./global-gen";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { AssetHandler } from "./asset-handler";
 import { ExportFile } from "./export-file";
@@ -11,9 +9,7 @@ import { TFile } from "obsidian";
 
 export class HTMLGenerator
 {
-
 	//#region Main Generation Functions
-	
 	public static async beginBatch(exportingFiles: TFile[])
 	{
 		GlobalDataGenerator.clearGraphCache();
@@ -54,12 +50,12 @@ export class HTMLGenerator
 		if (ExportSettings.settings.includeOutline)
 		{
 			let headerTree = LinkTree.headersFromFile(file.markdownFile, 1);
-			let outline : HTMLElement | undefined = this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", "outline-tree", 1, false);
+			let outline : HTMLElement | undefined = this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", "outline-tree", false, 1, 2, false);
 			rightSidebar.appendChild(outline);
 		}
 
 		// inject darkmode toggle
-		if (ExportSettings.settings.addDarkModeToggle && !usingDocument.querySelector(".theme-toggle-inline, .theme-toggle"))
+		if (ExportSettings.settings.addDarkModeToggle && !usingDocument.querySelector(".theme-toggle-container-inline, .theme-toggle-container"))
 		{
 			let toggle = this.generateDarkmodeToggle(false, usingDocument);
 			leftSidebar.appendChild(toggle);
@@ -73,7 +69,7 @@ export class HTMLGenerator
 
 			if (tree.children.length >= 1)
 			{
-				let fileTree: HTMLDivElement = this.generateHTMLTree(tree, usingDocument, app.vault.getName(), "file-tree", 2, true);
+				let fileTree: HTMLDivElement = this.generateHTMLTree(tree, usingDocument, app.vault.getName(), "file-tree", true, 1, 1, true);
 				leftSidebar.appendChild(fileTree);
 			}
 		}
@@ -88,24 +84,27 @@ export class HTMLGenerator
 	public static async getDocumentHTML(file: ExportFile, addSelfToDownloads: boolean = false): Promise<ExportFile>
 	{
 		// set custom line width on body
-		let body = $(file.document.body);
+		let body = file.document.body;
 
 		let bodyClasses = (document.body.getAttribute("class") ?? "").replaceAll("\"", "'");
 		let bodyStyle = (document.body.getAttribute("style") ?? "").replaceAll("\"", "'");
-		body.attr("class", bodyClasses);
-		body.attr("style", bodyStyle);
+		body.setAttribute("class", bodyClasses);
+		body.setAttribute("style", bodyStyle);
 
 		let lineWidth = ExportSettings.settings.customLineWidth || "50em";
-		let contentWidth = ExportSettings.settings.contentWidth || "50em";
-		let sidebarWidth = ExportSettings.settings.sidebarWidth || "20em";
+		let contentWidth = ExportSettings.settings.contentWidth || "500em";
+		let sidebarWidth = ExportSettings.settings.sidebarWidth || "25em";
 		if (!isNaN(Number(lineWidth))) lineWidth += "px";
 		if (!isNaN(Number(contentWidth))) contentWidth += "px";
 		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
-		body.css("--line-width", lineWidth);
-		body.css("--line-width-adaptive", lineWidth);
-		body.css("--file-line-width", lineWidth);
-		body.css("--content-width", contentWidth);
-		body.css("--sidebar-width", sidebarWidth);
+		body.style.setProperty("--line-width", lineWidth);
+		body.style.setProperty("--line-width-adaptive", lineWidth);
+		body.style.setProperty("--file-line-width", lineWidth);
+		body.style.setProperty("--content-width", contentWidth);
+		body.style.setProperty("--sidebar-width", sidebarWidth);
+		body.style.setProperty("--collapse-arrow-size", "0.4em");
+		body.style.setProperty("--tree-horizontal-spacing", "1em");
+		body.style.setProperty("--tree-vertical-spacing", "0.5em");
 
 		// create obsidian document containers
 		let markdownViewEl = file.document.body.createDiv();
@@ -126,13 +125,16 @@ export class HTMLGenerator
 
 		// add heading fold arrows
 		let arrowHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='svg-icon right-triangle'><path d='M3 8L12 17L21 8'></path></svg>";
-		let headings = $(file.document).find("div h2, div h3, div h4, div h5, div h6");
-		headings.each((index, element) =>
+		let headings = file.document.querySelectorAll("div h2, div h3, div h4, div h5, div h6");
+		headings.forEach((element) =>
 		{
-			$(element).css("display", "flex");
+			if(!(element instanceof HTMLElement)) return;
+			if(!element.hasAttribute("data-heading")) return;
+
+			element.style.display = "flex";
 			
 			// continue if heading already has an arrow
-			if ($(element).find(".heading-collapse-indicator").length > 0) return;
+			if (element.querySelector(".heading-collapse-indicator") != null) return;
 
 			let el = file.document.createElement("div");
 			el.setAttribute("class", "heading-collapse-indicator collapse-indicator collapse-icon");
@@ -141,18 +143,23 @@ export class HTMLGenerator
 		});
 		
 		// remove collapsible arrows from h1 and inline titles
-		$(file.document).find("div h1, div .inline-title").each((index, element) =>
+		file.document.querySelectorAll("div h1, div .inline-title").forEach((element) =>
 		{
-			$(element).find(".heading-collapse-indicator").remove();
+			element.querySelector(".heading-collapse-indicator")?.remove();
 		});
 
-		// set dataview lists to not have a static width
-		$(file.document).find(".dataview.list-view-ul").each((index, element) =>
-		{
-			$(element).css("width", "auto");
-		});
+		// make sure the page scales correctly at different widths
+		file.sizerElement.style.paddingBottom = "";
+		file.sizerElement.style.paddingBottom = "32px";
+		file.sizerElement.style.padding = "var(--file-margins)";
+		file.sizerElement.style.paddingTop = "var(--file-margins)";
+		file.sizerElement.style.paddingLeft = "var(--file-margins)";
+		file.sizerElement.style.paddingRight = "var(--file-margins)";
+		file.sizerElement.style.width = "-webkit-fill-available";
+		file.sizerElement.style.position = "absolute";
 
-		this.fixLinks(file); // modify links to work outside of obsidian (including relative links)
+		// modify links to work outside of obsidian (including relative links)
+		this.fixLinks(file); 
 		
 		// inline / outline images
 		let outlinedImages : Downloadable[] = [];
@@ -162,7 +169,7 @@ export class HTMLGenerator
 		}
 		else
 		{
-			outlinedImages = await this.outlineMedia(file);
+			outlinedImages = await this.externalizeMedia(file);
 		}
 
 		if(addSelfToDownloads) file.downloads.push(file.getSelfDownloadable());
@@ -187,7 +194,6 @@ export class HTMLGenerator
 		let currentTitle = file.document.body.querySelector("h1, h2, .inline-title")?.textContent ?? "";
 		if (currentTitle != file.markdownFile.basename && !hasTitle)
 		{
-			console.log("Adding title to document: " + file.markdownFile.basename);
 			let divContainer = file.document.querySelector("div.mod-header");
 			if (!divContainer) 
 			{
@@ -203,44 +209,73 @@ export class HTMLGenerator
 		}
 	}
 
-	private static generateSideBars(middleContent: HTMLElement, file: ExportFile): {container: HTMLElement, left: HTMLElement, right: HTMLElement, center: HTMLElement}
+	private static generateSideBars(middleContent: HTMLElement, file: ExportFile): {container: HTMLElement, left: HTMLElement, leftScroll: HTMLElement, right: HTMLElement, rightScroll: HTMLElement, center: HTMLElement}
 	{
 		let docEl = file.document;
 
+		/*
+		- div.webpage-container
+
+			- div.sidebar-left
+				- div.sidebar-content
+					- div.sidebar-scroll-area
+
+			- div.document-container
+
+			- div.sidebar-right
+				- div.sidebar-content
+					- div.sidebar-scroll-area
+		*/
+
+		let pageContainer = docEl.createElement("div");
+		let leftSidebar = docEl.createElement("div");
 		let leftContent = docEl.createElement("div");
+		let leftSidebarScroll = docEl.createElement("div");
+		let documentContainer = docEl.createElement("div");
+		let rightSidebar = docEl.createElement("div");
 		let rightContent = docEl.createElement("div");
-		let centerContent = docEl.createElement("div");
-		let flexContainer = docEl.createElement("div");
+		let rightSidebarScroll = docEl.createElement("div");
 
-		flexContainer.setAttribute("class", "flex-container");
-		centerContent.setAttribute("class", "center-content");
+		pageContainer.setAttribute("class", "webpage-container");
+		leftSidebar.setAttribute("class", "sidebar-left");
 		leftContent.setAttribute("class", "sidebar-content");
+		leftSidebarScroll.setAttribute("class", "sidebar-scroll-area");
+		documentContainer.setAttribute("class", "document-container");
 		rightContent.setAttribute("class", "sidebar-content");
+		rightSidebar.setAttribute("class", "sidebar-right");
+		rightSidebarScroll.setAttribute("class", "sidebar-scroll-area");
+		
+		leftSidebar.setAttribute("id", "sidebar");
+		leftSidebar.appendChild(leftContent);
+		// leftContent.appendChild(leftSidebarScroll);
 
-		let leftBar = docEl.createElement("div");
-		leftBar.setAttribute("id", "sidebar");
-		leftBar.setAttribute("class", "sidebar-left");
-		leftBar.appendChild(leftContent);
+		documentContainer.appendChild(middleContent);
 
-		let rightBar = docEl.createElement("div");
-		rightBar.setAttribute("id", "sidebar");
-		rightBar.setAttribute("class", "sidebar-right");
-		rightBar.appendChild(rightContent);
+		rightSidebar.setAttribute("id", "sidebar");
+		rightSidebar.appendChild(rightContent);
+		// rightContent.appendChild(rightSidebarScroll);
 
-		centerContent.appendChild(middleContent);
-		flexContainer.appendChild(leftBar);
-		flexContainer.appendChild(centerContent);
-		flexContainer.appendChild(rightBar);
+		pageContainer.appendChild(leftSidebar);
+		pageContainer.appendChild(documentContainer);
+		pageContainer.appendChild(rightSidebar);
 
-		return {container: flexContainer, left: leftContent, right: rightContent, center: centerContent};
+		return {container: pageContainer, left: leftContent, leftScroll: leftSidebarScroll, right: rightContent, rightScroll: rightSidebarScroll, center: documentContainer};
 	}
 
 	private static getRelativePaths(file: ExportFile): {mediaPath: Path, jsPath: Path, cssPath: Path, rootPath: Path}
 	{
 		let rootPath = file.pathToRoot;
-		let imagePath = rootPath.join(AssetHandler.mediaFolderName).makeUnixStyle();
-		let jsPath = rootPath.join(AssetHandler.jsFolderName).makeUnixStyle();
-		let cssPath = rootPath.join(AssetHandler.cssFolderName).makeUnixStyle();
+		let imagePath = AssetHandler.mediaFolderName.makeUnixStyle();
+		let jsPath = AssetHandler.jsFolderName.makeUnixStyle();
+		let cssPath = AssetHandler.cssFolderName.makeUnixStyle();
+
+		if (ExportSettings.settings.makeNamesWebStyle)
+		{
+			imagePath = imagePath.makeWebStyle();
+			jsPath = jsPath.makeWebStyle();
+			cssPath = cssPath.makeWebStyle();
+			rootPath = rootPath.makeWebStyle();
+		}
 
 		return {mediaPath: imagePath, jsPath: jsPath, cssPath: cssPath, rootPath: rootPath};
 	}
@@ -252,30 +287,21 @@ export class HTMLGenerator
 		let meta =
 		`
 		<title>${file.markdownFile.basename}</title>
-
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-		<meta charset="UTF-8">
+		<base href="${relativePaths.rootPath}/">
+		<meta id="root-path" root-path="${relativePaths.rootPath}/">
 
 		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
-
-		<script src='https://code.jquery.com/jquery-3.6.0.js'></script>
-		<script src="https://code.jquery.com/ui/1.13.2/jquery-ui.js" integrity="sha256-xLD7nhI62fcsEZK2/v8LsBcb4lG7dgULkuXoXB/j91c=" crossorigin="anonymous"></script></script>
-		<script src="https://code.iconify.design/iconify-icon/1.0.3/iconify-icon.min.js"></script>
-		<script src="https://pixijs.download/v7.2.4/pixi.js"></script>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
+		<meta charset="UTF-8">
 		`;
+
+		if (ExportSettings.settings.includeOutline)
+		{
+			meta += `<script src="https://code.iconify.design/iconify-icon/1.0.3/iconify-icon.min.js"></script>`;
+		}
 
 		// --- JS ---
 		let scripts = "";
-
-		scripts += 
-		`
-		<script id="relative-paths">
-			let rootPath = "${relativePaths.rootPath}";
-			let mediaPath = "${relativePaths.mediaPath}";
-			let jsPath = "${relativePaths.jsPath}";
-			let cssPath = "${relativePaths.cssPath}";
-		</script>
-		`;
 
 		if (ExportSettings.settings.includeGraphView) 
 		{
@@ -296,6 +322,7 @@ export class HTMLGenerator
 			scripts += `\n<script type='module' src='${relativePaths.jsPath}/graph_view.js'></script>\n`;
 			scripts += `\n<script src='${relativePaths.jsPath}/graph_wasm.js'></script>\n`;
 			scripts += `\n<script src="${relativePaths.jsPath}/tinycolor.js"></script>\n`;
+			scripts += `\n<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js" integrity="sha512-Ch/O6kL8BqUwAfCF7Ie5SX1Hin+BJgYH4pNjRqXdTEqMsis1TUYg+j6nnI9uduPjGaj7DN4UKCZgpvoExt6dkw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>\n`;
 		}
 
 		if (ExportSettings.settings.inlineJS)
@@ -351,6 +378,7 @@ export class HTMLGenerator
 
 			<style> ${cssSettings} </style>
 			<style> ${AssetHandler.mathStyles} </style>
+			
 
 			${scripts}
 			`;
@@ -366,18 +394,17 @@ export class HTMLGenerator
 	private static fixLinks(file: ExportFile)
 	{
 		let htmlCompatibleExt = ["canvas", "md"];
-		let query = $(file.document);
 
-		query.find("a.internal-link").each(function ()
+		file.document.querySelectorAll("a.internal-link").forEach((linkEl) =>
 		{
-			$(this).attr("target", "_self");
+			linkEl.setAttribute("target", "_self");
 
-			let href = $(this).attr("href");
+			let href = linkEl.getAttribute("href");
 			if (!href) return;
 
 			if (href.startsWith("#")) // link pointing to header of this document
 			{
-				$(this).attr("href", href.replaceAll(" ", "_"));
+				linkEl.setAttribute("href", href.replaceAll(" ", "_"));
 			}
 			else // if it doesn't start with #, it's a link to another document
 			{
@@ -388,43 +415,60 @@ export class HTMLGenerator
 				if (!targetFile) return;
 
 				let targetPath = new Path(targetFile.path);
-				let targetRelativePath = Path.getRelativePath(file.exportPath, targetPath);
-				if (htmlCompatibleExt.includes(targetRelativePath.extensionName)) targetRelativePath.setExtension("html");
-				if (ExportSettings.settings.makeNamesWebStyle) targetRelativePath.makeWebStyle();
+				// let targetRelativePath = Path.getRelativePath(file.exportPath, targetPath);
+				if (htmlCompatibleExt.includes(targetPath.extensionName)) targetPath.setExtension("html");
+				if (ExportSettings.settings.makeNamesWebStyle) targetPath.makeWebStyle();
 
-				let finalHref = targetRelativePath.makeUnixStyle() + targetHeader.replaceAll(" ", "_");
-				$(this).attr("href", finalHref);
+				let finalHref = targetPath.makeUnixStyle() + targetHeader.replaceAll(" ", "_");
+				linkEl.setAttribute("href", finalHref);
 			}
 		});
 
-		query.find("a.footnote-link").each(function ()
+		file.document.querySelectorAll("a.footnote-link").forEach((linkEl) =>
 		{
-			$(this).attr("target", "_self");
+			linkEl.setAttribute("target", "_self");
 		});
 
-		query.find("h1, h2, h3, h4, h5, h6").each(function ()
+		file.document.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((headerEl) =>
 		{
 			// use the headers inner text as the id
-			$(this).attr("id", $(this).text().replaceAll(" ", "_"));
+			headerEl.setAttribute("id", headerEl.textContent?.replaceAll(" ", "_") ?? "");
 		});
+	}
+
+	private static getMediaPath(src: string): Path
+	{
+		// @ts-ignore
+		let pathString = "";
+		try
+		{
+			// @ts-ignore
+			pathString = app.vault.resolveFileUrl(src)?.path ?? "";
+		}
+		catch
+		{
+			pathString = src.replaceAll("app://", "").replaceAll("\\", "/");
+			pathString = pathString.replaceAll(pathString.split("/")[0] + "/", "");
+			pathString = Path.getRelativePathFromVault(new Path(pathString), true).asString;
+		}
+
+		pathString = pathString ?? "";
+
+		return new Path(pathString);
 	}
 
 	private static async inlineMedia(file: ExportFile)
 	{
-		let query = $(file.document);
-		let media = query.find("img, audio").toArray();
-
-		for (let i = 0; i < media.length; i++)
+		let elements = Array.from(file.document.querySelectorAll("img, audio, video"))
+		for (let mediaEl of elements)
 		{
-			let mediaEl = media[i];
-			let rawSrc = $(mediaEl).attr("src") ?? "";
-			if (rawSrc.startsWith("http:") || rawSrc.startsWith("https:")) continue;
+			let rawSrc = mediaEl.getAttribute("src") ?? "";
+			if (!rawSrc.startsWith("app:")) continue;
 			
-			// @ts-ignore
-			let filePath = new Path(app.vault.resolveFileUrl(rawSrc)?.path ?? "");
+			let filePath = this.getMediaPath(rawSrc);
 
 			let base64 = await filePath.readFileString("base64") ?? "";
-			if (base64 === "") continue;
+			if (base64 === "") return;
 
 			let ext = filePath.extensionName;
 			if(ext === "svg") ext += "+xml";
@@ -432,55 +476,46 @@ export class HTMLGenerator
 			//@ts-ignore
 			let type = app.viewRegistry.typeByExtension[ext] ?? "audio";
 
-			$(mediaEl).attr("src", `data:${type}/${ext};base64,${base64}`);
-		}
+			mediaEl.setAttribute("src", `data:${type}/${ext};base64,${base64}`);
+		};
 	}
 
-	private static async outlineMedia(file: ExportFile): Promise<Downloadable[]>
+	private static async externalizeMedia(file: ExportFile): Promise<Downloadable[]>
 	{
 		let downloads: Downloadable[] = [];
-		let query = $(file.document);
-		let media = query.find("img, audio, video").toArray();
 
-		for (let i = 0; i < media.length; i++)
+		let elements = Array.from(file.document.querySelectorAll("img, audio, video"))
+		for (let mediaEl of elements)
 		{
-			let mediaEl = $(media[i]);
-			let src = (mediaEl.attr("src") ?? "");
-			if (!src.startsWith("app://local")) continue;
-			src = src.replace("app://local", "").split("?")[0];
+			let rawSrc = mediaEl.getAttribute("src") ?? "";
+			if (!rawSrc.startsWith("app:")) continue;
+			
+			let filePath = this.getMediaPath(rawSrc);
 
-			let mediaPath = new Path(src).makeRootAbsolute();
-			if (!mediaPath.exists)
-			{
-				console.log("Could not find image at " + mediaPath);
-				continue;
-			}
-
-			let vaultToMedia = Path.getRelativePathFromVault(mediaPath);
-			let exportLocation = vaultToMedia;
+			let exportLocation = filePath.copy;
 
 			// if the media is inside the exported folder then keep it in the same place
-			let mediaPathInExport = Path.getRelativePath(file.exportFromFolder, vaultToMedia);
+			let mediaPathInExport = Path.getRelativePath(file.exportedFolder, filePath);
 			if (mediaPathInExport.asString.startsWith(".."))
 			{
 				// if path is outside of the vault, outline it into the media folder
-				exportLocation = AssetHandler.mediaFolderName.joinString(vaultToMedia.fullName);
+				exportLocation = AssetHandler.mediaFolderName.joinString(filePath.fullName);
 			}
 
-			let relativeImagePath = Path.getRelativePath(file.exportPath, exportLocation)
+			// let relativeImagePath = Path.getRelativePath(file.exportPath, exportLocation)
 
 			if(ExportSettings.settings.makeNamesWebStyle)
 			{
-				relativeImagePath.makeWebStyle();
+				// relativeImagePath.makeWebStyle();
 				exportLocation.makeWebStyle();
 			}
 
-			mediaEl.attr("src", relativeImagePath.asString);
+			mediaEl.setAttribute("src", exportLocation.asString);
 
-			let data = await mediaPath.readFileBuffer() ?? Buffer.from([]);
-			let imageDownload = new Downloadable(exportLocation.fullName, data, exportLocation.directory);
+			let data = await filePath.readFileBuffer() ?? Buffer.from([]);
+			let imageDownload = new Downloadable(exportLocation.fullName, data, exportLocation.directory.makeForceFolder());
 			downloads.push(imageDownload);
-		}
+		};
 
 		return downloads;
 	}
@@ -494,14 +529,14 @@ export class HTMLGenerator
 		// programatically generates the above html snippet
 		let toggle = usingDocument.createElement("div");
 		let label = usingDocument.createElement("label");
-		label.classList.add(inline ? "theme-toggle-inline" : "theme-toggle");
+		label.classList.add(inline ? "theme-toggle-container-inline" : "theme-toggle-container");
 		label.setAttribute("for", "theme_toggle");
 		let input = usingDocument.createElement("input");
-		input.classList.add("toggle__input");
+		input.classList.add("theme-toggle-input");
 		input.setAttribute("type", "checkbox");
 		input.setAttribute("id", "theme_toggle");
 		let div = usingDocument.createElement("div");
-		div.classList.add("toggle__fill");
+		div.classList.add("toggle-background");
 		label.appendChild(input);
 		label.appendChild(div);
 		toggle.appendChild(label);
@@ -509,7 +544,7 @@ export class HTMLGenerator
 		return toggle;
 	}
 
-	private static generateTreeItem(item: LinkTree, usingDocument: Document): HTMLDivElement
+	private static generateTreeItem(item: LinkTree, usingDocument: Document, minCollapsableDepth = 1, startClosed: boolean = true): HTMLDivElement
 	{
 		let arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg>`;
 
@@ -530,11 +565,14 @@ export class HTMLGenerator
 
 		let itemContentsEl = treeItemEl.createDiv("tree-item-contents");
 
-		if (item.children.length != 0)
+		if (item.children.length != 0 && item.depth >= minCollapsableDepth)
 		{
 			let itemIconEl = itemContentsEl.createDiv("tree-item-icon collapse-icon");
 			let svgEl = usingDocument.createElement("svg");
 			itemIconEl.appendChild(svgEl).outerHTML = arrowIcon;
+
+			treeItemEl.classList.add("mod-collapsible");
+			if (startClosed) treeItemEl.classList.add("is-collapsed");
 		}
 
 		let itemLinkEl = itemContentsEl.createEl("a", { cls: "tree-item-link" });
@@ -543,116 +581,88 @@ export class HTMLGenerator
 		treeItemEl.createDiv("tree-item-children");
 
 		return treeItemEl;
-
-		// let outlineItemEl = usingDocument.createElement('div');
-		// outlineItemEl.classList.add("tree-item");
-		// outlineItemEl.setAttribute("data-depth", item.depth.toString());
-
-		// let outlineItemContentsEl = usingDocument.createElement('div');
-		// outlineItemContentsEl.classList.add("tree-item-contents");
-
-		// let outlineItemLinkEl = usingDocument.createElement('a');
-		// outlineItemLinkEl.classList.add("internal-link");
-		// if(item.href) outlineItemLinkEl.setAttribute("href", item.href);
-		
-		// let outlineItemIconEl = usingDocument.createElement('div');
-		// outlineItemIconEl.classList.add("tree-item-icon");
-		// outlineItemIconEl.classList.add("collapse-icon");
-		
-		// let outlineItemIconSvgEl = usingDocument.createElement('svg');
-		// outlineItemIconSvgEl.innerHTML = arrowIcon;
-		// outlineItemIconSvgEl = outlineItemIconSvgEl.firstChild as HTMLElement;
-		
-		// let outlineItemTitleEl = usingDocument.createElement('span');
-		// outlineItemTitleEl.classList.add("tree-item-title");
-		// outlineItemTitleEl.innerText = item.title;
-
-		// if (item.type == TreeItemType.Folder)
-		// {
-		// 	outlineItemIconEl.style.width = "100%";
-		// 	outlineItemIconEl.style.height = "100%";
-		// 	outlineItemIconEl.style.position = "absolute";
-		// 	outlineItemContentsEl.style.position = "relative";
-		// 	outlineItemTitleEl.style.marginLeft = "calc(16px + 0.5em)";
-		// }
-
-		// let outlineItemChildrenEl = usingDocument.createElement('div');
-		// outlineItemChildrenEl.classList.add("tree-item-children");
-
-		// outlineItemIconEl.appendChild(outlineItemIconSvgEl);
-		// outlineItemContentsEl.appendChild(outlineItemIconEl);
-		// outlineItemContentsEl.appendChild(outlineItemTitleEl);
-		// outlineItemEl.appendChild(outlineItemContentsEl);
-		// outlineItemEl.appendChild(outlineItemChildrenEl);
-
-		// return outlineItemEl;
 	}
 
-	private static generateHTMLTree(tree: LinkTree, usingDocument: Document, treeTitle: string, className: string, minDepth: number = 1, closeAllItems: boolean = false): HTMLDivElement
+	private static buildTreeRecursive(tree: LinkTree, usingDocument: Document, minDepth:number = 1, minCollapsableDepth:number = 1, closeAllItems: boolean = true): HTMLDivElement[]
 	{
-		let outlineEl = usingDocument.createElement('div');
-		outlineEl.classList.add('tree-container', className);
-		outlineEl.setAttribute("data-depth", "0");
+		let treeItems: HTMLDivElement[] = [];
 
-		let outlineHeader = usingDocument.createElement('div');
-		outlineHeader.classList.add("tree-header");
-
-		let headerLabelEl = usingDocument.createElement('span');
-		headerLabelEl.style.margin = "1em";
-		headerLabelEl.style.marginLeft = "0";
-		headerLabelEl.addClass("sidebar-section-header");
-		headerLabelEl.innerText = treeTitle;
-
-		let headerCollapseAllEl = usingDocument.createElement('button');
-		headerCollapseAllEl.classList.add("clickable-icon", "collapse-tree-button");
-		if (closeAllItems) headerCollapseAllEl.classList.add("is-collapsed");
-
-		let headerCollapseAllIconEl = usingDocument.createElement('iconify-icon');
-		headerCollapseAllIconEl.setAttribute("icon", "ph:arrows-in-line-horizontal-bold");
-		headerCollapseAllIconEl.setAttribute("width", "18px");
-		headerCollapseAllIconEl.setAttribute("height", "18px");
-		headerCollapseAllIconEl.setAttribute("rotate", "90deg");
-		headerCollapseAllIconEl.setAttribute("color", "currentColor");
-
-		headerCollapseAllEl.appendChild(headerCollapseAllIconEl);
-		outlineHeader.appendChild(headerLabelEl);
-		outlineHeader.appendChild(headerCollapseAllEl);
-		outlineEl.appendChild(outlineHeader);
-
-		let listStack = [outlineEl];
-		
-		// function to get the data-depth of the previous list item as a number
-		function getLastStackSize(): number
+		for (let item of tree.children)
 		{
-			return parseInt(listStack[listStack.length - 1].getAttribute("data-depth") ?? "0");
-		}
+			let children = this.buildTreeRecursive(item, usingDocument, minCollapsableDepth);
 
-		let items = tree.flatten();
-
-		for (let i = 0; i < items.length; i++)
-		{
-			let item = items[i];
-
-			if (item.depth < minDepth) continue;
-
-			let listItem : HTMLDivElement = this.generateTreeItem(item, usingDocument);
-
-			while (getLastStackSize() >= item.depth && listStack.length > 1)
+			if(item.depth >= minDepth)
 			{
-				listStack.pop();
+				let treeItem = this.generateTreeItem(item, usingDocument, minCollapsableDepth, closeAllItems);
+				treeItems.push(treeItem);
+				treeItem.querySelector(".tree-item-children")?.append(...children);
 			}
-
-			let childContainer = listStack.last()?.querySelector(".tree-item-children");
-			if (getLastStackSize() === 0) childContainer = listStack.last();
-			if (!childContainer) continue;
-
-			if (closeAllItems) listItem.classList.add("is-collapsed");
-
-			childContainer.appendChild(listItem);
-			listStack.push(listItem);
+			else
+			{
+				treeItems.push(...children);
+			}
 		}
 
-		return outlineEl;
+		return treeItems;
+	}
+
+	private static generateHTMLTree(tree: LinkTree, usingDocument: Document, treeTitle: string, className: string, showNestingIndicator = true, minDepth: number = 1, minCollapsableDepth = 1, closeAllItems: boolean = false): HTMLDivElement
+	{
+		/*
+		- div.tree-container
+			- div.tree-header
+				- span.sidebar-section-header
+				- button.collapse-tree-button
+					- iconify-icon
+			- div.tree-scroll-area
+				- div.tree-item
+					- div.tree-item-contents
+						- div.tree-item-icon
+							- svg
+						- a.internal-link
+							- span.tree-item-title
+					- div.tree-item-children
+		*/
+
+		let treeContainerEl = usingDocument.createElement('div');
+		let treeHeaderEl = usingDocument.createElement('div');
+		let sectionHeaderEl = usingDocument.createElement('span');
+		let collapseAllEl = usingDocument.createElement('button');
+		let collapseAllIconEl = usingDocument.createElement('iconify-icon');
+		let treeScrollAreaEl = usingDocument.createElement('div');
+
+		treeContainerEl.classList.add('tree-container', className);
+		if (showNestingIndicator) treeContainerEl.classList.add("mod-nav-indicator");
+		treeHeaderEl.classList.add("tree-header");
+		sectionHeaderEl.classList.add("sidebar-section-header");
+		collapseAllEl.classList.add("clickable-icon", "collapse-tree-button");
+		if (closeAllItems) collapseAllEl.classList.add("is-collapsed");
+		treeScrollAreaEl.classList.add("tree-scroll-area");
+
+		treeContainerEl.setAttribute("data-depth", "0");
+		sectionHeaderEl.innerText = treeTitle;
+		collapseAllIconEl.setAttribute("icon", "ph:arrows-in-line-horizontal-bold");
+		collapseAllIconEl.setAttribute("width", "18px");
+		collapseAllIconEl.setAttribute("height", "18px");
+		collapseAllIconEl.setAttribute("rotate", "90deg");
+		collapseAllIconEl.setAttribute("color", "currentColor");
+
+		treeContainerEl.appendChild(treeHeaderEl);
+		treeContainerEl.appendChild(treeScrollAreaEl);
+		treeHeaderEl.appendChild(sectionHeaderEl);
+		treeHeaderEl.appendChild(collapseAllEl);
+		collapseAllEl.appendChild(collapseAllIconEl);
+
+		let treeItems = this.buildTreeRecursive(tree, usingDocument, minDepth, minCollapsableDepth, closeAllItems);
+
+		for (let item of treeItems)
+		{
+			treeScrollAreaEl.appendChild(item);
+		}
+
+		console.log(treeItems);
+
+		return treeContainerEl;
 	}
 
 	private static generateGraphView(usingDocument: Document): HTMLDivElement

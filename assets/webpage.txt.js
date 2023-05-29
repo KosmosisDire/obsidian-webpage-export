@@ -1,46 +1,353 @@
-async function loadDocument(url, pushHistory = true)
-{
-	let response;
-	try
-	{
-		response = await fetch(url);
-	}
-	catch (error)
-	{
-		console.log("Cannot use fetch API (likely due to CORS), just loading the page normally.");
-		window.location.assign(url);
-		return;
-	}
-	
-	let doc = document.implementation.createHTMLDocument();
 
-	deinitializePage();
+//#region Helpers
+
+function getAbsoluteRootPath()
+{
+	if (typeof rootPath == 'undefined') setupRootPath(document);
+	return new URL(window.location.href + "/../" + rootPath).pathname;
+}
+
+function getURLPath(url = window.location.pathname)
+{
+	let absoluteRoot = getAbsoluteRootPath();
+	let pathname = url.substring(absoluteRoot.length);
+	console.log("url path: ", pathname);
+	return pathname;
+}
+
+function getURLRootPath(url = window.location.pathname)
+{
+	let path = getURLPath(url);
+	let splitPath = path.split("/");
+	let rootPath = "";
+	for (let i = 0; i < splitPath.length - 1; i++)
+	{
+		rootPath += "../";
+	}
+	return rootPath;
+}
+
+async function setTreeCollapsed(element, collapsed, animate = true)
+{
+	let children = element.querySelector(".tree-item-children");
+
+	if (collapsed)
+	{
+		element.classList.add("is-collapsed");
+		if(animate) slideUp(children, 100);
+		else children.style.display = "none";
+	}
+	else
+	{
+		element.classList.remove("is-collapsed");
+		if(animate) slideDown(children, 100);
+		else children.style.removeProperty("display");
+	}
+}
+
+async function setTreeCollapsedAll(elements, collapsed, animate = true)
+{
+	let childrenList = [];
+	elements.forEach(async element => 
+	{
+		let children = element.querySelector(".tree-item-children");
+
+		if (collapsed)
+		{
+			element.classList.add("is-collapsed");
+		}
+		else
+		{
+			element.classList.remove("is-collapsed");
+		}
+
+		childrenList.push(children);
+	});
+
+	if (collapsed)
+	{
+		if(animate) slideUpAll(childrenList, 100);
+		else childrenList.forEach(async children => children.style.display = "none");
+	}
+	else
+	{
+		if(animate) slideDownAll(childrenList, 100);
+		else childrenList.forEach(async children => children.style.removeProperty("display"));
+	}
+}
+
+function toggleTreeCollapsed(element)
+{
+	if (!element) return;
+	setTreeCollapsed(element, !element.classList.contains("is-collapsed"));
+}
+
+function toggleTreeCollapsedAll(elements)
+{
+	if (!elements) return;
+	setTreeCollapsedAll(elements, !elements[0].classList.contains("is-collapsed"));
+}
+
+function setHeaderCollapse(header, collapse, openParents = true)
+{
+	// let selector = getHeadingContentsSelector(header);
+	if (header.classList.contains("is-collapsed") && !collapse) header.classList.remove("is-collapsed");
+	if (!header.classList.contains("is-collapsed") && collapse) header.classList.add("is-collapsed");
+
+	let childHeaders = [];
+
+	let possibleChild = header.nextElementSibling;
+
+	// loop through next siblings showing/ hiding children until we reach a header of the same or lower level
+	while (possibleChild != null)
+	{
+		let possibleChildHeader = possibleChild.firstChild;
+		
+		let isHeader = possibleChildHeader ? /[Hh][1-6]/g.test(possibleChildHeader.tagName) : false;
+
+		if(isHeader)
+		{
+			// if header is a sibling of this header then break
+			if (possibleChildHeader.tagName <= header.firstChild.tagName) break;
+
+			// save child headers to be re closed afterwards
+			childHeaders.push(possibleChild);
+		}
+
+		if (collapse) possibleChild.style.display = "none";
+		else possibleChild.style.display = "";
+
+		possibleChild = possibleChild.nextElementSibling;
+	}
+
+	if(!collapse)
+	{
+		// if we are opening the header then we need to make sure that all closed child headers stay closed
+		childHeaders.forEach(function(item)
+		{
+			if (item.classList.contains("is-collapsed"))
+			{
+				setHeaderCollapse(item, true);
+			}
+		});
+
+		// if we are opening the header then we need to make sure that all parent headers are open
+		if (openParents)
+		{
+			let possibleParent = header.previousElementSibling;
+			while (possibleParent != null)
+			{
+				let possibleParentHeader = possibleParent.firstChild;
+				let isHeader = possibleParentHeader ? /[Hh][1-6]/g.test(possibleParentHeader.tagName) : false;
+				
+				if(isHeader)
+				{
+					if (possibleParentHeader.tagName < header.firstChild.tagName)
+					{
+						// if header is a parent of this header then unhide
+						setHeaderCollapse(possibleParent, false);
+						break;
+					}
+				}
+
+				possibleParent = possibleParent.previousElementSibling;
+			}
+		}
+	}
+}
+
+let slideUp = (target, duration=500) => {
+
+	target.style.transitionProperty = 'height, margin, padding';
+	target.style.transitionDuration = duration + 'ms';
+	target.style.boxSizing = 'border-box';
+	target.style.height = target.offsetHeight + 'px';
+	target.offsetHeight;
+	target.style.overflow = 'hidden';
+	target.style.height = 0;
+	target.style.paddingTop = 0;
+	target.style.paddingBottom = 0;
+	target.style.marginTop = 0;
+	target.style.marginBottom = 0;
+	window.setTimeout(async () => {
+			target.style.display = 'none';
+			target.style.removeProperty('height');
+			target.style.removeProperty('padding-top');
+			target.style.removeProperty('padding-bottom');
+			target.style.removeProperty('margin-top');
+			target.style.removeProperty('margin-bottom');
+			target.style.removeProperty('overflow');
+			target.style.removeProperty('transition-duration');
+			target.style.removeProperty('transition-property');
+	}, duration);
+}
+
+let slideUpAll = (targets, duration=500) => {
+
+	targets.forEach(async target => {
+		target.style.transitionProperty = 'height, margin, padding';
+		target.style.transitionDuration = duration + 'ms';
+		target.style.boxSizing = 'border-box';
+		target.style.height = target.offsetHeight + 'px';
+		target.offsetHeight;
+		target.style.overflow = 'hidden';
+		target.style.height = 0;
+		target.style.paddingTop = 0;
+		target.style.paddingBottom = 0;
+		target.style.marginTop = 0;
+		target.style.marginBottom = 0;
+	});
+
+	window.setTimeout(async () => {
+		targets.forEach(async target => {
+			target.style.display = 'none';
+			target.style.removeProperty('height');
+			target.style.removeProperty('padding-top');
+			target.style.removeProperty('padding-bottom');
+			target.style.removeProperty('margin-top');
+			target.style.removeProperty('margin-bottom');
+			target.style.removeProperty('overflow');
+			target.style.removeProperty('transition-duration');
+			target.style.removeProperty('transition-property');
+		});
+	}, duration);
+}
+
+let slideDown = (target, duration=500) => {
+
+	target.style.removeProperty('display');
+	let display = window.getComputedStyle(target).display;
+	if (display === 'none') display = 'block';
+	target.style.display = display;
+	let height = target.offsetHeight;
+	target.style.overflow = 'hidden';
+	target.style.height = 0;
+	target.style.paddingTop = 0;
+	target.style.paddingBottom = 0;
+	target.style.marginTop = 0;
+	target.style.marginBottom = 0;
+	target.offsetHeight;
+	target.style.boxSizing = 'border-box';
+	target.style.transitionProperty = "height, margin, padding";
+	target.style.transitionDuration = duration + 'ms';
+	target.style.height = height + 'px';
+	target.style.removeProperty('padding-top');
+	target.style.removeProperty('padding-bottom');
+	target.style.removeProperty('margin-top');
+	target.style.removeProperty('margin-bottom');
+	window.setTimeout(async () => {
+		target.style.removeProperty('height');
+		target.style.removeProperty('overflow');
+		target.style.removeProperty('transition-duration');
+		target.style.removeProperty('transition-property');
+	}, duration);
+}
+
+let slideDownAll = (targets, duration=500) => {
+
+	targets.forEach(async target => {
+		target.style.removeProperty('display');
+		let display = window.getComputedStyle(target).display;
+		if (display === 'none') display = 'block';
+		target.style.display = display;
+		let height = target.offsetHeight;
+		target.style.overflow = 'hidden';
+		target.style.height = 0;
+		target.style.paddingTop = 0;
+		target.style.paddingBottom = 0;
+		target.style.marginTop = 0;
+		target.style.marginBottom = 0;
+		target.offsetHeight;
+		target.style.boxSizing = 'border-box';
+		target.style.transitionProperty = "height, margin, padding";
+		target.style.transitionDuration = duration + 'ms';
+		target.style.height = height + 'px';
+		target.style.removeProperty('padding-top');
+		target.style.removeProperty('padding-bottom');
+		target.style.removeProperty('margin-top');
+		target.style.removeProperty('margin-bottom');
+	});
+
+	window.setTimeout( async () => {
+		targets.forEach(async target => {
+			target.style.removeProperty('height');
+			target.style.removeProperty('overflow');
+			target.style.removeProperty('transition-duration');
+			target.style.removeProperty('transition-property');
+		});
+	}, duration);
+}
+
+var slideToggle = (target, duration = 500) => {
+	if (window.getComputedStyle(target).display === 'none') {
+		return slideDown(target, duration);
+	} else {
+		return slideUp(target, duration);
+	}
+}
+
+var slideToggleAll = (targets, duration = 500) => {
+	if (window.getComputedStyle(targets[0]).display === 'none') {
+		return slideDownAll(targets, duration);
+	} else {
+		return slideUpAll(targets, duration);
+	}
+}
+
+//#endregion
+
+async function loadDocument(url, pushHistory = true, scrollTo = true)
+{
+	console.log("Loading document: " + url);
+	
+	// change the active file
+	setActiveDocument(url, scrollTo, pushHistory);
+
+	let response;
+
+	if(typeof embeddedDocuments == 'undefined')
+	{
+		try
+		{
+			response = await fetch(url);
+		}
+		catch (error)
+		{
+			console.log("Cannot use fetch API (likely due to CORS), just loading the page normally.");
+			window.location.assign(url);
+			return;
+		}
+	}
+	else
+	{
+		response = new Response(embeddedDocuments[url], {status: 200, statusText: "OK"});
+	}
+
+	let doc = document.implementation.createHTMLDocument();
 
 	if (response.ok)
 	{
 		let html = (await response.text()).replaceAll("<!DOCTYPE html>", "").replaceAll("<html>", "").replaceAll("</html>", "");
 		doc.documentElement.innerHTML = html;
 
-		document.querySelector(".center-content").innerHTML = doc.querySelector(".center-content").innerHTML;
+		// copy document content and outline tree
+		document.querySelector(".document-container").innerHTML = doc.querySelector(".document-container").innerHTML;
 		document.querySelector(".outline-tree").innerHTML = doc.querySelector(".outline-tree").innerHTML;
-		document.title = doc.title;
-
-		let pathsCode = doc.querySelector("#relative-paths").textContent;
-		// get a list of strings contained inside of ""
-		let paths = pathsCode.match(/"(.*?)"/g).map(function (val) { return val.replace(/"/g, ""); });
-		rootPath = paths[0];
-		mediaPath = paths[1];
-		jsPath = paths[2];
-		cssPath = paths[3];
-
+	
+		// if the url has a heading, scroll to it
 		let splitURL = url.split("#");
 		let pathnameTarget = splitURL[0] ?? url;
 		let headingTarget = splitURL.length > 1 ? splitURL[1] : null;
-
-		// if the url has a heading, scroll to it
 		if (headingTarget) document.getElementById(headingTarget).scrollIntoView();
 
-		if(pushHistory) window.history.pushState({ path: pathnameTarget }, '', pathnameTarget);
+		// Change the root path to match the match from the new page
+		setupRootPath(doc);
+
+		// initialize events on the new page
+		initializePage(document.querySelector(".document-container"));
+		initializePage(document.querySelector(".outline-tree"));
+
+		document.title = doc.title;
 	}
 	else
 	{
@@ -54,46 +361,89 @@ async function loadDocument(url, pushHistory = true)
 		</div>
 		`;
 
-		document.querySelector(".tree-container").innerHTML = "";
+		document.querySelector(".outline-tree").innerHTML = "";
+
+		console.log("Page not found: " + getAbsoluteRootPath() + url);
+		let newRootPath = getURLRootPath(getAbsoluteRootPath() + url);
+		rootPath = newRootPath;
+		document.querySelector("base").href = newRootPath;
 
 		document.title = "Page Not Found";
-
-		if(pushHistory) window.history.pushState({ path: window.location.pathname }, '', window.location.pathname);
 	}
 
-	initializePage();
-
 	return doc;
+}
+
+function setActiveDocument(url, scrollTo = true, pushHistory = true)
+{
+	let pathnameTarget = url.split("#")[0] ?? url; // path with no header
+
+	// switch active file in file tree
+	document.querySelector(".tree-item.mod-active")?.classList.remove("mod-active");
+	let treeItems = Array.from(document.querySelectorAll(".tree-item > .tree-item-contents > .tree-item-link"));
+	let treeItem = undefined;
+	for (let item of treeItems) 
+	{
+		if (item.getAttribute("href") == url)
+		{
+			let parent = item.parentElement.parentElement;
+
+			parent.classList.add("mod-active");
+			treeItem = parent;
+			
+			while (parent.hasAttribute("data-depth"))
+			{
+				setTreeCollapsed(parent, false, false);
+				parent = parent.parentElement.parentElement;
+			}
+
+			continue;
+		}
+	}
+
+	if(scrollTo) treeItem?.scrollIntoView({block: "center", inline: "nearest"});
+
+	// set the active file in th graph view
+	if(typeof nodes != 'undefined' && window.renderWorker)
+	{
+		let activeNode = nodes?.paths.findIndex(function(item) { return item.endsWith(pathnameTarget); }) ?? -1;
+		
+		if(activeNode >= 0) 
+		{
+			console.log("Setting active node to: " + activeNode);
+			window.renderWorker.activeNode = activeNode;
+		}
+	}
+
+	if(pushHistory) window.history.pushState({ path: pathnameTarget }, '', pathnameTarget);
 }
 
 //#region Initialization
 
 elementsWithEventListeners = [];
 
-function setupThemeToggle()
+function setupThemeToggle(setupOnNode)
 {
-	console.log("Setting up theme toggle");
-
 	if (localStorage.getItem("theme_toggle") != null)
     {
         setThemeToggle(localStorage.getItem("theme_toggle") == "true");
     }
 
-	var lastScheme = "theme-dark";
+	// var lastScheme = "theme-dark";
 	// change theme to match current system theme
-	if (localStorage.getItem("theme_toggle") == null && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
-	{
-		setThemeToggle(true);
-		lastScheme = "theme-light";
-	}
-	if (localStorage.getItem("theme_toggle") == null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-	{
-		setThemeToggle(true);
-		lastScheme = "theme-dark";
-	}
+	// if (localStorage.getItem("theme_toggle") == null && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
+	// {
+	// 	setThemeToggle(true);
+	// 	lastScheme = "theme-light";
+	// }
+	// if (localStorage.getItem("theme_toggle") == null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+	// {
+	// 	setThemeToggle(true);
+	// 	lastScheme = "theme-dark";
+	// }
 
 	// set initial toggle state based on body theme class
-	if ($("body").hasClass("theme-light"))
+	if (document.body.classList.contains("theme-light"))
 	{
 		setThemeToggle(true);
 	}
@@ -104,49 +454,62 @@ function setupThemeToggle()
 
 	function setThemeToggle(state, instant = false)
 	{
-		$(".toggle__input").each(function()
-		{
-			$(this).prop("checked", state);
-		});
+		let toggle = document.querySelector(".theme-toggle-input");
 
-		if(!$(".toggle__input").hasClass("is-checked") && state)
-		{
-			$(".toggle__input").addClass("is-checked");
+		toggle.checked = state;
+
+		if (instant) 
+		{	
+			var oldTransition = document.body.style.transition;
+			document.body.style.transition = "none";
 		}
-		else if ($(".toggle__input").hasClass("is-checked") && !state)
+
+		if(!toggle.classList.contains("is-checked") && state)
 		{
-			$(".toggle__input").removeClass("is-checked");
+			toggle.classList.add("is-checked");
+		}
+		else if (toggle.classList.contains("is-checked") && !state)
+		{
+			toggle.classList.remove("is-checked");
 		}
 
 		if(!state)
 		{
-			if ($("body").hasClass("theme-light"))
+			if (document.body.classList.contains("theme-light"))
 			{
-				$("body").removeClass("theme-light");
+				document.body.classList.remove("theme-light");
 			}
 
-			if (!$("body").hasClass("theme-dark"))
+			if (!document.body.classList.contains("theme-dark"))
 			{
-				$("body").addClass("theme-dark");
+				document.body.classList.add("theme-dark");
 			}
 		}
 		else
 		{
-			if ($("body").hasClass("theme-dark"))
+			if (document.body.classList.contains("theme-dark"))
 			{
-				$("body").removeClass("theme-dark");
+				document.body.classList.remove("theme-dark");
 			}
 
-			if (!$("body").hasClass("theme-light"))
+			if (!document.body.classList.contains("theme-light"))
 			{
-				$("body").addClass("theme-light");
+				document.body.classList.add("theme-light");
 			}
+		}
+
+		if (instant)
+		{
+			setTimeout(function()
+			{
+				document.body.style.transition = oldTransition;
+			}, 100);
 		}
 
 		localStorage.setItem("theme_toggle", state ? "true" : "false");
 	}
 
-    document.querySelectorAll(".toggle__input").forEach(function(element)
+    setupOnNode.querySelectorAll(".theme-toggle-input").forEach(function(element)
 	{
 		element.addEventListener("change", function()
 		{
@@ -184,13 +547,13 @@ function setupThemeToggle()
 
 }
 
-function setupHeaders()
+function setupHeaders(setupOnNode)
 {
     // MAKE HEADERS COLLAPSIBLE
     // if "heading-collapse-indicator" is clicked, toggle the display of every div until the next heading of the same or lower level
     function getHeadingContentsSelector(header)
     {
-        let headingLevel = $(header).children().first().prop("tagName").toLowerCase();
+        let headingLevel = header.firstChild.tagName;
         let headingNumber = parseInt(headingLevel.replace("h", ""));
 
         let endingHeadings = [1, 2, 3, 4, 5, 6].filter(function(item)
@@ -206,46 +569,7 @@ function setupHeaders()
         return endingHeadingsSelector;
     }
 
-	function setHeaderCollapse(header, collapse)
-	{
-		let selector = getHeadingContentsSelector($(header));
-
-        if(!collapse)
-        {
-			if ($(header).hasClass("is-collapsed")) $(header).toggleClass("is-collapsed");
-
-            $(header).nextUntil(selector).show();
-			
-			// close headers inside of this one that are collapsed
-            $(header).nextUntil(selector).each(function()
-            {
-				if($(this).hasClass("is-collapsed"))
-					setHeaderCollapse($(this), true);
-            });
-			
-			//open headers above this one that are collapsed
-			lastHeaderSize = $(header).children().first().prop("tagName").toLowerCase().replace("h", "");
-			$(header).prevAll().each(function()
-			{
-				if($(this).hasClass("is-collapsed") && $(this).has("h1, h2, h3, h4, h5, h6"))
-				{
-					let hSize = $(this).children().first().prop("tagName").toLowerCase().replace("h", "");
-					if(hSize < lastHeaderSize)
-					{
-						setHeaderCollapse($(this), false);
-						lastHeaderSize = hSize;
-					}
-				}
-			});
-        }
-        else
-        {
-			if (!$(header).hasClass("is-collapsed")) $(header).toggleClass("is-collapsed");
-            $(header).nextUntil(selector).hide();
-        }
-	}
-
-	document.querySelectorAll(".heading-collapse-indicator").forEach(function (element) 
+	setupOnNode.querySelectorAll(".heading-collapse-indicator").forEach(function (element) 
 	{
 		element.addEventListener("click", function () 
 		{
@@ -257,7 +581,7 @@ function setupHeaders()
 	});
 
 	// unfold header when an internal link that points to that header is clicked
-	document.querySelectorAll(".internal-link").forEach(function (element) 
+	setupOnNode.querySelectorAll(".internal-link").forEach(function (element) 
 	{
 		element.addEventListener("click", function (event) 
 		{
@@ -275,84 +599,71 @@ function setupHeaders()
 	});
 }
 
-function setupOutline() 
+function setupTrees(setupOnNode) 
 {
-	function setCollapsed(element, collapsed, animate = true)
-	{
-		let children = element.querySelector(".tree-item-children");
+	const fileTreeItems = Array.from(setupOnNode.querySelectorAll(".tree-container.file-tree .tree-item"));
 
-		if (collapsed)
-		{
-			element.classList.add("is-collapsed");
-			if(animate) $(children).slideUp(100);
-			else children.style.display = "none";
-		}
-		else
-		{
-			element.classList.remove("is-collapsed");
-			if(animate) $(children).slideDown(100);
-			else children.style.display = "flex";
-		}
-	}
-
-	function toggleCollapsed(element)
-	{
-		console.log(element);
-		if (!element) return;
-		setCollapsed(element, !element.classList.contains("is-collapsed"));
-	}
-
-    document.querySelectorAll(".tree-item-contents > .collapse-icon").forEach(function(item)
+    setupOnNode.querySelectorAll(".tree-item-contents > .collapse-icon").forEach(function(item)
 	{
 		item.addEventListener("click", function()
 		{
-			toggleCollapsed(item.parentElement.parentElement);
+			toggleTreeCollapsed(item.parentElement.parentElement);
 		});
 
 		elementsWithEventListeners.push(item);
 	});
 
-	document.querySelectorAll(".tree-container > .tree-header > .collapse-tree-button").forEach(function(button)
+	let fileTreeCollapse = setupOnNode.querySelector(".tree-container.file-tree .collapse-tree-button");
+	if (fileTreeCollapse) fileTreeCollapse.addEventListener("click", async function()
 	{
-		button.addEventListener("click", function()
-		{
-			button.parentElement.parentElement.querySelectorAll(".tree-item").forEach(function(item)
-			{
-				setCollapsed(item, !button.classList.contains("is-collapsed"));
-			});
+		let fileTreeIsCollapsed = fileTreeCollapse.classList.contains("is-collapsed");
+		
+		setTreeCollapsedAll(fileTreeItems, !fileTreeIsCollapsed, fileTreeItems.length < 100);
 
-			button.classList.toggle("is-collapsed");
-
-			button.querySelector("iconify-icon").setAttribute("icon", button.classList.contains("is-collapsed") ? "ph:arrows-out-line-horizontal-bold" : "ph:arrows-in-line-horizontal-bold");
-		});
-
-		elementsWithEventListeners.push(button);
+		fileTreeCollapse.classList.toggle("is-collapsed");
+		fileTreeCollapse.querySelector("iconify-icon").setAttribute("icon", fileTreeIsCollapsed ? "ph:arrows-out-line-horizontal-bold" : "ph:arrows-in-line-horizontal-bold");
 	});
+	elementsWithEventListeners.push(fileTreeCollapse);
 
-	document.querySelectorAll(".tree-container .tree-item").forEach(function(item)
+
+	let outlineTreeCollapse = setupOnNode.querySelector(".tree-container.outline-tree .collapse-tree-button");
+	if(outlineTreeCollapse) outlineTreeCollapse.addEventListener("click", async function()
 	{
-		if (item.classList.contains("is-collapsed")) setCollapsed(item, true, false);
+		let outlineTreeIsCollapsed = outlineTreeCollapse.classList.contains("is-collapsed");
+
+		let items = Array.from(outlineTreeCollapse.parentElement.parentElement.querySelectorAll(".tree-item"));
+		setTreeCollapsedAll(items, !outlineTreeIsCollapsed, items.length < 100);
+
+		outlineTreeCollapse.classList.toggle("is-collapsed");
+		outlineTreeCollapse.querySelector("iconify-icon").setAttribute("icon", outlineTreeIsCollapsed ? "ph:arrows-out-line-horizontal-bold" : "ph:arrows-in-line-horizontal-bold");
+	});
+	elementsWithEventListeners.push(outlineTreeCollapse);
+	
+	// start with all closed
+	setupOnNode.querySelectorAll(".tree-container .tree-item").forEach(function(item)
+	{
+		if (item.classList.contains("is-collapsed")) setTreeCollapsed(item, true, false);
 	});
 
 	// make sure the icons match their starting collaped state
-	$(".tree-container > .tree-header > .collapse-tree-button").each(function()
+	setupOnNode.querySelectorAll(".tree-container > .tree-header > .collapse-tree-button").forEach(function(item)
 	{
-		if ($(this).hasClass("is-collapsed"))
+		if (item.classList.contains("is-collapsed"))
 		{
-			$(this).find("iconify-icon").attr("icon", "ph:arrows-out-line-horizontal-bold");
+			item.querySelector("iconify-icon").setAttribute("icon", "ph:arrows-out-line-horizontal-bold");
 		}
 		else
 		{
-			$(this).find("iconify-icon").attr("icon", "ph:arrows-in-line-horizontal-bold");
+			item.querySelector("iconify-icon").setAttribute("icon", "ph:arrows-in-line-horizontal-bold");
 		}
 	});
 }
 
-function setupCallouts()
+function setupCallouts(setupOnNode)
 {
 	// MAKE CALLOUTS COLLAPSIBLE
     // if the callout title is clicked, toggle the display of .callout-content
-	document.querySelectorAll(".callout.is-collapsible .callout-title").forEach(function (element) 
+	setupOnNode.querySelectorAll(".callout.is-collapsible .callout-title").forEach(function (element) 
 	{
 		element.addEventListener("click", function () 
 		{
@@ -363,11 +674,9 @@ function setupCallouts()
 				parent.classList.toggle("is-collapsed");
 			}
 
-			$(parent).find(".callout-content").slideToggle(duration = 100, complete = function () {
-				if (!isCollapsed) {
-					parent.classList.toggle("is-collapsed");
-				}
-			});
+			slideToggle(parent.querySelector(".callout-content"), 100);
+			setTimeout(() => {if (!isCollapsed) parent.classList.toggle("is-collapsed");}, 100);
+			
 		});
 
 		elementsWithEventListeners.push(element);
@@ -375,10 +684,10 @@ function setupCallouts()
 
 }
 
-function setupCheckboxes()
+function setupCheckboxes(setupOnNode)
 {
 	// Fix checkboxed toggling .is-checked
-	document.querySelectorAll(".task-list-item-checkbox").forEach(function (element) 
+	setupOnNode.querySelectorAll(".task-list-item-checkbox").forEach(function (element) 
 	{
 		element.addEventListener("click", function () 
 		{
@@ -390,23 +699,23 @@ function setupCheckboxes()
 		elementsWithEventListeners.push(element);
 	});
 
-	$(`.plugin-tasks-list-item input[type="checkbox"]`).each(function()
+	setupOnNode.querySelectorAll(`.plugin-tasks-list-item input[type="checkbox"]`).forEach(function(checkbox)
 	{
-		$(this).prop("checked", $(this).parent().hasClass("is-checked"));
+		checkbox.checked = checkbox.parentElement.classList.contains("is-checked");
 	});
 
-	$('.kanban-plugin__item.is-complete').each(function()
+	setupOnNode.querySelectorAll('.kanban-plugin__item.is-complete').forEach(function(checkbox)
 	{
-		$(this).find('input[type="checkbox"]').prop("checked", true);
+		checkbox.querySelector('input[type="checkbox"]').checked = true;
 	});
 }
 
-function setupCanvas()
+function setupCanvas(setupOnNode)
 {
 	let focusedNode = null;
 
 	// make canvas nodes selectable
-	document.querySelectorAll(".canvas-node-content-blocker").forEach(function (element) 
+	setupOnNode.querySelectorAll(".canvas-node-content-blocker").forEach(function (element) 
 	{
 		element.addEventListener("click", function () 
 		{
@@ -441,10 +750,10 @@ function setupCanvas()
 
 }
 
-function setupCodeblocks()
+function setupCodeblocks(setupOnNode)
 {
 	// make code snippet block copy button copy the code to the clipboard
-	document.querySelectorAll(".copy-code-button").forEach(function (element) 
+	setupOnNode.querySelectorAll(".copy-code-button").forEach(function (element) 
 	{
 		element.addEventListener("click", function () 
 		{
@@ -454,7 +763,7 @@ function setupCodeblocks()
 			// set a timeout to change the text back
 			setTimeout(function () 
 			{
-				document.querySelectorAll(".copy-code-button").forEach(function (button) 
+				setupOnNode.querySelectorAll(".copy-code-button").forEach(function (button) 
 				{
 					button.textContent = "Copy";
 				});
@@ -465,36 +774,28 @@ function setupCodeblocks()
 	});
 }
 
-function setupLinks()
+function setupLinks(setupOnNode)
 {
-	document.querySelectorAll(".internal-link, .footnote-link, .tree-item-link").forEach(function(link)
+	setupOnNode.querySelectorAll(".internal-link, .footnote-link, .tree-item-link").forEach(function(link)
 	{
 		link.addEventListener("click", function(event)
 		{
 			let target = link.getAttribute("href");
-
 			event.preventDefault();
 
 			// this is linking to a different page
 			if (!target.startsWith("#"))
 			{
-				if (link.classList.contains("tree-item-link"))
-				{
-					console.log("Loading document: " + target);
-					target = rootPath + "/" + target;
-					loadDocument(target);
-					return;
-				}
-
-				console.log("Loading document: " + target);
-				// if the target is not a header, load the page
-				loadDocument(target);
+				// load doc, if it is a tree link then don't scroll to the active doc in the file tree
+				loadDocument(target, true, !link.classList.contains("tree-item-link"));
 				return;
 			}
 			else
 			{
 				console.log("Scrolling to: " + target);
-				document.getElementById(target.substring(1)).scrollIntoView();
+				let headerTarget = document.getElementById(target.substring(1));
+				if (headerTarget.parentElement.classList.contains("is-collapsed")) setHeaderCollapse(headerTarget.parentElement, false);
+				headerTarget.scrollIntoView();
 			}
 		});
 
@@ -503,36 +804,67 @@ function setupLinks()
 
     window.onpopstate = function(event)
     {
-		loadDocument(window.location.pathname, false);
+		loadDocument(getURLPath(), false);
     }
 }
 
-function initializePage()
+function initializePage(setupOnNode)
 {
 	elementsWithEventListeners = [];
 
-    setupThemeToggle();
-    setupHeaders();
-    setupOutline();
-	setupCallouts();
-	setupCheckboxes();
-	setupCanvas();
-	setupCodeblocks();
-	setupLinks();
+    setupThemeToggle(setupOnNode);
+    setupHeaders(setupOnNode);
+    setupTrees(setupOnNode);
+	setupCallouts(setupOnNode);
+	setupCheckboxes(setupOnNode);
+	setupCanvas(setupOnNode);
+	setupCodeblocks(setupOnNode);
+	setupLinks(setupOnNode);
+
+	setupOnNode.querySelectorAll("*").forEach(function(element)
+	{
+		element.addEventListener("touchstart", function(event)
+		{
+			// event.preventDefault();
+			// event.stopPropagation();
+
+			console.log("touchstart");
+			if (element instanceof HTMLElement) element.click();
+		}, );
+	});
+
+	if(setupOnNode == document) 
+	{
+		setupRootPath(document);
+		setActiveDocument(getURLPath());
+	}
 }
 
-function deinitializePage()
+function setupRootPath(fromDocument)
 {
-	elementsWithEventListeners.forEach(function(element)
-	{
-		if(!element || !element.parentNode) return;
-		let copy = element.cloneNode(true);
-		element.parentNode.replaceChild(copy, element);
-	});	
+	let basePath = fromDocument.querySelector("#root-path").getAttribute("root-path");
+	document.querySelector("base").href = basePath;
+	document.querySelector("#root-path").setAttribute("root-path", basePath);
+	rootPath = basePath;
+}
 
-	elementsWithEventListeners = [];
+function initializeForFileProtocol()
+{
+	let graphEl = document.querySelector(".graph-view-placeholder");
+	if(graphEl)
+	{
+		console.log("Running locally, skipping graph view initialization and hiding graph.");
+		graphEl.style.display = "none";
+		graphEl.previousElementSibling.style.display = "none"; // hide the graph's header
+	}
 }
 
 //#endregion
 
-jQuery(initializePage);
+window.onload = function()
+{
+	console.log("onload");
+	
+	if (window.location.protocol == "file:") initializeForFileProtocol();
+	initializePage(document);
+}

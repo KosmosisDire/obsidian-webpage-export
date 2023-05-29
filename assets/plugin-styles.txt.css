@@ -1,3 +1,5 @@
+/*#region Code Copy */
+
 /* Make code block copy button fade in and out */
 .markdown-rendered pre:not(:hover) > button.copy-code-button
 {
@@ -28,13 +30,9 @@
 	transition: none;
 }
 
-/* fix large inline math blocks overlapping */
-mjx-container > mjx-math.MJX-TEX
-{
-	display: inline-block;
-}
+/*#endregion */
 
-/* remove canvas controls */
+/*#region Canvas */
 .canvas-card-menu {
 	display: none;
 	cursor: default !important;
@@ -80,18 +78,10 @@ mjx-container > mjx-math.MJX-TEX
 	cursor: default !important;
 }
 
-/* fix coloring for horizontal divider */
-hr
-{
-	border-top: var(--hr-thickness) solid var(--divider-color);
-}
+/*#endregion */
 
-.center-content
-{
-    flex-basis: var(--content-width);
-}
+/*#region Sidebars */
 
-/* sidebars */
 #sidebar {
     background-color: var(--background-secondary);
     flex: 1 0 min-content;
@@ -113,10 +103,19 @@ hr
     line-height: var(--line-height-tight);
     display: flex;
     flex-direction: column;
-    overflow-y: scroll;
     padding: 10px;
     padding-bottom: 0;
     height: 100%;
+}
+
+.sidebar-scroll-area
+{
+    width: 100%;
+    height: 100%;
+    line-height: var(--line-height-tight);
+    display: flex;
+    flex-direction: column;
+    overflow-y: scroll;
 }
 
 .sidebar-left
@@ -135,13 +134,47 @@ hr
     flex-direction: row;
 }
 
-.flex-container {
+@media print 
+{
+    #sidebar, .outline-container, .theme-toggle-container, .theme-toggle-container-inline, .toggle-background, .theme-toggle-input
+    {
+        display: none !important;
+    }
+}
+
+@media screen and (max-width: 800px)
+{
+    #sidebar, .sideabr-right, .sidebar-left, .outline-container
+    {
+        display: none !important;
+    }
+}
+
+@media screen and (max-width: 950px)
+{
+    .sidebar-left
+    {
+        display: none !important;
+    }
+}
+
+/*#endregion */
+
+/*#region Content / Markdown Preview View */
+
+.webpage-container {
     background-color: var(--background-primary);
     display: flex;
     flex-direction: row;
     height: 100%;
     width: 100%;
     align-items: stretch;
+    position: fixed;
+}
+
+.document-container
+{
+    flex-basis: var(--content-width);
 }
 
 .markdown-reading-view
@@ -151,7 +184,32 @@ hr
     width: 100%;
 }
 
-/* Small fix for exporting kanban files */
+.markdown-preview-view
+{
+    display: flex;
+    width: 100%;
+    max-width: 100%;
+    padding-bottom: 30em;
+    align-items: flex-start;
+    justify-content: center;
+}
+
+.document-container > .markdown-preview-view > .markdown-preview-sizer
+{
+    padding: unset;
+    width: unset;
+    height: unset;
+    margin: unset;
+    max-width: unset;
+    min-height: unset;
+    max-width: var(--line-width);
+    flex-basis: var(--line-width);
+}
+
+/*#endregion */
+
+/*#region Kanban */
+
 .markdown-preview-view.kanban-plugin__markdown-preview-view {
     font-family: var(--font-text, var(--default-font));
     font-size: .875rem;
@@ -172,85 +230,66 @@ hr
     display: none;
 }
 
-@media print 
+/*#endregion */
+
+/*#region Tree */
+
+/* Base tree */
+.tree-container 
 {
-    #sidebar, .sideabr-right, .sidebar-left, .outline-container, .theme-toggle, .theme-toggle-inline, .toggle__fill, .toggle__input
-    {
-        display: none !important;
-    }
-}
-
-/* @media screen and (max-width: 350px) and (min-width: 0px)
-{
-	*
-	{
-		font-size: 0.75rem;
-	}
-}
-
-
-@media screen and (max-width: 400px) and (min-width: 350px)
-{
-	*
-	{
-		font-size: 0.8rem;
-	}
-}
-
-@media screen and (max-width: 500px) and (min-width: 400px)
-{
-	*
-	{
-		font-size: 0.85rem;
-	}
-}
-
-@media screen and (max-width: 600px) and (min-width: 500px)
-{
-	*
-	{
-		font-size: 0.9rem;
-	}
-} */
-
-@media screen and (max-width: 800px)
-{
-    #sidebar, .sideabr-right, .sidebar-left, .outline-container
-    {
-        display: none !important;
-    }
-}
-
-@media screen and (max-width: 950px)
-{
-    .sidebar-left
-    {
-        display: none !important;
-    }
-}
-
-.tree-container {
-    padding-bottom: 5em;
+    padding-bottom: 12px;
     margin: 12px;
+    height: -webkit-fill-available;
+    position: relative;
 }
 
-.tree-header {
+.tree-container .tree-header 
+{
     display: flex;
     flex-direction: row;
     align-items: center;
 }
 
-.tree-item {
+.tree-container .tree-header .sidebar-section-header
+{
+    margin: 1em;
+    margin-left: 0;
+}
+
+.tree-container .tree-scroll-area
+{
+    width: 100%;
+    overflow-y: scroll;
+    padding: 1em;
+    padding-right: calc(1em + 12px);
+    padding-bottom: 3em;
+    border-radius: var(--radius-m);
+    position: absolute;
+    height: -webkit-fill-available;
+}
+
+.tree-container .tree-item 
+{
     display: flex;
     flex-direction: column;
     align-items: flex-start;
+    padding: 0;
 }
 
-.tree-item:last-child {
-    margin-bottom: 0;
+.tree-container .tree-item-children
+{
+    padding: 0;
+    margin-left: 0;
+    border-left: none;
+    width: -webkit-fill-available;
 }
 
-.tree-item-contents {
+.tree-container .tree-item.mod-active > .tree-item-contents > .tree-item-link
+{
+    color: var(--color-accent);
+}
+
+.tree-container .tree-item-contents {
     position: relative;
     display: flex;
     flex-direction: row;
@@ -258,20 +297,28 @@ hr
     border-radius: 0.4em;
     color: var(--nav-item-color);
     width: 100%;
+    margin-left: var(--tree-horizontal-spacing);
 }
 
-.tree-item-contents:hover {
-    color: var(--nav-item-color-hover);
-    cursor: pointer;
-    /* outline: solid 1px var(--active-line-bg); */
-}
-
-.tree-item-contents:active 
+.tree-container .tree-item-contents:active 
 {
     color: var(--nav-item-color-active);
 }
 
-.tree-item-icon.collapse-icon {
+.tree-container a.tree-item-link 
+{
+    width: -webkit-fill-available;
+    height: 100%;
+    transition: background-color 0.1s;
+    border-radius: var(--radius-s);
+    padding-left: calc(var(--tree-horizontal-spacing) + var(--collapse-arrow-size)/2 + 1px);
+    padding-bottom: calc(var(--tree-vertical-spacing) / 2);
+    padding-top: calc(var(--tree-vertical-spacing) / 2);
+    color: var(--nav-item-color);
+    text-decoration: none;
+}
+
+.tree-container .tree-item-icon.collapse-icon {
     display: flex;
     justify-content: flex-start;
     align-items: center;
@@ -279,67 +326,119 @@ hr
     transition: background-color 0.1s;
     position: absolute;
     height: 100%;
-    padding: var(--nav-item-children-padding-left);
 }
 
-.tree-item.mod-tree-folder > .tree-item-contents > .tree-item-icon.collapse-icon
+.tree-container .tree-item.mod-tree-folder > .tree-item-contents > .tree-item-icon.collapse-icon
 {
     width: 100%;
-}
-
-.collapse-icon:hover {
-    /* background-color: var(--nav-item-background-hover); */
-    color: var(--nav-item-color-hover);
 }
 
 .collapse-icon > svg {
     color: unset !important;
 }
 
-a.tree-item-link {
-    padding: 0.3em;
-    width: -webkit-fill-available;
-    height: 100%;
-    transition: background-color 0.1s;
-    border-radius: var(--radius-s);
-    margin-left: calc(10px + var(--nav-item-children-padding-left) * 2);
-    color: var(--nav-item-color);
-    text-decoration: none;
+.collapse-icon:hover 
+{
+    color: var(--nav-item-color-hover);
 }
 
-a.tree-item-link:hover 
+.tree-container a.tree-item-link:hover 
 {
-    /* background-color: var(--nav-item-background-hover); */
+    cursor: pointer;
+    color: var(--nav-item-color-hover);
     text-decoration: underline;
 }
 
-.markdown-preview-view
+/* Indentation guide */
+
+.tree-container > .tree-scroll-area > * .tree-item
 {
-    display: flex;
-    justify-content: center;
-    width: 100%;
-    max-width: 100%;
-    padding-bottom: 30em;
+    margin-left: calc(var(--tree-horizontal-spacing) + var(--collapse-arrow-size) / 2 + 1px);
+    border-left: var(--nav-indentation-guide-width) solid var(--nav-indentation-guide-color);
 }
 
-.center-content > .markdown-preview-view > .markdown-preview-sizer
+.tree-container .tree-scroll-area > * > * > .tree-item
 {
-    padding: unset;
-    width: unset;
-    height: unset;
-    margin: unset;
-    max-width: unset;
-    min-height: unset;
-    max-width: var(--line-width);
-    flex-basis: var(--line-width);
+    margin-left: calc(var(--collapse-arrow-size) / 2 + 1px);
 }
 
-/* Let links wrap anywhere so that the width isn't set by long links */
+.tree-container .tree-item.mod-active
+{
+    border-left: var(--nav-indentation-guide-width) solid var(--color-accent);
+}
+
+
+.tree-container .tree-item:hover:not(.mod-active):not(.mod-collapsible):not(:has(.tree-item:hover)) /* Hover */
+{
+    border-left: var(--nav-indentation-guide-width) solid var(--nav-item-color-hover);
+}
+
+.webpage-container .tree-container .tree-item:not(.mod-collapsible) > .tree-item-children > .tree-item,
+.webpage-container .tree-container > .tree-scroll-area > .tree-item,
+.webpage-container .tree-container:not(.mod-nav-indicator) .tree-item
+{
+    border-left: none !important;
+}
+
+.webpage-container .tree-container .tree-item:not(.mod-collapsible) > .tree-item-children > .tree-item > .tree-item-contents,
+.webpage-container .tree-container:not(.mod-nav-indicator) .tree-item .tree-item-contents,
+.webpage-container .tree-container > .tree-scroll-area > .tree-item > .tree-item-contents
+{
+    margin-left: 0 !important;
+}
+
+/* Special */
+
+.tree-container.outline-tree .tree-item[data-depth='1'] > .tree-item-contents > .tree-item-link
+{
+    font-weight: 900;
+    font-size: 1.1em;
+    margin-left: 0;
+}
+
+.tree-container .tree-item.is-collapsed > .tree-item-contents > .tree-item-icon.collapse-icon > svg
+{
+    transition: transform 0.1s ease-in-out;
+    transform: rotate(-90deg);
+}
+
+
+
+/*#endregion */
+
+/*#region Headers */
+
+.collapse-icon svg.svg-icon {
+    color: var(--nav-collapse-icon-color);
+    stroke-width: 4px;
+    width: var(--collapse-arrow-size);
+    height: var(--collapse-arrow-size);
+    transition: transform 100ms ease-in-out 0s;
+    min-width: 10px;
+    min-height: 10px;
+}
+
+div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
+{
+    transition: transform 0.1s ease-in-out;
+    transform: rotate(-90deg);
+}
+
+/*#endregion */
+
+/*#region Text Wrapping */
 a {
     overflow-wrap: anywhere;
 }
 
-/* mobile support for obsidian columns plugin */
+* 
+{
+    overflow-wrap: break-word;
+}
+
+/*#endregion */
+
+/*#region Obsidian Columns Plugin */
 .columnParent {
     display: flex;
     padding: 15px 20px;
@@ -351,52 +450,15 @@ a {
     white-space: normal;
 }
 
-.cm-preview-code-block .admonition-content .columnParent p {
-    white-space: pre-wrap;
-}
-
 .columnChild {
     flex-grow: 1;
     flex-basis: 0px;
 }
+/*#endregion */
 
-/* sortable plugin fix */
-.markdown-preview-view th,
-.table-view-table > thead > tr > th,
-.markdown-source-view.mod-cm6 .dataview.table-view-table thead.table-view-thead tr th {
-    /* background-image: none;
-    background-repeat: no-repeat;
-    background-position: right, left;
-    padding-right: 21px;
-    padding-left: 21px; */
-    cursor: pointer;
-}
+/*#region Theme Toggle */
 
-th[sortable-style="sortable-asc"], th[sortable-style="sortable-desc"]
-{
-    display: flex;
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: left;
-}
-
-th[sortable-style="sortable-asc"]::after 
-{
-    height: 100%;
-    position: relative;
-    content: "▲";
-    display: flex;
-}
-
-th[sortable-style="sortable-desc"]::after {
-    height: 100%;
-    position: relative;
-    content: "▼";
-    display: flex;
-}
-
-/* Toggle Styles */
-.theme-toggle {
+.theme-toggle-container {
     --toggle-width: 50px;
     --toggle-height: 23px;
     --border-radius: calc(var(--toggle-height) / 2);
@@ -408,23 +470,6 @@ th[sortable-style="sortable-desc"]::after {
     display: inline-block;
     cursor: pointer;
 	margin: 10px;
-}
-
-.theme-toggle-inline {
-    --toggle-width: 50px;
-    --toggle-height: 23px;
-    --border-radius: calc(var(--toggle-height) / 2);
-    --handle-width: calc(var(--toggle-height) * 0.65);
-    --handle-radius: calc(var(--handle-width) / 2);
-    --handle-margin: calc((var(--toggle-height) / 2.0) - var(--handle-radius));
-    --handle-translation: calc(var(--toggle-width) - var(--handle-width) - (var(--handle-margin) * 2));
-
-    display: inline-block;
-    cursor: pointer;
-    position: relative;
-
-    margin-top: 10px;
-    margin-bottom: 10px;
 }
 
 /* animation to expand width, move handle, then contract width */
@@ -506,13 +551,13 @@ th[sortable-style="sortable-desc"]::after {
     }
 }
 
-.toggle__input {
+.theme-toggle-input {
     display: none;
     z-index: 1000;
 }
 
 /* Fill in dark mode / default */
-.toggle__fill {
+.toggle-background {
     position: relative;
     width: var(--toggle-width);
     height: var(--toggle-height);
@@ -526,7 +571,7 @@ th[sortable-style="sortable-desc"]::after {
 }
 
 /* Handle default */
-.toggle__fill::before 
+.toggle-background::before 
 {
     content: "";
     position: absolute;
@@ -544,23 +589,23 @@ th[sortable-style="sortable-desc"]::after {
 }
 
 /* handle light*/
-.toggle__input:checked ~ .toggle__fill::before 
+.theme-toggle-input:checked ~ .toggle-background::before 
 {
     animation: toggle-slide-right 0.2s ease-in-out normal both;
 }
 
-.toggle__input:active ~ .toggle__fill::before 
+.theme-toggle-input:active ~ .toggle-background::before 
 {
     animation: toggle-expand-right 0.2s ease-in-out normal both;
 }
 
-.toggle__input:active:checked ~ .toggle__fill::before
+.theme-toggle-input:active:checked ~ .toggle-background::before
 {
     animation: toggle-expand-left 0.2s ease-in-out normal both;
 }
 
 /* sun moon icon icon default */
-.toggle__fill::after
+.toggle-background::after
 {
     content: "";
     position: absolute;
@@ -574,16 +619,15 @@ th[sortable-style="sortable-desc"]::after {
 }
 
 /* sun moon icon icon light */
-.toggle__input:checked ~ .toggle__fill::after
+.theme-toggle-input:checked ~ .toggle-background::after
 {
     transform: translateX(calc(var(--handle-translation) * -1)) scale(0.9);
     background: url('https://api.iconify.design/lucide/sun.svg') no-repeat center center;
 }
 
+/*#endregion */
 
-
-
-/* Graph View */
+/*#region Graph View */
 #graph-canvas
 {
     width: 100%;
@@ -612,7 +656,8 @@ th[sortable-style="sortable-desc"]::after {
     display: flex;
 }
 
-.graph-icon {
+.graph-icon 
+{
     cursor: pointer;
     color: var(--text-muted);
 }
@@ -631,7 +676,8 @@ th[sortable-style="sortable-desc"]::after {
     margin: 10px;
 }
 
-.graph-view-placeholder {
+.graph-view-placeholder 
+{
     padding: 0;
     width: -webkit-fill-available;
     aspect-ratio: 1/1;
@@ -646,18 +692,41 @@ th[sortable-style="sortable-desc"]::after {
     border: 1px solid var(--modal-border-color);
 }
 
-.scale-down {
+.scale-down 
+{
     transition: transform 0.2s ease-in-out;
     transform: scale(0.9);
 }
 
-.scale-up {
+.scale-up 
+{
     transition: transform 0.2s ease-in-out;
     transform: scale(1);
 }
 
-.graph-expand {
+.graph-expand 
+{
     position: absolute;
     top: 5px;
     right: 5px;
 }
+
+
+
+/*#endregion */
+
+/*#region Tweaks */
+
+hr
+{
+    border: none;
+	border-top: var(--hr-thickness) solid;
+    border-color: var(--hr-color);
+}
+
+.markdown-embed-link
+{
+    display: none;
+}
+
+/*#endregion */
