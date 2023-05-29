@@ -309,23 +309,23 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 
 	let response;
 
-	if(typeof embeddedDocuments == 'undefined')
+	// if(typeof embeddedDocuments == 'undefined')
+	// {
+	try
 	{
-		try
-		{
-			response = await fetch(url);
-		}
-		catch (error)
-		{
-			console.log("Cannot use fetch API (likely due to CORS), just loading the page normally.");
-			window.location.assign(url);
-			return;
-		}
+		response = await fetch(url);
 	}
-	else
+	catch (error)
 	{
-		response = new Response(embeddedDocuments[url], {status: 200, statusText: "OK"});
+		console.log("Cannot use fetch API (likely due to CORS), just loading the page normally.");
+		window.location.assign(url);
+		return;
 	}
+	// }
+	// else
+	// {
+	// 	response = new Response(embeddedDocuments[url], {status: 200, statusText: "OK"});
+	// }
 
 	let doc = document.implementation.createHTMLDocument();
 
@@ -419,7 +419,7 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 		}
 	}
 
-	if(pushHistory) window.history.pushState({ path: pathnameTarget }, '', pathnameTarget);
+	if(pushHistory && window.location.protocol != "file:") window.history.pushState({ path: pathnameTarget }, '', pathnameTarget);
 }
 
 //#region Initialization
