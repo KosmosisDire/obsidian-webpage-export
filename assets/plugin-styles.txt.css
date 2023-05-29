@@ -142,22 +142,6 @@
     }
 }
 
-@media screen and (max-width: 800px)
-{
-    #sidebar, .sideabr-right, .sidebar-left, .outline-container
-    {
-        display: none !important;
-    }
-}
-
-@media screen and (max-width: 950px)
-{
-    .sidebar-left
-    {
-        display: none !important;
-    }
-}
-
 /*#endregion */
 
 /*#region Content / Markdown Preview View */

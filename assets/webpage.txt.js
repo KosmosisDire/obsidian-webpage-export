@@ -812,6 +812,75 @@ function setupLinks(setupOnNode)
     }
 }
 
+
+let sidebarWidth = undefined;
+let lineWidth = undefined;
+function setupResize(setupOnNode)
+{
+	if (setupOnNode != document) return;
+
+	function updateSidebars()
+	{
+		let rightSidebar = document.querySelector(".sidebar-right");
+		let leftSidebar = document.querySelector(".sidebar-left");
+		let sidebarCount = (rightSidebar ? 1 : 0) + (leftSidebar ? 1 : 0);
+
+		if (sidebarCount == 0) return;
+
+		if(!sidebarWidth) sidebarWidth = Math.max(rightSidebar?.clientWidth, leftSidebar?.clientWidth);
+
+		if (!lineWidth)
+		{
+			let docWidthTestEl = document.createElement("div");
+			document.querySelector(".markdown-preview-view").appendChild(docWidthTestEl);
+			docWidthTestEl.style.width = "var(--line-width)";
+			docWidthTestEl.style.minWidth = "var(--line-width)";
+			docWidthTestEl.style.maxWidth = "var(--line-width)";
+			lineWidth = docWidthTestEl.clientWidth;
+			docWidthTestEl.remove();
+		}
+
+		let letHideRightThreshold = sidebarWidth * sidebarCount + lineWidth / 2;
+
+		if (window.innerWidth < letHideRightThreshold)
+		{
+			rightSidebar.style.display = "none";
+		}
+		else
+		{
+			rightSidebar.style.display = "";
+		}
+
+		let letHideLeftThreshold = lineWidth / 2 + sidebarWidth;
+
+		if (window.innerWidth < letHideLeftThreshold)
+		{
+			leftSidebar.style.display = "none";
+		}
+		else
+		{
+			leftSidebar.style.display = "";
+		}
+	}
+
+	window.addEventListener("resize", function()
+	{
+		updateSidebars();
+	});
+
+	updateSidebars();
+}
+
+function setupRootPath(fromDocument)
+{
+	let basePath = fromDocument.querySelector("#root-path").getAttribute("root-path");
+	document.querySelector("base").href = basePath;
+	document.querySelector("#root-path").setAttribute("root-path", basePath);
+	rootPath = basePath;
+}
+
+let touchDrag = false;
+
 function initializePage(setupOnNode)
 {
 	elementsWithEventListeners = [];
@@ -824,17 +893,31 @@ function initializePage(setupOnNode)
 	setupCanvas(setupOnNode);
 	setupCodeblocks(setupOnNode);
 	setupLinks(setupOnNode);
+	setupResize(setupOnNode);
+
+	document.body.addEventListener("touchmove", function(event)
+	{
+		event.stopImmediatePropagation();
+		touchDrag = true;
+		console.log("touchmove");
+	});
 
 	setupOnNode.querySelectorAll("*").forEach(function(element)
 	{
-		element.addEventListener("touchstart", function(event)
+		element.addEventListener("touchend", function(event)
 		{
 			// event.preventDefault();
-			// event.stopPropagation();
 
-			console.log("touchstart");
+			if (touchDrag)
+			{
+				touchDrag = false;
+				event.stopPropagation();
+				return;
+			}
+
+			console.log("touchend");
 			if (element instanceof HTMLElement) element.click();
-		}, );
+		});
 	});
 
 	if(setupOnNode == document) 
@@ -842,14 +925,6 @@ function initializePage(setupOnNode)
 		setupRootPath(document);
 		setActiveDocument(getURLPath());
 	}
-}
-
-function setupRootPath(fromDocument)
-{
-	let basePath = fromDocument.querySelector("#root-path").getAttribute("root-path");
-	document.querySelector("base").href = basePath;
-	document.querySelector("#root-path").setAttribute("root-path", basePath);
-	rootPath = basePath;
 }
 
 function initializeForFileProtocol()
