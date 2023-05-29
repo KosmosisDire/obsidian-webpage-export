@@ -16,13 +16,10 @@ export namespace MarkdownRenderer
 
     export async function renderMarkdown(file: ExportFile): Promise<string>
 	{
-		console.log(1);
 		if (!renderLeaf)
 		{
 			throw new Error("Cannot render document without a render leaf! Please call beginBatch() before calling this function, and endBatch() after you are done exporting all files.");
 		}
-
-		console.log(2);
 
 		try
 		{
@@ -35,16 +32,12 @@ export namespace MarkdownRenderer
 			return generateFailDocument();
 		}
 
-		console.log(3);
-
 		if(!(renderLeaf.view instanceof MarkdownView))
 		{
 			let message = "This file was not a normal markdown file! File: " + file.markdownFile.path;
 			RenderLog.warning("Cannot render file: ", message);
 			return generateFailDocument();
 		}
-
-		console.log(4);
 
 		// @ts-ignore
 		let previewModeFound = await Utils.waitUntil(() => renderLeaf != undefined && renderLeaf.view.previewMode, 2000, 10);
@@ -55,13 +48,9 @@ export namespace MarkdownRenderer
 			return generateFailDocument();
 		}
 
-		console.log(5);
-
 		let preview = renderLeaf.view.previewMode;
 
 		await Utils.changeViewMode(renderLeaf.view, "preview");
-
-		console.log(6);
 
 		// @ts-ignore
 		preview.renderer.showAll = true;
@@ -80,12 +69,8 @@ export namespace MarkdownRenderer
 			isRendered = true;
 		});
 
-		console.log(7);
-
 		// @ts-ignore
 		let renderfinished = await Utils.waitUntil(() => (preview.renderer.lastRender != lastRender && isRendered) || renderLeaf == undefined, 30000, 50);
-		
-		console.log(8);
 
 		if (renderLeaf == undefined)
 		{
@@ -100,8 +85,6 @@ export namespace MarkdownRenderer
 			return generateFailDocument();
 		}
 
-		console.log(9);
-
 		// wait for dataview blocks to render
 		let text = renderLeaf.view.data;
 		let dataviews = text.matchAll(/```(dataview|dataviewjs)/g);
@@ -112,8 +95,6 @@ export namespace MarkdownRenderer
 			// HTMLGenerator.reportWarning("Dataview Blocks Detected", "Detected " + dataviewCount + " dataview blocks. Waiting " + ExportSettings.settings.dataviewBlockWaitTime * dataviewCount + "ms for render.");
 			await Utils.delay(ExportSettings.settings.dataviewBlockWaitTime * dataviewCount);
 		}
-
-		console.log(10);
 
 		// If everything worked then do a bit of postprocessing
 		let container = preview.containerEl;
@@ -137,8 +118,6 @@ export namespace MarkdownRenderer
 			{
 				AssetHandler.mathStyles = stylesheet.innerHTML.replaceAll("app://obsidian.md/", "https://publish.obsidian.md/").trim();
 			}
-
-			console.log(11);
 
 			return container.innerHTML;
 		}
