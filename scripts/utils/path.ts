@@ -76,19 +76,30 @@ export class Path
 		}
 		catch (e)
 		{
-			this.log("Could not parse path:" + path, e.stack, "error");
+			this.log("Could not decode path:" + path, e.stack, "error");
 		}
 
 		let parsed = pathTools.parse(path);
 
 		let parent = parsed.dir;
+		let fullPath = "";
+
 		if(path.endsWith("/") || path.endsWith("\\") || parsed.ext == "")
 		{
+			if (path.endsWith("/") || path.endsWith("\\")) path = path.substring(0, path.length - 1);
+
 			parsed.dir = pathTools.normalizeSafe(path);
+			let items = parsed.dir.split("/");
+			parsed.name = items[items.length - 1];
+			parsed.base = parsed.name;
+			parsed.ext = "";
+			fullPath = parsed.dir;
+		}
+		else
+		{
+			fullPath = pathTools.join(parent, parsed.base);
 		}
 
-
-		let fullPath = pathTools.join(parent, parsed.base);
 
 		return { root: parsed.root, dir: parsed.dir, parent: parent, base: parsed.base, ext: parsed.ext, name: parsed.name, fullPath: fullPath };
 	}
@@ -136,9 +147,9 @@ export class Path
 		return new Path(relative, workingDir);
 	}
 
-	public static getRelativePathFromVault(path: Path): Path
+	public static getRelativePathFromVault(path: Path, useAbsolute: boolean = false): Path
 	{
-		return Path.getRelativePath(Path.vaultPath, path);
+		return Path.getRelativePath(Path.vaultPath, path, useAbsolute);
 	}
 
 	private static vaultPathCache: Path | undefined = undefined;
@@ -180,7 +191,7 @@ export class Path
 	
 	static toWebStyle(path: string): string
 	{
-		return path.replaceAll(" ", "-").toLowerCase();
+		return path.replaceAll(" ", "-").replaceAll(/-{2,}/g, "-").replace(".-", "-").toLowerCase();
 	}
 
 	joinString(...paths: string[]): Path
@@ -202,6 +213,16 @@ export class Path
 			this._fullPath = Path.joinStringPaths(workingDirectory.toString(), this.asString);
 			this._workingDirectory = "";
 			this.reparse(this.asString);
+		}
+
+		return this;
+	}
+
+	makeForceFolder(): Path
+	{
+		if (!this.isDirectory)
+		{
+			this.reparse(this.asString + "/");
 		}
 
 		return this;
@@ -293,7 +314,7 @@ export class Path
 
 	makeWebStyle(): Path
 	{
-		this._fullPath = this.asString.replaceAll(" ", "-").toLowerCase();
+		this._fullPath = Path.toWebStyle(this.asString);
 		this.reparse(this.asString);
 		return this;
 	}
