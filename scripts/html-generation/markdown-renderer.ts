@@ -13,6 +13,7 @@ export namespace MarkdownRenderer
 	export let problemLog: string = "";
 	export let renderLeaf: WorkspaceLeaf | undefined;
     export let errorInBatch: boolean = false;
+	export let cancelled: boolean = false;
 
     export async function renderMarkdown(file: ExportFile): Promise<string>
 	{
@@ -32,6 +33,8 @@ export namespace MarkdownRenderer
 			return generateFailDocument();
 		}
 
+		if (cancelled) throw new Error("Markdown rendering cancelled");
+
 		if(!(renderLeaf.view instanceof MarkdownView))
 		{
 			let message = "This file was not a normal markdown file! File: " + file.markdownFile.path;
@@ -40,7 +43,10 @@ export namespace MarkdownRenderer
 		}
 
 		// @ts-ignore
-		let previewModeFound = await Utils.waitUntil(() => renderLeaf != undefined && renderLeaf.view.previewMode, 2000, 10);
+		let previewModeFound = await Utils.waitUntil(() => (renderLeaf != undefined && renderLeaf.view.previewMode) || cancelled, 2000, 10);
+		
+		if (cancelled) throw new Error("Markdown rendering cancelled");
+
 		if (!previewModeFound)
 		{
 			let message = "Failed to open preview mode! File: " + file.markdownFile.path;
@@ -51,16 +57,19 @@ export namespace MarkdownRenderer
 		let preview = renderLeaf.view.previewMode;
 
 		await Utils.changeViewMode(renderLeaf.view, "preview");
+		if (cancelled) throw new Error("Markdown rendering cancelled");
+
 
 		// @ts-ignore
 		preview.renderer.showAll = true;
 		// @ts-ignore
 		await preview.renderer.unfoldAllHeadings();
+		if (cancelled) throw new Error("Markdown rendering cancelled");
 
 		// @ts-ignore
 		let lastRender = preview.renderer.lastRender;
 		// @ts-ignore
-		await preview.renderer.rerender(true);
+		preview.renderer.rerender(true);
 
 		let isRendered = false;
 		// @ts-ignore
@@ -70,13 +79,9 @@ export namespace MarkdownRenderer
 		});
 
 		// @ts-ignore
-		let renderfinished = await Utils.waitUntil(() => (preview.renderer.lastRender != lastRender && isRendered) || renderLeaf == undefined, 30000, 50);
+		let renderfinished = await Utils.waitUntil(() => (preview.renderer.lastRender != lastRender && isRendered) || cancelled, 30000, 50);
 
-		if (renderLeaf == undefined)
-		{
-			RenderLog.warning("Render cancelled! On file: ", file.markdownFile.path);
-			return generateFailDocument();
-		}
+		if (cancelled) throw new Error("Markdown rendering cancelled");
 
 		if (!renderfinished)
 		{
@@ -92,9 +97,10 @@ export namespace MarkdownRenderer
 
 		if (dataviewCount > 0)
 		{
-			// HTMLGenerator.reportWarning("Dataview Blocks Detected", "Detected " + dataviewCount + " dataview blocks. Waiting " + ExportSettings.settings.dataviewBlockWaitTime * dataviewCount + "ms for render.");
 			await Utils.delay(ExportSettings.settings.dataviewBlockWaitTime * dataviewCount);
 		}
+
+		if (cancelled) throw new Error("Markdown rendering cancelled");
 
 		// If everything worked then do a bit of postprocessing
 		let container = preview.containerEl;
@@ -143,6 +149,7 @@ export namespace MarkdownRenderer
 	{
 		problemLog = "";
         errorInBatch = false;
+		cancelled = false;
 
 		renderLeaf = TabManager.openNewTab("window", "vertical");
 		// @ts-ignore
@@ -180,7 +187,11 @@ export namespace MarkdownRenderer
 		let renderBrowserWindow = window.electron.remote.BrowserWindow.getFocusedWindow();
 		renderBrowserWindow.setAlwaysOnTop(true, "floating", 1);
 		renderBrowserWindow.webContents.setFrameRate(120);
-		console.log(renderBrowserWindow);
+		renderBrowserWindow.on("close", () =>
+		{
+			cancelled = true;
+			console.log("cancelled");
+		});
 
 		// @ts-ignore
 		let allWindows = window.electron.remote.BrowserWindow.getAllWindows()
@@ -229,11 +240,10 @@ export namespace MarkdownRenderer
 		return logEl;
 	}
 
-	export function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
+	export async function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
 	{
-		if(!renderLeaf) return;
 		// @ts-ignore
-		let found = Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 2000, 10);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		// @ts-ignore
@@ -299,7 +309,7 @@ export namespace MarkdownRenderer
 		}
 	}
 
-	export function _reportError(messageTitle: string, message: string, fatal: boolean)
+	export async function _reportError(messageTitle: string, message: string, fatal: boolean)
 	{
 		if(problemLog == "")
 		{
@@ -309,12 +319,10 @@ export namespace MarkdownRenderer
         messageTitle = (fatal ? "[Fatal Error] " : "[Error] ") + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
-		if(!renderLeaf) return;
-
         errorInBatch = true;
 
 		// @ts-ignore
-		let found = Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 2000, 10);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		// @ts-ignore
@@ -348,7 +356,7 @@ export namespace MarkdownRenderer
         }
 	}
 
-	export function _reportWarning(messageTitle: string, message: string)
+	export async function _reportWarning(messageTitle: string, message: string)
 	{
 		if(problemLog == "" && ExportSettings.settings.showWarningsInExportLog)
 		{
@@ -360,9 +368,8 @@ export namespace MarkdownRenderer
 
 		if(!ExportSettings.settings.showWarningsInExportLog) return;
 
-		if(!renderLeaf) return;
 		// @ts-ignore
-		let found = Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 2000, 10);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		// @ts-ignore
@@ -379,7 +386,7 @@ export namespace MarkdownRenderer
 
 	}
 
-    export function _reportInfo(messageTitle: string, message: string)
+    export async function _reportInfo(messageTitle: string, message: string)
 	{
 		if(problemLog == "")
 		{
@@ -391,9 +398,8 @@ export namespace MarkdownRenderer
 
 		if(!ExportSettings.settings.showWarningsInExportLog) return;
 
-		if(!renderLeaf) return;
 		// @ts-ignore
-		let found = Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 2000, 10);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		// @ts-ignore

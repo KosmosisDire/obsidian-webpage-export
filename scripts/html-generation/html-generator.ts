@@ -106,6 +106,7 @@ export class HTMLGenerator
 		// create obsidian document containers
 		let markdownViewEl = file.document.body.createDiv();
 		let content = await MarkdownRenderer.renderMarkdown(file);
+		if (MarkdownRenderer.cancelled) throw new Error("Markdown rendering cancelled");
 		markdownViewEl.outerHTML = content;
 
 		if(ExportSettings.settings.allowFoldingHeadings && !markdownViewEl.hasClass("allow-fold-headings")) 

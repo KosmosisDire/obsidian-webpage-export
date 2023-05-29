@@ -136,10 +136,8 @@ export class AssetHandler
 
 		// @ts-ignore
 		let changed = this.mathjaxStylesheet?.ownerNode.getAttribute("data-change");
-		console.log(changed);
 		if (changed != this.lastMathjaxChanged)
 		{
-			console.log(Utils.getActiveTextView()?.file.name + " has latex");
 			AssetHandler.mathStyles = "";
 			for (let i = 0; i < this.mathjaxStylesheet.cssRules.length; i++)
 			{
