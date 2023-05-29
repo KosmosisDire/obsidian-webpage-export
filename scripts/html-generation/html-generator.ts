@@ -170,6 +170,12 @@ export class HTMLGenerator
 			outlinedImages = await this.externalizeMedia(file);
 		}
 
+		// add math styles to the document. They are here and not in head because they are unique to each document
+		let mathStyleEl = document.createElement("style");
+		mathStyleEl.id = "MJX-CHTML-styles";
+		mathStyleEl.innerHTML = AssetHandler.mathStyles;
+		file.contentElement.prepend(mathStyleEl);
+
 		if(addSelfToDownloads) file.downloads.push(file.getSelfDownloadable());
 		file.downloads.push(...outlinedImages);
 		file.downloads.push(...await AssetHandler.getDownloads());
@@ -352,7 +358,6 @@ export class HTMLGenerator
 			
 			<!-- Obsidian App Styles / Other Built-in Styles -->
 			<style> ${AssetHandler.appStyles} </style>
-			<style> ${AssetHandler.mathStyles} </style>
 			<style> ${cssSettings} </style>
 
 			<!-- Theme Styles -->
@@ -377,10 +382,7 @@ export class HTMLGenerator
 			<link rel="stylesheet" href="${relativePaths.cssPath}/theme.css">
 			<link rel="stylesheet" href="${relativePaths.cssPath}/plugin-styles.css">
 			<link rel="stylesheet" href="${relativePaths.cssPath}/snippets.css">
-
 			<style> ${cssSettings} </style>
-			<style> ${AssetHandler.mathStyles} </style>
-			
 
 			${scripts}
 			`;
