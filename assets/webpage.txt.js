@@ -554,24 +554,6 @@ function setupThemeToggle(setupOnNode)
 function setupHeaders(setupOnNode)
 {
     // MAKE HEADERS COLLAPSIBLE
-    // if "heading-collapse-indicator" is clicked, toggle the display of every div until the next heading of the same or lower level
-    function getHeadingContentsSelector(header)
-    {
-        let headingLevel = header.firstChild.tagName;
-        let headingNumber = parseInt(headingLevel.replace("h", ""));
-
-        let endingHeadings = [1, 2, 3, 4, 5, 6].filter(function(item)
-        {
-            return item <= headingNumber;
-        }).map(function(item)
-        {
-            return `div:has(h${item})`;
-        });
-
-        let endingHeadingsSelector = endingHeadings.join(", ");
-
-        return endingHeadingsSelector;
-    }
 
 	setupOnNode.querySelectorAll(".heading-collapse-indicator").forEach(function (element) 
 	{
