@@ -66,12 +66,8 @@ export class HTMLGenerator
 		{
 			let tree = GlobalDataGenerator.getFileTree();
 			if (ExportSettings.settings.makeNamesWebStyle) tree.makeLinksWebStyle();
-
-			if (tree.children.length >= 1)
-			{
-				let fileTree: HTMLDivElement = this.generateHTMLTree(tree, usingDocument, app.vault.getName(), "file-tree", true, 1, 1, true);
-				leftSidebar.appendChild(fileTree);
-			}
+			let fileTree: HTMLDivElement = this.generateHTMLTree(tree, usingDocument, app.vault.getName(), "file-tree", true, 1, 1, true);
+			leftSidebar.appendChild(fileTree);
 		}
 
 		await this.fillInHead(file);
@@ -105,6 +101,7 @@ export class HTMLGenerator
 		body.style.setProperty("--collapse-arrow-size", "0.4em");
 		body.style.setProperty("--tree-horizontal-spacing", "1em");
 		body.style.setProperty("--tree-vertical-spacing", "0.5em");
+		body.style.setProperty("--sidebar-margin", "12px");
 
 		// create obsidian document containers
 		let markdownViewEl = file.document.body.createDiv();
@@ -155,7 +152,7 @@ export class HTMLGenerator
 		file.sizerElement.style.paddingTop = "var(--file-margins)";
 		file.sizerElement.style.paddingLeft = "var(--file-margins)";
 		file.sizerElement.style.paddingRight = "var(--file-margins)";
-		file.sizerElement.style.width = "-webkit-fill-available";
+		file.sizerElement.style.width = "100%";
 		file.sizerElement.style.position = "absolute";
 
 		// modify links to work outside of obsidian (including relative links)
@@ -196,7 +193,6 @@ export class HTMLGenerator
 
 		if (!hasTitle || (currentTitleEl?.tagName == "H2" && currentTitle != file.markdownFile.basename))
 		{
-			console.log("adding title: " + file.markdownFile.basename);
 			let divContainer = file.document.querySelector("div.mod-header");
 			if (!divContainer) 
 			{
@@ -210,6 +206,7 @@ export class HTMLGenerator
 			title.setAttribute("class", "inline-title");
 			title.setAttribute("data-heading", title.innerText);
 			title.style.display = "block";
+			title.id = file.markdownFile.basename.replaceAll(" ", "_");
 		}
 	}
 
@@ -663,8 +660,6 @@ export class HTMLGenerator
 		{
 			treeScrollAreaEl.appendChild(item);
 		}
-
-		console.log(treeItems);
 
 		return treeContainerEl;
 	}

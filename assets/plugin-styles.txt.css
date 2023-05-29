@@ -92,7 +92,7 @@
 
 .sidebar-section-header
 {
-  margin: 0em 0 0em 12px;
+  margin: 0em 0 0em var(--sidebar-margin);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   font-weight: 600;
@@ -237,17 +237,26 @@
 /* Base tree */
 .tree-container 
 {
-    padding-bottom: 12px;
-    margin: 12px;
-    height: -webkit-fill-available;
-    position: relative;
+	/* padding-bottom: 12px; */
+	/* margin: 12px; */
+	/* height: 100%; */
+	/* position: relative; */
+	/* display: contents; */
+	position: relative;
+	height: 100%;
+	width: auto;
+	margin: var(--sidebar-margin);
+	margin-top: 3em;
+    margin-bottom: 0;
 }
 
 .tree-container .tree-header 
 {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	position: absolute;
+	top: -3em;
 }
 
 .tree-container .tree-header .sidebar-section-header
@@ -256,16 +265,22 @@
     margin-left: 0;
 }
 
-.tree-container .tree-scroll-area
+.tree-container:has(.tree-scroll-area:empty) 
 {
-    width: 100%;
-    overflow-y: scroll;
-    padding: 1em;
-    padding-right: calc(1em + 12px);
-    padding-bottom: 3em;
-    border-radius: var(--radius-m);
-    position: absolute;
-    height: -webkit-fill-available;
+    display: none;
+}
+
+.tree-container .tree-scroll-area 
+{
+	width: 100%;
+	height: 100%;
+	max-height: 100%;
+	overflow-y: scroll;
+	padding: 1em;
+	padding-right: calc(1em + var(--sidebar-margin));
+	padding-bottom: 3em;
+	border-radius: var(--radius-m);
+	position: absolute;
 }
 
 .tree-container .tree-item 
@@ -281,7 +296,7 @@
     padding: 0;
     margin-left: 0;
     border-left: none;
-    width: -webkit-fill-available;
+    width: 100%;
 }
 
 .tree-container .tree-item.mod-active > .tree-item-contents > .tree-item-link
@@ -307,7 +322,7 @@
 
 .tree-container a.tree-item-link 
 {
-    width: -webkit-fill-available;
+    width: 100%;
     height: 100%;
     transition: background-color 0.1s;
     border-radius: var(--radius-s);
@@ -651,7 +666,7 @@ a {
 .graph-view-container 
 {
     position: relative;
-    width: -webkit-fill-available;
+    width: 100%;
     aspect-ratio: 1/1;
     display: flex;
 }
@@ -679,11 +694,11 @@ a {
 .graph-view-placeholder 
 {
     padding: 0;
-    width: -webkit-fill-available;
+    width: auto;
     aspect-ratio: 1/1;
     position: relative;
     flex: none;
-    margin: 12px;
+    margin: var(--sidebar-margin);
 }
 
 .graph-view-placeholder:has(.expanded)
