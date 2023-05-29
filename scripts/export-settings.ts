@@ -4,7 +4,8 @@ import HTMLExportPlugin from './main';
 import { Path } from './utils/path';
 import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
 
-export interface ExportSettingsData {
+export interface ExportSettingsData 
+{
 	// Inlining Options
 	inlineCSS: boolean;
 	inlineJS: boolean;
@@ -20,6 +21,7 @@ export interface ExportSettingsData {
 	customLineWidth: string;
 	contentWidth: string;
 	sidebarWidth: string;
+	startOutlineCollapsed: boolean;
 
 	// Export Options
 	dataviewBlockWaitTime: number;
@@ -65,6 +67,7 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	customLineWidth: "",
 	contentWidth: "",
 	sidebarWidth: "",
+	startOutlineCollapsed: false,
 
 	// Export Options
 	dataviewBlockWaitTime: 700,
@@ -223,6 +226,45 @@ export class ExportSettings extends PluginSettingTab {
 				}
 				));
 
+		new Setting(contentEl)
+			.setName('Add filename as title')
+			.setDesc('If the first header is not an H1, include the file name as a title at the top of the page.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.addFilenameTitle)
+				.onChange(async (value) => {
+					ExportSettings.settings.addFilenameTitle = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		hr = contentEl.createEl("hr");
+		hr.style.marginTop = "20px";
+		hr.style.marginBottom = "20px";
+		hr.style.borderColor = "var(--color-accent)";
+		hr.style.opacity = "0.5";
+		new Setting(contentEl)
+			.setName('Page Behaviors:')
+			.setDesc("Control the behavior of different page features.")
+			.setHeading()
+
+		new Setting(contentEl)
+			.setName('Start Outline Collapsed')
+			.setDesc('Start the document\'s table of contents with all items collapsed')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.startOutlineCollapsed)
+				.onChange(async (value) => {
+					ExportSettings.settings.startOutlineCollapsed = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		new Setting(contentEl)
+			.setName('Allow folding headings')
+			.setDesc('Allow headings to be folded with an arrow icon beside each heading, just as in Obsidian.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.allowFoldingHeadings)
+				.onChange(async (value) => {
+					ExportSettings.settings.allowFoldingHeadings = value;
+					await ExportSettings.saveSettings();
+				}));
 
 		//#endregion
 
@@ -270,7 +312,7 @@ export class ExportSettings extends PluginSettingTab {
 
 		//#endregion
 
-		//#region Formatting Options
+		//#region Layout Options
 
 		hr = contentEl.createEl("hr");
 		hr.style.marginTop = "20px";
@@ -278,7 +320,7 @@ export class ExportSettings extends PluginSettingTab {
 		hr.style.borderColor = "var(--color-accent)";
 		hr.style.opacity = "0.5";
 		new Setting(contentEl)
-			.setName('Formatting Options:')
+			.setName('Layout Options:')
 			.setHeading()
 
 		new Setting(contentEl)
@@ -332,46 +374,6 @@ export class ExportSettings extends PluginSettingTab {
 				this.display();
 			}));
 
-		new Setting(contentEl)
-			.setName('Make names web style')
-			.setDesc('Make the names of files and folders lowercase and replace spaces with dashes.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.makeNamesWebStyle)
-				.onChange(async (value) => {
-					ExportSettings.settings.makeNamesWebStyle = value;
-					await ExportSettings.saveSettings();
-				}));
-
-		new Setting(contentEl)
-			.setName('Allow folding headings')
-			.setDesc('Allow headings to be folded with an arrow icon beside each heading, just as in Obsidian.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.allowFoldingHeadings)
-				.onChange(async (value) => {
-					ExportSettings.settings.allowFoldingHeadings = value;
-					await ExportSettings.saveSettings();
-				}));
-
-		new Setting(contentEl)
-			.setName('Add filename as title')
-			.setDesc('If the first header is not an H1, include the file name as a title at the top of the page.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.addFilenameTitle)
-				.onChange(async (value) => {
-					ExportSettings.settings.addFilenameTitle = value;
-					await ExportSettings.saveSettings();
-				}));
-
-		new Setting(contentEl)
-			.setName('Beautify HTML')
-			.setDesc('Beautify the HTML text to make it more human readable at the cost of export speed.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.beautifyHTML)
-				.onChange(async (value) => {
-					ExportSettings.settings.beautifyHTML = value;
-					await ExportSettings.saveSettings();
-				}));
-
 		//#endregion
 
 		//#region Export Options
@@ -407,6 +409,27 @@ export class ExportSettings extends PluginSettingTab {
 					ExportSettings.settings.showWarningsInExportLog = value;
 					await ExportSettings.saveSettings();
 				}));
+		
+		new Setting(contentEl)
+			.setName('Make names web style')
+			.setDesc('Make the names of files and folders lowercase and replace spaces with dashes.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.makeNamesWebStyle)
+				.onChange(async (value) => {
+					ExportSettings.settings.makeNamesWebStyle = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		new Setting(contentEl)
+			.setName('Beautify HTML')
+			.setDesc('Beautify the HTML text to make it more human readable at the cost of export speed.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.beautifyHTML)
+				.onChange(async (value) => {
+					ExportSettings.settings.beautifyHTML = value;
+					await ExportSettings.saveSettings();
+				}));
+
 
 		//#endregion
 

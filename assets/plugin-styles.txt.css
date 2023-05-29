@@ -82,7 +82,7 @@
 
 /*#region Sidebars */
 
-#sidebar {
+.sidebar {
     background-color: var(--background-secondary);
     flex: 1 0 min-content;
     display: flex;
@@ -136,7 +136,7 @@
 
 @media print 
 {
-    #sidebar, .outline-container, .theme-toggle-container, .theme-toggle-container-inline, .toggle-background, .theme-toggle-input
+    .sidebar, .outline-container, .theme-toggle-container, .theme-toggle-container-inline, .toggle-background, .theme-toggle-input
     {
         display: none !important;
     }

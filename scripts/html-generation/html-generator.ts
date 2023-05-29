@@ -50,7 +50,7 @@ export class HTMLGenerator
 		if (ExportSettings.settings.includeOutline)
 		{
 			let headerTree = LinkTree.headersFromFile(file.markdownFile, 1);
-			let outline : HTMLElement | undefined = this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", "outline-tree", false, 1, 2, false);
+			let outline : HTMLElement | undefined = this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", "outline-tree", false, 1, 2, ExportSettings.settings.startOutlineCollapsed);
 			rightSidebar.appendChild(outline);
 		}
 
@@ -246,13 +246,13 @@ export class HTMLGenerator
 		rightSidebar.setAttribute("class", "sidebar-right");
 		rightSidebarScroll.setAttribute("class", "sidebar-scroll-area");
 		
-		leftSidebar.setAttribute("id", "sidebar");
+		leftSidebar.classList.add("sidebar");
 		leftSidebar.appendChild(leftContent);
 		// leftContent.appendChild(leftSidebarScroll);
 
 		documentContainer.appendChild(middleContent);
 
-		rightSidebar.setAttribute("id", "sidebar");
+		rightSidebar.classList.add("sidebar");
 		rightSidebar.appendChild(rightContent);
 		// rightContent.appendChild(rightSidebarScroll);
 
@@ -584,13 +584,13 @@ export class HTMLGenerator
 		return treeItemEl;
 	}
 
-	private static buildTreeRecursive(tree: LinkTree, usingDocument: Document, minDepth:number = 1, minCollapsableDepth:number = 1, closeAllItems: boolean = true): HTMLDivElement[]
+	private static buildTreeRecursive(tree: LinkTree, usingDocument: Document, minDepth:number = 1, minCollapsableDepth:number = 1, closeAllItems: boolean = false): HTMLDivElement[]
 	{
 		let treeItems: HTMLDivElement[] = [];
 
 		for (let item of tree.children)
 		{
-			let children = this.buildTreeRecursive(item, usingDocument, minCollapsableDepth);
+			let children = this.buildTreeRecursive(item, usingDocument, minDepth, minCollapsableDepth, closeAllItems);
 
 			if(item.depth >= minDepth)
 			{
