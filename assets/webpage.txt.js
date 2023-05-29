@@ -29,6 +29,8 @@ function getURLRootPath(url = window.location.pathname)
 
 async function setTreeCollapsed(element, collapsed, animate = true)
 {
+	if (!element || !element.classList.contains("mod-collapsible")) return;
+
 	let children = element.querySelector(".tree-item-children");
 
 	if (collapsed)
@@ -50,6 +52,8 @@ async function setTreeCollapsedAll(elements, collapsed, animate = true)
 	let childrenList = [];
 	elements.forEach(async element => 
 	{
+		if (!element || !element.classList.contains("mod-collapsible")) return;
+
 		let children = element.querySelector(".tree-item-children");
 
 		if (collapsed)
