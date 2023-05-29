@@ -11,7 +11,6 @@ function getURLPath(url = window.location.pathname)
 {
 	let absoluteRoot = getAbsoluteRootPath();
 	let pathname = url.substring(absoluteRoot.length);
-	console.log("url path: ", pathname);
 	return pathname;
 }
 
@@ -414,7 +413,6 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 		
 		if(activeNode >= 0) 
 		{
-			console.log("Setting active node to: " + activeNode);
 			window.renderWorker.activeNode = activeNode;
 		}
 	}
@@ -778,7 +776,6 @@ function setupLinks(setupOnNode)
 			}
 			else
 			{
-				console.log("Scrolling to: " + target);
 				let headerTarget = document.getElementById(target.substring(1));
 				if (headerTarget.parentElement.classList.contains("is-collapsed")) setHeaderCollapse(headerTarget.parentElement, false);
 				headerTarget.scrollIntoView();
@@ -881,7 +878,6 @@ function initializePage(setupOnNode)
 	{
 		event.stopImmediatePropagation();
 		touchDrag = true;
-		console.log("touchmove");
 	});
 
 	setupOnNode.querySelectorAll("*").forEach(function(element)
@@ -897,7 +893,6 @@ function initializePage(setupOnNode)
 				return;
 			}
 
-			console.log("touchend");
 			if (element instanceof HTMLElement) element.click();
 		});
 	});
@@ -924,8 +919,6 @@ function initializeForFileProtocol()
 
 window.onload = function()
 {
-	console.log("onload");
-	
 	if (window.location.protocol == "file:") initializeForFileProtocol();
 	initializePage(document);
 }
