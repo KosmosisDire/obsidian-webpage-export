@@ -12,24 +12,18 @@
 	"author": "Nathan George",
 	"license": "GPL-3.0",
 	"devDependencies": {
-		"@types/file-saver": "^2.0.5",
-		"@types/jquery": "^3.5.14",
 		"@types/js-beautify": "^1.13.3",
 		"@types/node": "^16.11.6",
-		"@types/victor": "^1.1.0",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",
 		"electron": "^18.3.15",
 		"esbuild": "0.14.47",
-		"jquery": "^3.5.14",
 		"obsidian": "^0.16.3",
 		"tslib": "2.4.0",
-		"typescript": "4.7.4",
-		"victor": "^1.1.0"
+		"typescript": "4.7.4"
 	},
 	"dependencies": {
-		"jquery": "^3.5.14",
 		"js-beautify": "^1.14.7",
 		"upath": "^2.0.1"
 	}
