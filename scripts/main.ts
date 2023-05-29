@@ -1,5 +1,5 @@
 // imports from obsidian API
-import { Notice, Plugin, TFile, TFolder} from 'obsidian';
+import { MarkdownView, Notice, Plugin, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
 import { ExportModal, ExportSettings } from './export-settings';
@@ -10,34 +10,12 @@ import { ExportFile } from './html-generation/export-file';
 import { AssetHandler } from './html-generation/asset-handler';
 import { RenderLog } from './html-generation/render-log';
 import { Downloadable } from './utils/downloadable';
+import { GlobalDataGenerator, LinkTree } from './html-generation/global-gen';
 
 export default class HTMLExportPlugin extends Plugin
 {
 	static plugin: HTMLExportPlugin;
 	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string};
-
-	addTogglePostprocessor()
-	{
-		this.registerMarkdownCodeBlockProcessor("theme-toggle", (source, el, ctx) =>
-		{
-			let toggleEl = HTMLGenerator.generateDarkmodeToggle();
-			el.replaceWith(toggleEl);
-		});
-
-		//also replace `theme-toggle` and ```theme-toggle``` for better inline toggles, or in places you couldn't use a normal code block
-		this.registerMarkdownPostProcessor((element, context) =>
-		{
-			let codeBlocks = element.querySelectorAll('code, span.cm-inline-code');
-			codeBlocks.forEach((codeBlock) =>
-			{
-				if (codeBlock instanceof HTMLElement && codeBlock.innerText === "theme-toggle")
-				{
-					let toggleEl = HTMLGenerator.generateDarkmodeToggle();
-					codeBlock.replaceWith(toggleEl);
-				}
-			});
-		});
-	}
 
 	async addCommands()
 	{
@@ -125,11 +103,8 @@ export default class HTMLExportPlugin extends Plugin
 			{
 				console.log("Opening: "+exportInfo.exportedPath.asString);
 				this.openPath(exportInfo.exportedPath);
-			}
+			}			
 		});
-
-		// add toggle postprocessor
-		this.addTogglePostprocessor();
 
 		// add commands
 		this.addCommands();
