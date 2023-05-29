@@ -10,6 +10,7 @@ export interface ExportSettingsData {
 	inlineJS: boolean;
 	inlineImages: boolean;
 	includePluginCSS: string;
+	includeSvelteCSS: boolean;
 
 	// Formatting Options
 	makeNamesWebStyle: boolean;
@@ -54,6 +55,7 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	inlineJS: true,
 	inlineImages: true,
 	includePluginCSS: '',
+	includeSvelteCSS: true,
 
 	// Formatting Options
 	makeNamesWebStyle: false,
@@ -191,7 +193,7 @@ export class ExportSettings extends PluginSettingTab {
 
 		new Setting(contentEl)
 			.setName('Include theme toggle')
-			.setDesc('Adds a theme toggle to the left sidebar of any page that doesn\'t already have a toggle embedded with "theme-toggle" codeblock.')
+			.setDesc('Adds a theme toggle to the left sidebar.')
 			.addToggle((toggle) => toggle
 				.setValue(ExportSettings.settings.addDarkModeToggle)
 				.onChange(async (value) => {
@@ -201,7 +203,7 @@ export class ExportSettings extends PluginSettingTab {
 
 		new Setting(contentEl)
 			.setName('Include document outline')
-			.setDesc('Adds an interactive document outline tree to the right sidebar of the document.')
+			.setDesc('Adds the document\'s table of contents to the right sidebar.')
 			.addToggle((toggle) => toggle
 				.setValue(ExportSettings.settings.includeOutline)
 				.onChange(async (value) => {
@@ -212,7 +214,7 @@ export class ExportSettings extends PluginSettingTab {
 
 		new Setting(contentEl)
 			.setName('Include file tree')
-			.setDesc('Adds an interactive file tree to the left sidebar of the document.')
+			.setDesc('Adds an interactive file tree to the left sidebar.')
 			.addToggle((toggle) => toggle
 				.setValue(ExportSettings.settings.includeFileTree)
 				.onChange(async (value) => {
@@ -443,6 +445,16 @@ export class ExportSettings extends PluginSettingTab {
 				ExportSettings.saveSettings();
 			});
 		});
+
+		new Setting(contentEl)
+			.setName('Include Svelte CSS')
+			.setDesc('Include the CSS from any plugins that use the svelte framework.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.includeSvelteCSS)
+				.onChange(async (value) => {
+					ExportSettings.settings.includeSvelteCSS = value;
+					await ExportSettings.saveSettings();
+				}));
 
 		//#endregion
 
