@@ -20,7 +20,7 @@ export class ExportFile
 	/**
 	 * The relative path from the vault root to the FOLDER being exported
 	 */
-	public exportFromFolder: Path;
+	public exportedFolder: Path;
 
 	/**
 	 * Is this file part of a batch export, or is it being exported independently?
@@ -68,7 +68,7 @@ export class ExportFile
 
 		this.markdownFile = file;
 		this.exportToFolder = exportToFolder;
-		this.exportFromFolder = exportFromFolder;
+		this.exportedFolder = exportFromFolder;
 		this.partOfBatch = partOfBatch;
 
 		this.name = (fileName === "" ? (file.basename + ".html") : fileName);
@@ -106,6 +106,14 @@ export class ExportFile
 	}
 
 	/**
+	 * The element that determines the size of the document, aka the markdown-preview-sizer
+	 */
+	get sizerElement(): HTMLElement
+	{
+		return this.document.querySelector(".markdown-preview-sizer") as HTMLElement;
+	}
+
+	/**
 	 * The absolute path that the file will be saved to
 	 */
 	get exportPathAbsolute(): Path
@@ -126,7 +134,7 @@ export class ExportFile
 	 */
 	public getSelfDownloadable(): Downloadable
 	{
-		return new Downloadable(this.name, this.html, this.exportPath.directory);
+		return new Downloadable(this.name, this.html, this.exportPath.directory.makeForceFolder());
 	}
 
 	public async generateHTML(addSelfToDownloads: boolean = false): Promise<ExportFile>
