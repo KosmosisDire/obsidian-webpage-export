@@ -513,8 +513,11 @@ function setupThemeToggle(setupOnNode)
 
     setupOnNode.querySelectorAll(".theme-toggle-input").forEach(function(element)
 	{
-		element.addEventListener("change", function()
+		element.addEventListener("change", function(event)
 		{
+			event.preventDefault();
+			event.stopPropagation();
+			console.log("Theme toggle changed to: " + !(localStorage.getItem("theme_toggle") == "true"));
 			setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
 		});
 
@@ -654,13 +657,10 @@ function setupCallouts(setupOnNode)
 			var parent = this.parentElement;
 			var isCollapsed = parent.classList.contains("is-collapsed");
 
-			if (isCollapsed) {
-				parent.classList.toggle("is-collapsed");
-			}
+			parent.classList.toggle("is-collapsed");
+			element.querySelector(".callout-fold").classList.toggle("is-collapsed");
 
 			slideToggle(parent.querySelector(".callout-content"), 100);
-			setTimeout(() => {if (!isCollapsed) parent.classList.toggle("is-collapsed");}, 100);
-			
 		});
 
 		elementsWithEventListeners.push(element);
@@ -884,7 +884,8 @@ function initializePage(setupOnNode)
 	{
 		element.addEventListener("touchend", function(event)
 		{
-			// event.preventDefault();
+			event.stopPropagation();
+			event.preventDefault();
 
 			if (touchDrag)
 			{
