@@ -21,6 +21,6 @@ export class Downloadable
 	{
 		let data = this.content instanceof Buffer ? this.content : Buffer.from(this.content.toString(), this.encoding);
 		let writePath = this.relativeDownloadPath.absolute(downloadDirectory).joinString(this.filename);
-		await writePath.writeFile(data);
+		await writePath.writeFile(data, this.encoding);
 	}
 }
