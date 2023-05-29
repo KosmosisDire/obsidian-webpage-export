@@ -549,7 +549,6 @@ class GraphRenderWorker
     }
 }
 
-
 async function initializeGraphView()
 {
     if(running) return;
@@ -567,6 +566,30 @@ async function initializeGraphView()
     pixiApp.ticker.add(updateGraph);
 
     setActiveDocument(getURLPath());
+
+    setInterval(() =>
+    {
+        function isHidden(el) {
+            var style = window.getComputedStyle(el);
+            return (style.display === 'none')
+        }
+
+        let hidden = (isHidden(document.querySelector(".graph-view-placeholder")) || isHidden(document.querySelector("#sidebar:has(.graph-view-placeholder)")));
+
+        if(running && hidden)
+        {
+            running = false;
+            console.log("Graph view hidden, stopping update loop");
+        }
+        else if (!running && !hidden)
+        {
+            running = true;
+            renderWorker.autoResizeCanvas();
+            renderWorker.centerCamera();
+            console.log("Graph view visible, starting update loop");
+        }
+
+    }, 1000);
 }
 
 function updateGraph()
