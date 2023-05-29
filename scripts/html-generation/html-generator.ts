@@ -61,7 +61,7 @@ export class HTMLGenerator
 			leftSidebar.appendChild(toggle);
 		}
 
-		//inject file tree
+		// inject file tree
 		if (ExportSettings.settings.includeFileTree)
 		{
 			let tree = GlobalDataGenerator.getFileTree();
@@ -190,10 +190,13 @@ export class HTMLGenerator
 	
 	private static addTitle(file: ExportFile)
 	{
-		let hasTitle = file.document.body.querySelector("h1, .inline-title") != null;
-		let currentTitle = file.document.body.querySelector("h1, h2, .inline-title")?.textContent ?? "";
-		if (currentTitle != file.markdownFile.basename && !hasTitle)
+		let currentTitleEl = file.document.querySelector("h1, h2, body.show-inline-title .inline-title");
+		let hasTitle = currentTitleEl != null;
+		let currentTitle = currentTitleEl?.textContent ?? "";
+
+		if (!hasTitle || (currentTitleEl?.tagName == "H2" && currentTitle != file.markdownFile.basename))
 		{
+			console.log("adding title: " + file.markdownFile.basename);
 			let divContainer = file.document.querySelector("div.mod-header");
 			if (!divContainer) 
 			{
@@ -202,10 +205,11 @@ export class HTMLGenerator
 				file.contentElement.querySelector(".markdown-preview-sizer")?.prepend(divContainer);
 			}
 
-			let title = divContainer.createEl("h1");
+			let title = divContainer.createEl("div");
 			title.innerText = file.markdownFile.basename;
 			title.setAttribute("class", "inline-title");
 			title.setAttribute("data-heading", title.innerText);
+			title.style.display = "block";
 		}
 	}
 
