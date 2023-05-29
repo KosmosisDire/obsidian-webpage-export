@@ -15,6 +15,7 @@ import { Path } from "scripts/utils/path.js";
 import { Downloadable } from "scripts/utils/downloadable.js";
 import { ExportSettings } from "scripts/export-settings.js";
 import { RenderLog } from "./render-log.js";
+import { Utils } from "scripts/utils/utils.js";
 
 export class AssetHandler
 {
@@ -32,10 +33,12 @@ export class AssetHandler
 	public static themeStyles: string = "";
 	public static snippetStyles: string = "";
 	public static pluginStyles: string = "";
-	private static lastEnabledPluginStyles: string = "";
 
+	private static lastEnabledPluginStyles: string = "";
 	private static lastEnabledSnippets: string[] = [];
 	private static lastEnabledTheme: string = "";
+	private static lastMathjaxChanged: number = -1;
+	private static mathjaxStylesheet: CSSStyleSheet | undefined = undefined;
 
 	public static webpageJS: string = "";
 	public static graphViewJS: string = "";
@@ -43,7 +46,6 @@ export class AssetHandler
 	public static graphWASM: Buffer;
 	public static renderWorkerJS: string = "";
 	public static tinyColorJS: string = "";
-
 
 	public static async initialize(pluginID: string)
 	{
@@ -122,6 +124,37 @@ export class AssetHandler
 			this.lastEnabledPluginStyles = enabledPluginStyles;
 			this.pluginStyles = await this.getPluginStyles();
 		}
+
+		this.lastMathjaxChanged = -1;
+	}
+
+	public static loadMathjaxStyles()
+	{
+		// @ts-ignore
+		if (this.mathjaxStylesheet == undefined) this.mathjaxStylesheet = Array.from(document.styleSheets).find((sheet) => sheet.ownerNode.id == ("MJX-CHTML-styles"));
+		if (this.mathjaxStylesheet == undefined) return;
+
+		// @ts-ignore
+		let changed = this.mathjaxStylesheet?.ownerNode.getAttribute("data-change");
+		console.log(changed);
+		if (changed != this.lastMathjaxChanged)
+		{
+			console.log(Utils.getActiveTextView()?.file.name + " has latex");
+			AssetHandler.mathStyles = "";
+			for (let i = 0; i < this.mathjaxStylesheet.cssRules.length; i++)
+			{
+				AssetHandler.mathStyles += this.mathjaxStylesheet.cssRules[i].cssText + "\n";
+			}
+
+			AssetHandler.mathStyles.replaceAll("app://obsidian.md/", "https://publish.obsidian.md/").trim();
+		}
+		else
+		{
+			console.log(Utils.getActiveTextView()?.file.name + " does not have latex");
+			AssetHandler.mathStyles = "";
+		}
+
+		this.lastMathjaxChanged = changed;
 	}
 
 	private static async loadAppStyles()

@@ -60,7 +60,7 @@ export namespace MarkdownRenderer
 		// @ts-ignore
 		let lastRender = preview.renderer.lastRender;
 		// @ts-ignore
-		preview.renderer.rerender(true);
+		await preview.renderer.rerender(true);
 
 		let isRendered = false;
 		// @ts-ignore
@@ -100,23 +100,9 @@ export namespace MarkdownRenderer
 		let container = preview.containerEl;
 		if (container)
 		{
+			postProcessHTML(file, container);
 
-			// transclusions put a div inside a p tag, which is invalid html. Fix it here
-			container.querySelectorAll("p:has(div)").forEach((element) =>
-			{
-				// replace the p tag with a span
-				let span = file.document.createElement("span");
-				span.innerHTML = element.innerHTML;
-				element.replaceWith(span);
-			});
-
-			// load stylesheet for mathjax
-			await Utils.delay(100);
-			let stylesheet = document.getElementById("MJX-CHTML-styles");
-			if (stylesheet)
-			{
-				AssetHandler.mathStyles = stylesheet.innerHTML.replaceAll("app://obsidian.md/", "https://publish.obsidian.md/").trim();
-			}
+			AssetHandler.loadMathjaxStyles();
 
 			return container.innerHTML;
 		}
@@ -126,6 +112,33 @@ export namespace MarkdownRenderer
 		return generateFailDocument();
 	}
 
+	function postProcessHTML(file: ExportFile, html: HTMLElement)
+	{
+		// transclusions put a div inside a p tag, which is invalid html. Fix it here
+		html.querySelectorAll("p:has(div)").forEach((element) =>
+		{
+			// replace the p tag with a span
+			let span = file.document.createElement("span");
+			span.innerHTML = element.innerHTML;
+			element.replaceWith(span);
+		});
+
+		// encode all text input values into attributes
+		html.querySelectorAll("input[type=text]").forEach((element: HTMLElement) =>
+		{
+			// @ts-ignore
+			element.setAttribute("value", element.value);
+			// @ts-ignore
+			element.value = "";
+		});
+
+		html.querySelectorAll("textarea").forEach((element: HTMLElement) =>
+		{
+			// @ts-ignore
+			element.textContent = element.value;
+		});
+	}
+	
     export async function beginBatch()
 	{
 		problemLog = "";
