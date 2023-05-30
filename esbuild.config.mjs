@@ -12,6 +12,11 @@ if you want to view the source, please visit the github repository of this plugi
 const prod = (process.argv[2] === 'production');
 
 esbuild.build({
+	loader: {
+		'.txt.js': 'text',
+		'.txt.css': 'text',
+		'.wasm': 'binary'
+	},
 	banner: {
 		js: banner,
 	},
@@ -38,5 +43,5 @@ esbuild.build({
 	logLevel: "info",
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
-	outfile: 'main.js',
+	outfile: 'main.js'
 }).catch(() => process.exit(1));

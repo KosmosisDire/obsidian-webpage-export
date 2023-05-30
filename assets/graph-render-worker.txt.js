@@ -37,6 +37,8 @@ if( 'function' === typeof importScripts)
     let grabbedNode = -1;
     let updateAttached = false;
     let attachedToGrabbed = [];
+    let activeNode = -1;
+    let attachedToActive = [];
 
     let cameraScale = 1;
     let cameraScaleRoot = 1;
@@ -157,7 +159,8 @@ if( 'function' === typeof importScripts)
         if (hoveredNode != -1 || grabbedNode != -1)
         {
             hoverFade = Math.min(1, hoverFade + hoverFadeSpeed);
-        }else
+        }
+        else
         {
             hoverFade = Math.max(0, hoverFade - hoverFadeSpeed);
         }
@@ -265,7 +268,14 @@ if( 'function' === typeof importScripts)
         {
 
         }
-        
+
+        graphics.lineStyle(2, colors.accent);
+        // draw the active node
+        if (activeNode != -1)
+        {
+            let pos = vecToScreenSpace(getPosition(activeNode));
+            graphics.drawCircle(pos.x, pos.y, getNodeScreenRadius(radii[activeNode]) + 4);
+        }
     }
 
     function onMessage(event)
@@ -295,6 +305,10 @@ if( 'function' === typeof importScripts)
         else if(event.data.type == "resize")
         {
             app.renderer.resize(event.data.width, event.data.height);
+        }
+        else if(event.data.type == "set_active")
+        {
+            activeNode = event.data.active;
         }
         else if(event.data.type == "update_colors")
         {

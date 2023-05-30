@@ -129,7 +129,7 @@ export class Utils
 
 	static async downloadFiles(files: Downloadable[], folderPath: Path)
 	{
-		if (!folderPath.isAbsolute) throw new Error("folderPath must be absolute");
+		if (!folderPath.isAbsolute) throw new Error("folderPath must be absolute: " + folderPath.asString);
 
 		RenderLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)")
 		

@@ -1,23 +1,27 @@
 import { Modal, Plugin, PluginSettingTab, Setting } from 'obsidian';
 import { Utils } from './utils/utils';
-import { writeFile } from "fs/promises";
-import { HTMLGenerator } from './html-generation/html-generator';
 import HTMLExportPlugin from './main';
 import { Path } from './utils/path';
-import { AssetHandler } from './html-generation/asset-handler';
+import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
 
-export interface ExportSettingsData {
+export interface ExportSettingsData 
+{
 	// Inlining Options
 	inlineCSS: boolean;
 	inlineJS: boolean;
 	inlineImages: boolean;
 	includePluginCSS: string;
+	includeSvelteCSS: boolean;
 
 	// Formatting Options
 	makeNamesWebStyle: boolean;
 	allowFoldingHeadings: boolean;
 	addFilenameTitle: boolean;
 	beautifyHTML: boolean;
+	customLineWidth: string;
+	contentWidth: string;
+	sidebarWidth: string;
+	startOutlineCollapsed: boolean;
 
 	// Export Options
 	dataviewBlockWaitTime: number;
@@ -26,14 +30,12 @@ export interface ExportSettingsData {
 	// Page Features
 	addDarkModeToggle: boolean;
 	includeOutline: boolean;
-	includeVaultOutline: boolean;
+	includeFileTree: boolean;
 	includeGraphView: boolean;
 
 	// Main Export Options
 	exportPreset: string;
-	customLineWidth: string;
 	openAfterExport: boolean;
-	keepNestedFolderStructure: boolean;
 
 	// Graph View Settings
 	graphAttractionForce: number;
@@ -55,12 +57,17 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	inlineJS: true,
 	inlineImages: true,
 	includePluginCSS: '',
+	includeSvelteCSS: true,
 
 	// Formatting Options
 	makeNamesWebStyle: false,
 	allowFoldingHeadings: true,
 	addFilenameTitle: true,
 	beautifyHTML: false,
+	customLineWidth: "",
+	contentWidth: "",
+	sidebarWidth: "",
+	startOutlineCollapsed: false,
 
 	// Export Options
 	dataviewBlockWaitTime: 700,
@@ -70,13 +77,11 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	addDarkModeToggle: true,
 	includeOutline: true,
 	includeGraphView: false,
-	includeVaultOutline: true,
+	includeFileTree: true,
 
 	// Main Export Options
 	exportPreset: '',
-	customLineWidth: "",
 	openAfterExport: true,
-	keepNestedFolderStructure: false,
 
 	// Graph View Settings
 	graphAttractionForce: 1,
@@ -135,16 +140,10 @@ export class ExportSettings extends PluginSettingTab {
 	static settings: ExportSettingsData = DEFAULT_SETTINGS;
 	static plugin: Plugin;
 
-	private static thirdPartyStylesBlacklistURL: string = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/assets/third-party-styles-blacklist.txt";
-
 	private blacklistedPluginIDs: string[] = [];
 	public async getBlacklistedPluginIDs(): Promise<string[]> {
 		if (this.blacklistedPluginIDs.length > 0) return this.blacklistedPluginIDs;
-
-		let blacklist = await AssetHandler.assetsPath.joinString("third-party-styles-blacklist.txt").readFileString();
-		if (blacklist) {
-			this.blacklistedPluginIDs = blacklist.split("\n");
-		}
+		this.blacklistedPluginIDs = pluginStylesBlacklist.split("\n");
 
 		return this.blacklistedPluginIDs;
 	}
@@ -158,11 +157,6 @@ export class ExportSettings extends PluginSettingTab {
 		ExportSettings.settings = Object.assign({}, DEFAULT_SETTINGS, await ExportSettings.plugin.loadData());
 		ExportSettings.settings.customLineWidth = ExportSettings.settings.customLineWidth.toString();
 		if (ExportSettings.settings.customLineWidth === "0") ExportSettings.settings.customLineWidth = "";
-
-		//Download third-party-styles-blacklist.txt
-		let thirdPartyStylesBlacklist = await fetch(ExportSettings.thirdPartyStylesBlacklistURL);
-		let thirdPartyStylesBlacklistText = await thirdPartyStylesBlacklist.text();
-		await writeFile(AssetHandler.assetsPath.joinString("third-party-styles-blacklist.txt").asString, thirdPartyStylesBlacklistText).catch((err) => { console.log(err); });
 	}
 
 	static async saveSettings() {
@@ -202,7 +196,7 @@ export class ExportSettings extends PluginSettingTab {
 
 		new Setting(contentEl)
 			.setName('Include theme toggle')
-			.setDesc('Adds a theme toggle to the left sidebar of any page that doesn\'t already have a toggle embedded with "theme-toggle" codeblock.')
+			.setDesc('Adds a theme toggle to the left sidebar.')
 			.addToggle((toggle) => toggle
 				.setValue(ExportSettings.settings.addDarkModeToggle)
 				.onChange(async (value) => {
@@ -212,7 +206,7 @@ export class ExportSettings extends PluginSettingTab {
 
 		new Setting(contentEl)
 			.setName('Include document outline')
-			.setDesc('Adds an interactive document outline tree to the right sidebar of the document.')
+			.setDesc('Adds the document\'s table of contents to the right sidebar.')
 			.addToggle((toggle) => toggle
 				.setValue(ExportSettings.settings.includeOutline)
 				.onChange(async (value) => {
@@ -220,6 +214,57 @@ export class ExportSettings extends PluginSettingTab {
 					await ExportSettings.saveSettings();
 				}
 				));
+
+		new Setting(contentEl)
+			.setName('Include file tree')
+			.setDesc('Adds an interactive file tree to the left sidebar.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.includeFileTree)
+				.onChange(async (value) => {
+					ExportSettings.settings.includeFileTree = value;
+					await ExportSettings.saveSettings();
+				}
+				));
+
+		new Setting(contentEl)
+			.setName('Add filename as title')
+			.setDesc('If the first header is not an H1, include the file name as a title at the top of the page.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.addFilenameTitle)
+				.onChange(async (value) => {
+					ExportSettings.settings.addFilenameTitle = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		hr = contentEl.createEl("hr");
+		hr.style.marginTop = "20px";
+		hr.style.marginBottom = "20px";
+		hr.style.borderColor = "var(--color-accent)";
+		hr.style.opacity = "0.5";
+		new Setting(contentEl)
+			.setName('Page Behaviors:')
+			.setDesc("Control the behavior of different page features.")
+			.setHeading()
+
+		new Setting(contentEl)
+			.setName('Start Outline Collapsed')
+			.setDesc('Start the document\'s table of contents with all items collapsed')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.startOutlineCollapsed)
+				.onChange(async (value) => {
+					ExportSettings.settings.startOutlineCollapsed = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		new Setting(contentEl)
+			.setName('Allow folding headings')
+			.setDesc('Allow headings to be folded with an arrow icon beside each heading, just as in Obsidian.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.allowFoldingHeadings)
+				.onChange(async (value) => {
+					ExportSettings.settings.allowFoldingHeadings = value;
+					await ExportSettings.saveSettings();
+				}));
 
 		//#endregion
 
@@ -267,7 +312,7 @@ export class ExportSettings extends PluginSettingTab {
 
 		//#endregion
 
-		//#region Formatting Options
+		//#region Layout Options
 
 		hr = contentEl.createEl("hr");
 		hr.style.marginTop = "20px";
@@ -275,11 +320,11 @@ export class ExportSettings extends PluginSettingTab {
 		hr.style.borderColor = "var(--color-accent)";
 		hr.style.opacity = "0.5";
 		new Setting(contentEl)
-			.setName('Formatting Options:')
+			.setName('Layout Options:')
 			.setHeading()
 
 		new Setting(contentEl)
-			.setName('Page Width')
+			.setName('Document Width')
 			.setDesc('Sets the line width of the exported document. Use any css units.\nDefault units: px')
 			.addText((text) => text
 				.setValue(ExportSettings.settings.customLineWidth)
@@ -296,44 +341,38 @@ export class ExportSettings extends PluginSettingTab {
 			}));
 
 		new Setting(contentEl)
-			.setName('Make names web style')
-			.setDesc('Make the names of files and folders lowercase and replace spaces with dashes.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.makeNamesWebStyle)
+			.setName('Content Width')
+			.setDesc('Sets the width of the central content section of the document. This will push the sidebars towards the edges of the screen the larger it is leaving margins on either side of the document. Use any css units.\nDefault units: px')
+			.addText((text) => text
+				.setValue(ExportSettings.settings.contentWidth)
+				.setPlaceholder('Leave blank for default')
 				.onChange(async (value) => {
-					ExportSettings.settings.makeNamesWebStyle = value;
+					ExportSettings.settings.contentWidth = value;
 					await ExportSettings.saveSettings();
-				}));
+				}
+				))
+			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
+				ExportSettings.settings.contentWidth = "";
+				ExportSettings.saveSettings();
+				this.display();
+			}));
 
 		new Setting(contentEl)
-			.setName('Allow folding headings')
-			.setDesc('Allow headings to be folded with an arrow icon beside each heading, just as in Obsidian.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.allowFoldingHeadings)
+			.setName('Sidebar Width')
+			.setDesc('Sets the width of the sidebar\'s content. Use any css units.\nDefault units: px')
+			.addText((text) => text
+				.setValue(ExportSettings.settings.sidebarWidth)
+				.setPlaceholder('Leave blank for default')
 				.onChange(async (value) => {
-					ExportSettings.settings.allowFoldingHeadings = value;
+					ExportSettings.settings.sidebarWidth = value;
 					await ExportSettings.saveSettings();
-				}));
-
-		new Setting(contentEl)
-			.setName('Add filename as title')
-			.setDesc('If the first header is not an H1, include the file name as a title at the top of the page.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.addFilenameTitle)
-				.onChange(async (value) => {
-					ExportSettings.settings.addFilenameTitle = value;
-					await ExportSettings.saveSettings();
-				}));
-
-		new Setting(contentEl)
-			.setName('Beautify HTML')
-			.setDesc('Beautify the HTML text to make it more human readable at the cost of export speed.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.beautifyHTML)
-				.onChange(async (value) => {
-					ExportSettings.settings.beautifyHTML = value;
-					await ExportSettings.saveSettings();
-				}));
+				}
+				))
+			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
+				ExportSettings.settings.sidebarWidth = "";
+				ExportSettings.saveSettings();
+				this.display();
+			}));
 
 		//#endregion
 
@@ -370,6 +409,27 @@ export class ExportSettings extends PluginSettingTab {
 					ExportSettings.settings.showWarningsInExportLog = value;
 					await ExportSettings.saveSettings();
 				}));
+		
+		new Setting(contentEl)
+			.setName('Make names web style')
+			.setDesc('Make the names of files and folders lowercase and replace spaces with dashes.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.makeNamesWebStyle)
+				.onChange(async (value) => {
+					ExportSettings.settings.makeNamesWebStyle = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		new Setting(contentEl)
+			.setName('Beautify HTML')
+			.setDesc('Beautify the HTML text to make it more human readable at the cost of export speed.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.beautifyHTML)
+				.onChange(async (value) => {
+					ExportSettings.settings.beautifyHTML = value;
+					await ExportSettings.saveSettings();
+				}));
+
 
 		//#endregion
 
@@ -408,6 +468,16 @@ export class ExportSettings extends PluginSettingTab {
 				ExportSettings.saveSettings();
 			});
 		});
+
+		new Setting(contentEl)
+			.setName('Include Svelte CSS')
+			.setDesc('Include the CSS from any plugins that use the svelte framework.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.includeSvelteCSS)
+				.onChange(async (value) => {
+					ExportSettings.settings.includeSvelteCSS = value;
+					await ExportSettings.saveSettings();
+				}));
 
 		//#endregion
 
@@ -644,6 +714,7 @@ export class ExportModal extends Modal {
 							ExportSettings.settings.inlineImages = true;
 							ExportSettings.settings.makeNamesWebStyle = false;
 							ExportSettings.settings.includeGraphView = false;
+							ExportSettings.settings.includeFileTree = false;
 							await ExportSettings.saveSettings();
 
 							break;
@@ -653,6 +724,7 @@ export class ExportModal extends Modal {
 							ExportSettings.settings.inlineImages = false;
 							ExportSettings.settings.makeNamesWebStyle = true;
 							ExportSettings.settings.includeGraphView = true;
+							ExportSettings.settings.includeFileTree = true;
 							await ExportSettings.saveSettings();
 
 							break;

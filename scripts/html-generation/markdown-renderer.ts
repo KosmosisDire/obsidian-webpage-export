@@ -1,14 +1,11 @@
 import { MarkdownView, Notice, WorkspaceLeaf } from "obsidian";
 import { ExportSettings } from "scripts/export-settings";
-import { GraphGenerator } from "scripts/html-generation/graph-gen";
 import { Utils } from "scripts/utils/utils";
 import { ExportFile } from "./export-file";
 import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
 const { clipboard } = require('electron')
-import jQuery from 'jquery';
 import { RenderLog } from "./render-log";
-const $ = jQuery;
 
 
 export namespace MarkdownRenderer
@@ -16,10 +13,10 @@ export namespace MarkdownRenderer
 	export let problemLog: string = "";
 	export let renderLeaf: WorkspaceLeaf | undefined;
     export let errorInBatch: boolean = false;
+	export let cancelled: boolean = false;
 
     export async function renderMarkdown(file: ExportFile): Promise<string>
 	{
-
 		if (!renderLeaf)
 		{
 			throw new Error("Cannot render document without a render leaf! Please call beginBatch() before calling this function, and endBatch() after you are done exporting all files.");
@@ -36,6 +33,8 @@ export namespace MarkdownRenderer
 			return generateFailDocument();
 		}
 
+		if (cancelled) throw new Error("Markdown rendering cancelled");
+
 		if(!(renderLeaf.view instanceof MarkdownView))
 		{
 			let message = "This file was not a normal markdown file! File: " + file.markdownFile.path;
@@ -44,7 +43,10 @@ export namespace MarkdownRenderer
 		}
 
 		// @ts-ignore
-		let previewModeFound = await Utils.waitUntil(() => renderLeaf != undefined && renderLeaf.view.previewMode, 2000, 10);
+		let previewModeFound = await Utils.waitUntil(() => (renderLeaf != undefined && renderLeaf.view.previewMode) || cancelled, 2000, 10);
+		
+		if (cancelled) throw new Error("Markdown rendering cancelled");
+
 		if (!previewModeFound)
 		{
 			let message = "Failed to open preview mode! File: " + file.markdownFile.path;
@@ -55,11 +57,14 @@ export namespace MarkdownRenderer
 		let preview = renderLeaf.view.previewMode;
 
 		await Utils.changeViewMode(renderLeaf.view, "preview");
+		if (cancelled) throw new Error("Markdown rendering cancelled");
+
 
 		// @ts-ignore
 		preview.renderer.showAll = true;
 		// @ts-ignore
 		await preview.renderer.unfoldAllHeadings();
+		if (cancelled) throw new Error("Markdown rendering cancelled");
 
 		// @ts-ignore
 		let lastRender = preview.renderer.lastRender;
@@ -74,16 +79,14 @@ export namespace MarkdownRenderer
 		});
 
 		// @ts-ignore
-		let renderfinished = await Utils.waitUntil(() => (preview.renderer.lastRender != lastRender && isRendered) || renderLeaf == undefined, 10000, 10);
+		let renderfinished = await Utils.waitUntil(() => (preview.renderer.lastRender != lastRender && isRendered) || cancelled, 30000, 50);
+
+		if (cancelled) throw new Error("Markdown rendering cancelled");
+
 		if (!renderfinished)
 		{
-			let message = "Failed to render file within 10 seconds! File: " + file.markdownFile.path;
+			let message = "Failed to render file within 30 seconds! File: " + file.markdownFile.path;
 			RenderLog.warning("Cannot render file: ", message);
-			return generateFailDocument();
-		}
-		if (renderLeaf == undefined)
-		{
-			RenderLog.warning("Render cancelled! On file: ", file.markdownFile.path);
 			return generateFailDocument();
 		}
 
@@ -94,33 +97,18 @@ export namespace MarkdownRenderer
 
 		if (dataviewCount > 0)
 		{
-			// HTMLGenerator.reportWarning("Dataview Blocks Detected", "Detected " + dataviewCount + " dataview blocks. Waiting " + ExportSettings.settings.dataviewBlockWaitTime * dataviewCount + "ms for render.");
 			await Utils.delay(ExportSettings.settings.dataviewBlockWaitTime * dataviewCount);
 		}
+
+		if (cancelled) throw new Error("Markdown rendering cancelled");
 
 		// If everything worked then do a bit of postprocessing
 		let container = preview.containerEl;
 		if (container)
 		{
-			// Makes ure the markdown-preview-sizer element is completely passive
-			$(container).find(".markdown-preview-sizer").css("width", "unset");
-			$(container).find(".markdown-preview-sizer").css("height", "unset");
-			$(container).find(".markdown-preview-sizer").css("margin", "unset");
-			$(container).find(".markdown-preview-sizer").css("padding", "unset");
-			$(container).find(".markdown-preview-sizer").css("max-width", "unset");
-			$(container).find(".markdown-preview-sizer").css("min-height", "unset");
+			postProcessHTML(file, container);
 
-			// load stylesheet for mathjax
-			let stylesheet = document.getElementById("MJX-CHTML-styles");
-			if (stylesheet)
-			{
-				if(document.getElementById("MJX-CHTML-styles"))
-				{
-					document.getElementById("MJX-CHTML-styles")?.remove();
-					document.head.appendChild(stylesheet);
-				}
-				AssetHandler.mathStyles = stylesheet.innerHTML.replaceAll("app://obsidian.md/", "https://publish.obsidian.md/").trim();
-			}
+			AssetHandler.loadMathjaxStyles();
 
 			return container.innerHTML;
 		}
@@ -130,11 +118,38 @@ export namespace MarkdownRenderer
 		return generateFailDocument();
 	}
 
+	function postProcessHTML(file: ExportFile, html: HTMLElement)
+	{
+		// transclusions put a div inside a p tag, which is invalid html. Fix it here
+		html.querySelectorAll("p:has(div)").forEach((element) =>
+		{
+			// replace the p tag with a span
+			let span = file.document.createElement("span");
+			span.innerHTML = element.innerHTML;
+			element.replaceWith(span);
+		});
+
+		// encode all text input values into attributes
+		html.querySelectorAll("input[type=text]").forEach((element: HTMLElement) =>
+		{
+			// @ts-ignore
+			element.setAttribute("value", element.value);
+			// @ts-ignore
+			element.value = "";
+		});
+
+		html.querySelectorAll("textarea").forEach((element: HTMLElement) =>
+		{
+			// @ts-ignore
+			element.textContent = element.value;
+		});
+	}
+	
     export async function beginBatch()
 	{
-		GraphGenerator.clearGraphCache();
 		problemLog = "";
         errorInBatch = false;
+		cancelled = false;
 
 		renderLeaf = TabManager.openNewTab("window", "vertical");
 		// @ts-ignore
@@ -158,19 +173,32 @@ export namespace MarkdownRenderer
 		// @ts-ignore
 		renderLeaf.parent.containerEl.style.height = "0";
 		// @ts-ignore
-		$(renderLeaf.parent.parent.containerEl).find(".clickable-icon, .workspace-tab-header-container-inner").css("display", "none");
+		renderLeaf.parent.parent.containerEl.querySelector(".clickable-icon, .workspace-tab-header-container-inner").style.display = "none";
 		// @ts-ignore
-		$(renderLeaf.parent.containerEl).css("max-height", "var(--header-height)");
+		renderLeaf.parent.containerEl.style.maxHeight = "var(--header-height)";
 		// @ts-ignore
-		$(renderLeaf.parent.parent.containerEl).removeClass("mod-vertical");
+		renderLeaf.parent.parent.containerEl.classList.remove("mod-vertical");
 		// @ts-ignore
-		$(renderLeaf.parent.parent.containerEl).addClass("mod-horizontal");
-		renderLeaf.view.containerEl.win.resizeTo(900, 450);
+		renderLeaf.parent.parent.containerEl.classList.add("mod-horizontal");
+		renderLeaf.view.containerEl.win.resizeTo(600, 300);
 		renderLeaf.view.containerEl.win.moveTo(window.screen.width / 2 - 450, window.screen.height - 450 - 75);
 
-		console.log(renderLeaf);
+		// @ts-ignore
+		let renderBrowserWindow = window.electron.remote.BrowserWindow.getFocusedWindow();
+		renderBrowserWindow.setAlwaysOnTop(true, "floating", 1);
+		renderBrowserWindow.webContents.setFrameRate(120);
+		renderBrowserWindow.on("close", () =>
+		{
+			cancelled = true;
+			console.log("cancelled");
+		});
 
-		await Utils.delay(1000);
+		// @ts-ignore
+		let allWindows = window.electron.remote.BrowserWindow.getAllWindows()
+		for (const win of allWindows)
+		{
+			win.webContents.setBackgroundThrottling(false);
+		}
 	}
 
 	export function endBatch()
@@ -179,6 +207,13 @@ export namespace MarkdownRenderer
 		{
             if (!errorInBatch)
 			    renderLeaf.detach();
+		}
+
+		// @ts-ignore
+		let allWindows = window.electron.remote.BrowserWindow.getAllWindows()
+		for (const win of allWindows)
+		{
+			win.webContents.setBackgroundThrottling(false);
 		}
 	}
 
@@ -205,11 +240,10 @@ export namespace MarkdownRenderer
 		return logEl;
 	}
 
-	export function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
+	export async function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
 	{
-		if(!renderLeaf) return;
 		// @ts-ignore
-		let found = Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 2000, 10);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		// @ts-ignore
@@ -275,17 +309,20 @@ export namespace MarkdownRenderer
 		}
 	}
 
-	export function _reportError(messageTitle: string, message: string, fatal: boolean)
+	export async function _reportError(messageTitle: string, message: string, fatal: boolean)
 	{
+		if(problemLog == "")
+		{
+			this.renderLeaf.view.containerEl.win.resizeTo(900, 500);
+		}
+
         messageTitle = (fatal ? "[Fatal Error] " : "[Error] ") + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
-
-		if(!renderLeaf) return;
 
         errorInBatch = true;
 
 		// @ts-ignore
-		let found = Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 2000, 10);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		// @ts-ignore
@@ -319,16 +356,20 @@ export namespace MarkdownRenderer
         }
 	}
 
-	export function _reportWarning(messageTitle: string, message: string)
+	export async function _reportWarning(messageTitle: string, message: string)
 	{
+		if(problemLog == "" && ExportSettings.settings.showWarningsInExportLog)
+		{
+			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
+		}
+
         messageTitle = "[Warning] " + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
 		if(!ExportSettings.settings.showWarningsInExportLog) return;
 
-		if(!renderLeaf) return;
 		// @ts-ignore
-		let found = Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 2000, 10);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		// @ts-ignore
@@ -345,16 +386,20 @@ export namespace MarkdownRenderer
 
 	}
 
-    export function _reportInfo(messageTitle: string, message: string)
+    export async function _reportInfo(messageTitle: string, message: string)
 	{
+		if(problemLog == "")
+		{
+			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
+		}
+
         messageTitle = "[Info] " + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
 		if(!ExportSettings.settings.showWarningsInExportLog) return;
 
-		if(!renderLeaf) return;
 		// @ts-ignore
-		let found = Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 2000, 10);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		// @ts-ignore
@@ -375,10 +420,11 @@ export namespace MarkdownRenderer
 		return `
 		<div class="markdown-preview-view markdown-rendered">
 			<div class="markdown-preview-sizer" style="width: 100%; height: 100%; margin: 0px; padding: 0px; max-width: 100%; min-height: 100%;">
-			<div>
-				<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
-					<h1 style>${message}</h1>
-				</center>
+				<div>
+					<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
+						<h1 style>${message}</h1>
+					</center>
+				</div>
 			</div>
 		</div>
 		`;

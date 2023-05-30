@@ -70,18 +70,36 @@ export class Path
 
 	private static parsePath(path: string): { root: string, dir: string, parent: string, base: string, ext: string, name: string, fullPath: string }
 	{
-		path = decodeURI(path);
+		try
+		{
+			path = decodeURI(path);
+		}
+		catch (e)
+		{
+			this.log("Could not decode path:" + path, e.stack, "error");
+		}
 
 		let parsed = pathTools.parse(path);
 
 		let parent = parsed.dir;
+		let fullPath = "";
+
 		if(path.endsWith("/") || path.endsWith("\\") || parsed.ext == "")
 		{
+			if (path.endsWith("/") || path.endsWith("\\")) path = path.substring(0, path.length - 1);
+
 			parsed.dir = pathTools.normalizeSafe(path);
+			let items = parsed.dir.split("/");
+			parsed.name = items[items.length - 1];
+			parsed.base = parsed.name;
+			parsed.ext = "";
+			fullPath = parsed.dir;
+		}
+		else
+		{
+			fullPath = pathTools.join(parent, parsed.base);
 		}
 
-
-		let fullPath = pathTools.join(parent, parsed.base);
 
 		return { root: parsed.root, dir: parsed.dir, parent: parent, base: parsed.base, ext: parsed.ext, name: parsed.name, fullPath: fullPath };
 	}
@@ -93,7 +111,16 @@ export class Path
 
 	private static joinStringPaths(...paths: string[]): string
 	{
-		return decodeURI(pathTools.join(...paths));
+		let joined = pathTools.join(...paths);
+		try
+		{
+			return decodeURI(joined);
+		}
+		catch (e)
+		{
+			this.log("Could not decode joined paths: " + joined, e.stack, "error");
+			return joined;
+		}
 	}
 
 	public static joinPath(...paths: Path[]): Path
@@ -120,9 +147,9 @@ export class Path
 		return new Path(relative, workingDir);
 	}
 
-	public static getRelativePathFromVault(path: Path): Path
+	public static getRelativePathFromVault(path: Path, useAbsolute: boolean = false): Path
 	{
-		return Path.getRelativePath(Path.vaultPath, path);
+		return Path.getRelativePath(Path.vaultPath, path, useAbsolute);
 	}
 
 	private static vaultPathCache: Path | undefined = undefined;
@@ -164,7 +191,7 @@ export class Path
 	
 	static toWebStyle(path: string): string
 	{
-		return path.replaceAll(" ", "-").toLowerCase();
+		return path.replaceAll(" ", "-").replaceAll(/-{2,}/g, "-").replace(".-", "-").toLowerCase();
 	}
 
 	joinString(...paths: string[]): Path
@@ -179,13 +206,23 @@ export class Path
 
 	makeAbsolute(workingDirectory: string | Path = this._workingDirectory): Path
 	{
-		if(workingDirectory instanceof Path && !workingDirectory.isAbsolute) throw new Error("workingDirectory must be an absolute path");
+		if(workingDirectory instanceof Path && !workingDirectory.isAbsolute) throw new Error("workingDirectory must be an absolute path: " + workingDirectory.asString);
 
 		if (!this.isAbsolute)
 		{
 			this._fullPath = Path.joinStringPaths(workingDirectory.toString(), this.asString);
 			this._workingDirectory = "";
 			this.reparse(this.asString);
+		}
+
+		return this;
+	}
+
+	makeForceFolder(): Path
+	{
+		if (!this.isDirectory)
+		{
+			this.reparse(this.asString + "/");
 		}
 
 		return this;
@@ -277,7 +314,7 @@ export class Path
 
 	makeWebStyle(): Path
 	{
-		this._fullPath = this.asString.replaceAll(" ", "-").toLowerCase();
+		this._fullPath = Path.toWebStyle(this.asString);
 		this.reparse(this.asString);
 		return this;
 	}
@@ -477,6 +514,11 @@ export class Path
 	get copy(): Path
 	{
 		return new Path(this.asString, this._workingDirectory);
+	}
+
+	getDepth(): number
+	{
+		return this.asString.split("/").length - 1;
 	}
 
 	absolute(workingDirectory: string | Path = this._workingDirectory): Path
