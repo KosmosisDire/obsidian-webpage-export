@@ -107,11 +107,41 @@ function getHeaderEl(headerDiv)
 	return possibleChildHeader;
 }
 
-function setHeaderCollapse(headerDiv, collapse, openParents = true)
+function getPreviousHeader(headerDiv)
 {
+	let possibleParent = headerDiv.previousElementSibling;
+	let isHeader = false;
+
+	while (possibleParent != null)
+	{
+		let possibleChildHeader = getHeaderEl(possibleParent);
+		isHeader = possibleChildHeader ? /[Hh][1-6]/g.test(possibleChildHeader.tagName) : false;
+		if (isHeader) break;
+
+		possibleParent = possibleParent.previousElementSibling;
+	}
+
+	return possibleParent;
+}
+
+function setHeaderOpen(headerDiv, open, openParents = true)
+{
+	if(headerDiv.tagName != "DIV" || !getHeaderEl(headerDiv))
+	{
+		console.error("setHeaderOpen() must be called with a header div");
+		return;
+	}
+
 	// let selector = getHeadingContentsSelector(header);
-	if (headerDiv.classList.contains("is-collapsed") && !collapse) headerDiv.classList.remove("is-collapsed");
-	if (!headerDiv.classList.contains("is-collapsed") && collapse) headerDiv.classList.add("is-collapsed");
+	if (open) 
+	{
+		headerDiv.classList.remove("is-collapsed");
+		headerDiv.style.display = "";
+	}
+	if (!open)
+	{
+		headerDiv.classList.add("is-collapsed");
+	}
 
 	let headerEl = getHeaderEl(headerDiv);
 
@@ -133,43 +163,40 @@ function setHeaderCollapse(headerDiv, collapse, openParents = true)
 			childHeaders.push(possibleChild);
 		}
 
-		if (collapse) possibleChild.style.display = "none";
+		if (!open) possibleChild.style.display = "none";
 		else possibleChild.style.display = "";
 
 		possibleChild = possibleChild.nextElementSibling;
 	}
 
-	if(!collapse)
+	if(open)
 	{
 		// if we are opening the header then we need to make sure that all closed child headers stay closed
 		childHeaders.forEach(function(item)
 		{
 			if (item.classList.contains("is-collapsed"))
 			{
-				setHeaderCollapse(item, true);
+				setHeaderOpen(item, false);
 			}
 		});
 
 		// if we are opening the header then we need to make sure that all parent headers are open
 		if (openParents)
 		{
-			let possibleParent = headerDiv.previousElementSibling;
-			while (possibleParent != null)
+			let previousHeader = getPreviousHeader(headerDiv);
+			
+			while (previousHeader != null)
 			{
-				let possibleParentHeader = possibleParent.firstChild;
-				let isHeader = possibleParentHeader ? /[Hh][1-6]/g.test(possibleParentHeader.tagName) : false;
-				
-				if(isHeader)
-				{
-					if (possibleParentHeader.tagName < headerDiv.firstChild.tagName)
-					{
-						// if header is a parent of this header then unhide
-						setHeaderCollapse(possibleParent, false);
-						break;
-					}
-				}
+				let previousHeaderEl = getHeaderEl(previousHeader);
 
-				possibleParent = possibleParent.previousElementSibling;
+				if (previousHeaderEl.tagName < headerEl.tagName)
+				{
+					// if header is a parent of this header then unhide
+					setHeaderOpen(previousHeader, true);
+					break;
+				}
+				
+				previousHeader = getPreviousHeader(previousHeader);
 			}
 		}
 	}
@@ -565,8 +592,8 @@ function setupHeaders(setupOnNode)
 	{
 		element.addEventListener("click", function () 
 		{
-			var isCollapsed = this.parentElement.parentElement.classList.contains("is-collapsed");
-			setHeaderCollapse(this.parentElement.parentElement, !isCollapsed);
+			var isOpen = !this.parentElement.parentElement.classList.contains("is-collapsed");
+			setHeaderOpen(this.parentElement.parentElement, !isOpen);
 		});
 	});
 
@@ -583,7 +610,7 @@ function setupHeaders(setupOnNode)
 			{
 				console.log("Uncollapsing header: " + target);
 				let header = document.getElementById(target.substring(1));
-				setHeaderCollapse(header.parentElement, false);
+				setHeaderOpen(header.parentElement, true);
 			}
 		});
 	});
@@ -768,7 +795,7 @@ function setupLinks(setupOnNode)
 			else
 			{
 				let headerTarget = document.getElementById(target.substring(1));
-				if (headerTarget.parentElement.classList.contains("is-collapsed")) setHeaderCollapse(headerTarget.parentElement, false);
+				setHeaderOpen(headerTarget.parentElement, true);
 				headerTarget.scrollIntoView();
 			}
 		});
