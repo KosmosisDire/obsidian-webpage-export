@@ -91,27 +91,43 @@ function toggleTreeCollapsedAll(elements)
 	setTreeCollapsedAll(elements, !elements[0].classList.contains("is-collapsed"));
 }
 
-function setHeaderCollapse(header, collapse, openParents = true)
+function getHeaderEl(headerDiv)
+{
+	let possibleChildHeader = headerDiv.firstChild;
+	let isHeader = false;
+
+	while (possibleChildHeader != null)
+	{
+		isHeader = possibleChildHeader ? /[Hh][1-6]/g.test(possibleChildHeader.tagName) : false;
+		if (isHeader) break;
+
+		possibleChildHeader = possibleChildHeader.nextElementSibling;
+	}
+
+	return possibleChildHeader;
+}
+
+function setHeaderCollapse(headerDiv, collapse, openParents = true)
 {
 	// let selector = getHeadingContentsSelector(header);
-	if (header.classList.contains("is-collapsed") && !collapse) header.classList.remove("is-collapsed");
-	if (!header.classList.contains("is-collapsed") && collapse) header.classList.add("is-collapsed");
+	if (headerDiv.classList.contains("is-collapsed") && !collapse) headerDiv.classList.remove("is-collapsed");
+	if (!headerDiv.classList.contains("is-collapsed") && collapse) headerDiv.classList.add("is-collapsed");
+
+	let headerEl = getHeaderEl(headerDiv);
 
 	let childHeaders = [];
 
-	let possibleChild = header.nextElementSibling;
+	let possibleChild = headerDiv.nextElementSibling;
 
 	// loop through next siblings showing/ hiding children until we reach a header of the same or lower level
 	while (possibleChild != null)
 	{
-		let possibleChildHeader = possibleChild.firstChild;
-		
-		let isHeader = possibleChildHeader ? /[Hh][1-6]/g.test(possibleChildHeader.tagName) : false;
+		let possibleChildHeader = getHeaderEl(possibleChild);
 
-		if(isHeader)
+		if(possibleChildHeader)
 		{
 			// if header is a sibling of this header then break
-			if (possibleChildHeader.tagName <= header.firstChild.tagName) break;
+			if (possibleChildHeader.tagName <= headerEl.tagName) break;
 
 			// save child headers to be re closed afterwards
 			childHeaders.push(possibleChild);
@@ -137,7 +153,7 @@ function setHeaderCollapse(header, collapse, openParents = true)
 		// if we are opening the header then we need to make sure that all parent headers are open
 		if (openParents)
 		{
-			let possibleParent = header.previousElementSibling;
+			let possibleParent = headerDiv.previousElementSibling;
 			while (possibleParent != null)
 			{
 				let possibleParentHeader = possibleParent.firstChild;
@@ -145,7 +161,7 @@ function setHeaderCollapse(header, collapse, openParents = true)
 				
 				if(isHeader)
 				{
-					if (possibleParentHeader.tagName < header.firstChild.tagName)
+					if (possibleParentHeader.tagName < headerDiv.firstChild.tagName)
 					{
 						// if header is a parent of this header then unhide
 						setHeaderCollapse(possibleParent, false);
@@ -421,9 +437,6 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 }
 
 //#region Initialization
-
-elementsWithEventListeners = [];
-
 function setupThemeToggle(setupOnNode)
 {
 	if (localStorage.getItem("theme_toggle") != null)
@@ -511,17 +524,10 @@ function setupThemeToggle(setupOnNode)
 		localStorage.setItem("theme_toggle", state ? "true" : "false");
 	}
 
-    setupOnNode.querySelectorAll(".theme-toggle-input").forEach(function(element)
+    setupOnNode.querySelector(".theme-toggle-input")?.addEventListener("change", event =>
 	{
-		element.addEventListener("change", function(event)
-		{
-			event.preventDefault();
-			event.stopPropagation();
-			console.log("Theme toggle changed to: " + !(localStorage.getItem("theme_toggle") == "true"));
-			setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
-		});
-
-		elementsWithEventListeners.push(element);
+		console.log("Theme toggle changed to: " + !(localStorage.getItem("theme_toggle") == "true"));
+		setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
 	});
 
     // window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => 
@@ -555,7 +561,6 @@ function setupThemeToggle(setupOnNode)
 function setupHeaders(setupOnNode)
 {
     // MAKE HEADERS COLLAPSIBLE
-
 	setupOnNode.querySelectorAll(".heading-collapse-indicator").forEach(function (element) 
 	{
 		element.addEventListener("click", function () 
@@ -563,12 +568,10 @@ function setupHeaders(setupOnNode)
 			var isCollapsed = this.parentElement.parentElement.classList.contains("is-collapsed");
 			setHeaderCollapse(this.parentElement.parentElement, !isCollapsed);
 		});
-
-		elementsWithEventListeners.push(element);
 	});
 
 	// unfold header when an internal link that points to that header is clicked
-	setupOnNode.querySelectorAll(".internal-link").forEach(function (element) 
+	setupOnNode.querySelectorAll("a.internal-link, a.tree-item-link").forEach(function (element) 
 	{
 		element.addEventListener("click", function (event) 
 		{
@@ -576,13 +579,13 @@ function setupHeaders(setupOnNode)
 			let target = this.getAttribute("href");
 
 			// if the target is a header uncollapse it
-			if (target.startsWith("#")) {
+			if (target.startsWith("#")) 
+			{
+				console.log("Uncollapsing header: " + target);
 				let header = document.getElementById(target.substring(1));
 				setHeaderCollapse(header.parentElement, false);
 			}
 		});
-
-		elementsWithEventListeners.push(element);
 	});
 }
 
@@ -596,8 +599,6 @@ function setupTrees(setupOnNode)
 		{
 			toggleTreeCollapsed(item.parentElement.parentElement);
 		});
-
-		elementsWithEventListeners.push(item);
 	});
 
 	let fileTreeCollapse = setupOnNode.querySelector(".tree-container.file-tree .collapse-tree-button");
@@ -610,7 +611,6 @@ function setupTrees(setupOnNode)
 		fileTreeCollapse.classList.toggle("is-collapsed");
 		fileTreeCollapse.querySelector("iconify-icon").setAttribute("icon", fileTreeIsCollapsed ? "ph:arrows-out-line-horizontal-bold" : "ph:arrows-in-line-horizontal-bold");
 	});
-	elementsWithEventListeners.push(fileTreeCollapse);
 
 
 	let outlineTreeCollapse = setupOnNode.querySelector(".tree-container.outline-tree .collapse-tree-button");
@@ -624,7 +624,6 @@ function setupTrees(setupOnNode)
 		outlineTreeCollapse.classList.toggle("is-collapsed");
 		outlineTreeCollapse.querySelector("iconify-icon").setAttribute("icon", outlineTreeIsCollapsed ? "ph:arrows-out-line-horizontal-bold" : "ph:arrows-in-line-horizontal-bold");
 	});
-	elementsWithEventListeners.push(outlineTreeCollapse);
 	
 	// start with all closed
 	setupOnNode.querySelectorAll(".tree-container .tree-item").forEach(function(item)
@@ -662,8 +661,6 @@ function setupCallouts(setupOnNode)
 
 			slideToggle(parent.querySelector(".callout-content"), 100);
 		});
-
-		elementsWithEventListeners.push(element);
 	});
 
 }
@@ -679,8 +676,6 @@ function setupCheckboxes(setupOnNode)
 			parent.classList.toggle("is-checked");
 			parent.setAttribute("data-task", parent.classList.contains("is-checked") ? "x" : " ");
 		});
-
-		elementsWithEventListeners.push(element);
 	});
 
 	setupOnNode.querySelectorAll(`.plugin-tasks-list-item input[type="checkbox"]`).forEach(function(checkbox)
@@ -715,8 +710,6 @@ function setupCanvas(setupOnNode)
 
 			focusedNode = parent;
 		});
-
-		elementsWithEventListeners.push(element);
 	});
 
 	// make canvas node deselect when clicking outside
@@ -753,8 +746,6 @@ function setupCodeblocks(setupOnNode)
 				});
 			}, 2000);
 		});
-
-		elementsWithEventListeners.push(element);
 	});
 }
 
@@ -781,8 +772,6 @@ function setupLinks(setupOnNode)
 				headerTarget.scrollIntoView();
 			}
 		});
-
-		elementsWithEventListeners.push(link);
 	});
 
     window.onpopstate = function(event)
@@ -862,8 +851,6 @@ let touchDrag = false;
 
 function initializePage(setupOnNode)
 {
-	elementsWithEventListeners = [];
-
     setupThemeToggle(setupOnNode);
     setupHeaders(setupOnNode);
     setupTrees(setupOnNode);
@@ -874,19 +861,10 @@ function initializePage(setupOnNode)
 	setupLinks(setupOnNode);
 	setupResize(setupOnNode);
 
-	document.body.addEventListener("touchmove", function(event)
-	{
-		event.stopImmediatePropagation();
-		touchDrag = true;
-	});
-
 	setupOnNode.querySelectorAll("*").forEach(function(element)
 	{
 		element.addEventListener("touchend", function(event)
 		{
-			event.stopPropagation();
-			event.preventDefault();
-
 			if (touchDrag)
 			{
 				touchDrag = false;
@@ -900,6 +878,12 @@ function initializePage(setupOnNode)
 
 	if(setupOnNode == document) 
 	{
+		document.body.addEventListener("touchmove", function(event)
+		{
+			event.stopImmediatePropagation();
+			touchDrag = true;
+		});
+
 		setupRootPath(document);
 		setActiveDocument(getURLPath());
 	}
