@@ -475,11 +475,12 @@ export class HTMLGenerator
 			if (base64 === "") return;
 
 			let ext = filePath.extensionName;
-			if(ext === "svg") ext += "+xml";
 
 			//@ts-ignore
 			let type = app.viewRegistry.typeByExtension[ext] ?? "audio";
 
+			if(ext === "svg") ext += "+xml";
+			
 			mediaEl.setAttribute("src", `data:${type}/${ext};base64,${base64}`);
 		};
 	}
