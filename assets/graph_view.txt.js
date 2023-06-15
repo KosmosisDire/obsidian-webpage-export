@@ -206,13 +206,13 @@ class GraphAssembly
 
 class GraphRenderWorker
 {
-    #cameraOffset
-    #cameraScale
-    #hoveredNode
-    #grabbedNode
-    #colors
-    #width
-    #height
+    #cameraOffset;
+    #cameraScale;
+    #hoveredNode;
+    #grabbedNode;
+    #colors;
+    #width;
+    #height;
 
 
     constructor()
