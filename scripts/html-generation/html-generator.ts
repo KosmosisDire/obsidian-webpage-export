@@ -1,5 +1,5 @@
 import { Path } from "../utils/path";
-import { ExportSettings } from "../export-settings";
+import { ExportSettings, ExportSettingsData } from "../export-settings";
 import { GlobalDataGenerator, LinkTree } from "./global-gen";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { AssetHandler } from "./asset-handler";
@@ -32,6 +32,11 @@ export class HTMLGenerator
 		let sidebars = this.generateSideBars(file.contentElement, file);
 		let rightSidebar = sidebars.right;
 		let leftSidebar = sidebars.left;
+		if (ExportSettings.settings.hideLeftSidebar)
+			leftSidebar.style.display = 'none';
+		if (ExportSettings.settings.hideRightSidebar)
+			rightSidebar.style.display = 'none';
+			
 		usingDocument.body.appendChild(sidebars.container);
 
 		// inject graph view

@@ -32,6 +32,8 @@ export interface ExportSettingsData
 	includeOutline: boolean;
 	includeFileTree: boolean;
 	includeGraphView: boolean;
+	hideLeftSidebar: boolean;
+	hideRightSidebar: boolean;
 
 	// Main Export Options
 	exportPreset: string;
@@ -78,6 +80,9 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	includeOutline: true,
 	includeGraphView: false,
 	includeFileTree: true,
+	hideLeftSidebar: false,
+	hideRightSidebar: false,
+
 
 	// Main Export Options
 	exportPreset: '',
@@ -263,6 +268,26 @@ export class ExportSettings extends PluginSettingTab {
 				.setValue(ExportSettings.settings.allowFoldingHeadings)
 				.onChange(async (value) => {
 					ExportSettings.settings.allowFoldingHeadings = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		new Setting(contentEl)
+			.setName('Hide left sidebar')
+			.setDesc('Do not display the left sidebar. The theme toggle, if enabled, will not be displayed if this is on.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.hideLeftSidebar)
+				.onChange(async (value) => {
+					ExportSettings.settings.hideLeftSidebar = value;
+					await ExportSettings.saveSettings();
+				}));
+
+		new Setting(contentEl)
+			.setName('Hide right sidebar')
+			.setDesc('Do not display the right sidebar. The graph, if enabled, will not be displayed if this is on.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.hideRightSidebar)
+				.onChange(async (value) => {
+					ExportSettings.settings.hideRightSidebar = value;
 					await ExportSettings.saveSettings();
 				}));
 
