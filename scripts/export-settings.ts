@@ -230,8 +230,28 @@ export class ExportSettings extends PluginSettingTab {
 					await ExportSettings.saveSettings();
 				}
 				));
+				
+		new Setting(contentEl)
+			.setName('Hide left sidebar')
+			.setDesc('Do not display the left sidebar. The theme toggle, if enabled, will not be displayed if this is on.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.hideLeftSidebar)
+				.onChange(async (value) => {
+					ExportSettings.settings.hideLeftSidebar = value;
+					await ExportSettings.saveSettings();
+				}));
 
 		new Setting(contentEl)
+			.setName('Hide right sidebar')
+			.setDesc('Do not display the right sidebar. The graph, if enabled, will not be displayed if this is on.')
+			.addToggle((toggle) => toggle
+				.setValue(ExportSettings.settings.hideRightSidebar)
+				.onChange(async (value) => {
+					ExportSettings.settings.hideRightSidebar = value;
+					await ExportSettings.saveSettings();
+				}));
+				
+				new Setting(contentEl)
 			.setName('Add filename as title')
 			.setDesc('If the first header is not an H1, include the file name as a title at the top of the page.')
 			.addToggle((toggle) => toggle
@@ -271,25 +291,6 @@ export class ExportSettings extends PluginSettingTab {
 					await ExportSettings.saveSettings();
 				}));
 
-		new Setting(contentEl)
-			.setName('Hide left sidebar')
-			.setDesc('Do not display the left sidebar. The theme toggle, if enabled, will not be displayed if this is on.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.hideLeftSidebar)
-				.onChange(async (value) => {
-					ExportSettings.settings.hideLeftSidebar = value;
-					await ExportSettings.saveSettings();
-				}));
-
-		new Setting(contentEl)
-			.setName('Hide right sidebar')
-			.setDesc('Do not display the right sidebar. The graph, if enabled, will not be displayed if this is on.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.hideRightSidebar)
-				.onChange(async (value) => {
-					ExportSettings.settings.hideRightSidebar = value;
-					await ExportSettings.saveSettings();
-				}));
 
 		//#endregion
 
