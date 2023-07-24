@@ -12,10 +12,14 @@ import { RenderLog } from './html-generation/render-log';
 import { Downloadable } from './utils/downloadable';
 import { GlobalDataGenerator, LinkTree } from './html-generation/global-gen';
 
+const LOCALSTORAGE_KEY = 'webpage-html-export-lastExported';
+
 export default class HTMLExportPlugin extends Plugin
 {
 	static plugin: HTMLExportPlugin;
 	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string};
+
+	lastExported: Record<string, string>;
 
 	async addCommands()
 	{
@@ -94,6 +98,9 @@ export default class HTMLExportPlugin extends Plugin
 		// init settings
 		this.addSettingTab(new ExportSettings(this));
 		ExportSettings.loadSettings();
+
+		// init last exported data
+		this.lastExported = this.app.loadLocalStorage(LOCALSTORAGE_KEY) ?? {};
 
 		// add export vault icon to ribbon
 		this.addRibbonIcon("folder-up", "Export Vault to HTML", async () =>
@@ -176,6 +183,24 @@ export default class HTMLExportPlugin extends Plugin
 			exportToPath = saveDialogPath;
 		}
 
+		if (
+			ExportSettings.settings.incrementalExport &&
+			this.lastExported &&
+			file.stat.mtime <= this.lastExported[file.path]
+		) {
+			new Notice(
+				`Skipping ${file.path}. File unchanged since last export.`,
+				5000
+			);
+			RenderLog.progress(
+				1,
+				2,
+				'File unchanged',
+				`Skipping: ${file.path}`
+			);
+			return;
+		}
+
 		if (!partOfBatch)
 		{
 			// if we are starting a new export then begin a new batch
@@ -208,6 +233,8 @@ export default class HTMLExportPlugin extends Plugin
 			new Notice("✅ Finished HTML Export:\n\n" + exportToPath.asString, 5000);
 			HTMLGenerator.endBatch();
 		}
+
+		this.lastExported[file.path] = new Date().getTime();
 
 		return exportedFile;
 	}
@@ -314,6 +341,7 @@ export default class HTMLExportPlugin extends Plugin
 
 	onunload()
 	{
+		this.app.saveLocalStorage(LOCALSTORAGE_KEY, this.lastExported);
 		console.log('unloading webpage-html-export plugin');
 	}
 }
