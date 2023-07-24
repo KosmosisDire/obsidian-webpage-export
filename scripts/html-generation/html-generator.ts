@@ -1,3 +1,4 @@
+import { setIcon } from "obsidian";
 import { Path } from "../utils/path";
 import { ExportSettings } from "../export-settings";
 import { GlobalDataGenerator, LinkTree } from "./global-gen";
@@ -30,6 +31,7 @@ export class HTMLGenerator
 		let usingDocument = file.document;
 
 		let sidebars = this.generateSideBars(file.contentElement, file);
+		this.generateSideBarBtns(file, sidebars);
 		let rightSidebar = sidebars.right;
 		let leftSidebar = sidebars.left;
 		usingDocument.body.appendChild(sidebars.container);
@@ -223,6 +225,7 @@ export class HTMLGenerator
 
 		/*
 		- div.webpage-container
+			- div.sidebar-mobile-btns
 
 			- div.sidebar-left
 				- div.sidebar-content
@@ -252,7 +255,7 @@ export class HTMLGenerator
 		rightContent.setAttribute("class", "sidebar-content");
 		rightSidebar.setAttribute("class", "sidebar-right");
 		rightSidebarScroll.setAttribute("class", "sidebar-scroll-area");
-		
+
 		leftSidebar.classList.add("sidebar");
 		leftSidebar.appendChild(leftContent);
 		// leftContent.appendChild(leftSidebarScroll);
@@ -267,7 +270,35 @@ export class HTMLGenerator
 		pageContainer.appendChild(documentContainer);
 		pageContainer.appendChild(rightSidebar);
 
+
 		return {container: pageContainer, left: leftContent, leftScroll: leftSidebarScroll, right: rightContent, rightScroll: rightSidebarScroll, center: documentContainer};
+	}
+
+	private static generateSideBarBtns(file: ExportFile, {left, right, container}: {left: HTMLElement, right: HTMLElement, container: HTMLElement}): {leftBtn: HTMLElement, rightBtn: HTMLElement, mobileSideBarBtns: HTMLElement}
+	{
+		const docEl = file.document;
+		/*
+		- div.sidebar-mobile-btns
+			- a.sidebar-mobile-btn--left
+			- a.sidebar-mobile-btn--right
+		*/
+
+		let mobileSideBarBtns = docEl.createElement("div");
+		const leftBtn = docEl.createElement("a");
+		const rightBtn = docEl.createElement("a");
+
+		mobileSideBarBtns.setAttribute("class", "sidebar-mobile-btns");
+		leftBtn.setAttribute("class", "sidebar-mobile-btn--left");
+		rightBtn.setAttribute("class", "sidebar-mobile-btn--right");
+
+		setIcon(leftBtn, "sidebar-left");
+		setIcon(rightBtn, "sidebar-right");
+
+		mobileSideBarBtns.appendChild(leftBtn);
+		mobileSideBarBtns.appendChild(rightBtn);
+		container.appendChild(mobileSideBarBtns);
+
+		return {leftBtn, rightBtn, mobileSideBarBtns};
 	}
 
 	private static getRelativePaths(file: ExportFile): {mediaPath: Path, jsPath: Path, cssPath: Path, rootPath: Path}
