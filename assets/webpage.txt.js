@@ -430,7 +430,7 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 	let treeItem = undefined;
 	for (let item of treeItems) 
 	{
-		if (item.getAttribute("href") == url)
+		if (item.getAttribute("href") == decodeURI(url))
 		{
 			let parent = item.parentElement.parentElement;
 
@@ -443,7 +443,7 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 				parent = parent.parentElement.parentElement;
 			}
 
-			continue;
+			break;
 		}
 	}
 
