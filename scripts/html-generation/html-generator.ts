@@ -150,11 +150,10 @@ export class HTMLGenerator
 
 		// make sure the page scales correctly at different widths
 		file.sizerElement.style.paddingBottom = "";
-		file.sizerElement.style.paddingBottom = "32px";
-		file.sizerElement.style.padding = "var(--file-margins)";
 		file.sizerElement.style.paddingTop = "var(--file-margins)";
 		file.sizerElement.style.paddingLeft = "var(--file-margins)";
 		file.sizerElement.style.paddingRight = "var(--file-margins)";
+		file.sizerElement.style.paddingBottom = "50vh";
 		file.sizerElement.style.width = "100%";
 		file.sizerElement.style.position = "absolute";
 
