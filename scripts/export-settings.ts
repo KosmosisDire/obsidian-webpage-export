@@ -26,6 +26,7 @@ export interface ExportSettingsData
 	// Export Options
 	dataviewBlockWaitTime: number;
 	showWarningsInExportLog: boolean;
+	incrementalExport: boolean;
 
 	// Page Features
 	addDarkModeToggle: boolean;
@@ -72,6 +73,7 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	// Export Options
 	dataviewBlockWaitTime: 700,
 	showWarningsInExportLog: true,
+	incrementalExport: false,
 
 	// Page Features
 	addDarkModeToggle: true,
@@ -430,6 +432,15 @@ export class ExportSettings extends PluginSettingTab {
 					await ExportSettings.saveSettings();
 				}));
 
+		new Setting(contentEl)
+			.setName('Incremental export')
+			.setDesc('Only export files that have changed since last export.')
+			.addToggle((toggle) => toggle
+			.setValue(ExportSettings.settings.incrementalExport)
+			.onChange(async (value) => {
+				ExportSettings.settings.incrementalExport = value;
+				await ExportSettings.saveSettings();
+			}));
 
 		//#endregion
 
