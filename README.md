@@ -26,12 +26,15 @@ Webpage HTML Export is a plugin for Obsidian which lets you export single files 
 ## FAQ
 
 > Q: Why am I getting a fatal error that ":has" is not a valid selector?
+> 
 > A: You need to update obsidian to the latest version by downloading the new installed from obsidian's website.
 
 > Q: Why won't the graph view load?
+> 
 > A: The graph view does not work if you are opening the files locally, you must host them on a web server.
 
 > Q: Why are my pages loading so slow when hosted on a web server??
+> 
 > A: Make sure you select the "Multi-file Website" preset, or disable all the media inlining options in the settings. 
 
 ## Support This Plugin
