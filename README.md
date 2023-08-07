@@ -13,7 +13,17 @@ Webpage HTML Export is a plugin for Obsidian which lets you export single files 
 - Theme Toggle
 - Interactive Graph View (Experimental)
 
-## Instructions
+## Installation
+
+Install from Obsidian Community Plugins: [Open in Obsidian](https://obsidian.md/plugins?id=webpage-html-export)
+
+### Manual Installation
+
+1. Download the `.zip` file from the [Latest Release](https://github.com/KosmosisDire/obsidian-webpage-export/releases/latest), or from any other release version.
+2. Unzip into: `{VaultFolder}/.obsidian/plugins/`
+3. Reload obsidian
+
+## Using the Plugin
 - To export a single file or folder, right click on the file or open the more-options menu for the file and select "Export to HTML".
 - If you are exporting to a website please choose the "Multi-File Website" preset.
 - If you are sharing a small number of files to be opened locally on a user's machine select the "Self-contained Documents" option.
@@ -23,7 +33,7 @@ Webpage HTML Export is a plugin for Obsidian which lets you export single files 
 - Wait for the export to finish and do not minimize both obsidian and the export window simulateously or the export will pause.
 - Congrats on your exported files!
 
-## FAQ
+## Troubleshooting
 
 > Q: Why am I getting a fatal error that ":has" is not a valid selector?
 > 
@@ -33,9 +43,14 @@ Webpage HTML Export is a plugin for Obsidian which lets you export single files 
 > 
 > A: The graph view does not work if you are opening the files locally, you must host them on a web server.
 
-> Q: Why are my pages loading so slow when hosted on a web server??
+> Q: Why are my pages loading so slow when hosted on a web server?
 > 
-> A: Make sure you select the "Multi-file Website" preset, or disable all the media inlining options in the settings. 
+> A: Make sure you select the "Multi-file Website" preset, or disable all the media inlining options in the settings.
+
+## Contributing
+
+Only start work on features which have an issue created for them and have been accepted by me!
+Contributiong guide coming soon.
 
 ## Support This Plugin
 
