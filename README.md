@@ -33,7 +33,11 @@ Install from Obsidian Community Plugins: [Open in Obsidian](https://obsidian.md/
 - Wait for the export to finish and do not minimize both obsidian and the export window simulateously or the export will pause.
 - Congrats on your exported files!
 
-## Troubleshooting
+## FAQ
+
+> Q: Can I run this from the command line?
+>
+> A: Not yet. However a command line / CLI feature is planned. Contribute to the disscussion [here](https://github.com/KosmosisDire/obsidian-webpage-export/issues/49)
 
 > Q: Why am I getting a fatal error that ":has" is not a valid selector?
 > 
