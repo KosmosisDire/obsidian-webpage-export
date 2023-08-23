@@ -19,8 +19,6 @@ export default class HTMLExportPlugin extends Plugin
 	static plugin: HTMLExportPlugin;
 	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string};
 
-	lastExported: Record<string, string>;
-
 	async addCommands()
 	{
 		this.addCommand({
@@ -98,9 +96,6 @@ export default class HTMLExportPlugin extends Plugin
 		// init settings
 		this.addSettingTab(new ExportSettings(this));
 		ExportSettings.loadSettings();
-
-		// init last exported data
-		this.lastExported = this.app.loadLocalStorage(LOCALSTORAGE_KEY) ?? {};
 
 		// add export vault icon to ribbon
 		this.addRibbonIcon("folder-up", "Export Vault to HTML", async () =>
@@ -183,24 +178,6 @@ export default class HTMLExportPlugin extends Plugin
 			exportToPath = saveDialogPath;
 		}
 
-		if (
-			ExportSettings.settings.incrementalExport &&
-			this.lastExported &&
-			file.stat.mtime <= this.lastExported[file.path]
-		) {
-			new Notice(
-				`Skipping ${file.path}. File unchanged since last export.`,
-				5000
-			);
-			RenderLog.progress(
-				1,
-				2,
-				'File unchanged',
-				`Skipping: ${file.path}`
-			);
-			return;
-		}
-
 		if (!partOfBatch)
 		{
 			// if we are starting a new export then begin a new batch
@@ -208,11 +185,19 @@ export default class HTMLExportPlugin extends Plugin
 			RenderLog.progress(1, 2, "Generating HTML", "Exporting: " + file.path);
 		}
 
-		// the !partOfBatch is passed to forceExportToRoot. 
 		// If this is a single file export then export it to the folder specified rather than into it's subfolder.
 		try
 		{
+			// the !partOfBatch is passed to forceExportToRoot, if this file is by itself then we don't need to export it to it's subfolder
 			var exportedFile = new ExportFile(file, exportToPath.directory.absolute(), exportFromPath.directory, partOfBatch, exportToPath.fullName, !partOfBatch);
+			
+			// Skip the file if it's unchanged since last export
+			if (ExportSettings.settings.incrementalExport && exportedFile.isFileModified === false)
+			{
+				RenderLog.log("Skipping file", `${file.path}. File unchanged since last export.`);
+				return;
+			}
+
 			await HTMLGenerator.generateWebpage(exportedFile);
 		}
 		catch (e)
@@ -233,8 +218,6 @@ export default class HTMLExportPlugin extends Plugin
 			new Notice("✅ Finished HTML Export:\n\n" + exportToPath.asString, 5000);
 			HTMLGenerator.endBatch();
 		}
-
-		this.lastExported[file.path] = new Date().getTime();
 
 		return exportedFile;
 	}
@@ -341,7 +324,6 @@ export default class HTMLExportPlugin extends Plugin
 
 	onunload()
 	{
-		this.app.saveLocalStorage(LOCALSTORAGE_KEY, this.lastExported);
 		console.log('unloading webpage-html-export plugin');
 	}
 }

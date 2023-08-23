@@ -148,7 +148,6 @@ export class AssetHandler
 		}
 		else
 		{
-			console.log(Utils.getActiveTextView()?.file.name + " does not have latex");
 			AssetHandler.mathStyles = "";
 		}
 

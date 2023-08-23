@@ -311,15 +311,21 @@ export namespace MarkdownRenderer
 
 	export async function _reportError(messageTitle: string, message: string, fatal: boolean)
 	{
+        messageTitle = (fatal ? "[Fatal Error] " : "[Error] ") + messageTitle;
+		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
+
+		errorInBatch = true;
+
+		// Return if log levels do not match
+		if (!fatal && !["error", "warning", "all"].contains(ExportSettings.settings.logLevel))
+		{
+			return;
+		}
+
 		if(problemLog == "")
 		{
 			this.renderLeaf.view.containerEl.win.resizeTo(900, 500);
 		}
-
-        messageTitle = (fatal ? "[Fatal Error] " : "[Error] ") + messageTitle;
-		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
-
-        errorInBatch = true;
 
 		// @ts-ignore
 		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
@@ -358,15 +364,16 @@ export namespace MarkdownRenderer
 
 	export async function _reportWarning(messageTitle: string, message: string)
 	{
-		if(problemLog == "" && ExportSettings.settings.showWarningsInExportLog)
+		messageTitle = "[Warning] " + messageTitle;
+		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
+
+		// return if log level does not include warnings
+		if(!["warning", "all"].contains(ExportSettings.settings.logLevel)) return;
+
+		if(problemLog == "")
 		{
 			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
 		}
-
-        messageTitle = "[Warning] " + messageTitle;
-		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
-
-		if(!ExportSettings.settings.showWarningsInExportLog) return;
 
 		// @ts-ignore
 		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
@@ -388,15 +395,15 @@ export namespace MarkdownRenderer
 
     export async function _reportInfo(messageTitle: string, message: string)
 	{
+        messageTitle = "[Info] " + messageTitle;
+		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
+
+		if(!(ExportSettings.settings.logLevel == "all")) return;
+
 		if(problemLog == "")
 		{
 			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
 		}
-
-        messageTitle = "[Info] " + messageTitle;
-		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
-
-		if(!ExportSettings.settings.showWarningsInExportLog) return;
 
 		// @ts-ignore
 		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
