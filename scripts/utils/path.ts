@@ -1,8 +1,9 @@
 const pathTools = require('upath');
-import {  existsSync } from 'fs';
+import {  Stats, existsSync } from 'fs';
 import { FileSystemAdapter, Notice } from 'obsidian';
 import { Utils } from './utils';
 import { promises as fs } from 'fs';
+import { statSync } from 'fs';
 import internal from 'stream';
 
 export class Path
@@ -478,6 +479,23 @@ export class Path
 		}
 
 		return this._exists;
+	}
+
+	get stat(): Stats|undefined
+	{
+		if(!this.exists) return undefined;
+
+		try
+		{
+		
+			let stat = statSync(this.absolute().asString);
+			return stat;
+		}
+		catch (error)
+		{
+			Path.log("Error getting stat: " + this.asString, error.stack, "error");
+			return undefined;
+		}
 	}
 
 	assertExists(): boolean

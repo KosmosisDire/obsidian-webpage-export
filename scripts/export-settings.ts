@@ -25,7 +25,7 @@ export interface ExportSettingsData
 
 	// Export Options
 	dataviewBlockWaitTime: number;
-	showWarningsInExportLog: boolean;
+	logLevel: "all" | "warning" | "error" | "fatal" | "none";
 	incrementalExport: boolean;
 
 	// Page Features
@@ -54,14 +54,14 @@ export interface ExportSettingsData
 const DEFAULT_SETTINGS: ExportSettingsData =
 {
 	// Inlining Options
-	inlineCSS: true,
-	inlineJS: true,
-	inlineImages: true,
+	inlineCSS: false,
+	inlineJS: false,
+	inlineImages: false,
 	includePluginCSS: '',
 	includeSvelteCSS: true,
 
 	// Formatting Options
-	makeNamesWebStyle: false,
+	makeNamesWebStyle: true,
 	allowFoldingHeadings: true,
 	addFilenameTitle: true,
 	beautifyHTML: false,
@@ -72,8 +72,8 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 
 	// Export Options
 	dataviewBlockWaitTime: 700,
-	showWarningsInExportLog: true,
-	incrementalExport: false,
+	logLevel: "warning",
+	incrementalExport: true,
 
 	// Page Features
 	addDarkModeToggle: true,
@@ -82,7 +82,7 @@ const DEFAULT_SETTINGS: ExportSettingsData =
 	includeFileTree: true,
 
 	// Main Export Options
-	exportPreset: '',
+	exportPreset: 'website',
 	openAfterExport: true,
 
 	// Graph View Settings
@@ -403,12 +403,17 @@ export class ExportSettings extends PluginSettingTab {
 				}));
 
 		new Setting(contentEl)
-			.setName('Show warnings in export log')
-			.setDesc('The export log (shown in the export window) displays only relevant warnings or errors to you. Turn this off to stop displaying warnings. Errors will always show.')
-			.addToggle((toggle) => toggle
-				.setValue(ExportSettings.settings.showWarningsInExportLog)
-				.onChange(async (value) => {
-					ExportSettings.settings.showWarningsInExportLog = value;
+			.setName('Log Level')
+			.setDesc('Set the level of logging to display in the export log.')
+			.addDropdown((dropdown) => dropdown
+				.addOption('all', 'All')
+				.addOption('warning', 'Warning')
+				.addOption('error', 'Error')
+				.addOption('fatal', 'Only Fatal Errors')
+				.setValue(ExportSettings.settings.logLevel)
+				.onChange(async (value: "all" | "warning" | "error" | "fatal" | "none") =>
+				{
+					ExportSettings.settings.logLevel = value;
 					await ExportSettings.saveSettings();
 				}));
 		
@@ -431,16 +436,6 @@ export class ExportSettings extends PluginSettingTab {
 					ExportSettings.settings.beautifyHTML = value;
 					await ExportSettings.saveSettings();
 				}));
-
-		new Setting(contentEl)
-			.setName('Incremental export')
-			.setDesc('Only export files that have changed since last export.')
-			.addToggle((toggle) => toggle
-			.setValue(ExportSettings.settings.incrementalExport)
-			.onChange(async (value) => {
-				ExportSettings.settings.incrementalExport = value;
-				await ExportSettings.saveSettings();
-			}));
 
 		//#endregion
 
@@ -647,6 +642,7 @@ export class ExportSettings extends PluginSettingTab {
 export class ExportModal extends Modal {
 	static isClosed: boolean = true;
 	static canceled: boolean = true;
+	static filePickerModal: HTMLElement;
 
 	constructor() {
 		super(app);
@@ -734,7 +730,7 @@ export class ExportModal extends Modal {
 							ExportSettings.settings.inlineJS = false;
 							ExportSettings.settings.inlineImages = false;
 							ExportSettings.settings.makeNamesWebStyle = true;
-							ExportSettings.settings.includeGraphView = true;
+							ExportSettings.settings.includeGraphView = false;
 							ExportSettings.settings.includeFileTree = true;
 							await ExportSettings.saveSettings();
 
@@ -762,6 +758,16 @@ Self-contained Documents: For documents which should each be self contained as o
 					ExportSettings.settings.openAfterExport = value;
 					await ExportSettings.saveSettings();
 				}));
+
+		new Setting(contentEl)
+			.setName('Only Export Modified')
+			.setDesc('Disable this to do a full re-export.')
+			.addToggle((toggle) => toggle
+			.setValue(ExportSettings.settings.incrementalExport)
+			.onChange(async (value) => {
+				ExportSettings.settings.incrementalExport = value;
+				await ExportSettings.saveSettings();
+			}));
 
 		new Setting(contentEl)
 			.setName('')
@@ -799,5 +805,6 @@ Self-contained Documents: For documents which should each be self contained as o
 		const { contentEl } = this;
 		contentEl.empty();
 		ExportModal.isClosed = true;
+		ExportModal.filePickerModal.remove();
 	}
 }

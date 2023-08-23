@@ -129,6 +129,11 @@ export class ExportFile
 		return Path.getRelativePath(this.exportPath, new Path(this.exportPath.workingDirectory), true).makeUnixStyle();
 	}
 
+	get isFileModified(): boolean
+	{
+		return this.markdownFile.stat.mtime > (this.exportPathAbsolute.stat?.mtime.getTime() ?? Number.NEGATIVE_INFINITY);
+	}
+
 	/**
 	 * Returns a downloadable object to download the .html file to the current path with the current html contents.
 	 */
