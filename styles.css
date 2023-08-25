@@ -168,11 +168,11 @@
     width: 100%;
 }
 
-.collapse-icon > svg {
+.tree-container .collapse-icon > svg {
     color: unset !important;
 }
 
-.collapse-icon:hover 
+.tree-container .collapse-icon:hover 
 {
     color: var(--nav-item-color-hover);
 }
