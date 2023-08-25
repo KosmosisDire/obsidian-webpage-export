@@ -2,6 +2,7 @@ import { Modal, Setting } from 'obsidian';
 import { Utils } from '../utils/utils';
 import HTMLExportPlugin from '../main';
 import { MainSettings } from './main-settings';
+import { FilePicker } from './file-picker';
 
 export class ExportModal extends Modal {
 	static isClosed: boolean = true;
@@ -29,6 +30,16 @@ export class ExportModal extends Modal {
 		ExportModal.filePickerModal.style.zIndex = "1";
 		ExportModal.filePickerModal.style.width = "20em";
 		ExportModal.filePickerModal.style.margin = "10px";
+		let container = ExportModal.filePickerModal.createDiv({ cls: 'modal-content tree-container' }).createDiv({ cls: 'tree-scroll-area' });
+		container.style.height = "100%";
+		container.style.width = "100%";
+		container.style.overflowY = "auto";
+		container.style.overflowX = "hidden";
+		container.style.padding = "1em";
+		
+
+		let fileTree = FilePicker.getFileSelectTree(app.vault.getFiles());
+		fileTree.buildTree(container);
 
 
 		const { contentEl } = this;

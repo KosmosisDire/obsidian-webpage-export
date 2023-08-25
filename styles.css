@@ -42,4 +42,199 @@
 }
 
 
+/*#region Tree */
 
+.tree-container
+{
+    --collapse-arrow-size: 0.4em;
+    --tree-horizontal-spacing: 1em;
+    --tree-vertical-spacing: 0.5em;
+    --sidebar-margin: 12px;
+}
+
+/* Base tree */
+.tree-container 
+{
+	/* padding-bottom: 12px; */
+	/* margin: 12px; */
+	/* height: 100%; */
+	/* position: relative; */
+	/* display: contents; */
+	position: relative;
+	height: 100%;
+	width: auto;
+	margin: var(--sidebar-margin);
+	margin-top: 3em;
+    margin-bottom: 0;
+}
+
+.tree-container .tree-header 
+{
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	position: absolute;
+	top: -3em;
+}
+
+.tree-container .tree-header .sidebar-section-header
+{
+    margin: 1em;
+    margin-left: 0;
+}
+
+.tree-container:has(.tree-scroll-area:empty) 
+{
+    display: none;
+}
+
+.tree-container .tree-scroll-area 
+{
+	width: 100%;
+	height: 100%;
+	max-height: 100%;
+	overflow-y: scroll;
+	padding: 1em;
+	padding-right: calc(1em + var(--sidebar-margin));
+	padding-bottom: 3em;
+	border-radius: var(--radius-m);
+	position: absolute;
+}
+
+.tree-container .tree-item 
+{
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0;
+}
+
+.tree-container .tree-item-children
+{
+    padding: 0;
+    margin-left: 0;
+    border-left: none;
+    width: 100%;
+}
+
+.tree-container .tree-item.mod-active > .tree-item-contents > .tree-item-link
+{
+    color: var(--color-accent);
+}
+
+.tree-container .tree-item-contents {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    border-radius: 0.4em;
+    color: var(--nav-item-color);
+    width: 100%;
+    margin-left: var(--tree-horizontal-spacing);
+}
+
+.tree-container .tree-item-contents:active 
+{
+    color: var(--nav-item-color-active);
+}
+
+.tree-container a.tree-item-link 
+{
+    width: 100%;
+    height: 100%;
+    transition: background-color 0.1s;
+    border-radius: var(--radius-s);
+    padding-left: calc(var(--tree-horizontal-spacing) + var(--collapse-arrow-size)/2 + 1px);
+    padding-bottom: calc(var(--tree-vertical-spacing) / 2);
+    padding-top: calc(var(--tree-vertical-spacing) / 2);
+    color: var(--nav-item-color);
+    text-decoration: none;
+}
+
+.tree-container .tree-item-icon.collapse-icon {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    border-radius: var(--radius-s);
+    transition: background-color 0.1s;
+    position: absolute;
+    height: 100%;
+}
+
+.tree-container .tree-item.mod-tree-folder > .tree-item-contents > .tree-item-icon.collapse-icon
+{
+    width: 100%;
+}
+
+.collapse-icon > svg {
+    color: unset !important;
+}
+
+.collapse-icon:hover 
+{
+    color: var(--nav-item-color-hover);
+}
+
+.tree-container a.tree-item-link:hover 
+{
+    cursor: pointer;
+    color: var(--nav-item-color-hover);
+    text-decoration: underline;
+}
+
+/* Indentation guide */
+
+.tree-container > .tree-scroll-area > * .tree-item
+{
+    margin-left: calc(var(--tree-horizontal-spacing) + var(--collapse-arrow-size) / 2 + 1px);
+    border-left: var(--nav-indentation-guide-width) solid var(--nav-indentation-guide-color);
+}
+
+.tree-container .tree-scroll-area > * > * > .tree-item
+{
+    margin-left: calc(var(--collapse-arrow-size) / 2 + 1px);
+}
+
+.tree-container .tree-item.mod-active
+{
+    border-left: var(--nav-indentation-guide-width) solid var(--color-accent);
+}
+
+
+.tree-container .tree-item:hover:not(.mod-active):not(.mod-collapsible):not(:has(.tree-item:hover)) /* Hover */
+{
+    border-left: var(--nav-indentation-guide-width) solid var(--nav-item-color-hover);
+}
+
+.tree-container .tree-item:not(.mod-collapsible) > .tree-item-children > .tree-item,
+.tree-container > .tree-scroll-area > .tree-item,
+.tree-container:not(.mod-nav-indicator) .tree-item
+{
+    border-left: none !important;
+}
+
+.tree-container .tree-item:not(.mod-collapsible) > .tree-item-children > .tree-item > .tree-item-contents,
+.tree-container:not(.mod-nav-indicator) .tree-item .tree-item-contents,
+.tree-container > .tree-scroll-area > .tree-item > .tree-item-contents
+{
+    margin-left: 0 !important;
+}
+
+/* Special */
+
+.tree-container.outline-tree .tree-item[data-depth='1'] > .tree-item-contents > .tree-item-link
+{
+    font-weight: 900;
+    font-size: 1.1em;
+    margin-left: 0;
+}
+
+.tree-container .tree-item.is-collapsed > .tree-item-contents > .tree-item-icon.collapse-icon > svg
+{
+    transition: transform 0.1s ease-in-out;
+    transform: rotate(-90deg);
+}
+
+
+
+/*#endregion */

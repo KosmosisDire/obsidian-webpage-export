@@ -619,7 +619,7 @@ export class HTMLGenerator
 		return treeItemEl;
 	}
 
-	private static buildTreeRecursive(tree: LinkTree, usingDocument: Document, minDepth:number = 1, minCollapsableDepth:number = 1, closeAllItems: boolean = false): HTMLDivElement[]
+	public static buildTreeRecursive(tree: LinkTree, usingDocument: Document, minDepth:number = 1, minCollapsableDepth:number = 1, closeAllItems: boolean = false): HTMLDivElement[]
 	{
 		let treeItems: HTMLDivElement[] = [];
 
@@ -642,7 +642,7 @@ export class HTMLGenerator
 		return treeItems;
 	}
 
-	private static generateHTMLTree(tree: LinkTree, usingDocument: Document, treeTitle: string, className: string, showNestingIndicator = true, minDepth: number = 1, minCollapsableDepth = 1, closeAllItems: boolean = false): HTMLDivElement
+	public static generateHTMLTree(tree: LinkTree, usingDocument: Document, treeTitle: string, className: string, showNestingIndicator = true, minDepth: number = 1, minCollapsableDepth = 1, closeAllItems: boolean = false): HTMLDivElement
 	{
 		/*
 		- div.tree-container
