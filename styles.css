@@ -50,6 +50,8 @@
     --tree-horizontal-spacing: 1em;
     --tree-vertical-spacing: 0.5em;
     --sidebar-margin: 12px;
+
+	font-size: 13px;
 }
 
 /* Base tree */

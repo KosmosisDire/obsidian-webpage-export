@@ -30,16 +30,22 @@ export class ExportModal extends Modal {
 		ExportModal.filePickerModal.style.zIndex = "1";
 		ExportModal.filePickerModal.style.width = "20em";
 		ExportModal.filePickerModal.style.margin = "10px";
-		let container = ExportModal.filePickerModal.createDiv({ cls: 'modal-content tree-container' }).createDiv({ cls: 'tree-scroll-area' });
+		let container = ExportModal.filePickerModal.createDiv({ cls: 'modal-content tree-container file-tree mod-nav-indicator' });
 		container.style.height = "100%";
 		container.style.width = "100%";
-		container.style.overflowY = "auto";
-		container.style.overflowX = "hidden";
-		container.style.padding = "1em";
+		container.style.padding = "0";
+		container.style.margin = "0";
+		
+		let scrollArea = container.createDiv({ cls: 'tree-scroll-area' });
+		scrollArea.style.height = "100%";
+		scrollArea.style.width = "100%";
+		scrollArea.style.overflowY = "auto";
+		scrollArea.style.overflowX = "hidden";
+		scrollArea.style.padding = "1em";
 		
 
 		let fileTree = FilePicker.getFileSelectTree(app.vault.getFiles());
-		fileTree.buildTree(container);
+		fileTree.buildTree(scrollArea);
 
 
 		const { contentEl } = this;
