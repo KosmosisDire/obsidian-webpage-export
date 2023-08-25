@@ -2,7 +2,7 @@
 import { MarkdownView, Notice, Plugin, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
-import { ExportModal, ExportSettings } from './export-settings';
+import { ExportModal } from './settings/export-modal';
 import { Utils } from './utils/utils';
 import { HTMLGenerator } from './html-generation/html-generator';
 import { Path } from './utils/path';
@@ -10,9 +10,7 @@ import { ExportFile } from './html-generation/export-file';
 import { AssetHandler } from './html-generation/asset-handler';
 import { RenderLog } from './html-generation/render-log';
 import { Downloadable } from './utils/downloadable';
-import { GlobalDataGenerator, LinkTree } from './html-generation/global-gen';
-
-const LOCALSTORAGE_KEY = 'webpage-html-export-lastExported';
+import { MainSettings } from './settings/main-settings';
 
 export default class HTMLExportPlugin extends Plugin
 {
@@ -33,7 +31,7 @@ export default class HTMLExportPlugin extends Plugin
 
 					this.exportFile(file, new Path(file.path)).then((exportedFile) =>
 					{
-						if (exportedFile && ExportSettings.settings.openAfterExport)
+						if (exportedFile && MainSettings.settings.openAfterExport)
 						{
 							this.openPath(exportedFile.exportPathAbsolute);
 						}
@@ -56,7 +54,7 @@ export default class HTMLExportPlugin extends Plugin
 					let path = Utils.idealDefaultPath().joinString(file.name).setExtension("html");
 					this.exportFile(file, new Path(file.path), false, path, false).then((exportedFile) =>
 					{
-						if (exportedFile && ExportSettings.settings.openAfterExport)
+						if (exportedFile && MainSettings.settings.openAfterExport)
 						{
 							this.openPath(exportedFile.exportPathAbsolute);
 						}
@@ -94,14 +92,14 @@ export default class HTMLExportPlugin extends Plugin
 		AssetHandler.initialize("webpage-html-export");
 
 		// init settings
-		this.addSettingTab(new ExportSettings(this));
-		ExportSettings.loadSettings();
+		this.addSettingTab(new MainSettings(this));
+		MainSettings.loadSettings();
 
 		// add export vault icon to ribbon
 		this.addRibbonIcon("folder-up", "Export Vault to HTML", async () =>
 		{
 			let exportInfo = await this.exportFolder(Path.emptyPath);
-			if (exportInfo.success && ExportSettings.settings.openAfterExport)
+			if (exportInfo.success && MainSettings.settings.openAfterExport)
 			{
 				console.log("Opening: "+exportInfo.exportedPath.asString);
 				this.openPath(exportInfo.exportedPath);
@@ -127,7 +125,7 @@ export default class HTMLExportPlugin extends Plugin
 							{
 								let path = new Path(file.path);
 								let exportedFile = await this.exportFile(file, path);
-								if (exportedFile && ExportSettings.settings.openAfterExport)
+								if (exportedFile && MainSettings.settings.openAfterExport)
 								{
 									console.log("Opening: "+exportedFile.exportPathAbsolute.asString);
 									this.openPath(exportedFile.exportPathAbsolute);
@@ -136,7 +134,7 @@ export default class HTMLExportPlugin extends Plugin
 							else if(file instanceof TFolder)
 							{
 								let exportInfo = await this.exportFolder(new Path(file.path));
-								if (exportInfo.success && ExportSettings.settings.openAfterExport)
+								if (exportInfo.success && MainSettings.settings.openAfterExport)
 								{
 									console.log("Opening: "+exportInfo.exportedPath.asString);
 									this.openPath(exportInfo.exportedPath);
@@ -172,7 +170,7 @@ export default class HTMLExportPlugin extends Plugin
 		if (exportToPath === undefined) 
 		{
 			let defaultFileName = file.basename + ".html";
-			if (ExportSettings.settings.makeNamesWebStyle) defaultFileName = Path.toWebStyle(defaultFileName);
+			if (MainSettings.settings.makeNamesWebStyle) defaultFileName = Path.toWebStyle(defaultFileName);
 			let saveDialogPath = await Utils.showSaveDialog(Utils.idealDefaultPath(), defaultFileName, false);
 			if (!saveDialogPath) return undefined;
 			exportToPath = saveDialogPath;
@@ -192,7 +190,7 @@ export default class HTMLExportPlugin extends Plugin
 			var exportedFile = new ExportFile(file, exportToPath.directory.absolute(), exportFromPath.directory, partOfBatch, exportToPath.fullName, !partOfBatch);
 			
 			// Skip the file if it's unchanged since last export
-			if (ExportSettings.settings.incrementalExport && exportedFile.isFileModified === false)
+			if (MainSettings.settings.incrementalExport && exportedFile.isFileModified === false)
 			{
 				RenderLog.log("Skipping file", `${file.path}. File unchanged since last export.`);
 				return;

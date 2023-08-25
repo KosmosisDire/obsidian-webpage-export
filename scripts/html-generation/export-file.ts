@@ -1,9 +1,9 @@
 import { html_beautify } from "js-beautify";
 import { TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
-import { ExportSettings } from "scripts/export-settings";
 import { HTMLGenerator } from "./html-generator";
 import { Downloadable } from "scripts/utils/downloadable";
+import { MainSettings } from "scripts/settings/main-settings";
 
 export class ExportFile
 {
@@ -78,7 +78,7 @@ export class ExportFile
 		if (forceExportToRoot) this.exportPath.reparse(this.name);
 		this.exportPath.setWorkingDirectory(this.exportToFolder.asString);
 
-		if (ExportSettings.settings.makeNamesWebStyle)
+		if (MainSettings.settings.makeNamesWebStyle)
 		{
 			this.name = Path.toWebStyle(this.name);
 			this.exportPath.makeWebStyle();
@@ -93,7 +93,7 @@ export class ExportFile
 	get html(): string
 	{
 		let htmlString = "<!DOCTYPE html>\n" + this.document.documentElement.outerHTML;
-		if (ExportSettings.settings.beautifyHTML) htmlString = html_beautify(htmlString, { indent_size: 2 });
+		if (MainSettings.settings.beautifyHTML) htmlString = html_beautify(htmlString, { indent_size: 2 });
 		return htmlString;
 	}
 

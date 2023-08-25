@@ -1,12 +1,13 @@
 import { setIcon } from "obsidian";
 import { Path } from "../utils/path";
-import { ExportSettings } from "../export-settings";
-import { GlobalDataGenerator, LinkTree } from "./global-gen";
+import { GlobalDataGenerator } from "./global-gen";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { AssetHandler } from "./asset-handler";
 import { ExportFile } from "./export-file";
 import { Downloadable } from "scripts/utils/downloadable";
 import { TFile } from "obsidian";
+import { MainSettings } from "scripts/settings/main-settings";
+import { LinkTree } from "./link-tree";
 
 export class HTMLGenerator
 {
@@ -37,7 +38,7 @@ export class HTMLGenerator
 		usingDocument.body.appendChild(sidebars.container);
 
 		// inject graph view
-		if (ExportSettings.settings.includeGraphView)
+		if (MainSettings.settings.includeGraphView)
 		{
 			let graph = this.generateGraphView(usingDocument);
 			let graphHeader = usingDocument.createElement("span");
@@ -49,25 +50,25 @@ export class HTMLGenerator
 		}
 
 		// inject outline
-		if (ExportSettings.settings.includeOutline)
+		if (MainSettings.settings.includeOutline)
 		{
 			let headerTree = LinkTree.headersFromFile(file.markdownFile, 1);
-			let outline : HTMLElement | undefined = this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", "outline-tree", false, 1, 2, ExportSettings.settings.startOutlineCollapsed);
+			let outline : HTMLElement | undefined = this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", "outline-tree", false, 1, 2, MainSettings.settings.startOutlineCollapsed);
 			rightSidebar.appendChild(outline);
 		}
 
 		// inject darkmode toggle
-		if (ExportSettings.settings.addDarkModeToggle && !usingDocument.querySelector(".theme-toggle-container-inline, .theme-toggle-container"))
+		if (MainSettings.settings.addDarkModeToggle && !usingDocument.querySelector(".theme-toggle-container-inline, .theme-toggle-container"))
 		{
 			let toggle = this.generateDarkmodeToggle(false, usingDocument);
 			leftSidebar.appendChild(toggle);
 		}
 
 		// inject file tree
-		if (ExportSettings.settings.includeFileTree)
+		if (MainSettings.settings.includeFileTree)
 		{
 			let tree = GlobalDataGenerator.getFileTree();
-			if (ExportSettings.settings.makeNamesWebStyle) tree.makeLinksWebStyle();
+			if (MainSettings.settings.makeNamesWebStyle) tree.makeLinksWebStyle();
 			let fileTree: HTMLDivElement = this.generateHTMLTree(tree, usingDocument, app.vault.getName(), "file-tree", true, 1, 1, true);
 			leftSidebar.appendChild(fileTree);
 		}
@@ -89,9 +90,9 @@ export class HTMLGenerator
 		body.setAttribute("class", bodyClasses);
 		body.setAttribute("style", bodyStyle);
 
-		let lineWidth = ExportSettings.settings.customLineWidth || "50em";
-		let contentWidth = ExportSettings.settings.contentWidth || "500em";
-		let sidebarWidth = ExportSettings.settings.sidebarWidth || "25em";
+		let lineWidth = MainSettings.settings.customLineWidth || "50em";
+		let contentWidth = MainSettings.settings.contentWidth || "500em";
+		let sidebarWidth = MainSettings.settings.sidebarWidth || "25em";
 		if (!isNaN(Number(lineWidth))) lineWidth += "px";
 		if (!isNaN(Number(contentWidth))) contentWidth += "px";
 		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
@@ -111,7 +112,7 @@ export class HTMLGenerator
 		if (MarkdownRenderer.cancelled) throw new Error("Markdown rendering cancelled");
 		markdownViewEl.outerHTML = content;
 
-		if(ExportSettings.settings.allowFoldingHeadings && !markdownViewEl.hasClass("allow-fold-headings")) 
+		if(MainSettings.settings.allowFoldingHeadings && !markdownViewEl.hasClass("allow-fold-headings")) 
 		{
 			markdownViewEl.addClass("allow-fold-headings");
 		}
@@ -120,7 +121,7 @@ export class HTMLGenerator
 			markdownViewEl.removeClass("allow-fold-headings");
 		}
 
-		if (ExportSettings.settings.addFilenameTitle)
+		if (MainSettings.settings.addFilenameTitle)
 			this.addTitle(file);
 
 		// add heading fold arrows
@@ -162,7 +163,7 @@ export class HTMLGenerator
 		
 		// inline / outline images
 		let outlinedImages : Downloadable[] = [];
-		if (ExportSettings.settings.inlineImages)
+		if (MainSettings.settings.inlineImages)
 		{
 			await this.inlineMedia(file);
 		}
@@ -181,7 +182,7 @@ export class HTMLGenerator
 		file.downloads.push(...outlinedImages);
 		file.downloads.push(...await AssetHandler.getDownloads());
 
-		if(ExportSettings.settings.makeNamesWebStyle)
+		if(MainSettings.settings.makeNamesWebStyle)
 		{
 			file.downloads.forEach((file) =>
 			{
@@ -307,7 +308,7 @@ export class HTMLGenerator
 		let jsPath = AssetHandler.jsFolderName.makeUnixStyle();
 		let cssPath = AssetHandler.cssFolderName.makeUnixStyle();
 
-		if (ExportSettings.settings.makeNamesWebStyle)
+		if (MainSettings.settings.makeNamesWebStyle)
 		{
 			imagePath = imagePath.makeWebStyle();
 			jsPath = jsPath.makeWebStyle();
@@ -333,7 +334,7 @@ export class HTMLGenerator
 		<meta charset="UTF-8">
 		`;
 
-		if (ExportSettings.settings.includeOutline)
+		if (MainSettings.settings.includeOutline)
 		{
 			meta += `<script src="https://code.iconify.design/iconify-icon/1.0.3/iconify-icon.min.js"></script>`;
 		}
@@ -341,19 +342,19 @@ export class HTMLGenerator
 		// --- JS ---
 		let scripts = "";
 
-		if (ExportSettings.settings.includeGraphView) 
+		if (MainSettings.settings.includeGraphView) 
 		{
 			// TODO: outline the nodes to a file
 			scripts += 
 			`
 			<!-- Graph View Data -->
 			<script>
-			let nodes=\n${JSON.stringify(GlobalDataGenerator.getGlobalGraph(ExportSettings.settings.graphMinNodeSize, ExportSettings.settings.graphMaxNodeSize))};
-			let attractionForce = ${ExportSettings.settings.graphAttractionForce};
-			let linkLength = ${ExportSettings.settings.graphLinkLength};
-			let repulsionForce = ${ExportSettings.settings.graphRepulsionForce};
-			let centralForce = ${ExportSettings.settings.graphCentralForce};
-			let edgePruning = ${ExportSettings.settings.graphEdgePruning};
+			let nodes=\n${JSON.stringify(GlobalDataGenerator.getGlobalGraph(MainSettings.settings.graphMinNodeSize, MainSettings.settings.graphMaxNodeSize))};
+			let attractionForce = ${MainSettings.settings.graphAttractionForce};
+			let linkLength = ${MainSettings.settings.graphLinkLength};
+			let repulsionForce = ${MainSettings.settings.graphRepulsionForce};
+			let centralForce = ${MainSettings.settings.graphCentralForce};
+			let edgePruning = ${MainSettings.settings.graphEdgePruning};
 			</script>
 			`;
 
@@ -363,7 +364,7 @@ export class HTMLGenerator
 			scripts += `\n<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js" integrity="sha512-Ch/O6kL8BqUwAfCF7Ie5SX1Hin+BJgYH4pNjRqXdTEqMsis1TUYg+j6nnI9uduPjGaj7DN4UKCZgpvoExt6dkw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>\n`;
 		}
 
-		if (ExportSettings.settings.inlineJS)
+		if (MainSettings.settings.inlineJS)
 		{
 			scripts += `\n<script>\n${AssetHandler.webpageJS}\n</script>\n`;
 		}
@@ -376,7 +377,7 @@ export class HTMLGenerator
 		// --- CSS ---
 		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
 		
-		if (ExportSettings.settings.inlineCSS)
+		if (MainSettings.settings.inlineCSS)
 		{
 			let pluginCSS = AssetHandler.webpageStyles;
 			let thirdPartyPluginStyles = AssetHandler.pluginStyles;
@@ -451,7 +452,7 @@ export class HTMLGenerator
 				let targetPath = new Path(targetFile.path);
 				// let targetRelativePath = Path.getRelativePath(file.exportPath, targetPath);
 				if (htmlCompatibleExt.includes(targetPath.extensionName)) targetPath.setExtension("html");
-				if (ExportSettings.settings.makeNamesWebStyle) targetPath.makeWebStyle();
+				if (MainSettings.settings.makeNamesWebStyle) targetPath.makeWebStyle();
 
 				let finalHref = targetPath.makeUnixStyle() + targetHeader.replaceAll(" ", "_");
 				linkEl.setAttribute("href", finalHref);
@@ -539,7 +540,7 @@ export class HTMLGenerator
 
 			// let relativeImagePath = Path.getRelativePath(file.exportPath, exportLocation)
 
-			if(ExportSettings.settings.makeNamesWebStyle)
+			if(MainSettings.settings.makeNamesWebStyle)
 			{
 				// relativeImagePath.makeWebStyle();
 				exportLocation.makeWebStyle();

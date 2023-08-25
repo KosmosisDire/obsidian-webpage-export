@@ -13,9 +13,9 @@ import appStyles from "assets/obsidian-styles.txt.css";
 import webpageStyles from "assets/plugin-styles.txt.css";
 import { Path } from "scripts/utils/path.js";
 import { Downloadable } from "scripts/utils/downloadable.js";
-import { ExportSettings } from "scripts/export-settings.js";
 import { RenderLog } from "./render-log.js";
 import { Utils } from "scripts/utils/utils.js";
+import { MainSettings } from "scripts/settings/main-settings.js";
 
 export class AssetHandler
 {
@@ -68,7 +68,7 @@ export class AssetHandler
 	public static async getDownloads() : Promise<Downloadable[]>
 	{
 		let toDownload: Downloadable[] = [];
-		if (!ExportSettings.settings.inlineCSS)
+		if (!MainSettings.settings.inlineCSS)
 		{
 			let pluginCSS = this.webpageStyles;
 			let thirdPartyPluginCSS = await this.getPluginStyles();
@@ -82,12 +82,12 @@ export class AssetHandler
 			toDownload.push(themecssDownload);
 			toDownload.push(snippetsDownload);
 		}
-		if (!ExportSettings.settings.inlineJS)
+		if (!MainSettings.settings.inlineJS)
 		{
 			let webpagejsDownload = new Downloadable("webpage.js", this.webpageJS, this.jsFolderName);
 			toDownload.push(webpagejsDownload);
 		}
-		if(ExportSettings.settings.includeGraphView)
+		if(MainSettings.settings.includeGraphView)
 		{
 			let graphWASMDownload = new Downloadable("graph_wasm.wasm", this.graphWASM, this.jsFolderName); // MIGHT NEED TO SPECIFY ENCODING
 			let renderWorkerJSDownload = new Downloadable("graph-render-worker.js", this.renderWorkerJS, this.jsFolderName);
@@ -108,7 +108,7 @@ export class AssetHandler
 	{
 		let snippetsNames = this.getEnabledSnippets();
 		let themeName = this.getCurrentThemeName();
-		let enabledPluginStyles = ExportSettings.settings.includePluginCSS;
+		let enabledPluginStyles = MainSettings.settings.includePluginCSS;
 		if (snippetsNames != this.lastEnabledSnippets)
 		{
 			this.lastEnabledSnippets = snippetsNames;
@@ -190,7 +190,7 @@ export class AssetHandler
 		{
 			// @ts-ignore
 			let styleID = stylesheets[i].ownerNode?.id;
-			if (styleID.startsWith("svelte") && ExportSettings.settings.includeSvelteCSS || styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET")
+			if (styleID.startsWith("svelte") && MainSettings.settings.includeSvelteCSS || styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET")
 			{
 				let style = stylesheets[i].cssRules;
 
@@ -210,7 +210,7 @@ export class AssetHandler
 	{
 		// load 3rd party plugin css
 		let pluginCSS = "";
-		let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("\n");
+		let thirdPartyPluginStyleNames = MainSettings.settings.includePluginCSS.split("\n");
 		for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
 		{
 			if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;

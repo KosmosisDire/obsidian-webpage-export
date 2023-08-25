@@ -1,11 +1,11 @@
 import { MarkdownView, Notice, WorkspaceLeaf } from "obsidian";
-import { ExportSettings } from "scripts/export-settings";
 import { Utils } from "scripts/utils/utils";
 import { ExportFile } from "./export-file";
 import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
 const { clipboard } = require('electron')
 import { RenderLog } from "./render-log";
+import { MainSettings } from "scripts/settings/main-settings";
 
 
 export namespace MarkdownRenderer
@@ -97,7 +97,7 @@ export namespace MarkdownRenderer
 
 		if (dataviewCount > 0)
 		{
-			await Utils.delay(ExportSettings.settings.dataviewBlockWaitTime * dataviewCount);
+			await Utils.delay(MainSettings.settings.dataviewBlockWaitTime * dataviewCount);
 		}
 
 		if (cancelled) throw new Error("Markdown rendering cancelled");
@@ -317,7 +317,7 @@ export namespace MarkdownRenderer
 		errorInBatch = true;
 
 		// Return if log levels do not match
-		if (!fatal && !["error", "warning", "all"].contains(ExportSettings.settings.logLevel))
+		if (!fatal && !["error", "warning", "all"].contains(MainSettings.settings.logLevel))
 		{
 			return;
 		}
@@ -368,7 +368,7 @@ export namespace MarkdownRenderer
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
 		// return if log level does not include warnings
-		if(!["warning", "all"].contains(ExportSettings.settings.logLevel)) return;
+		if(!["warning", "all"].contains(MainSettings.settings.logLevel)) return;
 
 		if(problemLog == "")
 		{
@@ -398,7 +398,7 @@ export namespace MarkdownRenderer
         messageTitle = "[Info] " + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
-		if(!(ExportSettings.settings.logLevel == "all")) return;
+		if(!(MainSettings.settings.logLevel == "all")) return;
 
 		if(problemLog == "")
 		{
