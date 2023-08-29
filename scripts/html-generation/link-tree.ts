@@ -26,6 +26,15 @@ export class LinkTree
 	public root: LinkTree | undefined = undefined;
 	public isRoot: boolean = false;
 
+	public forAllChildren(func: (child: LinkTree) => void, recursive: boolean = true)
+	{
+		for (let child of this.children)
+		{
+			func(child);
+			if (recursive) child.forAllChildren(func);
+		}
+	}
+
 	/**
 	 * Sets the source of this tree item. This also sets the type, title and href based on the source.
 	 */

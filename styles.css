@@ -46,12 +46,19 @@
 
 .tree-container
 {
+	--checkbox-size: 1em;
     --collapse-arrow-size: 0.4em;
-    --tree-horizontal-spacing: 1em;
+    --tree-horizontal-spacing: var(--checkbox-size);
     --tree-vertical-spacing: 0.5em;
     --sidebar-margin: 12px;
 
 	font-size: 13px;
+}
+
+input[type=checkbox].file-checkbox
+{
+	margin-left: calc(var(--collapse-arrow-size) * 3);
+	z-index: 100;
 }
 
 /* Base tree */
