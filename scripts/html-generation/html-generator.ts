@@ -11,9 +11,16 @@ import { LinkTree } from "./link-tree";
 
 export class HTMLGenerator
 {
+	public static isBatchStarted() : boolean
+	{
+		return MarkdownRenderer.batchStarted;
+	}
+
 	//#region Main Generation Functions
 	public static async beginBatch(exportingFiles: TFile[])
 	{
+		if (this.isBatchStarted()) return;
+
 		GlobalDataGenerator.clearGraphCache();
 		GlobalDataGenerator.clearFileTreeCache();
 		GlobalDataGenerator.getFileTree(exportingFiles);
@@ -23,7 +30,11 @@ export class HTMLGenerator
 
 	public static endBatch()
 	{
+		if (!this.isBatchStarted()) return;
+
 		MarkdownRenderer.endBatch();
+		GlobalDataGenerator.clearGraphCache();
+		GlobalDataGenerator.clearFileTreeCache();
 	}
 
 	public static async generateWebpage(file: ExportFile): Promise<ExportFile>

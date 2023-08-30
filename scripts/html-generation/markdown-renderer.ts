@@ -14,6 +14,7 @@ export namespace MarkdownRenderer
 	export let renderLeaf: WorkspaceLeaf | undefined;
     export let errorInBatch: boolean = false;
 	export let cancelled: boolean = false;
+	export let batchStarted: boolean = false;
 
     export async function renderMarkdown(file: ExportFile): Promise<string>
 	{
@@ -147,9 +148,12 @@ export namespace MarkdownRenderer
 	
     export async function beginBatch()
 	{
+		if(batchStarted) return;
+
 		problemLog = "";
         errorInBatch = false;
 		cancelled = false;
+		batchStarted = true;
 
 		renderLeaf = TabManager.openNewTab("window", "vertical");
 		// @ts-ignore
@@ -203,6 +207,8 @@ export namespace MarkdownRenderer
 
 	export function endBatch()
 	{
+		if (!batchStarted) return;
+
 		if (renderLeaf)
 		{
             if (!errorInBatch)
@@ -215,6 +221,8 @@ export namespace MarkdownRenderer
 		{
 			win.webContents.setBackgroundThrottling(false);
 		}
+
+		batchStarted = false;
 	}
 
 	export function generateLogEl(title: string, message: string, textColor: string, backgroundColor: string): HTMLElement

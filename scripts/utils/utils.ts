@@ -127,9 +127,9 @@ export class Utils
 		return Path.vaultPath;
 	}
 
-	static async downloadFiles(files: Downloadable[], folderPath: Path)
+	static async downloadFiles(files: Downloadable[], rootPath: Path)
 	{
-		if (!folderPath.isAbsolute) throw new Error("folderPath must be absolute: " + folderPath.asString);
+		if (!rootPath.isAbsolute) throw new Error("folderPath must be absolute: " + rootPath.asString);
 
 		RenderLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)")
 		
@@ -139,7 +139,7 @@ export class Utils
 
 			try
 			{
-				await file.download(folderPath.directory);
+				await file.download(rootPath.directory);
 				RenderLog.progress(i+1, files.length, "Saving HTML files to disk", "Saving: " + file.filename, "var(--color-green)");
 			}
 			catch (e)
@@ -223,5 +223,11 @@ export class Utils
 		}
 
 		return inputString;
+	}
+
+	static async openPath(path: Path)
+	{
+		// @ts-ignore
+		await window.electron.remote.shell.openPath(path.asString);
 	}
 }

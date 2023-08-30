@@ -2,11 +2,12 @@ import { TFile } from "obsidian";
 import { GlobalDataGenerator } from "scripts/html-generation/global-gen";
 import { HTMLGenerator } from "scripts/html-generation/html-generator";
 import { LinkTree } from "scripts/html-generation/link-tree";
+import HTMLExportPlugin from "scripts/main";
 
 export class FilePicker extends LinkTree
 {
 	public children: FilePicker[] = [];
-	public fileElement: HTMLElement | undefined = undefined;
+	public container: HTMLElement | undefined;
 
 	public forAllChildren(func: (child: FilePicker) => void, recursive: boolean = true)
 	{
@@ -115,11 +116,15 @@ export class FilePicker extends LinkTree
 	public buildTree(container: HTMLElement)
 	{
 		let tree = HTMLGenerator.buildTreeRecursive(this, document, 0, 0, true);
+
 		for (let i = 0; i < tree.length; i++)
 		{
 			let item = tree[i];
 			container.appendChild(item);
 		}
+
+		this.container = container;
+		this.forAllChildren((child) => child.container = container);
 
 		container.querySelectorAll(".tree-container .tree-item").forEach((item: HTMLElement) =>
 		{
@@ -139,6 +144,7 @@ export class FilePicker extends LinkTree
 					item.querySelectorAll(".file-checkbox").forEach((checkbox: HTMLInputElement) =>
 					{
 						checkbox.checked = newCheckbox.checked;
+						checkbox.classList.toggle("checked", newCheckbox.checked);
 					});
 				});
 				contents.insertAdjacentElement("afterbegin", newCheckbox);
@@ -152,7 +158,6 @@ export class FilePicker extends LinkTree
 					let parent = this.parentElement?.parentElement;
 					if (parent) 
 					{
-						console.log(parent);
 						This.toggleTreeCollapsed(parent);
 					}
 				});
@@ -164,11 +169,16 @@ export class FilePicker extends LinkTree
 	{
 		let selectedFiles: TFile[] = [];
 
-		this.forAllChildren((child) =>
+		this.container?.querySelectorAll(".file-checkbox").forEach((checkbox: HTMLInputElement) =>
 		{
-			if((child.fileElement?.querySelector(".file-checkbox") as HTMLInputElement)?.checked)
+			if (checkbox.checked)
 			{
-				selectedFiles.push(child.source as TFile);
+				let path = checkbox.parentElement?.querySelector(".tree-item-link")?.getAttribute("href")?.replaceAll(".html", ".md");
+				if (path)
+				{
+					let file = HTMLExportPlugin.plugin.app.vault.getAbstractFileByPath(path);
+					if (file instanceof TFile) selectedFiles.push(file);
+				}
 			}
 		});
 
