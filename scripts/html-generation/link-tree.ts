@@ -1,5 +1,6 @@
 import { Path } from "scripts/utils/path";
 import { HeadingCache, TAbstractFile, TFile, TFolder } from "obsidian";
+import { HTMLGenerator } from "./html-generator";
 
 export const enum TreeItemType
 {
@@ -54,7 +55,7 @@ export class LinkTree
 		{
 			let path = new Path(source.path).makeUnixStyle();
 			if (source instanceof TFolder) path.makeForceFolder();
-			else path.setExtension("html");
+			else if(HTMLGenerator.convertableExtensions.includes(path.extensionName)) path.setExtension("html");
 
 			this.href = path.asString;
 			this.title = path.basename == "." ? "" : path.basename;

@@ -3,6 +3,7 @@ import { GlobalDataGenerator } from "scripts/html-generation/global-gen";
 import { HTMLGenerator } from "scripts/html-generation/html-generator";
 import { LinkTree } from "scripts/html-generation/link-tree";
 import HTMLExportPlugin from "scripts/main";
+import { Path } from "scripts/utils/path";
 
 export class FilePicker extends LinkTree
 {
@@ -146,6 +147,28 @@ export class FilePicker extends LinkTree
 						checkbox.checked = newCheckbox.checked;
 						checkbox.classList.toggle("checked", newCheckbox.checked);
 					});
+
+					this.container?.querySelectorAll(".file-checkbox").forEach((checkbox: HTMLInputElement) =>
+					{
+						if(!checkbox.checked)
+						{
+							let uncheckedChildren = checkbox.parentElement?.parentElement?.querySelectorAll(".mod-tree-file .file-checkbox:not(.checked)");
+							if (uncheckedChildren?.length == 0) 
+							{
+								checkbox.checked = true;
+								checkbox.classList.toggle("checked", checkbox.checked);
+							}
+						}
+						else
+						{
+							let uncheckedChildren = checkbox.parentElement?.parentElement?.querySelectorAll(".mod-tree-file .file-checkbox:not(.checked)");
+							if (uncheckedChildren?.length ?? 0 > 0) 
+							{
+								checkbox.checked = false;
+								checkbox.classList.toggle("checked", checkbox.checked);
+							}
+						}
+					});
 				});
 				contents.insertAdjacentElement("afterbegin", newCheckbox);
 			}
@@ -162,6 +185,23 @@ export class FilePicker extends LinkTree
 					}
 				});
 			}
+		});
+
+
+		container.querySelectorAll(".mod-tree-file .tree-item-link").forEach((link: HTMLElement) =>
+		{
+			link.addEventListener("click", (event) =>
+			{
+				event.preventDefault();
+				event.stopPropagation();
+				
+				console.log("clicked");
+				let checkbox = link.parentElement?.querySelector(".file-checkbox") as HTMLInputElement;
+				if (checkbox) 
+				{
+					checkbox.click();
+				}
+			});
 		});
 	}
 
@@ -183,5 +223,42 @@ export class FilePicker extends LinkTree
 		});
 
 		return selectedFiles;
+	}
+
+	public setSelectedFiles(files: Path[])
+	{
+		let stringfiles = files.map(f => f.makeUnixStyle().asString);
+
+		this.container?.querySelectorAll(".file-checkbox").forEach((checkbox: HTMLInputElement) =>
+		{
+			let path = checkbox.parentElement?.querySelector(".tree-item-link")?.getAttribute("href");
+			if (path)
+			{
+				checkbox.checked = stringfiles.includes(new Path(path).makeUnixStyle().asString.replaceAll(".html", ".md"));
+				checkbox.classList.toggle("checked", checkbox.checked);
+			}
+		});
+
+		this.container?.querySelectorAll(".file-checkbox").forEach((checkbox: HTMLInputElement) =>
+		{
+			if(!checkbox.checked)
+			{
+				let uncheckedChildren = checkbox.parentElement?.parentElement?.querySelectorAll(".mod-tree-file .file-checkbox:not(.checked)");
+				if (uncheckedChildren?.length == 0) 
+				{
+					checkbox.checked = true;
+					checkbox.classList.toggle("checked", checkbox.checked);
+				}
+			}
+			else
+			{
+				let uncheckedChildren = checkbox.parentElement?.parentElement?.querySelectorAll(".mod-tree-file .file-checkbox:not(.checked)");
+				if (uncheckedChildren?.length ?? 0 > 0) 
+				{
+					checkbox.checked = false;
+					checkbox.classList.toggle("checked", checkbox.checked);
+				}
+			}
+		});
 	}
 }

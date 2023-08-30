@@ -11,6 +11,8 @@ import { LinkTree } from "./link-tree";
 
 export class HTMLGenerator
 {
+	public static convertableExtensions = ["md"];
+	
 	public static isBatchStarted() : boolean
 	{
 		return MarkdownRenderer.batchStarted;

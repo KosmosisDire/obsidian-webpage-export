@@ -90,7 +90,7 @@ export class Utils
 		if (picker.canceled) return undefined;
 		
 		let pickedPath = new Path(picker.filePath);
-		MainSettings.settings.lastExportPath = pickedPath.asString;
+		MainSettings.settings.exportPath = pickedPath.asString;
 		MainSettings.saveSettings();
 		
 		return pickedPath;
@@ -109,7 +109,7 @@ export class Utils
 		if (picker.canceled) return undefined;
 
 		let path = new Path(picker.filePaths[0]);
-		MainSettings.settings.lastExportPath = path.directory.asString;
+		MainSettings.settings.exportPath = path.directory.asString;
 		MainSettings.saveSettings();
 
 		return path;
@@ -117,7 +117,7 @@ export class Utils
 
 	static idealDefaultPath() : Path
 	{
-		let lastPath = new Path(MainSettings.settings.lastExportPath);
+		let lastPath = new Path(MainSettings.settings.exportPath);
 
 		if (lastPath.asString != "" && lastPath.exists)
 		{

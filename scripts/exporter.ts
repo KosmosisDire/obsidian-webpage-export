@@ -11,7 +11,6 @@ import { Utils } from "./utils/utils";
 
 export class HTMLExporter
 {
-	public static convertableExtensions = ["md"];
 
 	public static async exportFile(file: TFile, exportFromPath: Path, exportToPath: Path, saveFile: boolean) : Promise<ExportFile | undefined>
 	{
@@ -37,7 +36,7 @@ export class HTMLExporter
 			return;
 		}
 
-		if(HTMLExporter.convertableExtensions.contains(file.extension)) 
+		if(HTMLGenerator.convertableExtensions.contains(file.extension)) 
 		{
 			await HTMLGenerator.generateWebpage(exportedFile);
 		}
@@ -47,7 +46,7 @@ export class HTMLExporter
 			(
 				new Downloadable
 				(
-					filePath.basename + ".html", 
+					filePath.fullName,
 					await filePath.readFileBuffer() ?? "", 
 					filePath.directory
 				)

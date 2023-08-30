@@ -4,6 +4,7 @@ import HTMLExportPlugin from '../main';
 import { MainSettings } from './main-settings';
 import { FilePicker } from './file-picker';
 import { Path } from 'scripts/utils/path';
+import { HTMLGenerator } from 'scripts/html-generation/html-generator';
 
 export interface ExportInfo
 {
@@ -39,6 +40,8 @@ export class ExportModal extends Modal
 
 		super.open();
 
+		await HTMLGenerator.endBatch();
+
 		let modalDivider: HTMLElement | undefined = undefined; // divider in between the main modal and the file picker modal
 		if(!this.filePickerModalEl)
 		{
@@ -52,11 +55,16 @@ export class ExportModal extends Modal
 			this.filePickerModalEl.style.padding = "0";
 			this.filePickerModalEl.style.margin = "10px";
 			this.filePickerModalEl.style.maxHeight = "80%";
+			this.filePickerModalEl.style.boxShadow = "0 0 7px 1px inset #00000060";
+
 			let container = this.filePickerModalEl.createDiv({ cls: 'modal-content tree-container file-tree mod-nav-indicator' });
 			container.style.height = "100%";
 			container.style.width = "100%";
 			container.style.padding = "0";
 			container.style.margin = "0";
+			container.style.display = "flex";
+			container.style.flexDirection = "column";
+			container.style.alignItems = "flex-end";
 			
 			let scrollArea = container.createDiv({ cls: 'tree-scroll-area' });
 			scrollArea.style.height = "100%";
@@ -77,6 +85,22 @@ export class ExportModal extends Modal
 
 			this.filePicker = FilePicker.getFileSelectTree(app.vault.getFiles());
 			this.filePicker.buildTree(scrollArea);
+			if(MainSettings.settings.pickedFiles[0].length > 0) this.filePicker.setSelectedFiles(MainSettings.settings.pickedFiles[0].map(path => new Path(path)));
+
+			let saveFiles = new Setting(container).addButton((button) => 
+			{
+				button.setButtonText("Save").onClick(async () =>
+				{
+					MainSettings.settings.pickedFiles[0] = this.filePicker.getSelectedFiles().map(file => file.path);
+					console.log(MainSettings.settings.pickedFiles[0]);
+					await MainSettings.saveSettings();
+				});
+			});
+				
+
+			saveFiles.settingEl.style.border = "none";
+			saveFiles.settingEl.style.marginRight = "1em";
+			
 		}
 
 
@@ -203,17 +227,18 @@ export class ExportModal extends Modal
 			{
 				text.inputEl.style.width = '100%';
 				text.setPlaceholder('Enter an absolute export directory path')
-					.setValue(MainSettings.settings.lastExportPath)
+					.setValue(MainSettings.settings.exportPath)
 					.onChange(async (value) => 
 					{
 						let path = new Path(value);
+						console.log(path);
 						if(!path.isDirectory) errorMessage.setText("Path must be a directory!");
 						else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
 						else
 						{
 							errorMessage.setText("");
-							MainSettings.settings.lastExportPath = value.replaceAll("\"", "");
-							text.setValue(MainSettings.settings.lastExportPath);
+							MainSettings.settings.exportPath = value.replaceAll("\"", "");
+							text.setValue(MainSettings.settings.exportPath);
 							await MainSettings.saveSettings();
 						}
 					});
@@ -226,7 +251,7 @@ export class ExportModal extends Modal
 					let path = await Utils.showSelectFolderDialog(ideal)
 					if (path) 
 					{
-						MainSettings.settings.lastExportPath = path.directory.asString;
+						MainSettings.settings.exportPath = path.directory.asString;
 						await MainSettings.saveSettings();
 						this.open();
 					}
@@ -265,7 +290,7 @@ export class ExportModal extends Modal
 		
 		this.pickedFiles = this.filePicker.getSelectedFiles();
 		this.filePickerModalEl.remove();
-		this.exportInfo = { canceled: this.canceled, pickedFiles: this.pickedFiles, exportPath: new Path(MainSettings.settings.lastExportPath)};
+		this.exportInfo = { canceled: this.canceled, pickedFiles: this.pickedFiles, exportPath: new Path(MainSettings.settings.exportPath)};
 
 		return this.exportInfo;
 	}

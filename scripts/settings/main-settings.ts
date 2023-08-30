@@ -49,7 +49,8 @@ export interface MainSettingsData
 	graphMaxNodeSize: number;
 
 	// Cache
-	lastExportPath: string;
+	exportPath: string;
+	pickedFiles: string[][];
 }
 
 const DEFAULT_SETTINGS: MainSettingsData =
@@ -96,13 +97,15 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	graphMaxNodeSize: 7,
 
 	// Cache
-	lastExportPath: '',
+	exportPath: '',
+	pickedFiles: [[]],
 }
 
 export class MainSettings extends PluginSettingTab {
 
 	static settings: MainSettingsData = DEFAULT_SETTINGS;
 	static plugin: Plugin;
+
 
 	private blacklistedPluginIDs: string[] = [];
 	public async getBlacklistedPluginIDs(): Promise<string[]> {

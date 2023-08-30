@@ -65,8 +65,20 @@ input[type=checkbox].file-checkbox
 
 .theme-dark .tree-item:has(.file-checkbox.checked).mod-tree-folder
 {
+	transition: border-radius 0.2s, background-color 0.2s;
 	background-color: rgba(var(--color-blue-rgb), 0.05);
-	border-radius: 0 var(--radius-m) var(--radius-m) 0;
+	border-radius: 3px var(--radius-l) var(--radius-l) 3px;
+}
+
+.tree-item:has(.file-checkbox).mod-tree-folder
+{
+	margin-top: 2px;
+	margin-bottom: 2px;
+}
+
+.tree-item:has(.file-checkbox.checked).mod-tree-folder.is-collapsed
+{
+	border-radius: 3px;
 }
 
 .theme-dark .tree-item:has(> .tree-item-contents > .file-checkbox:not(.checked)):has(.file-checkbox.checked).mod-tree-folder
@@ -76,8 +88,9 @@ input[type=checkbox].file-checkbox
 
 .theme-light .tree-item:has(.file-checkbox.checked).mod-tree-folder
 {
+	transition: border-radius 0.2s, background-color 0.2s;
 	background-color: rgba(var(--color-blue-rgb), 0.12);
-	border-radius: 0 var(--radius-m) var(--radius-m) 0;
+	border-radius: 3px var(--radius-l) var(--radius-l) 3px;
 }
 
 .theme-light .tree-item:has(> .tree-item-contents > .file-checkbox:not(.checked)):has(.file-checkbox.checked).mod-tree-folder
@@ -132,7 +145,6 @@ input[type=checkbox].file-checkbox
 	padding-right: calc(1em + var(--sidebar-margin));
 	padding-bottom: 3em;
 	border-radius: var(--radius-m);
-	position: absolute;
 }
 
 .tree-container .tree-item 
