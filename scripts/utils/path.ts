@@ -80,7 +80,18 @@ export class Path
 			this.log("Could not decode path:" + path, e.stack, "error");
 		}
 
-		let parsed = pathTools.parse(path);
+		let parsed = pathTools.parse(path) as { root: string, dir: string, base: string, ext: string, name: string };
+		
+		if (parsed.ext.contains(" "))
+		{
+			parsed.ext = "";
+		}
+
+		if(parsed.name.endsWith(" "))
+		{
+			parsed.name += parsed.ext;
+			parsed.ext = "";
+		}
 
 		let parent = parsed.dir;
 		let fullPath = "";
