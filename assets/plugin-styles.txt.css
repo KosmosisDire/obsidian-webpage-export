@@ -270,7 +270,6 @@ body:has( .markdown-preview-view > embed, .markdown-preview-view > video, .markd
 {
 	padding: 0;
 	margin: 0;
-	/* white-space: nowrap; */
 	overflow: visible;
 }
 

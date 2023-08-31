@@ -126,13 +126,11 @@ export class HTMLGenerator
 		markdownViewEl.outerHTML = content;
 		markdownViewEl = file.document.body.querySelector(".markdown-preview-view") ?? markdownViewEl;
 
-		console.log(markdownViewEl);
-
 		if(MainSettings.settings.allowFoldingHeadings && !markdownViewEl.hasClass("allow-fold-headings")) 
 		{
 			markdownViewEl.addClass("allow-fold-headings");
 		}
-		else if (markdownViewEl.hasClass("allow-fold-headings"))
+		else if (!MainSettings.settings.allowFoldingHeadings && markdownViewEl.hasClass("allow-fold-headings"))
 		{
 			markdownViewEl.removeClass("allow-fold-headings");
 		}
@@ -149,6 +147,7 @@ export class HTMLGenerator
 			if(!element.hasAttribute("data-heading")) return;
 
 			element.style.display = "flex";
+			element.style.whiteSpace = "break-spaces";
 			
 			// continue if heading already has an arrow
 			if (element.querySelector(".heading-collapse-indicator") != null) return;
@@ -158,7 +157,7 @@ export class HTMLGenerator
 			el.innerHTML = arrowHTML;
 			element.prepend(el);
 		});
-		
+
 		// remove collapsible arrows from h1 and inline titles
 		file.document.querySelectorAll("div h1, div .inline-title").forEach((element) =>
 		{
@@ -173,6 +172,20 @@ export class HTMLGenerator
 		file.sizerElement.style.paddingBottom = "50vh";
 		file.sizerElement.style.width = "100%";
 		file.sizerElement.style.position = "absolute";
+
+		// if the dynamic table of contents plugin is included on this page
+		// then parse each list item and render markdown for it
+		file.document.querySelectorAll(".block-language-toc.dynamic-toc li > a").forEach(async (element: HTMLElement) =>
+		{
+			let renderComp = new Component();
+			renderComp.load();
+			let renderEl = file.document.body.createDiv();
+			await ObsidianRenderer.renderMarkdown(element.textContent ?? "", renderEl, file.file.path, renderComp);
+			console.log(renderEl.textContent);
+			element.textContent = renderEl.textContent;
+			renderEl.remove();
+			renderComp.unload();
+		});
 
 		// modify links to work outside of obsidian (including relative links)
 		this.fixLinks(file); 
@@ -482,8 +495,8 @@ export class HTMLGenerator
 
 		file.document.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((headerEl) =>
 		{
-			// use the headers inner text as the id
-			headerEl.setAttribute("id", headerEl.textContent?.replaceAll(" ", "_") ?? "");
+			// convert the data-heading to the id
+			headerEl.setAttribute("id", (headerEl.getAttribute("data-heading") ?? headerEl.textContent)?.replaceAll(" ", "_") ?? "");
 		});
 	}
 
@@ -636,6 +649,32 @@ export class HTMLGenerator
 		treeItemEl.createDiv("tree-item-children");
 		await ObsidianRenderer.renderMarkdown(item.title, titleEl, "/", renderComp);
 		renderComp.unload();
+		//remove lists and replace them with plain text
+		titleEl.querySelectorAll("ol").forEach((el) =>
+		{
+			if(el.parentElement)
+			{
+				let start = el.getAttribute("start") ?? "1";
+				el.parentElement.createSpan().innerHTML = start + ". " + el.innerHTML;
+				el.remove();
+			}
+		});
+		titleEl.querySelectorAll("ul").forEach((el) =>
+		{
+			if(el.parentElement)
+			{
+				el.parentElement.createSpan().innerHTML = "- " + el.innerHTML;
+				el.remove();
+			}
+		});
+		titleEl.querySelectorAll("li").forEach((el) =>
+		{
+			if(el.parentElement)
+			{
+				el.parentElement.createSpan().innerHTML = el.innerHTML;
+				el.remove();
+			}
+		});
 
 		return treeItemEl;
 	}

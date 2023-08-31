@@ -6,6 +6,7 @@ import { TabManager } from "scripts/utils/tab-manager";
 const { clipboard } = require('electron')
 import { RenderLog } from "./render-log";
 import { MainSettings } from "scripts/settings/main-settings";
+import { html_beautify } from "js-beautify";
 
 
 export namespace MarkdownRenderer
@@ -155,6 +156,14 @@ export namespace MarkdownRenderer
 				element.removeAttribute("width");
 			}
 		});
+
+		if (MainSettings.settings.beautifyHTML) 
+		{
+			file.document.documentElement.outerHTML = html_beautify(file.document.documentElement.outerHTML, { indent_size: 2 });
+		
+			// remove all new lines from header elements which cause spacing issues
+			document.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((el) => el.innerHTML = el.innerHTML.replaceAll("\n", "")); 
+		}
 	}
 	
     export async function beginBatch()
@@ -330,6 +339,7 @@ export namespace MarkdownRenderer
 
 	export async function _reportError(messageTitle: string, message: string, fatal: boolean)
 	{
+		let firstLog = problemLog == "";
         messageTitle = (fatal ? "[Fatal Error] " : "[Error] ") + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
@@ -341,7 +351,7 @@ export namespace MarkdownRenderer
 			return;
 		}
 
-		if(problemLog == "")
+		if(firstLog)
 		{
 			this.renderLeaf.view.containerEl.win.resizeTo(900, 500);
 		}
@@ -383,13 +393,14 @@ export namespace MarkdownRenderer
 
 	export async function _reportWarning(messageTitle: string, message: string)
 	{
+		let firstLog = problemLog == "";
 		messageTitle = "[Warning] " + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
 		// return if log level does not include warnings
 		if(!["warning", "all"].contains(MainSettings.settings.logLevel)) return;
 
-		if(problemLog == "")
+		if(firstLog)
 		{
 			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
 		}
@@ -414,12 +425,13 @@ export namespace MarkdownRenderer
 
     export async function _reportInfo(messageTitle: string, message: string)
 	{
+		let firstLog = problemLog == "";
         messageTitle = "[Info] " + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
 		if(!(MainSettings.settings.logLevel == "all")) return;
 
-		if(problemLog == "")
+		if(firstLog)
 		{
 			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
 		}

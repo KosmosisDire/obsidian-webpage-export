@@ -143,7 +143,7 @@ hr
 
 /*#region Fonts */
 
-/* 
+
 @font-face
 {
     font-family: MJXZERO;
@@ -376,6 +376,6 @@ hr
     font-family: 'Flow Circular';
     font-display: swap;
     src: url('https://publish.obsidian.md/public/fonts/853ff76f08786ae44ca0.woff');
-} */
+} 
 
 /*#endregion */

@@ -344,21 +344,23 @@ var slideToggleAll = (targets, duration = 500) => {
 
 async function loadDocument(url, pushHistory = true, scrollTo = true)
 {
-	console.log("Loading document: " + url);
+	let splitURL = url.split("#");
+	let pathnameTarget = splitURL[0] ?? url;
+	console.log("Loading document: " + pathnameTarget);
 	
 	// change the active file
-	setActiveDocument(url, scrollTo, pushHistory);
+	setActiveDocument(pathnameTarget, scrollTo, pushHistory);
 
 	let response;
 
 	try
 	{
-		response = await fetch(url);
+		response = await fetch(pathnameTarget);
 	}
 	catch (error)
 	{
 		console.log("Cannot use fetch API (likely due to CORS), just loading the page normally.");
-		window.location.assign(url);
+		window.location.assign(pathnameTarget);
 		return;
 	}
 
@@ -366,7 +368,7 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 
 	if (response.ok)
 	{
-		let extention = url.split(".").pop();
+		let extention = url.split(".").pop().split("?")[0].split("#")[0].toLowerCase().trim();
 
 		if(extention == "html")
 		{
@@ -378,8 +380,6 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 			document.querySelector(".outline-tree").innerHTML = doc.querySelector(".outline-tree").innerHTML;
 		
 			// if the url has a heading, scroll to it
-			let splitURL = url.split("#");
-			let pathnameTarget = splitURL[0] ?? url;
 			let headingTarget = splitURL.length > 1 ? splitURL[1] : null;
 			if (headingTarget) document.getElementById(headingTarget).scrollIntoView();
 

@@ -81,6 +81,13 @@ input[type=checkbox].file-checkbox
 	border-radius: 3px;
 }
 
+.tree-item-title *
+{
+	padding: 0;
+	margin: 0;
+	overflow: visible;
+}
+
 .theme-dark .tree-item:has(> .tree-item-contents > .file-checkbox:not(.checked)):has(.file-checkbox.checked).mod-tree-folder
 {
 	background-color: rgba(var(--color-pink-rgb), 0.08);

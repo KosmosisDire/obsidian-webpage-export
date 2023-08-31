@@ -95,7 +95,6 @@ export class ExportFile
 	get html(): string
 	{
 		let htmlString = "<!DOCTYPE html>\n" + this.document.documentElement.outerHTML;
-		if (MainSettings.settings.beautifyHTML) htmlString = html_beautify(htmlString, { indent_size: 2 });
 		return htmlString;
 	}
 
@@ -133,7 +132,6 @@ export class ExportFile
 
 	get isFileModified(): boolean
 	{
-		console.log(this.exportPathAbsolute.asString);
 		return this.file.stat.mtime > (this.exportPathAbsolute.stat?.mtime.getTime() ?? Number.NEGATIVE_INFINITY);
 	}
 
