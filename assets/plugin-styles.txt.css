@@ -1,85 +1,3 @@
-/*#region Code Copy */
-
-/* Make code block copy button fade in and out */
-.markdown-rendered pre:not(:hover) > button.copy-code-button
-{
-	display: unset;
-	opacity: 0;
-}
-
-.markdown-rendered pre:hover > button.copy-code-button
-{
-	opacity: 1;
-}
-
-.markdown-rendered pre button.copy-code-button
-{
-	transition: opacity 0.2s ease-in-out, width 0.3s ease-in-out, background-color 0.2s ease-in-out;
-	text-overflow: clip;
-}
-
-.markdown-rendered pre > button.copy-code-button:hover
-{
-	background-color: var(--interactive-normal);
-}
-
-.markdown-rendered pre > button.copy-code-button:active
-{
-	background-color: var(--interactive-hover);
-	box-shadow: var(--input-shadow);
-	transition: none;
-}
-
-/*#endregion */
-
-/*#region Canvas */
-.canvas-card-menu {
-	display: none;
-	cursor: default !important;
-
-}
-
-.canvas-controls {
-	display: none;
-	cursor: default !important;
-
-}
-
-.canvas-node-connection-point 
-{
-	display: none;
-	cursor: default !important;
-
-}
-
-.canvas-menu-container {
-	display: none;
-}
-
-.canvas-node-content-blocker
-{
-	display: none;
-	cursor: pointer !important;
-}
-
-.canvas-wrapper
-{
-	position: relative;
-	cursor: default !important;
-}
-
-.canvas-node-resizer
-{
-	cursor: default !important;
-}
-
-.canvas-node-container
-{
-	cursor: default !important;
-}
-
-/*#endregion */
-
 /*#region Sidebars */
 
 .sidebar {
@@ -223,6 +141,26 @@
     justify-content: center;
 }
 
+/* If the markdown view is displaying a raw file or embed then increase it's size to make everything as large as possible */
+.markdown-preview-view:has( > embed), .markdown-preview-view:has( > img), .markdown-preview-view:has( > video), .markdown-preview-view:has( > audio), .markdown-preview-view:has( > frame)
+{
+	padding: 1em;
+	height: 100%;
+  align-items: center;
+}
+
+/* Hide the right sidebar when displaying a raw file */
+.webpage-container:has( .markdown-preview-view > embed, .markdown-preview-view > video, .markdown-preview-view > frame) .sidebar-right
+{
+  display: none;
+}
+
+/* Widen content area as much as possible when showing raw content */
+body:has( .markdown-preview-view > embed, .markdown-preview-view > video, .markdown-preview-view > frame)
+{
+    --content-width: 100% !important;
+}
+
 .document-container > .markdown-preview-view > .markdown-preview-sizer
 {
     padding: unset;
@@ -326,6 +264,14 @@
     margin-left: 0;
     border-left: none;
     width: 100%;
+}
+
+.tree-item-title *
+{
+	padding: 0;
+	margin: 0;
+	/* white-space: nowrap; */
+	overflow: visible;
 }
 
 .tree-container .tree-item.mod-active > .tree-item-contents > .tree-item-link
@@ -759,18 +705,3 @@ a {
 
 /*#endregion */
 
-/*#region Tweaks */
-
-hr
-{
-    border: none;
-	border-top: var(--hr-thickness) solid;
-    border-color: var(--hr-color);
-}
-
-.markdown-embed-link
-{
-    display: none;
-}
-
-/*#endregion */

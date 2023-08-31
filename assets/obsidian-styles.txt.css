@@ -1,12 +1,30 @@
-.callout
+.list-collapse-indicator
 {
-	mix-blend-mode: normal !important;
+    display: none !important;
+}
+
+.collapse-icon::before 
+{ 
+    /* content: "​" !important;  */
+    content: "" !important;
+    visibility: hidden !important;
+}
+
+.embedded-backlinks
+{
+	display: none !important;
+}
+
+hr
+{
+    border: none;
+	border-top: var(--hr-thickness) solid;
+    border-color: var(--hr-color);
 }
 
 @media print 
 {
-    
-    html body> :not(.print) 
+    html body > :not(.print) 
     {
         display: unset !important;
     }
@@ -22,11 +40,110 @@
     }
 }
 
-.list-collapse-indicator
+/*#region Transclusions */
+
+.markdown-embed .markdown-embed-content .markdown-preview-sizer
 {
-    display: none !important;
+	padding-left: 1em !important;
 }
 
+.markdown-embed .embed-title.markdown-embed-title
+{
+	display: none;
+}
+
+.markdown-embed .markdown-embed-link
+{
+	display: none;
+}
+
+/*#endregion  */
+
+/*#region Canvas */
+.canvas-card-menu {
+	display: none;
+	cursor: default !important;
+
+}
+
+.canvas-controls {
+	display: none;
+	cursor: default !important;
+
+}
+
+.canvas-node-connection-point 
+{
+	display: none;
+	cursor: default !important;
+
+}
+
+.canvas-menu-container {
+	display: none;
+}
+
+.canvas-node-content-blocker
+{
+	display: none;
+	cursor: pointer !important;
+}
+
+.canvas-wrapper
+{
+	position: relative;
+	cursor: default !important;
+}
+
+.canvas-node-resizer
+{
+	cursor: default !important;
+}
+
+.canvas-node-container
+{
+	cursor: default !important;
+}
+
+/*#endregion */
+
+/*#region Code Copy */
+
+/* Make code block copy button fade in and out */
+.markdown-rendered pre:not(:hover) > button.copy-code-button
+{
+	display: unset;
+	opacity: 0;
+}
+
+.markdown-rendered pre:hover > button.copy-code-button
+{
+	opacity: 1;
+}
+
+.markdown-rendered pre button.copy-code-button
+{
+	transition: opacity 0.2s ease-in-out, width 0.3s ease-in-out, background-color 0.2s ease-in-out;
+	text-overflow: clip;
+}
+
+.markdown-rendered pre > button.copy-code-button:hover
+{
+	background-color: var(--interactive-normal);
+}
+
+.markdown-rendered pre > button.copy-code-button:active
+{
+	background-color: var(--interactive-hover);
+	box-shadow: var(--input-shadow);
+	transition: none;
+}
+
+/*#endregion */
+
+/*#region Fonts */
+
+/* 
 @font-face
 {
     font-family: MJXZERO;
@@ -259,11 +376,6 @@
     font-family: 'Flow Circular';
     font-display: swap;
     src: url('https://publish.obsidian.md/public/fonts/853ff76f08786ae44ca0.woff');
-}
+} */
 
-.collapse-icon::before 
-{ 
-    /* content: "​" !important;  */
-    content: "" !important;
-    visibility: hidden !important;
-}
+/*#endregion */

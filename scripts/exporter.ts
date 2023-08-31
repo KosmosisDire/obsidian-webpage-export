@@ -1,4 +1,4 @@
-import { Notice, TFile, TFolder } from "obsidian";
+import { MarkdownRenderer, Notice, TFile, TFolder } from "obsidian";
 import { ExportFile } from "./html-generation/export-file";
 import { HTMLGenerator } from "./html-generation/html-generator";
 import { Path } from "./utils/path";
@@ -7,6 +7,7 @@ import { RenderLog } from "./html-generation/render-log";
 import { Downloadable } from "./utils/downloadable";
 import HTMLExportPlugin from "./main";
 import { Utils } from "./utils/utils";
+import { AssetHandler } from "./html-generation/asset-handler";
 
 
 export class HTMLExporter
@@ -42,15 +43,7 @@ export class HTMLExporter
 		}
 		else 
 		{
-			exportedFile.downloads.push
-			(
-				new Downloadable
-				(
-					filePath.fullName,
-					await filePath.readFileBuffer() ?? "", 
-					filePath.directory
-				)
-			);
+			exportedFile.downloads.push(await exportedFile.getSelfDownloadable());
 		}
 
 		if(saveFile) await this.saveExports([exportedFile], exportToPath.directory.absolute());
@@ -74,7 +67,8 @@ export class HTMLExporter
 			try
 			{
 				RenderLog.progress(i, files.length, "Generating HTML", "Exporting: " + file.path, "var(--color-accent)");
-				let exportPath = rootExportPath.joinString(file.name).setExtension("html");
+				let exportPath = rootExportPath.joinString(file.name);
+				if (HTMLGenerator.convertableExtensions.contains(file.extension)) exportPath.setExtension("html");
 				let exportedFile = await this.exportFile(file, new Path(file.path), exportPath, false);
 				if(exportedFile) exports.push(exportedFile);
 			}
@@ -117,7 +111,20 @@ export class HTMLExporter
 			downloads.push(...exports[i].downloads);
 		}
 
+		downloads.forEach((file) =>
+		{
+			if(MainSettings.settings.makeNamesWebStyle) 
+			{
+				file.filename = Path.toWebStyle(file.filename);
+				file.relativeDownloadPath.makeWebStyle();
+			}
+		});
+
+		downloads.push(...await AssetHandler.getDownloads());
+
 		downloads = downloads.filter((file, index) => downloads.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath && f.filename === file.filename) == index);
+
+
 
 		await Utils.downloadFiles(downloads, rootPath);
 	}

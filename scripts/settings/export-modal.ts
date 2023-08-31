@@ -42,13 +42,13 @@ export class ExportModal extends Modal
 
 		await HTMLGenerator.endBatch();
 
-		let modalDivider: HTMLElement | undefined = undefined; // divider in between the main modal and the file picker modal
+		// let modalDivider: HTMLElement | undefined = undefined; // divider in between the main modal and the file picker modal
 		if(!this.filePickerModalEl)
 		{
 			this.filePickerModalEl = this.containerEl.createDiv({ cls: 'modal' });
-			modalDivider = this.containerEl.createDiv();
+			// modalDivider = this.containerEl.createDiv();
 			this.containerEl.insertBefore(this.filePickerModalEl, this.modalEl);
-			this.containerEl.insertBefore(modalDivider, this.modalEl);
+			// this.containerEl.insertBefore(modalDivider, this.modalEl);
 			this.filePickerModalEl.style.position = 'relative';
 			this.filePickerModalEl.style.zIndex = "1";
 			this.filePickerModalEl.style.width = "20em";
@@ -74,17 +74,17 @@ export class ExportModal extends Modal
 			scrollArea.style.padding = "1em";
 			scrollArea.style.boxShadow = "0 0 7px 1px inset #00000060";
 
-			modalDivider.style.width = "2px";
-			modalDivider.style.opacity = "0.4";
-			modalDivider.style.backgroundColor = "var(--text-faint)";
-			modalDivider.style.zIndex = "2";
-			modalDivider.style.marginLeft = "0.4em";
-			modalDivider.style.marginRight = "1em";
-			modalDivider.style.maxHeight = "75%";
+			// modalDivider.style.width = "2px";
+			// modalDivider.style.opacity = "0.4";
+			// modalDivider.style.backgroundColor = "var(--text-faint)";
+			// modalDivider.style.zIndex = "2";
+			// modalDivider.style.marginLeft = "0.4em";
+			// modalDivider.style.marginRight = "1em";
+			// modalDivider.style.maxHeight = "75%";
 			
 
 			this.filePicker = FilePicker.getFileSelectTree(app.vault.getFiles());
-			this.filePicker.buildTree(scrollArea);
+			await this.filePicker.buildTree(scrollArea);
 			if(MainSettings.settings.pickedFiles[0].length > 0) this.filePicker.setSelectedFiles(MainSettings.settings.pickedFiles[0].map(path => new Path(path)));
 
 			let saveFiles = new Setting(container).addButton((button) => 
@@ -284,7 +284,7 @@ export class ExportModal extends Modal
 
 
 		this.filePickerModalEl.style.height = this.modalEl.clientHeight * 2 + "px";
-		if(modalDivider) modalDivider.style.height = this.modalEl.clientHeight * 1.9 + "px";
+		// if(modalDivider) modalDivider.style.height = this.modalEl.clientHeight * 1.9 + "px";
 
 		await Utils.waitUntil(() => this.isClosed, 60 * 60 * 1000, 10);
 		

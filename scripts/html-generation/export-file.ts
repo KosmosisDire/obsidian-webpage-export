@@ -10,7 +10,7 @@ export class ExportFile
 	/**
 	 * The original markdown file to export.
 	 */
-	public markdownFile: TFile;
+	public file: TFile;
 
 	/**
 	 * The absolute path to the FOLDER we are exporting to
@@ -28,7 +28,7 @@ export class ExportFile
 	public partOfBatch: boolean;
 
 	/**
-	 * The name of the file being exported, with the .html extension
+	 * The name of the file being exported, with the extension
 	 */
 	public name: string;
 
@@ -61,17 +61,16 @@ export class ExportFile
 	 * @param fileName The name of the file being exported, with the .html extension
 	 * @param forceExportToRoot Force the file to be saved directly int eh export folder rather than in it's subfolder.
 	 */
-	constructor(file: TFile, exportToFolder: Path, exportFromFolder: Path, partOfBatch: boolean, fileName: string = "", forceExportToRoot: boolean = false)
+	constructor(file: TFile, exportToFolder: Path, exportFromFolder: Path, partOfBatch: boolean, fileName: string, forceExportToRoot: boolean = false)
 	{
 		if(exportToFolder.isFile || !exportToFolder.isAbsolute) throw new Error("exportToFolder must be an absolute path to a folder: " + exportToFolder.asString);
-		if(!fileName.endsWith(".html")) throw new Error("fileName must be a .html file: " + fileName);
-
-		this.markdownFile = file;
+		
+		this.file = file;
 		this.exportToFolder = exportToFolder;
 		this.exportedFolder = exportFromFolder;
 		this.partOfBatch = partOfBatch;
+		this.name = fileName;
 
-		this.name = (fileName === "" ? (file.basename + ".html") : fileName);
 		let parentPath = file.parent.path;
 		if (parentPath.trim() == "/" || parentPath.trim() == "\\") parentPath = "";
 		this.exportPath = Path.joinStrings(parentPath, this.name);
@@ -84,7 +83,10 @@ export class ExportFile
 			this.exportPath.makeWebStyle();
 		}
 
-		this.document = document.implementation.createHTMLDocument(this.markdownFile.basename);
+		if(fileName.endsWith(".html"))
+		{
+			this.document = document.implementation.createHTMLDocument(this.file.basename);
+		}
 	}
 
 	/**
@@ -131,15 +133,17 @@ export class ExportFile
 
 	get isFileModified(): boolean
 	{
-		return this.markdownFile.stat.mtime > (this.exportPathAbsolute.stat?.mtime.getTime() ?? Number.NEGATIVE_INFINITY);
+		console.log(this.exportPathAbsolute.asString);
+		return this.file.stat.mtime > (this.exportPathAbsolute.stat?.mtime.getTime() ?? Number.NEGATIVE_INFINITY);
 	}
 
 	/**
 	 * Returns a downloadable object to download the .html file to the current path with the current html contents.
 	 */
-	public getSelfDownloadable(): Downloadable
+	public async getSelfDownloadable(): Promise<Downloadable>
 	{
-		return new Downloadable(this.name, this.html, this.exportPath.directory.makeForceFolder());
+		let content = (this.document ? this.html : await new Path(this.file.path).readFileBuffer()) ?? "";
+		return new Downloadable(this.name, content, this.exportPath.directory.makeForceFolder());
 	}
 
 	public async generateHTML(addSelfToDownloads: boolean = false): Promise<ExportFile>

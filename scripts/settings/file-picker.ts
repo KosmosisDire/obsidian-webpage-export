@@ -114,9 +114,9 @@ export class FilePicker extends LinkTree
 		return new FilePicker(GlobalDataGenerator.getFileTree(exportedFiles));
 	}
 
-	public buildTree(container: HTMLElement)
+	public async buildTree(container: HTMLElement)
 	{
-		let tree = HTMLGenerator.buildTreeRecursive(this, document, 0, 0, true);
+		let tree = await HTMLGenerator.buildTreeRecursive(this, document, 0, 0, true);
 
 		for (let i = 0; i < tree.length; i++)
 		{

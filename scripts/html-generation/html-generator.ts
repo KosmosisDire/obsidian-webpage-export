@@ -1,4 +1,4 @@
-import { setIcon } from "obsidian";
+import { Component, MarkdownRenderer as ObsidianRenderer, setIcon } from "obsidian";
 import { Path } from "../utils/path";
 import { GlobalDataGenerator } from "./global-gen";
 import { MarkdownRenderer } from "./markdown-renderer";
@@ -65,8 +65,8 @@ export class HTMLGenerator
 		// inject outline
 		if (MainSettings.settings.includeOutline)
 		{
-			let headerTree = LinkTree.headersFromFile(file.markdownFile, 1);
-			let outline : HTMLElement | undefined = this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", "outline-tree", false, 1, 2, MainSettings.settings.startOutlineCollapsed);
+			let headerTree = LinkTree.headersFromFile(file.file, 1);
+			let outline : HTMLElement | undefined = await this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", "outline-tree", false, 1, 2, MainSettings.settings.startOutlineCollapsed);
 			rightSidebar.appendChild(outline);
 		}
 
@@ -82,13 +82,13 @@ export class HTMLGenerator
 		{
 			let tree = GlobalDataGenerator.getFileTree();
 			if (MainSettings.settings.makeNamesWebStyle) tree.makeLinksWebStyle();
-			let fileTree: HTMLDivElement = this.generateHTMLTree(tree, usingDocument, app.vault.getName(), "file-tree", true, 1, 1, true);
+			let fileTree: HTMLDivElement = await this.generateHTMLTree(tree, usingDocument, app.vault.getName(), "file-tree", true, 1, 1, true);
 			leftSidebar.appendChild(fileTree);
 		}
 
 		await this.fillInHead(file);
 
-		file.downloads.unshift(file.getSelfDownloadable());
+		file.downloads.unshift(await file.getSelfDownloadable());
 
 		return file;
 	}
@@ -124,6 +124,9 @@ export class HTMLGenerator
 		let content = await MarkdownRenderer.renderMarkdown(file);
 		if (MarkdownRenderer.cancelled) throw new Error("Markdown rendering cancelled");
 		markdownViewEl.outerHTML = content;
+		markdownViewEl = file.document.body.querySelector(".markdown-preview-view") ?? markdownViewEl;
+
+		console.log(markdownViewEl);
 
 		if(MainSettings.settings.allowFoldingHeadings && !markdownViewEl.hasClass("allow-fold-headings")) 
 		{
@@ -191,7 +194,7 @@ export class HTMLGenerator
 		mathStyleEl.innerHTML = AssetHandler.mathStyles;
 		file.contentElement.prepend(mathStyleEl);
 
-		if(addSelfToDownloads) file.downloads.push(file.getSelfDownloadable());
+		if(addSelfToDownloads) file.downloads.push(await file.getSelfDownloadable());
 		file.downloads.push(...outlinedImages);
 		file.downloads.push(...await AssetHandler.getDownloads());
 
@@ -213,7 +216,7 @@ export class HTMLGenerator
 		let hasTitle = currentTitleEl != null;
 		let currentTitle = currentTitleEl?.textContent ?? "";
 
-		if (!hasTitle || (currentTitleEl?.tagName == "H2" && currentTitle != file.markdownFile.basename))
+		if (!hasTitle || (currentTitleEl?.tagName == "H2" && currentTitle != file.file.basename))
 		{
 			let divContainer = file.document.querySelector("div.mod-header");
 			if (!divContainer) 
@@ -224,11 +227,11 @@ export class HTMLGenerator
 			}
 
 			let title = divContainer.createEl("div");
-			title.innerText = file.markdownFile.basename;
+			title.innerText = file.file.basename;
 			title.setAttribute("class", "inline-title");
 			title.setAttribute("data-heading", title.innerText);
 			title.style.display = "block";
-			title.id = file.markdownFile.basename.replaceAll(" ", "_");
+			title.id = file.file.basename.replaceAll(" ", "_");
 		}
 	}
 
@@ -338,7 +341,7 @@ export class HTMLGenerator
 
 		let meta =
 		`
-		<title>${file.markdownFile.basename}</title>
+		<title>${file.file.basename}</title>
 		<base href="${relativePaths.rootPath}/">
 		<meta id="root-path" root-path="${relativePaths.rootPath}/">
 
@@ -459,7 +462,7 @@ export class HTMLGenerator
 				let targetHeader = href.split("#").length > 1 ? "#" + href.split("#")[1] : "";
 				let target = href.split("#")[0];
 
-				let targetFile = app.metadataCache.getFirstLinkpathDest(target, file.markdownFile.path);
+				let targetFile = app.metadataCache.getFirstLinkpathDest(target, file.file.path);
 				if (!targetFile) return;
 
 				let targetPath = new Path(targetFile.path);
@@ -593,7 +596,7 @@ export class HTMLGenerator
 		return toggle;
 	}
 
-	private static generateTreeItem(item: LinkTree, usingDocument: Document, minCollapsableDepth = 1, startClosed: boolean = true): HTMLDivElement
+	private static async generateTreeItem(item: LinkTree, usingDocument: Document, minCollapsableDepth = 1, startClosed: boolean = true): Promise<HTMLDivElement>
 	{
 		let arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg>`;
 
@@ -626,23 +629,28 @@ export class HTMLGenerator
 
 		let itemLinkEl = itemContentsEl.createEl("a", { cls: "tree-item-link" });
 		if (item.href) itemLinkEl.setAttribute("href", item.href);
-		itemLinkEl.createEl("span", { cls: "tree-item-title", text: item.title });
+
+		let renderComp = new Component();
+		renderComp.load();
+		let titleEl = itemLinkEl.createEl("span", { cls: "tree-item-title" });
 		treeItemEl.createDiv("tree-item-children");
+		await ObsidianRenderer.renderMarkdown(item.title, titleEl, "/", renderComp);
+		renderComp.unload();
 
 		return treeItemEl;
 	}
 
-	public static buildTreeRecursive(tree: LinkTree, usingDocument: Document, minDepth:number = 1, minCollapsableDepth:number = 1, closeAllItems: boolean = false): HTMLDivElement[]
+	public static async buildTreeRecursive(tree: LinkTree, usingDocument: Document, minDepth:number = 1, minCollapsableDepth:number = 1, closeAllItems: boolean = false): Promise<HTMLDivElement[]>
 	{
 		let treeItems: HTMLDivElement[] = [];
 
 		for (let item of tree.children)
 		{
-			let children = this.buildTreeRecursive(item, usingDocument, minDepth, minCollapsableDepth, closeAllItems);
+			let children = await this.buildTreeRecursive(item, usingDocument, minDepth, minCollapsableDepth, closeAllItems);
 
 			if(item.depth >= minDepth)
 			{
-				let treeItem = this.generateTreeItem(item, usingDocument, minCollapsableDepth, closeAllItems);
+				let treeItem = await this.generateTreeItem(item, usingDocument, minCollapsableDepth, closeAllItems);
 				treeItems.push(treeItem);
 				treeItem.querySelector(".tree-item-children")?.append(...children);
 			}
@@ -655,7 +663,7 @@ export class HTMLGenerator
 		return treeItems;
 	}
 
-	public static generateHTMLTree(tree: LinkTree, usingDocument: Document, treeTitle: string, className: string, showNestingIndicator = true, minDepth: number = 1, minCollapsableDepth = 1, closeAllItems: boolean = false): HTMLDivElement
+	public static async generateHTMLTree(tree: LinkTree, usingDocument: Document, treeTitle: string, className: string, showNestingIndicator = true, minDepth: number = 1, minCollapsableDepth = 1, closeAllItems: boolean = false): Promise<HTMLDivElement>
 	{
 		/*
 		- div.tree-container
@@ -702,7 +710,7 @@ export class HTMLGenerator
 		treeHeaderEl.appendChild(collapseAllEl);
 		collapseAllEl.appendChild(collapseAllIconEl);
 
-		let treeItems = this.buildTreeRecursive(tree, usingDocument, minDepth, minCollapsableDepth, closeAllItems);
+		let treeItems = await this.buildTreeRecursive(tree, usingDocument, minDepth, minCollapsableDepth, closeAllItems);
 
 		for (let item of treeItems)
 		{

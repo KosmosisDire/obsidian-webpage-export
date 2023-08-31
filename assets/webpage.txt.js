@@ -351,8 +351,6 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 
 	let response;
 
-	// if(typeof embeddedDocuments == 'undefined')
-	// {
 	try
 	{
 		response = await fetch(url);
@@ -363,37 +361,68 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 		window.location.assign(url);
 		return;
 	}
-	// }
-	// else
-	// {
-	// 	response = new Response(embeddedDocuments[url], {status: 200, statusText: "OK"});
-	// }
 
 	let doc = document.implementation.createHTMLDocument();
 
 	if (response.ok)
 	{
-		let html = (await response.text()).replaceAll("<!DOCTYPE html>", "").replaceAll("<html>", "").replaceAll("</html>", "");
-		doc.documentElement.innerHTML = html;
+		let extention = url.split(".").pop();
 
-		// copy document content and outline tree
-		document.querySelector(".document-container").innerHTML = doc.querySelector(".document-container").innerHTML;
-		document.querySelector(".outline-tree").innerHTML = doc.querySelector(".outline-tree").innerHTML;
-	
-		// if the url has a heading, scroll to it
-		let splitURL = url.split("#");
-		let pathnameTarget = splitURL[0] ?? url;
-		let headingTarget = splitURL.length > 1 ? splitURL[1] : null;
-		if (headingTarget) document.getElementById(headingTarget).scrollIntoView();
+		if(extention == "html")
+		{
+			let html = (await response.text()).replaceAll("<!DOCTYPE html>", "").replaceAll("<html>", "").replaceAll("</html>", "");
+			doc.documentElement.innerHTML = html;
 
-		// Change the root path to match the match from the new page
-		setupRootPath(doc);
+			// copy document content and outline tree
+			document.querySelector(".document-container").innerHTML = doc.querySelector(".document-container").innerHTML;
+			document.querySelector(".outline-tree").innerHTML = doc.querySelector(".outline-tree").innerHTML;
+		
+			// if the url has a heading, scroll to it
+			let splitURL = url.split("#");
+			let pathnameTarget = splitURL[0] ?? url;
+			let headingTarget = splitURL.length > 1 ? splitURL[1] : null;
+			if (headingTarget) document.getElementById(headingTarget).scrollIntoView();
 
-		// initialize events on the new page
-		initializePage(document.querySelector(".document-container"));
-		initializePage(document.querySelector(".outline-tree"));
+			// Change the root path to match the match from the new page
+			setupRootPath(doc);
 
-		document.title = doc.title;
+			// initialize events on the new page
+			initializePage(document.querySelector(".document-container"));
+			initializePage(document.querySelector(".outline-tree"));
+
+			document.title = doc.title;
+		}
+		else
+		{
+			let tag = extentionToTag(extention);
+
+			if(tag != undefined)
+			{
+				let media = document.createElement(tag);
+				media.controls = true;
+				media.src = url;
+
+				if(tag == "embed")
+				{
+					media.style.width = "100%";
+					media.style.height = "100%";
+				}
+				
+				media.style.objectFit = "contain";
+
+				document.querySelector(".markdown-preview-view").innerHTML = "";
+				document.querySelector(".markdown-preview-view").appendChild(media);
+
+				document.querySelector(".outline-tree").innerHTML = "";
+
+				document.title = url.split("/").pop();
+			}
+			else // just download the file
+			{
+				let blob = await response.blob();
+				downloadBlob(blob, url.split("/").pop());
+			}
+		}
 	}
 	else
 	{
@@ -419,6 +448,46 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 
 	return doc;
 }
+
+function extentionToTag(extention)
+{
+	if (["png", "jpg", "jpeg", "svg", "gif", "bmp", "ico"].includes(extention)) return "img";
+	if (["mp4", "mov", "avi", "webm", "mpeg"].includes(extention)) return "video";
+	if (["mp3", "wav", "ogg", "aac"].includes(extention)) return "audio";
+	if (["pdf"].includes(extention)) return "embed";
+	return undefined;
+}
+
+function downloadBlob(blob, name = 'file.txt') {
+    if (
+      window.navigator && 
+      window.navigator.msSaveOrOpenBlob
+    ) return window.navigator.msSaveOrOpenBlob(blob);
+
+    // For other browsers:
+    // Create a link pointing to the ObjectURL containing the blob.
+    const data = window.URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = data;
+    link.download = name;
+
+    // this is necessary as link.click() does not work on the latest firefox
+    link.dispatchEvent(
+      new MouseEvent('click', { 
+        bubbles: true, 
+        cancelable: true, 
+        view: window 
+      })
+    );
+
+    setTimeout(() => {
+      // For Firefox it is necessary to delay revoking the ObjectURL
+      window.URL.revokeObjectURL(data);
+      link.remove();
+    }, 100);
+}
+
 
 function setActiveDocument(url, scrollTo = true, pushHistory = true)
 {

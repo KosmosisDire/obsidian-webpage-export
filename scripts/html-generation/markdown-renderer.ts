@@ -25,11 +25,11 @@ export namespace MarkdownRenderer
 
 		try
 		{
-			await renderLeaf.openFile(file.markdownFile, { active: false});
+			await renderLeaf.openFile(file.file, { active: false});
 		}
 		catch (e)
 		{
-			let message = "Failed to open file! File: " + file.markdownFile.path;
+			let message = "Failed to open file! File: " + file.file.path;
 			RenderLog.warning("Cannot render file: ", message);
 			return generateFailDocument();
 		}
@@ -38,7 +38,7 @@ export namespace MarkdownRenderer
 
 		if(!(renderLeaf.view instanceof MarkdownView))
 		{
-			let message = "This file was not a normal markdown file! File: " + file.markdownFile.path;
+			let message = "This file was not a normal markdown file! File: " + file.file.path;
 			RenderLog.warning("Cannot render file: ", message);
 			return generateFailDocument();
 		}
@@ -50,7 +50,7 @@ export namespace MarkdownRenderer
 
 		if (!previewModeFound)
 		{
-			let message = "Failed to open preview mode! File: " + file.markdownFile.path;
+			let message = "Failed to open preview mode! File: " + file.file.path;
 			RenderLog.warning("Cannot render file: ", message);
 			return generateFailDocument();
 		}
@@ -86,7 +86,7 @@ export namespace MarkdownRenderer
 
 		if (!renderfinished)
 		{
-			let message = "Failed to render file within 30 seconds! File: " + file.markdownFile.path;
+			let message = "Failed to render file within 30 seconds! File: " + file.file.path;
 			RenderLog.warning("Cannot render file: ", message);
 			return generateFailDocument();
 		}
@@ -114,7 +114,7 @@ export namespace MarkdownRenderer
 			return container.innerHTML;
 		}
 
-		let message = "Could not find container with rendered content! File: " + file.markdownFile.path;
+		let message = "Could not find container with rendered content! File: " + file.file.path;
 		RenderLog.warning("Cannot render file: ", message);
 		return generateFailDocument();
 	}
@@ -143,6 +143,17 @@ export namespace MarkdownRenderer
 		{
 			// @ts-ignore
 			element.textContent = element.value;
+		});
+
+		// convert all hard coded image / media widths into max widths
+		html.querySelectorAll("img, video").forEach((element: HTMLElement) =>
+		{
+			let width = element.getAttribute("width");
+			if (width)
+			{
+				element.style.maxWidth = width;
+				element.removeAttribute("width");
+			}
 		});
 	}
 	
