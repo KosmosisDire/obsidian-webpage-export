@@ -41,7 +41,7 @@ Install from Obsidian Community Plugins: [Open in Obsidian](https://obsidian.md/
 
 > Q: Why am I getting a fatal error that ":has" is not a valid selector?
 > 
-> A: You need to update obsidian to the latest version by downloading the new installed from obsidian's website.
+> A: You need to update obsidian to the latest version by downloading the new installer from obsidian's website. Both the installer version and current version need to be updated, so you actually have to go to obsidian.md and download the installer from there again.
 
 > Q: Why won't the graph view load?
 > 
