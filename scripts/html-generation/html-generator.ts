@@ -1,235 +1,103 @@
-import { Component, MarkdownRenderer as ObsidianRenderer, setIcon } from "obsidian";
+import { Component, MarkdownPreviewView, MarkdownRenderer as ObsidianRenderer, setIcon } from "obsidian";
 import { Path } from "../utils/path";
-import { GlobalDataGenerator } from "./global-gen";
 import { MarkdownRenderer } from "./markdown-renderer";
 import { AssetHandler } from "./asset-handler";
-import { ExportFile } from "./export-file";
+import { Webpage } from "../objects/webpage";
 import { Downloadable } from "scripts/utils/downloadable";
 import { TFile } from "obsidian";
 import { MainSettings } from "scripts/settings/main-settings";
-import { LinkTree } from "./link-tree";
 
-export class HTMLGenerator
+export class GenHelper
 {
-	public static convertableExtensions = ["md"];
-	
-	public static isBatchStarted() : boolean
-	{
-		return MarkdownRenderer.batchStarted;
-	}
-
 	//#region Main Generation Functions
-	public static async beginBatch(exportingFiles: TFile[])
+	
+
+	public static async getViewHTML(view: MarkdownPreviewView, filePath: Path | string, addSelfToDownloads: boolean = false): Promise<{html: string, downloads: Downloadable[]}>
 	{
-		if (this.isBatchStarted()) return;
+		if (typeof filePath == "string") filePath = new Path(filePath);
 
-		GlobalDataGenerator.clearGraphCache();
-		GlobalDataGenerator.clearFileTreeCache();
-		GlobalDataGenerator.getFileTree(exportingFiles);
-		await AssetHandler.updateAssetCache();
-		await MarkdownRenderer.beginBatch();
-	}
+		filePath.makeUnixStyle();
 
-	public static endBatch()
-	{
-		if (!this.isBatchStarted()) return;
+		let tFile = app.vault.getAbstractFileByPath(filePath.asString) as TFile;
+		if (!tFile) throw new Error("File not found: " + filePath.asString);
+		// @ts-ignore
+		let tempFile = new Webpage(tFile, null, Path.vaultPath, true, filePath.basename + ".html", false);
 
-		MarkdownRenderer.endBatch();
-		GlobalDataGenerator.clearGraphCache();
-		GlobalDataGenerator.clearFileTreeCache();
-	}
+		if (!tempFile.document) return {html: "", downloads: []};
 
-	public static async generateWebpage(file: ExportFile): Promise<ExportFile>
-	{
-		await this.getDocumentHTML(file);
-		let usingDocument = file.document;
-
-		let sidebars = this.generateSideBars(file.contentElement, file);
-		this.generateSideBarBtns(file, sidebars);
-		let rightSidebar = sidebars.right;
-		let leftSidebar = sidebars.left;
-		usingDocument.body.appendChild(sidebars.container);
-
-		// inject graph view
-		if (MainSettings.settings.includeGraphView)
-		{
-			let graph = this.generateGraphView(usingDocument);
-			let graphHeader = usingDocument.createElement("span");
-			graphHeader.addClass("sidebar-section-header");
-			graphHeader.innerText = "Interactive Graph";
-			
-			rightSidebar.appendChild(graphHeader);
-			rightSidebar.appendChild(graph);
-		}
-
-		// inject outline
-		if (MainSettings.settings.includeOutline)
-		{
-			let headerTree = LinkTree.headersFromFile(file.file, 1);
-			let outline : HTMLElement | undefined = await this.generateHTMLTree(headerTree, usingDocument, "Table Of Contents", "outline-tree", false, 1, 2, MainSettings.settings.startOutlineCollapsed);
-			rightSidebar.appendChild(outline);
-		}
-
-		// inject darkmode toggle
-		if (MainSettings.settings.addDarkModeToggle && !usingDocument.querySelector(".theme-toggle-container-inline, .theme-toggle-container"))
-		{
-			let toggle = this.generateDarkmodeToggle(false, usingDocument);
-			leftSidebar.appendChild(toggle);
-		}
-
-		// inject file tree
-		if (MainSettings.settings.includeFileTree)
-		{
-			let tree = GlobalDataGenerator.getFileTree();
-			if (MainSettings.settings.makeNamesWebStyle) tree.makeLinksWebStyle();
-			let fileTree: HTMLDivElement = await this.generateHTMLTree(tree, usingDocument, app.vault.getName(), "file-tree", true, 1, 1, true);
-			leftSidebar.appendChild(fileTree);
-		}
-
-		await this.fillInHead(file);
-
-		file.downloads.unshift(await file.getSelfDownloadable());
-
-		return file;
-	}
-
-	public static async getDocumentHTML(file: ExportFile, addSelfToDownloads: boolean = false): Promise<ExportFile>
-	{
-		// set custom line width on body
-		let body = file.document.body;
-
-		let bodyClasses = (document.body.getAttribute("class") ?? "").replaceAll("\"", "'");
-		let bodyStyle = (document.body.getAttribute("style") ?? "").replaceAll("\"", "'");
-		body.setAttribute("class", bodyClasses);
-		body.setAttribute("style", bodyStyle);
-
-		let lineWidth = MainSettings.settings.customLineWidth || "50em";
-		let contentWidth = MainSettings.settings.contentWidth || "500em";
-		let sidebarWidth = MainSettings.settings.sidebarWidth || "25em";
-		if (!isNaN(Number(lineWidth))) lineWidth += "px";
-		if (!isNaN(Number(contentWidth))) contentWidth += "px";
-		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
-		body.style.setProperty("--line-width", lineWidth);
-		body.style.setProperty("--line-width-adaptive", lineWidth);
-		body.style.setProperty("--file-line-width", lineWidth);
-		body.style.setProperty("--content-width", contentWidth);
-		body.style.setProperty("--sidebar-width", sidebarWidth);
-		body.style.setProperty("--collapse-arrow-size", "0.4em");
-		body.style.setProperty("--tree-horizontal-spacing", "1em");
-		body.style.setProperty("--tree-vertical-spacing", "0.5em");
-		body.style.setProperty("--sidebar-margin", "12px");
-
-		// create obsidian document containers
-		let markdownViewEl = file.document.body.createDiv();
-		let content = await MarkdownRenderer.renderMarkdown(file);
-		if (MarkdownRenderer.cancelled) throw new Error("Markdown rendering cancelled");
-		markdownViewEl.outerHTML = content;
-		markdownViewEl = file.document.body.querySelector(".markdown-preview-view") ?? markdownViewEl;
-
-		if(MainSettings.settings.allowFoldingHeadings && !markdownViewEl.hasClass("allow-fold-headings")) 
-		{
-			markdownViewEl.addClass("allow-fold-headings");
-		}
-		else if (!MainSettings.settings.allowFoldingHeadings && markdownViewEl.hasClass("allow-fold-headings"))
-		{
-			markdownViewEl.removeClass("allow-fold-headings");
-		}
-
-		if (MainSettings.settings.addFilenameTitle)
-			this.addTitle(file);
+		let content = await MarkdownRenderer.renderMarkdownView(view);
+		tempFile.document.body.appendChild(content);
+		let container = tempFile.document.body;
 
 		// add heading fold arrows
 		let arrowHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='svg-icon right-triangle'><path d='M3 8L12 17L21 8'></path></svg>";
-		let headings = file.document.querySelectorAll("div h2, div h3, div h4, div h5, div h6");
+		let headings = container.querySelectorAll("div h2, div h3, div h4, div h5, div h6");
 		headings.forEach((element) =>
 		{
 			if(!(element instanceof HTMLElement)) return;
 			if(!element.hasAttribute("data-heading")) return;
-
-			element.style.display = "flex";
-			element.style.whiteSpace = "break-spaces";
 			
 			// continue if heading already has an arrow
 			if (element.querySelector(".heading-collapse-indicator") != null) return;
 
-			let el = file.document.createElement("div");
+			if (!tempFile.document) return {html: "", downloads: []};
+
+
+			let el = tempFile.document.createElement("div");
 			el.setAttribute("class", "heading-collapse-indicator collapse-indicator collapse-icon");
 			el.innerHTML = arrowHTML;
 			element.prepend(el);
 		});
 
 		// remove collapsible arrows from h1 and inline titles
-		file.document.querySelectorAll("div h1, div .inline-title").forEach((element) =>
+		container.querySelectorAll("div h1, div .inline-title").forEach((element) =>
 		{
 			element.querySelector(".heading-collapse-indicator")?.remove();
 		});
 
-		// make sure the page scales correctly at different widths
-		file.sizerElement.style.paddingBottom = "";
-		file.sizerElement.style.paddingTop = "var(--file-margins)";
-		file.sizerElement.style.paddingLeft = "var(--file-margins)";
-		file.sizerElement.style.paddingRight = "var(--file-margins)";
-		file.sizerElement.style.paddingBottom = "50vh";
-		file.sizerElement.style.width = "100%";
-		file.sizerElement.style.position = "absolute";
+		// remove all new lines from header elements which cause spacing issues
+		document.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((el) => el.innerHTML = el.innerHTML.replaceAll("\n", "")); 
 
-		// if the dynamic table of contents plugin is included on this page
-		// then parse each list item and render markdown for it
-		file.document.querySelectorAll(".block-language-toc.dynamic-toc li > a").forEach(async (element: HTMLElement) =>
-		{
-			let renderComp = new Component();
-			renderComp.load();
-			let renderEl = file.document.body.createDiv();
-			await ObsidianRenderer.renderMarkdown(element.textContent ?? "", renderEl, file.file.path, renderComp);
-			console.log(renderEl.textContent);
-			element.textContent = renderEl.textContent;
-			renderEl.remove();
-			renderComp.unload();
-		});
 
 		// modify links to work outside of obsidian (including relative links)
-		this.fixLinks(file); 
+		this.fixLinks(tempFile); 
 		
 		// inline / outline images
 		let outlinedImages : Downloadable[] = [];
 		if (MainSettings.settings.inlineImages)
 		{
-			await this.inlineMedia(file);
+			await this.inlineMedia(tempFile);
 		}
 		else
 		{
-			outlinedImages = await this.externalizeMedia(file);
+			outlinedImages = await this.externalizeMedia(tempFile);
 		}
 
-		// add math styles to the document. They are here and not in head because they are unique to each document
-		let mathStyleEl = document.createElement("style");
-		mathStyleEl.id = "MJX-CHTML-styles";
-		mathStyleEl.innerHTML = AssetHandler.mathStyles;
-		file.contentElement.prepend(mathStyleEl);
-
-		if(addSelfToDownloads) file.downloads.push(await file.getSelfDownloadable());
-		file.downloads.push(...outlinedImages);
-		file.downloads.push(...await AssetHandler.getDownloads());
+		if(addSelfToDownloads) tempFile.downloads.push(await tempFile.getSelfDownloadable());
+		tempFile.downloads.push(...outlinedImages);
+		tempFile.downloads.push(...await AssetHandler.getDownloads());
 
 		if(MainSettings.settings.makeNamesWebStyle)
 		{
-			file.downloads.forEach((file) =>
+			tempFile.downloads.forEach((file) =>
 			{
 				file.filename = Path.toWebStyle(file.filename);
 				file.relativeDownloadPath = file.relativeDownloadPath?.makeWebStyle();
 			});
 		}
 
-		return file;
+		return {html: container.innerHTML, downloads: tempFile.downloads};
 	}
 	
-	private static addTitle(file: ExportFile)
+	public static addTitle(file: Webpage)
 	{
+		if (!file.document) return;
+
 		let currentTitleEl = file.document.querySelector("h1, h2, body.show-inline-title .inline-title");
 		let hasTitle = currentTitleEl != null;
 		let currentTitle = currentTitleEl?.textContent ?? "";
 
-		if (!hasTitle || (currentTitleEl?.tagName == "H2" && currentTitle != file.file.basename))
+		if (!hasTitle || (currentTitleEl?.tagName == "H2" && currentTitle != file.source.basename))
 		{
 			let divContainer = file.document.querySelector("div.mod-header");
 			if (!divContainer) 
@@ -240,97 +108,110 @@ export class HTMLGenerator
 			}
 
 			let title = divContainer.createEl("div");
-			title.innerText = file.file.basename;
+			title.innerText = file.source.basename;
 			title.setAttribute("class", "inline-title");
 			title.setAttribute("data-heading", title.innerText);
 			title.style.display = "block";
-			title.id = file.file.basename.replaceAll(" ", "_");
+			title.id = file.source.basename.replaceAll(" ", "_");
 		}
 	}
 
-	private static generateSideBars(middleContent: HTMLElement, file: ExportFile): {container: HTMLElement, left: HTMLElement, leftScroll: HTMLElement, right: HTMLElement, rightScroll: HTMLElement, center: HTMLElement}
+	public static generateSideBarLayout(middleContent: HTMLElement, file: Webpage): {container: HTMLElement, left: HTMLElement, right: HTMLElement, center: HTMLElement}
 	{
+		if (!file.document) return {container: middleContent, left: middleContent, right: middleContent, center: middleContent};
+
 		let docEl = file.document;
 
 		/*
 		- div.webpage-container
-			- div.sidebar-mobile-btns
 
-			- div.sidebar-left
-				- div.sidebar-content
-					- div.sidebar-scroll-area
+			- div.sidebar.sidebar-left
+				- div.sidebar-container
+					- div.sidebar-sizer
+						- div.sidebar-content-positioner
+							- div.sidebar-content
+				- div.sidebar-gutter
+					- div.clickable-icon.sidebar-collapse-icon
+						- svg
 
 			- div.document-container
 
-			- div.sidebar-right
-				- div.sidebar-content
-					- div.sidebar-scroll-area
+			- div.sidebar.sidebar-right
+				- div.sidebar-gutter
+						- div.clickable-icon.sidebar-collapse-icon
+							- svg
+				- div.sidebar-container
+					- div.sidebar-sizer
+						- div.sidebar-content-positioner
+							- div.sidebar-content
 		*/
+
+		let iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M21 3H3C1.89543 3 1 3.89543 1 5V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19V5C23 3.89543 22.1046 3 21 3Z"></path><path d="M10 4V20"></path><path d="M4 7H7"></path><path d="M4 10H7"></path><path d="M4 13H7"></path></svg>`
 
 		let pageContainer = docEl.createElement("div");
 		let leftSidebar = docEl.createElement("div");
+		let leftSidebarContainer = docEl.createElement("div");
+		let leftSidebarSizer = docEl.createElement("div");
+		let leftSidebarContentPositioner = docEl.createElement("div");
 		let leftContent = docEl.createElement("div");
-		let leftSidebarScroll = docEl.createElement("div");
+		let leftGutter = docEl.createElement("div");
+		let leftGutterIcon = docEl.createElement("div");
 		let documentContainer = docEl.createElement("div");
 		let rightSidebar = docEl.createElement("div");
+		let rightSidebarContainer = docEl.createElement("div");
+		let rightSidebarSizer = docEl.createElement("div");
+		let rightSidebarContentPositioner = docEl.createElement("div");
 		let rightContent = docEl.createElement("div");
-		let rightSidebarScroll = docEl.createElement("div");
+		let rightGutter = docEl.createElement("div");
+		let rightGutterIcon = docEl.createElement("div");
 
 		pageContainer.setAttribute("class", "webpage-container");
-		leftSidebar.setAttribute("class", "sidebar-left");
+
+		leftSidebar.setAttribute("class", "sidebar-left sidebar");
+		leftSidebarContainer.setAttribute("class", "sidebar-container");
+		leftSidebarSizer.setAttribute("class", "sidebar-sizer");
+		leftSidebarContentPositioner.setAttribute("class", "sidebar-content-positioner");
 		leftContent.setAttribute("class", "sidebar-content");
-		leftSidebarScroll.setAttribute("class", "sidebar-scroll-area");
+		leftGutter.setAttribute("class", "sidebar-gutter");
+		leftGutterIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
+
 		documentContainer.setAttribute("class", "document-container");
+
+		rightSidebar.setAttribute("class", "sidebar-right sidebar");
+		rightSidebarContainer.setAttribute("class", "sidebar-container");
+		rightSidebarSizer.setAttribute("class", "sidebar-sizer");
+		rightSidebarContentPositioner.setAttribute("class", "sidebar-content-positioner");
 		rightContent.setAttribute("class", "sidebar-content");
-		rightSidebar.setAttribute("class", "sidebar-right");
-		rightSidebarScroll.setAttribute("class", "sidebar-scroll-area");
-
-		leftSidebar.classList.add("sidebar");
-		leftSidebar.appendChild(leftContent);
-		// leftContent.appendChild(leftSidebarScroll);
-
-		documentContainer.appendChild(middleContent);
-
-		rightSidebar.classList.add("sidebar");
-		rightSidebar.appendChild(rightContent);
-		// rightContent.appendChild(rightSidebarScroll);
+		rightGutter.setAttribute("class", "sidebar-gutter");
+		rightGutterIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
 
 		pageContainer.appendChild(leftSidebar);
 		pageContainer.appendChild(documentContainer);
 		pageContainer.appendChild(rightSidebar);
 
+		leftSidebar.appendChild(leftSidebarContainer);
+		leftSidebarContainer.appendChild(leftSidebarSizer);
+		leftSidebarSizer.appendChild(leftSidebarContentPositioner);
+		leftSidebarContentPositioner.appendChild(leftContent);
+		leftSidebar.appendChild(leftGutter);
+		leftGutter.appendChild(leftGutterIcon);
+		leftGutterIcon.innerHTML = iconSVG;
 
-		return {container: pageContainer, left: leftContent, leftScroll: leftSidebarScroll, right: rightContent, rightScroll: rightSidebarScroll, center: documentContainer};
+		documentContainer.appendChild(middleContent);
+
+		rightSidebar.appendChild(rightGutter);
+		rightGutter.appendChild(rightGutterIcon);
+		rightGutterIcon.innerHTML = iconSVG;
+		rightSidebar.appendChild(rightSidebarContainer);
+		rightSidebarContainer.appendChild(rightSidebarSizer);
+		rightSidebarSizer.appendChild(rightSidebarContentPositioner);
+		rightSidebarContentPositioner.appendChild(rightContent);
+		
+
+		return {container: pageContainer, left: leftContent, right: rightContent, center: documentContainer};
 	}
 
-	private static generateSideBarBtns(file: ExportFile, {left, right, container}: {left: HTMLElement, right: HTMLElement, container: HTMLElement}): {leftBtn: HTMLElement, rightBtn: HTMLElement, mobileSideBarBtns: HTMLElement}
-	{
-		const docEl = file.document;
-		/*
-		- div.sidebar-mobile-btns
-			- a.sidebar-mobile-btn--left
-			- a.sidebar-mobile-btn--right
-		*/
-
-		let mobileSideBarBtns = docEl.createElement("div");
-		const leftBtn = docEl.createElement("a");
-		const rightBtn = docEl.createElement("a");
-
-		mobileSideBarBtns.setAttribute("class", "sidebar-mobile-btns");
-		leftBtn.setAttribute("class", "sidebar-mobile-btn--left");
-		rightBtn.setAttribute("class", "sidebar-mobile-btn--right");
-
-		setIcon(leftBtn, "sidebar-left");
-		setIcon(rightBtn, "sidebar-right");
-
-		mobileSideBarBtns.appendChild(leftBtn);
-		mobileSideBarBtns.appendChild(rightBtn);
-		container.appendChild(mobileSideBarBtns);
-
-		return {leftBtn, rightBtn, mobileSideBarBtns};
-	}
-
-	private static getRelativePaths(file: ExportFile): {mediaPath: Path, jsPath: Path, cssPath: Path, rootPath: Path}
+	public static getRelativePaths(file: Webpage): {mediaPath: Path, jsPath: Path, cssPath: Path, rootPath: Path}
 	{
 		let rootPath = file.pathToRoot;
 		let imagePath = AssetHandler.mediaFolderName.makeUnixStyle();
@@ -348,13 +229,15 @@ export class HTMLGenerator
 		return {mediaPath: imagePath, jsPath: jsPath, cssPath: cssPath, rootPath: rootPath};
 	}
 
-	private static async fillInHead(file: ExportFile)
+	public static async fillInHead(file: Webpage)
 	{
+		if (!file.document) return;
+
 		let relativePaths = this.getRelativePaths(file);
 
 		let meta =
 		`
-		<title>${file.file.basename}</title>
+		<title>${file.source.basename}</title>
 		<base href="${relativePaths.rootPath}/">
 		<meta id="root-path" root-path="${relativePaths.rootPath}/">
 
@@ -363,30 +246,11 @@ export class HTMLGenerator
 		<meta charset="UTF-8">
 		`;
 
-		if (MainSettings.settings.includeOutline)
-		{
-			meta += `<script src="https://code.iconify.design/iconify-icon/1.0.3/iconify-icon.min.js"></script>`;
-		}
-
 		// --- JS ---
 		let scripts = "";
 
 		if (MainSettings.settings.includeGraphView) 
 		{
-			// TODO: outline the nodes to a file
-			scripts += 
-			`
-			<!-- Graph View Data -->
-			<script>
-			let nodes=\n${JSON.stringify(GlobalDataGenerator.getGlobalGraph(MainSettings.settings.graphMinNodeSize, MainSettings.settings.graphMaxNodeSize))};
-			let attractionForce = ${MainSettings.settings.graphAttractionForce};
-			let linkLength = ${MainSettings.settings.graphLinkLength};
-			let repulsionForce = ${MainSettings.settings.graphRepulsionForce};
-			let centralForce = ${MainSettings.settings.graphCentralForce};
-			let edgePruning = ${MainSettings.settings.graphEdgePruning};
-			</script>
-			`;
-
 			scripts += `\n<script type='module' src='${relativePaths.jsPath}/graph_view.js'></script>\n`;
 			scripts += `\n<script src='${relativePaths.jsPath}/graph_wasm.js'></script>\n`;
 			scripts += `\n<script src="${relativePaths.jsPath}/tinycolor.js"></script>\n`;
@@ -396,10 +260,12 @@ export class HTMLGenerator
 		if (MainSettings.settings.inlineJS)
 		{
 			scripts += `\n<script>\n${AssetHandler.webpageJS}\n</script>\n`;
+			scripts += `\n<script>\n${AssetHandler.generatedJS}\n</script>\n`;
 		}
 		else 
 		{
 			scripts += `\n<script src='${relativePaths.jsPath}/webpage.js'></script>\n`;
+			scripts += `\n<script src='${relativePaths.jsPath}/generated.js'></script>\n`;
 		}
 
 
@@ -428,6 +294,9 @@ export class HTMLGenerator
 
 			<!-- Snippets -->
 			<style> ${AssetHandler.snippetStyles} </style>
+
+			<!-- Generated Styles -->
+			<style> ${AssetHandler.generatedStyles} </style>
 		
 			${scripts}
 			`;
@@ -442,6 +311,7 @@ export class HTMLGenerator
 			<link rel="stylesheet" href="${relativePaths.cssPath}/theme.css">
 			<link rel="stylesheet" href="${relativePaths.cssPath}/plugin-styles.css">
 			<link rel="stylesheet" href="${relativePaths.cssPath}/snippets.css">
+			<link rel="stylesheet" href="${relativePaths.cssPath}/generated-styles.css">
 			<style> ${cssSettings} </style>
 
 			${scripts}
@@ -455,9 +325,9 @@ export class HTMLGenerator
 
 	//#region Links and Images
 
-	private static fixLinks(file: ExportFile)
+	public static fixLinks(file: Webpage)
 	{
-		let htmlCompatibleExt = ["canvas", "md"];
+		if (!file.document) return;
 
 		file.document.querySelectorAll("a.internal-link").forEach((linkEl) =>
 		{
@@ -475,12 +345,11 @@ export class HTMLGenerator
 				let targetHeader = href.split("#").length > 1 ? "#" + href.split("#")[1] : "";
 				let target = href.split("#")[0];
 
-				let targetFile = app.metadataCache.getFirstLinkpathDest(target, file.file.path);
+				let targetFile = app.metadataCache.getFirstLinkpathDest(target, file.source.path);
 				if (!targetFile) return;
 
 				let targetPath = new Path(targetFile.path);
-				// let targetRelativePath = Path.getRelativePath(file.exportPath, targetPath);
-				if (htmlCompatibleExt.includes(targetPath.extensionName)) targetPath.setExtension("html");
+				if (MarkdownRenderer.isConvertable(targetPath.extensionName)) targetPath.setExtension("html");
 				if (MainSettings.settings.makeNamesWebStyle) targetPath.makeWebStyle();
 
 				let finalHref = targetPath.makeUnixStyle() + targetHeader.replaceAll(" ", "_");
@@ -500,20 +369,27 @@ export class HTMLGenerator
 		});
 	}
 
-	private static getMediaPath(src: string): Path
+	public static getMediaPath(src: string, exportingFilePath: string): Path
 	{
 		// @ts-ignore
 		let pathString = "";
-		try
+		if (src.startsWith("app://"))
 		{
-			// @ts-ignore
-			pathString = app.vault.resolveFileUrl(src)?.path ?? "";
+			try
+			{
+				// @ts-ignore
+				pathString = app.vault.resolveFileUrl(src)?.path ?? "";
+			}
+			catch
+			{
+				pathString = src.replaceAll("app://", "").replaceAll("\\", "/");
+				pathString = pathString.replaceAll(pathString.split("/")[0] + "/", "");
+				pathString = Path.getRelativePathFromVault(new Path(pathString), true).asString;
+			}
 		}
-		catch
+		else
 		{
-			pathString = src.replaceAll("app://", "").replaceAll("\\", "/");
-			pathString = pathString.replaceAll(pathString.split("/")[0] + "/", "");
-			pathString = Path.getRelativePathFromVault(new Path(pathString), true).asString;
+			pathString = app.metadataCache.getFirstLinkpathDest(src, exportingFilePath)?.path ?? "";
 		}
 
 		pathString = pathString ?? "";
@@ -521,15 +397,16 @@ export class HTMLGenerator
 		return new Path(pathString);
 	}
 
-	private static async inlineMedia(file: ExportFile)
+	public static async inlineMedia(file: Webpage)
 	{
-		let elements = Array.from(file.document.querySelectorAll("img, audio, video"))
+		if (!file.document) return;
+
+		let elements = Array.from(file.document.querySelectorAll("[src]:not(head [src])"))
 		for (let mediaEl of elements)
 		{
 			let rawSrc = mediaEl.getAttribute("src") ?? "";
-			if (!rawSrc.startsWith("app:")) continue;
-			
-			let filePath = this.getMediaPath(rawSrc);
+			let filePath = this.getMediaPath(rawSrc, file.source.path);
+			if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
 
 			let base64 = await filePath.readFileString("base64") ?? "";
 			if (base64 === "") return;
@@ -545,22 +422,23 @@ export class HTMLGenerator
 		};
 	}
 
-	private static async externalizeMedia(file: ExportFile): Promise<Downloadable[]>
+	public static async externalizeMedia(file: Webpage): Promise<Downloadable[]>
 	{
+		if (!file.document) return [];
+
 		let downloads: Downloadable[] = [];
 
-		let elements = Array.from(file.document.querySelectorAll("img, audio, video"))
+		let elements = Array.from(file.document.querySelectorAll("[src]:not(head [src])"))
 		for (let mediaEl of elements)
 		{
 			let rawSrc = mediaEl.getAttribute("src") ?? "";
-			if (!rawSrc.startsWith("app:")) continue;
-			
-			let filePath = this.getMediaPath(rawSrc);
+			let filePath = this.getMediaPath(rawSrc, file.source.path);
+			if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
 
 			let exportLocation = filePath.copy;
 
 			// if the media is inside the exported folder then keep it in the same place
-			let mediaPathInExport = Path.getRelativePath(file.exportedFolder, filePath);
+			let mediaPathInExport = Path.getRelativePath(file.sourceFolder, filePath);
 			if (mediaPathInExport.asString.startsWith(".."))
 			{
 				// if path is outside of the vault, outline it into the media folder
@@ -609,170 +487,165 @@ export class HTMLGenerator
 		return toggle;
 	}
 
-	private static async generateTreeItem(item: LinkTree, usingDocument: Document, minCollapsableDepth = 1, startClosed: boolean = true): Promise<HTMLDivElement>
-	{
-		let arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg>`;
+	// public static async generateTreeItem(item: LinkTreeItem, usingDocument: Document, minCollapsableDepth = 1, startClosed: boolean = true): Promise<HTMLDivElement>
+	// {
+	// 	let arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg>`;
 
-		/*
-		- div.tree-item
-			- div.tree-item-contents
-				- div.tree-item-icon
-					- svg
-				- a.internal-link
-					- span.tree-item-title
-			- div.tree-item-children
-		*/
+	// 	/*
+	// 	- div.tree-item
+	// 		- div.tree-item-contents
+	// 			- a.internal-link.tree-item-link
+	// 				- div.tree-item-icon
+	// 					- svg
+	// 				- span.tree-item-title
+	// 		- div.tree-item-children
+	// 	*/
 
-		let treeItemEl = usingDocument.createElement('div');
-		treeItemEl.classList.add("tree-item");
-		treeItemEl.classList.add(item.type == "folder" ? "mod-tree-folder" : (item.type == "file" ? "mod-tree-file" : (item.type == "heading" ? "mod-tree-heading" : "mod-tree-none")));
-		treeItemEl.setAttribute("data-depth", item.depth.toString());
+	// 	let treeItemEl = usingDocument.createElement('div');
+	// 	treeItemEl.classList.add("tree-item");
+	// 	treeItemEl.classList.add(item.type == "folder" ? "mod-tree-folder" : (item.type == "file" ? "mod-tree-file" : (item.type == "heading" ? "mod-tree-heading" : "mod-tree-none")));
+	// 	treeItemEl.setAttribute("data-depth", item.depth.toString());
 
-		let itemContentsEl = treeItemEl.createDiv("tree-item-contents");
+	// 	let itemContentsEl = treeItemEl.createDiv("tree-item-contents");
 
-		if (item.children.length != 0 && item.depth >= minCollapsableDepth)
-		{
-			let itemIconEl = itemContentsEl.createDiv("tree-item-icon collapse-icon");
-			let svgEl = usingDocument.createElement("svg");
-			itemIconEl.appendChild(svgEl).outerHTML = arrowIcon;
+	// 	let itemLinkEl = itemContentsEl.createEl("div", { cls: "tree-item-link" });
+	// 	if (item.href) itemLinkEl.setAttribute("href", item.href);
 
-			treeItemEl.classList.add("mod-collapsible");
-			if (startClosed) treeItemEl.classList.add("is-collapsed");
-		}
+	// 	if (item.children.length != 0 && item.depth >= minCollapsableDepth)
+	// 	{
+	// 		let itemIconEl = itemLinkEl.createDiv("tree-item-icon collapse-icon");
+	// 		let svgEl = usingDocument.createElement("svg");
+	// 		itemIconEl.appendChild(svgEl).outerHTML = arrowIcon;
 
-		let itemLinkEl = itemContentsEl.createEl("a", { cls: "tree-item-link" });
-		if (item.href) itemLinkEl.setAttribute("href", item.href);
+	// 		treeItemEl.classList.add("mod-collapsible");
+	// 		if (startClosed) treeItemEl.classList.add("is-collapsed");
+	// 	}
 
-		let renderComp = new Component();
-		renderComp.load();
-		let titleEl = itemLinkEl.createEl("span", { cls: "tree-item-title" });
-		treeItemEl.createDiv("tree-item-children");
-		await ObsidianRenderer.renderMarkdown(item.title, titleEl, "/", renderComp);
-		renderComp.unload();
-		//remove lists and replace them with plain text
-		titleEl.querySelectorAll("ol").forEach((el) =>
-		{
-			if(el.parentElement)
-			{
-				let start = el.getAttribute("start") ?? "1";
-				el.parentElement.createSpan().innerHTML = start + ". " + el.innerHTML;
-				el.remove();
-			}
-		});
-		titleEl.querySelectorAll("ul").forEach((el) =>
-		{
-			if(el.parentElement)
-			{
-				el.parentElement.createSpan().innerHTML = "- " + el.innerHTML;
-				el.remove();
-			}
-		});
-		titleEl.querySelectorAll("li").forEach((el) =>
-		{
-			if(el.parentElement)
-			{
-				el.parentElement.createSpan().innerHTML = el.innerHTML;
-				el.remove();
-			}
-		});
+	// 	let renderComp = new Component();
+	// 	renderComp.load();
+	// 	let titleEl = itemLinkEl.createEl("span", { cls: "tree-item-title" });
+	// 	treeItemEl.createDiv("tree-item-children");
+	// 	await ObsidianRenderer.renderMarkdown(item.title, titleEl, "/", renderComp);
+	// 	renderComp.unload();
+	// 	//remove lists and replace them with plain text
+	// 	titleEl.querySelectorAll("ol").forEach((el) =>
+	// 	{
+	// 		if(el.parentElement)
+	// 		{
+	// 			let start = el.getAttribute("start") ?? "1";
+	// 			el.parentElement.createSpan().innerHTML = start + ". " + el.innerHTML;
+	// 			el.remove();
+	// 		}
+	// 	});
+	// 	titleEl.querySelectorAll("ul").forEach((el) =>
+	// 	{
+	// 		if(el.parentElement)
+	// 		{
+	// 			el.parentElement.createSpan().innerHTML = "- " + el.innerHTML;
+	// 			el.remove();
+	// 		}
+	// 	});
+	// 	titleEl.querySelectorAll("li").forEach((el) =>
+	// 	{
+	// 		if(el.parentElement)
+	// 		{
+	// 			el.parentElement.createSpan().innerHTML = el.innerHTML;
+	// 			el.remove();
+	// 		}
+	// 	});
 
-		return treeItemEl;
-	}
+	// 	return treeItemEl;
+	// }
 
-	public static async buildTreeRecursive(tree: LinkTree, usingDocument: Document, minDepth:number = 1, minCollapsableDepth:number = 1, closeAllItems: boolean = false): Promise<HTMLDivElement[]>
-	{
-		let treeItems: HTMLDivElement[] = [];
+	// public static async buildTreeRecursive(tree: LinkTreeItem, usingDocument: Document, minDepth:number = 1, minCollapsableDepth:number = 1, closeAllItems: boolean = false): Promise<HTMLDivElement[]>
+	// {
+	// 	let treeItems: HTMLDivElement[] = [];
 
-		for (let item of tree.children)
-		{
-			let children = await this.buildTreeRecursive(item, usingDocument, minDepth, minCollapsableDepth, closeAllItems);
+	// 	for (let item of tree.children)
+	// 	{
+	// 		let children = await this.buildTreeRecursive(item, usingDocument, minDepth, minCollapsableDepth, closeAllItems);
 
-			if(item.depth >= minDepth)
-			{
-				let treeItem = await this.generateTreeItem(item, usingDocument, minCollapsableDepth, closeAllItems);
-				treeItems.push(treeItem);
-				treeItem.querySelector(".tree-item-children")?.append(...children);
-			}
-			else
-			{
-				treeItems.push(...children);
-			}
-		}
+	// 		if(item.depth >= minDepth)
+	// 		{
+	// 			let treeItem = await this.generateTreeItem(item, usingDocument, minCollapsableDepth, closeAllItems);
+	// 			treeItems.push(treeItem);
+	// 			treeItem.querySelector(".tree-item-children")?.append(...children);
+	// 		}
+	// 		else
+	// 		{
+	// 			treeItems.push(...children);
+	// 		}
+	// 	}
 
-		return treeItems;
-	}
+	// 	return treeItems;
+	// }
 
-	public static async generateHTMLTree(tree: LinkTree, usingDocument: Document, treeTitle: string, className: string, showNestingIndicator = true, minDepth: number = 1, minCollapsableDepth = 1, closeAllItems: boolean = false): Promise<HTMLDivElement>
-	{
-		/*
-		- div.tree-container
-			- div.tree-header
-				- span.sidebar-section-header
-				- button.collapse-tree-button
-					- iconify-icon
-			- div.tree-scroll-area
-				- div.tree-item
-					- div.tree-item-contents
-						- div.tree-item-icon
-							- svg
-						- a.internal-link
-							- span.tree-item-title
-					- div.tree-item-children
-		*/
+	// public static async generateHTMLTree(tree: LinkTreeItem, usingDocument: Document, treeTitle: string, className: string, showNestingIndicator = true, minDepth: number = 1, minCollapsableDepth = 1, closeAllItems: boolean = false): Promise<HTMLDivElement>
+	// {
+	// 	/*
+	// 	- div.tree-container
+	// 		- div.tree-header
+	// 			- span.sidebar-section-header
+	// 			- button.collapse-tree-button
+	// 				- svg
+	// 		- div.tree-scroll-area
+	// 			- div.tree-item
+	// 				- div.tree-item-contents
+	// 					- div.tree-item-icon
+	// 						- svg
+	// 					- a.internal-link
+	// 						- span.tree-item-title
+	// 				- div.tree-item-children
+	// 	*/
 
-		let treeContainerEl = usingDocument.createElement('div');
-		let treeHeaderEl = usingDocument.createElement('div');
-		let sectionHeaderEl = usingDocument.createElement('span');
-		let collapseAllEl = usingDocument.createElement('button');
-		let collapseAllIconEl = usingDocument.createElement('iconify-icon');
-		let treeScrollAreaEl = usingDocument.createElement('div');
+	// 	let treeContainerEl = usingDocument.createElement('div');
+	// 	let treeHeaderEl = usingDocument.createElement('div');
+	// 	let sectionHeaderEl = usingDocument.createElement('span');
+	// 	let collapseAllEl = usingDocument.createElement('button');
+	// 	let treeScrollAreaEl = usingDocument.createElement('div');
 
-		treeContainerEl.classList.add('tree-container', className);
-		if (showNestingIndicator) treeContainerEl.classList.add("mod-nav-indicator");
-		treeHeaderEl.classList.add("tree-header");
-		sectionHeaderEl.classList.add("sidebar-section-header");
-		collapseAllEl.classList.add("clickable-icon", "collapse-tree-button");
-		if (closeAllItems) collapseAllEl.classList.add("is-collapsed");
-		treeScrollAreaEl.classList.add("tree-scroll-area");
+	// 	treeContainerEl.classList.add('tree-container', className);
+	// 	treeHeaderEl.classList.add("tree-header");
+	// 	sectionHeaderEl.classList.add("sidebar-section-header");
+	// 	collapseAllEl.classList.add("clickable-icon", "collapse-tree-button");
+	// 	collapseAllEl.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'></svg>";
+	// 	treeScrollAreaEl.classList.add("tree-scroll-area");
 
-		treeContainerEl.setAttribute("data-depth", "0");
-		sectionHeaderEl.innerText = treeTitle;
-		collapseAllIconEl.setAttribute("icon", "ph:arrows-in-line-horizontal-bold");
-		collapseAllIconEl.setAttribute("width", "18px");
-		collapseAllIconEl.setAttribute("height", "18px");
-		collapseAllIconEl.setAttribute("rotate", "90deg");
-		collapseAllIconEl.setAttribute("color", "currentColor");
+	// 	if (closeAllItems) collapseAllEl.classList.add("is-collapsed");
+	// 	if (showNestingIndicator) treeContainerEl.classList.add("mod-nav-indicator");
 
-		treeContainerEl.appendChild(treeHeaderEl);
-		treeContainerEl.appendChild(treeScrollAreaEl);
-		treeHeaderEl.appendChild(sectionHeaderEl);
-		treeHeaderEl.appendChild(collapseAllEl);
-		collapseAllEl.appendChild(collapseAllIconEl);
+	// 	treeContainerEl.setAttribute("data-depth", "0");
+	// 	sectionHeaderEl.innerText = treeTitle;
 
-		let treeItems = await this.buildTreeRecursive(tree, usingDocument, minDepth, minCollapsableDepth, closeAllItems);
+	// 	treeContainerEl.appendChild(treeHeaderEl);
+	// 	treeContainerEl.appendChild(treeScrollAreaEl);
+	// 	treeHeaderEl.appendChild(sectionHeaderEl);
+	// 	treeHeaderEl.appendChild(collapseAllEl);
 
-		for (let item of treeItems)
-		{
-			treeScrollAreaEl.appendChild(item);
-		}
+	// 	let treeItems = await this.buildTreeRecursive(tree, usingDocument, minDepth, minCollapsableDepth, closeAllItems);
 
-		return treeContainerEl;
-	}
+	// 	for (let item of treeItems)
+	// 	{
+	// 		treeScrollAreaEl.appendChild(item);
+	// 	}
 
-	private static generateGraphView(usingDocument: Document): HTMLDivElement
-	{
-		let graphEl = usingDocument.createElement("div");
-		graphEl.className = "graph-view-placeholder";
-		graphEl.innerHTML = 
-		`
-		<div class="graph-view-container">
-			<div class="graph-icon graph-expand" role="button" aria-label="Expand" data-tooltip-position="top"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-arrow-up-right"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg></div>
-			<canvas id="graph-canvas" width="512px" height="512px"></canvas>
-		</div>
-		`
+	// 	return treeContainerEl;
+	// }
 
-		return graphEl;
-	}
+	// private static generateGraphView(usingDocument: Document): HTMLDivElement
+	// {
+	// 	let graphEl = usingDocument.createElement("div");
+	// 	graphEl.className = "graph-view-placeholder";
+	// 	graphEl.innerHTML = 
+	// 	`
+	// 	<div class="graph-view-container">
+	// 		<div class="graph-icon graph-expand" role="button" aria-label="Expand" data-tooltip-position="top"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon lucide-arrow-up-right"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg></div>
+	// 		<canvas id="graph-canvas" width="512px" height="512px"></canvas>
+	// 	</div>
+	// 	`
+
+	// 	return graphEl;
+	// }
 
 	//#endregion
 }

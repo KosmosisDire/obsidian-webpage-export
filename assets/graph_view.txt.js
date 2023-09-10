@@ -8,22 +8,12 @@ let targetFPS = 40;
 let startingCameraScale = undefined;
 let startingCameraOffset = undefined;
 
-let mousePositionWorld = { x: undefined, y: undefined };
-let mousePositionScreen = { x: undefined, y: undefined };
+let mouseWorldPos = { x: undefined, y: undefined };
 let scrollVelocity = 0;
-let lastMousePos = { x: 0, y: 0 };
 let averageFPS = targetFPS;
-
-let mouseInside = false;
-let graphExpanded = false;
-let leftButtonDown = false;
-let rightButtonDown = false;
-let middleButtonDown = false;
-let panning = false;
 
 const pixiApp = new PIXI.Application();
 var renderWorker = undefined;
-
 
 class GraphAssembly
 {
@@ -218,6 +208,7 @@ class GraphRenderWorker
     constructor()
     {
         this.canvas = document.querySelector("#graph-canvas");
+		this.canvasSidebar = document.querySelector(".sidebar:has(#graph-canvas)");
 
         this.view = this.canvas.transferControlToOffscreen();
 
@@ -601,7 +592,9 @@ function updateGraph()
 {
     if(!running) return;
 
-    GraphAssembly.update(mousePositionWorld, renderWorker.grabbedNode, renderWorker.cameraScale);
+	if (renderWorker.canvasSidebar.classList.contains("is-collapsed")) return;
+
+    GraphAssembly.update(mouseWorldPos, renderWorker.grabbedNode, renderWorker.cameraScale);
 
     if (GraphAssembly.hoveredNode != renderWorker.hoveredNode)
     {
@@ -629,19 +622,38 @@ function updateGraph()
             scrollVelocity = 0;
         }
 
-        renderWorker.cameraScale = Math.max(Math.min(renderWorker.cameraScale + scrollVelocity * renderWorker.cameraScale, 10.0), 0.1);
+        zoomGraphViewAroundPoint(mouseWorldPos, scrollVelocity);
 
-        if(renderWorker.cameraScale != 0.1 && renderWorker.cameraScale != 10 && scrollVelocity > 0 && mousePositionWorld.x != undefined && mousePositionWorld.y != undefined)
-        {
-            // zoom towards cursor position
-            let mouseDiff = {x: mousePositionWorld.x - cameraCenter.x, y: mousePositionWorld.y - cameraCenter.y};
-            var movePos = {x: cameraCenter.x + mouseDiff.x * scrollVelocity, y: cameraCenter.y + mouseDiff.y * scrollVelocity};
-            renderWorker.setCameraCenterWorldspace(movePos);
-        }
-        else renderWorker.setCameraCenterWorldspace(cameraCenter);
-
-        scrollVelocity *= 0.6;
+        scrollVelocity *= 0.65;
     }
+}
+
+function zoomGraphViewAroundPoint(point, zoom, minScale = 0.15, maxScale = 15.0)
+{
+	let cameraCenter = renderWorker.getCameraCenterWorldspace();
+
+	renderWorker.cameraScale = Math.max(Math.min(renderWorker.cameraScale + zoom * renderWorker.cameraScale, maxScale), minScale);
+	if(renderWorker.cameraScale != minScale && renderWorker.cameraScale != maxScale && scrollVelocity > 0 && mouseWorldPos.x != undefined && mouseWorldPos.y != undefined)
+	{
+		let aroundDiff = {x: point.x - cameraCenter.x, y: point.y - cameraCenter.y};
+		let movePos = {x: cameraCenter.x + aroundDiff.x * zoom, y: cameraCenter.y + aroundDiff.y * zoom};
+		renderWorker.setCameraCenterWorldspace(movePos);
+	}
+	else renderWorker.setCameraCenterWorldspace(cameraCenter);
+}
+
+function scaleGraphViewAroundPoint(point, scale, minScale = 0.15, maxScale = 15.0)
+{
+	let cameraCenter = renderWorker.getCameraCenterWorldspace();
+
+	renderWorker.cameraScale = Math.max(Math.min(scale * renderWorker.cameraScale, maxScale), minScale);
+	if(renderWorker.cameraScale != minScale && renderWorker.cameraScale != maxScale && scrollVelocity > 0 && mouseWorldPos.x != undefined && mouseWorldPos.y != undefined)
+	{
+		let aroundDiff = {x: point.x - cameraCenter.x, y: point.y - cameraCenter.y};
+		let movePos = {x: cameraCenter.x + aroundDiff.x * scale, y: cameraCenter.y + aroundDiff.y * scale};
+		renderWorker.setCameraCenterWorldspace(movePos);
+	}
+	else renderWorker.setCameraCenterWorldspace(cameraCenter);
 }
 
 function initializeGraphEvents()
@@ -652,6 +664,7 @@ function initializeGraphEvents()
         GraphAssembly.free();
     });
 
+	let graphExpanded = false;
     let lastCanvasWidth = renderWorker.canvas.width;
     window.addEventListener('resize', () =>
     {
@@ -670,202 +683,7 @@ function initializeGraphEvents()
         }
     });
 
-    // Get the mouse position relative to the canvas.
-    function getMousePos(canvas, event)
-    {
-        var rect = canvas.getBoundingClientRect();
-        var clientX = event.clientX;
-        var clientY = event.clientY;
-
-        return {
-            x: clientX - rect.left,
-            y: clientY - rect.top
-        };
-    }
-
-    function handleMouseMove(event)
-    {
-        mousePositionScreen = getMousePos(renderWorker.canvas, event);
-        mousePositionWorld = renderWorker.vecToWorldspace(mousePositionScreen);
-
-        if (lastMousePos.x == 0 && lastMousePos.y == 0)
-        {
-            lastMousePos = { x: event.clientX, y: event.clientY };
-            return;
-        }
-
-        let delta = { x: lastMousePos.x - event.clientX, y: lastMousePos.y - event.clientY };
-
-        if (leftButtonDown && renderWorker.hoveredNode != -1)
-        {
-            renderWorker.grabbedNode = renderWorker.hoveredNode;
-        }
-
-        if (middleButtonDown || (leftButtonDown && renderWorker.hoveredNode == -1))
-        {
-            let camOffset = renderWorker.cameraOffset;
-            renderWorker.cameraOffset = { x: camOffset.x - delta.x, y: camOffset.y - delta.y };
-            panning = true;
-        }
-        else
-        {
-            panning = false;
-        }
-
-        lastMousePos = { x: event.clientX, y: event.clientY };
-    }
-
-    renderWorker.canvas.addEventListener("mouseenter", () => mouseInside = true);
-    renderWorker.canvas.addEventListener("mouseleave", () => mouseInside = false);
-
-    document.querySelectorAll("body").forEach(element => 
-    {
-        element.addEventListener("mousemove", event => 
-        {
-            event.stopPropagation();
-
-            if(mouseInside) return;
-
-            if (panning || renderWorker.grabbedNode != -1) {
-                handleMouseMove(event);
-            }
-        });
-    });
-
-    document.getElementById("graph-canvas").addEventListener("mousemove", event => 
-    {
-        handleMouseMove(event);
-    });
-
-
-    document.getElementById("graph-canvas").addEventListener("mousedown", event =>
-    {
-        event.stopPropagation();
-            
-        if (event.button == 0) leftButtonDown = true;
-        if (event.button == 1) middleButtonDown = true;
-        if (event.button == 2) rightButtonDown = true;
-    });
-
-    async function navigateToNode(nodeIndex)
-    {
-        if (!graphExpanded) GraphAssembly.saveState(renderWorker);
-        else toggleExpandedGraph();
-
-        let url = nodes.paths[nodeIndex];
-        if(window.location.pathname.endsWith(nodes.paths[nodeIndex])) return;
-        await loadDocument(url);
-    }
-
-    document.body.addEventListener("mouseup", event =>
-    {
-        event.stopPropagation();
-
-        if (event.button == 0) leftButtonDown = false;
-        if (event.button == 1) middleButtonDown = false;
-        if (event.button == 2) rightButtonDown = false;
-
-        // we must have just clicked on a node without dragging it
-        if (!panning && renderWorker.grabbedNode == -1 && renderWorker.hoveredNode != -1)
-        {
-            navigateToNode(renderWorker.hoveredNode);
-        }
-
-        renderWorker.grabbedNode = -1;
-    });
-
-    // also mouse up if mouse leaves canvas
-    document.getElementById("graph-canvas").addEventListener("mouseleave", event =>
-    {
-        event.stopPropagation();
-
-        if (renderWorker.grabbedNode == -1 && !(middleButtonDown || leftButtonDown))
-        {
-            mousePositionScreen = { x: undefined, y: undefined };
-            mousePositionWorld = { x: undefined, y: undefined };
-        }
-    });
-
-    document.getElementById("graph-canvas").addEventListener("wheel", function(e) 
-    {
-        e.preventDefault();
-        e.stopPropagation();
-
-        let startingScrollVelocity = 0.08;
-
-        let delta = e.deltaY;
-        if (delta > 0)
-        {
-            if(scrollVelocity >= -startingScrollVelocity)
-            {
-                scrollVelocity = -startingScrollVelocity;
-            }
-
-            scrollVelocity *= 1.3;
-        }
-        else
-        {
-            if(scrollVelocity <= startingScrollVelocity)
-            {
-                scrollVelocity = startingScrollVelocity;
-            }
-
-            scrollVelocity *= 1.3;
-        }
-    });
-
-    // touch controls
-    document.getElementById("graph-canvas").addEventListener("touchstart", function(e)
-    {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (e.touches.length == 1)
-        {
-            lastMousePos = { x: e.touches[0].clientX, y: e.touches[0].clientY };
-
-            leftButtonDown = true;
-        }
-        else if (e.touches.length == 2)
-        {
-            middleButtonDown = true;
-        }
-    });
-
-    document.getElementById("graph-canvas").addEventListener("touchmove", function(e)
-    {
-        handleMouseMove(e.touches[0]);
-    });
-
-    document.addEventListener("touchend", function(e)
-    {
-        e.preventDefault();
-        e.stopPropagation();
-
-        if (e.touches.length == 0)
-        {
-            leftButtonDown = false;
-            middleButtonDown = false;
-
-            if (!panning && renderWorker.grabbedNode == -1 && renderWorker.hoveredNode != -1)
-            {
-                navigateToNode(renderWorker.hoveredNode);
-            }
-
-            renderWorker.grabbedNode = -1;
-        }
-        else if (e.touches.length == 1)
-        {
-            middleButtonDown = false;
-        }
-    });
-
-    document.querySelector(".theme-toggle-input")?.addEventListener("change", event =>
-    {
-        renderWorker.resampleColors();
-    });
-
-    function toggleExpandedGraph()
+	function toggleExpandedGraph()
     {
         let container = document.querySelector(".graph-view-container");
         let initialWidth = container.clientWidth;
@@ -900,13 +718,186 @@ function initializeGraphEvents()
         graphExpanded = !graphExpanded;
     }
 
-    document.querySelector(".graph-expand.graph-icon")?.addEventListener("click", event =>
+	async function navigateToNode(nodeIndex)
+	{
+		if (!graphExpanded) GraphAssembly.saveState(renderWorker);
+		else toggleExpandedGraph();
+		let url = nodes.paths[nodeIndex];
+		if(window.location.pathname.endsWith(nodes.paths[nodeIndex])) return;
+		await loadDocument(url);
+	}
+
+    // Get the mouse position relative to the canvas.
+	function getPointerPosOnCanvas(event)
+	{
+		var rect = renderWorker.canvas.getBoundingClientRect();
+		let pos = getPointerPosition(event);
+
+		return {
+			x: pos.x - rect.left,
+			y: pos.y - rect.top
+		};
+	}
+
+	let startPointerPos = { x: 0, y: 0 };
+	let pointerPos = { x: 0, y: 0 };
+	let lastPointerPos = { x: 0, y: 0 };
+	let pointerDelta = { x: 0, y: 0 };
+	let pointerDeltaFromStart = { x: 0, y: 0 };
+	let lastTouchDistance = 0;
+	let pointerDown = false;
+	let middleDown = false;
+	let pointerInside = false;
+	let graphContainer = document.querySelector(".graph-view-container");
+
+	function handlePointerEnter(enter)
+	{
+		let lasstDistance = 0;
+
+		function handlePointerMove(move)
+		{
+			pointerPos = getPointerPosOnCanvas(move);
+			mouseWorldPos = renderWorker.vecToWorldspace(pointerPos);
+			pointerDelta = { x: pointerPos.x - lastPointerPos.x, y: pointerPos.y - lastPointerPos.y };
+			if (pointerDown) pointerDeltaFromStart = { x: pointerPos.x - startPointerPos.x, y: pointerPos.y - startPointerPos.y };
+			lastPointerPos = pointerPos;
+
+			if ((pointerDown && renderWorker.hoveredNode == -1 && renderWorker.grabbedNode == -1) || middleDown)
+			{
+				renderWorker.cameraOffset = { x: renderWorker.cameraOffset.x + pointerDelta.x, y: renderWorker.cameraOffset.y + pointerDelta.y };
+				console.log("pan");
+			}
+			else
+			{
+				if (renderWorker.hoveredNode != -1) renderWorker.canvas.style.cursor = "pointer";
+				else renderWorker.canvas.style.cursor = "default";
+			}
+
+			// pinch zoom
+			if (move.touches?.length == 2)
+			{
+				let touch1 = getTouchPosition(mouseMoveEv.touches[0]);
+				let touch2 = getTouchPosition(mouseMoveEv.touches[1]);
+				let distance = Math.sqrt(Math.pow(touch1.x - touch2.x, 2) + Math.pow(touch1.y - touch2.y, 2));
+
+				if (!startZoom)
+				{
+					startZoom = true;
+					lastDistance = distance;
+				}
+
+				let distanceDelta = distance - lastDistance;
+				let scaleDelta = distanceDelta / lastDistance;
+
+				scaleGraphViewAroundPoint(1 + scaleDelta, touchCenter);
+
+				lastDistance = distance;
+			}
+		}
+
+		function handlePointerUp(up)
+		{
+			document.removeEventListener("pointerup", handlePointerUp);
+			console.log("up");
+
+			setTimeout(() => 
+			{
+				if (pointerDown && renderWorker.grabbedNode != -1)
+				{
+					if (Math.abs(pointerDeltaFromStart.x) <= 2 && Math.abs(pointerDeltaFromStart.y) <= 2)
+					{
+						navigateToNode(renderWorker.grabbedNode);
+					}
+
+					renderWorker.grabbedNode = -1;
+					console.log("drop");
+				}
+
+				if (up.button == 0 && (up.touches?.length ?? 0 != 1)) pointerDown = false;
+				if (up.button == 1) middleDown = false;
+				if (!pointerInside) document.removeEventListener("pointermove", handlePointerMove);
+			}, 0);
+		}
+
+		function handlePointerDown(down)
+		{
+			document.addEventListener("pointerup", handlePointerUp);
+			startPointerPos = getPointerPosOnCanvas(down);
+			mouseWorldPos = renderWorker.vecToWorldspace(pointerPos);
+			pointerDeltaFromStart = { x: 0, y: 0 };
+			if (down.button == 0 || (down.touches?.length ?? 0 == 1)) pointerDown = true;
+			if (down.button == 1) middleDown = true;
+			console.log("down");
+
+			setTimeout(() =>
+			{
+				if (pointerDown && renderWorker.hoveredNode != -1)
+				{
+					renderWorker.grabbedNode = renderWorker.hoveredNode;
+					console.log("grab");
+				}
+			}, 0);
+		}
+
+		function handlePointerLeave(leave)
+		{
+			pointerInside = false;
+			if (!pointerDown) 
+			{
+				document.removeEventListener("pointermove", handlePointerMove);
+				mouseWorldPos = { x: undefined, y: undefined };
+			}
+			graphContainer.removeEventListener("pointerdown", handlePointerDown);
+			graphContainer.removeEventListener("pointerleave", handlePointerLeave);
+			console.log("leave");
+		}
+
+		pointerPos = getPointerPosOnCanvas(enter);
+		mouseWorldPos = renderWorker.vecToWorldspace(pointerPos);
+		lastPointerPos = getPointerPosOnCanvas(enter);
+		pointerInside = true;
+
+		document.addEventListener("pointermove", handlePointerMove);
+		graphContainer.addEventListener("pointerdown", handlePointerDown);
+		graphContainer.addEventListener("pointerleave", handlePointerLeave);
+		console.log("enter");
+	}
+
+	graphContainer.addEventListener("pointerenter", handlePointerEnter);
+
+	document.querySelector(".graph-expand.graph-icon")?.addEventListener("click", event =>
     {
-        event.preventDefault();
         event.stopPropagation();
 
         toggleExpandedGraph();
     });
+
+	graphContainer.addEventListener("wheel", function(e) 
+	{
+		let startingScrollVelocity = 0.09;
+		let delta = e.deltaY;
+		if (delta > 0)
+		{
+			if(scrollVelocity >= -startingScrollVelocity)
+			{
+				scrollVelocity = -startingScrollVelocity;
+			}
+			scrollVelocity *= 1.4;
+		}
+		else
+		{
+			if(scrollVelocity <= startingScrollVelocity)
+			{
+				scrollVelocity = startingScrollVelocity;
+			}
+			scrollVelocity *= 1.4;
+		}
+	});
+
+	document.querySelector(".theme-toggle-input")?.addEventListener("change", event =>
+	{
+		setTimeout(() => renderWorker.resampleColors(), 0);
+	});
 }
 
 Module['onRuntimeInitialized'] = initializeGraphView;

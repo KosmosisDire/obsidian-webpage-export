@@ -2,15 +2,15 @@ import { Modal, Setting, TFile } from 'obsidian';
 import { Utils } from '../utils/utils';
 import HTMLExportPlugin from '../main';
 import { MainSettings } from './main-settings';
-import { FilePicker } from './file-picker';
+import { FilePickerTree } from '../objects/file-picker';
 import { Path } from 'scripts/utils/path';
-import { HTMLGenerator } from 'scripts/html-generation/html-generator';
 
 export interface ExportInfo
 {
 	canceled: boolean;
 	pickedFiles: TFile[];
 	exportPath: Path;
+	validPath: boolean;
 }
 
 
@@ -19,8 +19,9 @@ export class ExportModal extends Modal
 	private isClosed: boolean = true;
 	private canceled: boolean = true;
 	private filePickerModalEl: HTMLElement;
-	private filePicker: FilePicker;
+	private filePicker: FilePickerTree;
 	private pickedFiles: TFile[];
+	private validPath: boolean = true;
 
 	public exportInfo: ExportInfo;
 
@@ -40,15 +41,10 @@ export class ExportModal extends Modal
 
 		super.open();
 
-		await HTMLGenerator.endBatch();
-
-		// let modalDivider: HTMLElement | undefined = undefined; // divider in between the main modal and the file picker modal
 		if(!this.filePickerModalEl)
 		{
 			this.filePickerModalEl = this.containerEl.createDiv({ cls: 'modal' });
-			// modalDivider = this.containerEl.createDiv();
 			this.containerEl.insertBefore(this.filePickerModalEl, this.modalEl);
-			// this.containerEl.insertBefore(modalDivider, this.modalEl);
 			this.filePickerModalEl.style.position = 'relative';
 			this.filePickerModalEl.style.zIndex = "1";
 			this.filePickerModalEl.style.width = "20em";
@@ -74,33 +70,23 @@ export class ExportModal extends Modal
 			scrollArea.style.padding = "1em";
 			scrollArea.style.boxShadow = "0 0 7px 1px inset #00000060";
 
-			// modalDivider.style.width = "2px";
-			// modalDivider.style.opacity = "0.4";
-			// modalDivider.style.backgroundColor = "var(--text-faint)";
-			// modalDivider.style.zIndex = "2";
-			// modalDivider.style.marginLeft = "0.4em";
-			// modalDivider.style.marginRight = "1em";
-			// modalDivider.style.maxHeight = "75%";
-			
-
-			this.filePicker = FilePicker.getFileSelectTree(app.vault.getFiles());
-			await this.filePicker.buildTree(scrollArea);
-			if(MainSettings.settings.pickedFiles[0].length > 0) this.filePicker.setSelectedFiles(MainSettings.settings.pickedFiles[0].map(path => new Path(path)));
+			this.filePicker = new FilePickerTree(app.vault.getFiles(), true, true);
+			this.filePicker.generateWithItemsClosed = true;
+			await this.filePicker.generateTree(scrollArea);
+			if(MainSettings.settings.filesToExport[0].length > 0) this.filePicker.setSelectedFiles(MainSettings.settings.filesToExport[0].map(path => new Path(path)));
 
 			let saveFiles = new Setting(container).addButton((button) => 
 			{
 				button.setButtonText("Save").onClick(async () =>
 				{
-					MainSettings.settings.pickedFiles[0] = this.filePicker.getSelectedFiles().map(file => file.path);
-					console.log(MainSettings.settings.pickedFiles[0]);
+					MainSettings.settings.filesToExport[0] = this.filePicker.getSelectedFiles().map(file => file.path);
+					console.log(MainSettings.settings.filesToExport[0]);
 					await MainSettings.saveSettings();
 				});
 			});
-				
 
 			saveFiles.settingEl.style.border = "none";
 			saveFiles.settingEl.style.marginRight = "1em";
-			
 		}
 
 
@@ -141,14 +127,6 @@ export class ExportModal extends Modal
 			white-space: pre-wrap;`)
 		}
 
-		// let hr = contentEl.createEl("hr");
-		// hr.style.marginTop = "20px";
-		// hr.style.marginBottom = "20px";
-		// hr.style.borderColor = "var(--color-accent)";
-		// hr.style.opacity = "0.5";
-
-		// contentEl.createEl('h3', { text: 'Basic Options:' });
-
 		new Setting(contentEl)
 			.setName('Export Presets')
 			.setHeading()
@@ -187,15 +165,6 @@ export class ExportModal extends Modal
 				}
 				));
 
-// 		contentEl.createDiv().outerHTML = 
-// 		`
-// 		<div class="setting-item-description" style="white-space: pre-wrap; margin-bottom: 1em;
-// 		">Multi-File Website: For multiple files as a website.
-// Self-contained Documents: For documents which should each be self contained as one file.
-
-// <em>For more control open the plugin settings from the button at the bottom of this popup.</em></div>`
-
-
 		new Setting(contentEl)
 			.setName('Only Export Modified')
 			.setDesc('Disable this to do a full re-export.')
@@ -203,6 +172,16 @@ export class ExportModal extends Modal
 				.setValue(MainSettings.settings.incrementalExport)
 				.onChange(async (value) => {
 					MainSettings.settings.incrementalExport = value;
+					await MainSettings.saveSettings();
+		}));
+
+		new Setting(contentEl)
+			.setName('Delete Old Files')
+			.setDesc('Delete *ALL* files in the export directory that are not included in this export.')
+			.addToggle((toggle) => toggle
+				.setValue(MainSettings.settings.deleteOldExportedFiles)
+				.onChange(async (value) => {
+					MainSettings.settings.deleteOldExportedFiles = value;
 					await MainSettings.saveSettings();
 		}));
 
@@ -220,6 +199,16 @@ export class ExportModal extends Modal
 		errorMessage.style.color = "var(--color-red)";
 		errorMessage.style.marginBottom = "0.75rem";
 
+		let tempPath = new Path(MainSettings.settings.exportPath);
+		if(!tempPath.isDirectory) errorMessage.setText("Path must be a directory!");
+		else if(!tempPath.isAbsolute) errorMessage.setText("Path must be absolute!");
+		else if(!tempPath.exists) errorMessage.setText("Path does not exist!");
+
+		if(errorMessage.innerText != "") 
+		{
+			this.validPath = false;
+		}
+
 		new Setting(contentEl)
 			.setName('')
 			.setHeading()
@@ -231,15 +220,17 @@ export class ExportModal extends Modal
 					.onChange(async (value) => 
 					{
 						let path = new Path(value);
-						console.log(path);
 						if(!path.isDirectory) errorMessage.setText("Path must be a directory!");
 						else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
+						else if(!path.exists) errorMessage.setText("Path does not exist!");
 						else
 						{
 							errorMessage.setText("");
 							MainSettings.settings.exportPath = value.replaceAll("\"", "");
 							text.setValue(MainSettings.settings.exportPath);
+							this.validPath = true;
 							await MainSettings.saveSettings();
+							this.open();
 						}
 					});
 			})
@@ -259,16 +250,13 @@ export class ExportModal extends Modal
 			})
 			.addButton((button) => 
 			{
+				button.setDisabled(!this.validPath);
+				if (button.disabled) button.buttonEl.style.opacity = "0.5";
 				button.setButtonText('Export').onClick(async () => 
 				{
 					this.canceled = false;
 					this.close();
 				});
-
-				// button.buttonEl.style.marginRight = 'auto';
-				// button.buttonEl.style.marginLeft = 'auto';
-				// button.buttonEl.style.width = '-webkit-fill-available';
-				// button.buttonEl.style.marginBottom = '2em';
 		});
 
 		contentEl.appendChild(errorMessage);
@@ -282,15 +270,13 @@ export class ExportModal extends Modal
 				app.setting.openTabById('webpage-html-export');
 		}));
 
-
 		this.filePickerModalEl.style.height = this.modalEl.clientHeight * 2 + "px";
-		// if(modalDivider) modalDivider.style.height = this.modalEl.clientHeight * 1.9 + "px";
 
 		await Utils.waitUntil(() => this.isClosed, 60 * 60 * 1000, 10);
 		
 		this.pickedFiles = this.filePicker.getSelectedFiles();
 		this.filePickerModalEl.remove();
-		this.exportInfo = { canceled: this.canceled, pickedFiles: this.pickedFiles, exportPath: new Path(MainSettings.settings.exportPath)};
+		this.exportInfo = { canceled: this.canceled, pickedFiles: this.pickedFiles, exportPath: new Path(MainSettings.settings.exportPath), validPath: this.validPath};
 
 		return this.exportInfo;
 	}

@@ -1,18 +1,18 @@
-.list-collapse-indicator
+.markdown-preview-view .heading-collapse-indicator 
 {
-    display: none !important;
+    margin-left: calc( 0px - var(--collapse-arrow-size) - 10px) !important;
+    padding: 0px 0px !important;
 }
 
-.collapse-icon::before 
-{ 
-    /* content: "​" !important;  */
-    content: "" !important;
-    visibility: hidden !important;
+.node-insert-event 
+{
+    animation-duration: unset !important;
+    animation-name: none !important;
 }
 
-.embedded-backlinks
+h1, h2, h3, h4, h5, h6
 {
-	display: none !important;
+	margin-top: 0 !important;
 }
 
 hr
@@ -40,6 +40,31 @@ hr
     }
 }
 
+/*#region Misc Hiding */
+
+.list-collapse-indicator
+{
+    display: none !important;
+}
+
+.collapse-icon::before 
+{ 
+    content: "​" !important; 
+    /* content: "" !important; */
+    visibility: hidden !important;
+}
+
+/* .embedded-backlinks
+{
+	display: none !important;
+} */
+
+.mod-header
+{
+	display: none !important;
+}
+/*#endregion */
+
 /*#region Transclusions */
 
 .markdown-embed .markdown-embed-content .markdown-preview-sizer
@@ -52,9 +77,9 @@ hr
 	display: none;
 }
 
-.markdown-embed .markdown-embed-link
+.markdown-embed-link
 {
-	display: none;
+	display: none !important;
 }
 
 /*#endregion  */
@@ -72,11 +97,27 @@ hr
 
 }
 
+.canvas-background
+{
+	pointer-events: visible !important;
+	cursor: grab !important;
+}
+
+.canvas-background:active
+{
+	cursor: grabbing !important;
+}
+
 .canvas-node-connection-point 
 {
 	display: none;
 	cursor: default !important;
 
+}
+
+.canvas-node-content
+{
+	backface-visibility: visible !important;
 }
 
 .canvas-menu-container {
@@ -85,7 +126,6 @@ hr
 
 .canvas-node-content-blocker
 {
-	display: none;
 	cursor: pointer !important;
 }
 
@@ -142,7 +182,6 @@ hr
 /*#endregion */
 
 /*#region Fonts */
-
 
 @font-face
 {

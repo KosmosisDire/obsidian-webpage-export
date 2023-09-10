@@ -26,3 +26,8 @@ webpage-html-export
 lapel
 obsidian-regex-replace
 templater-obsidian
+editing-toolbar
+obsidian-admonition
+obsidian-banners
+obsidian-charts
+obsidian-excalidraw-plugin

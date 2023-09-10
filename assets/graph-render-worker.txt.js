@@ -8,7 +8,6 @@ if( 'function' === typeof importScripts)
     let app;
     let container;
     let graphics;
-    let labelText;
 
     isDrawing = false;
 
@@ -18,6 +17,9 @@ if( 'function' === typeof importScripts)
     let nodeCount = 0;
     let radii = [];
     let labels = [];
+	let labelFade = [];
+	let labelWidths = [];
+	let pixiLabels = [];
     let cameraOffset = {x: 0, y: 0};
     let positions = new Float32Array(0);
     let linkLength = 0;
@@ -142,8 +144,50 @@ if( 'function' === typeof importScripts)
         return "#" + padZero(r) + padZero(g) + padZero(b);
     }
 
+	function clamp(value, min, max)
+	{
+		return Math.min(Math.max(value, min), max);
+	}
+
+	function lerp(a, b, t)
+	{
+		return a + (b - a) * t;
+	}
+
     let hoverFade = 0;
     let hoverFadeSpeed = 0.2;
+	let hoverFontSize = 15;
+	let normalFontSize = 12;
+	let fontRatio = hoverFontSize / normalFontSize;
+
+	function showLabel(index, fade, hovered = false)
+	{
+		let label = pixiLabels[index];
+		labelFade[index] = fade;
+
+		if(fade > 0.01) label.visible = true;
+		else 
+		{
+			hideLabel(index);
+			return;
+		}
+
+		if (hovered) label.style.fontSize = hoverFontSize;
+		else label.style.fontSize = normalFontSize;
+
+
+		let nodePos = vecToScreenSpace(getPosition(index));
+		let width = (labelWidths[index] * (hovered ? fontRatio : 1)) / 2;
+		label.x = nodePos.x - width;
+		label.y = nodePos.y + getNodeScreenRadius(radii[index]) + 9;
+		label.alpha = fade;
+	}
+
+	function hideLabel(index)
+	{
+		let label = pixiLabels[index];
+		label.visible = false;
+	}
 
     function draw()
     {
@@ -203,11 +247,25 @@ if( 'function' === typeof importScripts)
         graphics.lineStyle(0, 0xffffff);
         for (let i = 0; i < nodeCount; i++)
         {
+			let screenRadius = getNodeScreenRadius(radii[i]);
+
+			if (hoveredNode != i)
+			{
+				if (screenRadius > 2)
+				{
+					let labelFade = lerp(0, (screenRadius - 4) / 10 - (1/cameraScaleRoot)/6 * 0.9, Math.max(1 - hoverFade, 0.2));
+					showLabel(i, labelFade);
+				}
+				else 
+				{
+					hideLabel(i);
+				}
+			}
+
             if (hoveredNode == i || (lastHoveredNode == i && hoverFade != 0) || (hoveredNode != -1 && attachedToGrabbed.includes(i))) continue;
 
             let pos = vecToScreenSpace(getPosition(i));
-
-            graphics.drawCircle(pos.x, pos.y, getNodeScreenRadius(radii[i]));
+            graphics.drawCircle(pos.x, pos.y, screenRadius);
         }
 
         graphics.endFill();
@@ -241,6 +299,7 @@ if( 'function' === typeof importScripts)
                 let pos = vecToScreenSpace(getPosition(point));
 
                 graphics.drawCircle(pos.x, pos.y, getNodeScreenRadius(radii[point]));
+				showLabel(point, Math.max(hoverFade * 0.6, labelFade[point]));
             }
             graphics.endFill();
 
@@ -252,22 +311,12 @@ if( 'function' === typeof importScripts)
             graphics.drawCircle(pos.x, pos.y, getNodeScreenRadius(radii[index]));
             graphics.endFill();
 
-            labelText.text = labels[index];
-            let nodePos = vecToScreenSpace(getPosition(index));
-            labelText.x = nodePos.x - labelText.width/2;
-            labelText.y = nodePos.y + getNodeScreenRadius(radii[index]) + hoverFade * 5 + 15;
+            showLabel(index, Math.max(hoverFade, labelFade[index]), true);
         }
+
+		
 
         updateAttached = false;
-        
-        if (hoveredNode == -1)
-        {
-            labelText.text = "";
-        }
-        else
-        {
-
-        }
 
         graphics.lineStyle(2, colors.accent);
         // draw the active node
@@ -275,6 +324,7 @@ if( 'function' === typeof importScripts)
         {
             let pos = vecToScreenSpace(getPosition(activeNode));
             graphics.drawCircle(pos.x, pos.y, getNodeScreenRadius(radii[activeNode]) + 4);
+			
         }
     }
 
@@ -314,10 +364,10 @@ if( 'function' === typeof importScripts)
         {
             colors = event.data.colors;
 
-            if(labelText) 
-            {
-                labelText.style.fill = invertColor(colors.background, true);
-            }
+			for (let label of pixiLabels)
+			{
+				label.style.fill = invertColor(colors.background, true);
+			}
         }
         else if(event.data.type == "init")
         {
@@ -337,8 +387,15 @@ if( 'function' === typeof importScripts)
             app.stage.addChild(container);
             container.addChild(graphics);
 
-            labelText = new PIXI.Text("", {fontFamily : 'Arial', fontSize: 16, fontWeight: "bold", fill : invertColor(colors.background, true), align : 'center', anchor: 0.5});
-            app.stage.addChild(labelText);
+            pixiLabels = [];
+			for (let i = 0; i < nodeCount; i++)
+			{
+				let label = new PIXI.Text(labels[i], {fontFamily : 'Arial', fontSize: 12, fontWeight: "normal", fill : invertColor(colors.background, true), align : 'center', anchor: 0.5});
+				pixiLabels.push(label);
+				labelWidths.push(label.width);
+				labelFade.push(0);
+            	app.stage.addChild(label);
+			}
 
         }
         else

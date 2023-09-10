@@ -1,18 +1,15 @@
 // imports from obsidian API
-import { MarkdownView, Notice, Plugin, TFile, TFolder} from 'obsidian';
+import { Notice, Plugin} from 'obsidian';
 
 // modules that are part of the plugin
 import { ExportModal } from './settings/export-modal';
 import { Utils } from './utils/utils';
-import { HTMLGenerator } from './html-generation/html-generator';
-import { Path } from './utils/path';
-import { ExportFile } from './html-generation/export-file';
 import { AssetHandler } from './html-generation/asset-handler';
-import { RenderLog } from './html-generation/render-log';
-import { Downloadable } from './utils/downloadable';
+
 import { MainSettings } from './settings/main-settings';
 import { HTMLExporter } from './exporter';
-
+import { FileTree } from './objects/file-tree';
+import { MarkdownRenderer } from './html-generation/markdown-renderer';
 
 export default class HTMLExportPlugin extends Plugin
 {
@@ -23,7 +20,7 @@ export default class HTMLExportPlugin extends Plugin
 		console.log('loading webpage-html-export plugin');
 
 		HTMLExportPlugin.plugin = this;
-		await this.checkForUpdates();
+		this.checkForUpdates();
 		AssetHandler.initialize("webpage-html-export");
 		this.addSettingTab(new MainSettings(this));
 		MainSettings.loadSettings();
@@ -34,11 +31,18 @@ export default class HTMLExportPlugin extends Plugin
 			let info = await modal.open();
 			if (info.canceled) return;
 
-			await HTMLExporter.exportFiles(info.pickedFiles, info.exportPath, true);
+			await HTMLExporter.exportFiles(info.pickedFiles, info.exportPath, true, MainSettings.settings.deleteOldExportedFiles);
+
+			new Notice("✅ Finished HTML Export:\n\n" + info.exportPath, 5000);
+
+			if (MainSettings.settings.openAfterExport) Utils.openPath(info.exportPath);
 		});
+
+		// register callback for file rename so we can update the saved files to export
+		this.registerEvent(this.app.vault.on("rename", MainSettings.renameFile));
 	}
 
-	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string};
+	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string} = {updateAvailable: false, latestVersion: "0", currentVersion: "0", updateNote: ""};
 	async checkForUpdates(): Promise<{updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string}>
 	{	
 		let currentVersion = this.manifest.version;

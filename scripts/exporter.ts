@@ -1,6 +1,6 @@
-import { MarkdownRenderer, Notice, TFile, TFolder } from "obsidian";
-import { ExportFile } from "./html-generation/export-file";
-import { HTMLGenerator } from "./html-generation/html-generator";
+import { TFile, TFolder } from "obsidian";
+import { Webpage } from "./objects/webpage";
+import { GenHelper } from "./html-generation/html-generator";
 import { Path } from "./utils/path";
 import { MainSettings } from "./settings/main-settings";
 import { RenderLog } from "./html-generation/render-log";
@@ -8,107 +8,46 @@ import { Downloadable } from "./utils/downloadable";
 import HTMLExportPlugin from "./main";
 import { Utils } from "./utils/utils";
 import { AssetHandler } from "./html-generation/asset-handler";
+import { MarkdownRenderer } from "./html-generation/markdown-renderer";
+import { promises as fs } from 'fs';
+import { Website } from "./objects/website";
 
 
 export class HTMLExporter
 {
-
-	public static async exportFile(file: TFile, exportFromPath: Path, exportToPath: Path, saveFile: boolean) : Promise<ExportFile | undefined>
+	public static async exportFiles(files: TFile[], destination: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website>
 	{
-		let loneFile = !HTMLGenerator.isBatchStarted();
-		if(loneFile) await HTMLGenerator.beginBatch([file]);
+		var website = await new Website().createWithFiles(files, destination);
+		if (clearDirectory) await this.deleteNonExports(website.webpages, destination);
+		if (saveFiles) await this.saveExports(website.webpages, destination);
 
-		let filePath = new Path(file.path);
+		MarkdownRenderer.endBatch();
 
-		var exportedFile = new ExportFile
-		(
-			file, 
-			exportToPath.directory.absolute(), 
-			exportFromPath.directory, 
-			!loneFile,
-			exportToPath.fullName,
-			loneFile
-		);
-		
-		// Skip the file if it's unchanged since last export
-		if (MainSettings.settings.incrementalExport && exportedFile.isFileModified === false)
-		{
-			RenderLog.log("Skipping file", `${file.path}. File unchanged since last export.`);
-			return;
-		}
-
-		if(HTMLGenerator.convertableExtensions.contains(file.extension)) 
-		{
-			await HTMLGenerator.generateWebpage(exportedFile);
-		}
-		else 
-		{
-			exportedFile.downloads.push(await exportedFile.getSelfDownloadable());
-		}
-
-		if(saveFile) await this.saveExports([exportedFile], exportToPath.directory.absolute());
-		
-		if(loneFile) await HTMLGenerator.endBatch();
-	
-		return exportedFile;
+		return website;
 	}
 
-	public static async exportFiles(files: TFile[], rootExportPath: Path, saveFiles: boolean) : Promise<ExportFile[] | undefined>
-	{
-		await HTMLGenerator.beginBatch(files);
-
-		RenderLog.progress(0, files.length, "Generating HTML", "...", "var(--color-accent)");
-		
-		let exports: ExportFile[] = [];
-				
-		for (let i = 0; i < files.length; i++)
-		{
-			let file = files[i];
-			try
-			{
-				RenderLog.progress(i, files.length, "Generating HTML", "Exporting: " + file.path, "var(--color-accent)");
-				let exportPath = rootExportPath.joinString(file.name);
-				if (HTMLGenerator.convertableExtensions.contains(file.extension)) exportPath.setExtension("html");
-				let exportedFile = await this.exportFile(file, new Path(file.path), exportPath, false);
-				if(exportedFile) exports.push(exportedFile);
-			}
-			catch (e)
-			{
-				let message = "Could not export file: " + file.name;
-				RenderLog.error(message, e.stack);
-				return;
-			}
-		}
-
-		if(saveFiles) await this.saveExports(exports, rootExportPath);
-
-		await HTMLGenerator.endBatch();
-
-		return exports;
-	}
-
-	public static async exportFolder(folder: TFolder, rootExportPath: Path, saveFiles: boolean) : Promise<ExportFile[] | undefined>
+	public static async exportFolder(folder: TFolder, rootExportPath: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website>
 	{
 		let folderPath = new Path(folder.path);
 		let allFiles = HTMLExportPlugin.plugin.app.vault.getFiles();
 		let files = allFiles.filter((file) => new Path(file.path).directory.asString.startsWith(folderPath.asString));
 
-		return await this.exportFiles(files, rootExportPath, saveFiles);
+		return await this.exportFiles(files, rootExportPath, saveFiles, clearDirectory);
 	}
 
-	public static async exportVault(rootExportPath: Path, saveFiles: boolean) : Promise<ExportFile[] | undefined>
+	public static async exportVault(rootExportPath: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website>
 	{
 		let files = HTMLExportPlugin.plugin.app.vault.getFiles();
-		return await this.exportFiles(files, rootExportPath, saveFiles);
+		return await this.exportFiles(files, rootExportPath, saveFiles, clearDirectory);
 	}
 
-	public static async saveExports(exports: ExportFile[], rootPath: Path)
+	public static async saveExports(webpages: Webpage[], rootPath: Path)
 	{
 		let downloads: Downloadable[] = [];
 
-		for (let i = 0; i < exports.length; i++)
+		for (let i = 0; i < webpages.length; i++)
 		{
-			downloads.push(...exports[i].downloads);
+			downloads.push(...webpages[i].downloads);
 		}
 
 		downloads.forEach((file) =>
@@ -124,8 +63,97 @@ export class HTMLExporter
 
 		downloads = downloads.filter((file, index) => downloads.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath && f.filename === file.filename) == index);
 
-
-
 		await Utils.downloadFiles(downloads, rootPath);
+	}
+
+	private static async getAllFilesInFolderRecursive(folder: Path): Promise<Path[]>
+	{
+		let files: Path[] = [];
+
+		let folderFiles = await fs.readdir(folder.asString);
+		for (let i = 0; i < folderFiles.length; i++)
+		{
+			let file = folderFiles[i];
+			let path = folder.joinString(file);
+			if ((await fs.stat(path.asString)).isDirectory())
+			{
+				files.push(...await this.getAllFilesInFolderRecursive(path));
+			}
+			else
+			{
+				files.push(path);
+			}
+		}
+
+		return files;
+	}
+
+	private static async getAllEmptyFoldersRecursive(folder: Path): Promise<Path[]>
+	{
+		let folders: Path[] = [];
+
+		let folderFiles = await fs.readdir(folder.asString);
+		for (let i = 0; i < folderFiles.length; i++)
+		{
+			let file = folderFiles[i];
+			let path = folder.joinString(file);
+			if ((await fs.stat(path.asString)).isDirectory())
+			{
+				let subFolders = await this.getAllEmptyFoldersRecursive(path);
+				if (subFolders.length == 0)
+				{
+					let subFiles = await fs.readdir(path.asString);
+					if (subFiles.length == 0) folders.push(path);
+				}
+				else
+				{
+					folders.push(...subFolders);
+				}
+			}
+		}
+
+		return folders;
+	}
+
+	public static async deleteNonExports(webpages: Webpage[], rootPath: Path)
+	{
+		// delete all files in root path that are not in exports
+		let files = (await this.getAllFilesInFolderRecursive(rootPath)).filter((file) => !file.makeUnixStyle().asString.contains(AssetHandler.mediaFolderName.makeUnixStyle().asString));
+
+		console.log(files);
+
+		let toDelete = [];
+		for (let i = 0; i < files.length; i++)
+		{
+			let file = files[i];
+			if(!webpages.find((exportedFile) => exportedFile.exportPathAbsolute.makeUnixStyle().asString == file.makeUnixStyle().asString))
+			{
+				for (let webpage of webpages)
+				{
+					if (webpage.downloads.find((download) => download.relativeDownloadPath.makeUnixStyle().asString == file.makeUnixStyle().asString))
+					{
+						toDelete.push(file);
+						break;
+					}
+				}
+			}
+		}
+
+		for	(let i = 0; i < toDelete.length; i++)
+		{
+			let file = toDelete[i];
+			RenderLog.progress(i, toDelete.length, "Deleting Old Files", "Deleting: " + file.asString, "var(--color-red)");
+			await fs.unlink(file.asString);
+		}
+
+		// delete all empty folders in root path
+		let folders = (await this.getAllEmptyFoldersRecursive(rootPath));
+
+		for	(let i = 0; i < folders.length; i++)
+		{
+			let folder = folders[i];
+			RenderLog.progress(i, folders.length, "Deleting Empty Folders", "Deleting: " + folder.asString, "var(--color-purple)");
+			await fs.rmdir(folder.directory.asString);
+		}
 	}
 }

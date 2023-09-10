@@ -68,8 +68,8 @@ export class Utils
 		
 		// add filters
 		let filters = [{
-			name: Utils.trimStart(absoluteDefaultPath.extenstion, ".").toUpperCase() + " Files",
-			extensions: [Utils.trimStart(absoluteDefaultPath.extenstion, ".")]
+			name: Utils.trimStart(absoluteDefaultPath.extension, ".").toUpperCase() + " Files",
+			extensions: [Utils.trimStart(absoluteDefaultPath.extension, ".")]
 		}];
 
 		if (showAllFilesOption)

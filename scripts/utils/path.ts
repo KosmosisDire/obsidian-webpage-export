@@ -408,7 +408,7 @@ export class Path
 	 * @example
 	 * ".txt" or "".
 	 */
-	get extenstion(): string
+	get extension(): string
 	{
 		return this._ext;
 	}

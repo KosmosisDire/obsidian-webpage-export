@@ -1,9 +1,10 @@
-import { Plugin, PluginSettingTab, Setting } from 'obsidian';
+import { Plugin, PluginSettingTab, Setting, TFile } from 'obsidian';
 import { Utils } from '../utils/utils';
 import { Path } from '../utils/path';
 import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
 import { FlowList } from './flow-list';
 
+// #region Settings Definition
 
 export interface MainSettingsData 
 {
@@ -17,8 +18,9 @@ export interface MainSettingsData
 	// Formatting Options
 	makeNamesWebStyle: boolean;
 	allowFoldingHeadings: boolean;
+	sidebarsAlwaysCollapsible: boolean;
 	addFilenameTitle: boolean;
-	beautifyHTML: boolean;
+	minifyHTML: boolean;
 	customLineWidth: string;
 	contentWidth: string;
 	sidebarWidth: string;
@@ -28,6 +30,7 @@ export interface MainSettingsData
 	dataviewBlockWaitTime: number;
 	logLevel: "all" | "warning" | "error" | "fatal" | "none";
 	incrementalExport: boolean;
+	deleteOldExportedFiles: boolean;
 
 	// Page Features
 	addDarkModeToggle: boolean;
@@ -50,7 +53,7 @@ export interface MainSettingsData
 
 	// Cache
 	exportPath: string;
-	pickedFiles: string[][];
+	filesToExport: string[][];
 }
 
 const DEFAULT_SETTINGS: MainSettingsData =
@@ -65,8 +68,9 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	// Formatting Options
 	makeNamesWebStyle: true,
 	allowFoldingHeadings: true,
+	sidebarsAlwaysCollapsible: false,
 	addFilenameTitle: true,
-	beautifyHTML: false,
+	minifyHTML: true,
 	customLineWidth: "",
 	contentWidth: "",
 	sidebarWidth: "",
@@ -76,6 +80,7 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	dataviewBlockWaitTime: 700,
 	logLevel: "warning",
 	incrementalExport: true,
+	deleteOldExportedFiles: false,
 
 	// Page Features
 	addDarkModeToggle: true,
@@ -98,10 +103,15 @@ const DEFAULT_SETTINGS: MainSettingsData =
 
 	// Cache
 	exportPath: '',
-	pickedFiles: [[]],
+	filesToExport: [[]],
 }
 
-export class MainSettings extends PluginSettingTab {
+// #endregion
+
+export class MainSettings extends PluginSettingTab 
+{
+
+	// #region Class Functions and Variables
 
 	static settings: MainSettingsData = DEFAULT_SETTINGS;
 	static plugin: Plugin;
@@ -130,8 +140,25 @@ export class MainSettings extends PluginSettingTab {
 		await MainSettings.plugin.saveData(MainSettings.settings);
 	}
 
-	display() {
+	static renameFile(file: TFile, oldPath: string)
+	{
+		MainSettings.settings.filesToExport.forEach((fileList) =>
+		{
+			let index = fileList.indexOf(oldPath);
+			if (index >= 0)
+			{
+				fileList[index] = file.path;
+			}
+		});
+	}
+
+	// #endregion
+
+	display() 
+	{
 		const { containerEl: contentEl } = this;
+
+		// #region Settings Header
 
 		contentEl.empty();
 
@@ -148,6 +175,8 @@ export class MainSettings extends PluginSettingTab {
 		let supportHeader = contentEl.createDiv({ text: 'Support the continued development of this plugin.', cls: "setting-item-description" });
 		supportHeader.style.display = 'block';
 		supportHeader.style.marginBottom = '20px';
+
+		// #endregion
 
 		//#region Page Features
 
@@ -230,6 +259,16 @@ export class MainSettings extends PluginSettingTab {
 				.setValue(MainSettings.settings.allowFoldingHeadings)
 				.onChange(async (value) => {
 					MainSettings.settings.allowFoldingHeadings = value;
+					await MainSettings.saveSettings();
+				}));
+
+		new Setting(contentEl)
+			.setName('Sidebars Always Collapsible')
+			.setDesc('Always allow the sidebars to be collapsed regardless of the space on the screen. By default the sidebars adjust whether they can be collapsed based on the space available.')
+			.addToggle((toggle) => toggle
+				.setValue(MainSettings.settings.sidebarsAlwaysCollapsible)
+				.onChange(async (value) => {
+					MainSettings.settings.sidebarsAlwaysCollapsible = value;
 					await MainSettings.saveSettings();
 				}));
 
@@ -393,12 +432,12 @@ export class MainSettings extends PluginSettingTab {
 				}));
 
 		new Setting(contentEl)
-			.setName('Beautify HTML')
-			.setDesc('Beautify the HTML text to make it more human readable at the cost of export speed.')
+			.setName('Minify HTML')
+			.setDesc('Minify the HTML to make it load faster (but it will be less readable to humans).')
 			.addToggle((toggle) => toggle
-				.setValue(MainSettings.settings.beautifyHTML)
+				.setValue(MainSettings.settings.minifyHTML)
 				.onChange(async (value) => {
-					MainSettings.settings.beautifyHTML = value;
+					MainSettings.settings.minifyHTML = value;
 					await MainSettings.saveSettings();
 				}));
 
