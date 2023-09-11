@@ -1,4 +1,4 @@
-import { ButtonComponent, Modal, Setting, TFile } from 'obsidian';
+import { ButtonComponent, Modal, Setting, TFile, TextComponent } from 'obsidian';
 import { Utils } from '../utils/utils';
 import HTMLExportPlugin from '../main';
 import { MainSettings } from './main-settings';
@@ -218,6 +218,7 @@ export class ExportModal extends Modal
 		}
 
 		let exportButton : ButtonComponent | undefined = undefined;
+		let pathInput : TextComponent | undefined = undefined;
 
 		function setExportDisabled(disabled: boolean)
 		{
@@ -234,6 +235,7 @@ export class ExportModal extends Modal
 			.setHeading()
 			.addText((text) => 
 			{
+				pathInput = text;
 				text.inputEl.style.width = '100%';
 				text.setPlaceholder('Enter an absolute export directory path')
 					.setValue(MainSettings.settings.exportPath)
@@ -260,12 +262,13 @@ export class ExportModal extends Modal
 				button.setButtonText('Browse').onClick(async () => 
 				{
 					let ideal = Utils.idealDefaultPath();
-					let path = await Utils.showSelectFolderDialog(ideal)
+					let path = (await Utils.showSelectFolderDialog(ideal))?.directory;
 					if (path) 
 					{
 						MainSettings.settings.exportPath = path.directory.asString;
 						await MainSettings.saveSettings();
-						this.open();
+						setExportDisabled(!path.isDirectory || !path.isAbsolute || !path.exists);
+						pathInput?.setValue(MainSettings.settings.exportPath);
 					}
 				});
 			})
