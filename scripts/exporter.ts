@@ -18,6 +18,9 @@ export class HTMLExporter
 	public static async exportFiles(files: TFile[], destination: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website>
 	{
 		var website = await new Website().createWithFiles(files, destination);
+
+		MarkdownRenderer.checkCancelled();
+
 		if (clearDirectory) await this.deleteNonExports(website.webpages, destination);
 		if (saveFiles) await this.saveExports(website.webpages, destination);
 

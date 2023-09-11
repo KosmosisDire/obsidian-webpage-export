@@ -220,6 +220,8 @@ export class Website
 
 		for (let file of files)
 		{			
+			MarkdownRenderer.checkCancelled();
+
 			this.progress++;
 
 			try
@@ -242,10 +244,7 @@ export class Website
 				continue;
 			}
 
-			if (MarkdownRenderer.cancelled)
-			{
-				throw new Error("Export cancelled");
-			}
+			MarkdownRenderer.checkCancelled();
 		}
 
 		return this;

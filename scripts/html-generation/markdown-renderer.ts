@@ -24,20 +24,20 @@ export namespace MarkdownRenderer
 		return convertableExtensions.contains(extention);
 	}
 
-	export function checkCancelled()
+	export function checkCancelled(): boolean
 	{
 		if (cancelled) 
 		{
 			endBatch();
-			cancelled = false;
 			throw new Error("Markdown rendering cancelled");
 		}
 		if (!renderLeaf)
 		{
 			endBatch();
-			cancelled = false;
 			throw new Error("Markdown rendering leaf not found! Cancelled.");
 		}
+
+		return false;
 	}
 
 	function failRender(file: TFile, message: any): undefined
@@ -55,8 +55,8 @@ export namespace MarkdownRenderer
 			await MarkdownRenderer.beginBatch();
 		}
 
-		await Utils.waitUntil(() => renderLeaf != undefined || cancelled, 2000, 10);
-		checkCancelled();
+		await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 10);
+
 		if (!renderLeaf) return failRender(file.source, "Failed to create leaf for rendering!");
 		
 		try
@@ -67,8 +67,6 @@ export namespace MarkdownRenderer
 		{
 			return failRender(file.source, e);
 		}
-
-		checkCancelled();
 
 		let html: HTMLElement | undefined;
 
@@ -145,9 +143,7 @@ export namespace MarkdownRenderer
 			await section.render();
 
 			// @ts-ignore
-			await Utils.waitUntil(() => (section.el && section.rendered == true) || cancelled, 2000, 5);
-			
-			checkCancelled();
+			await Utils.waitUntil(() => (section.el && section.rendered == true) || checkCancelled(), 2000, 5);
 
 			section.el.querySelectorAll(".language-mermaid").forEach(async (element: HTMLElement) =>
 			{
@@ -165,7 +161,7 @@ export namespace MarkdownRenderer
 
 			await renderer.measureSection(section);
 
-			await Utils.waitUntil(() => section.computed == true || cancelled, 2000, 5);
+			await Utils.waitUntil(() => section.computed == true || checkCancelled(), 2000, 5);
 
 			// @ts-ignore
 			await preview.postProcess(section, promises, renderer.frontmatter);
@@ -283,7 +279,7 @@ export namespace MarkdownRenderer
     async function renderMarkdownFile(file: TFile, view: MarkdownView): Promise<HTMLElement | undefined>
 	{
 		// @ts-ignore
-		let previewModeFound = await Utils.waitUntil(() => view.previewMode || cancelled, 2000, 10);
+		let previewModeFound = await Utils.waitUntil(() => view.previewMode || checkCancelled(), 2000, 10);
 		
 		checkCancelled()
 
@@ -616,7 +612,7 @@ export namespace MarkdownRenderer
 
 		renderLeaf = TabManager.openNewTab("window", "vertical");
 		// @ts-ignore
-		let parentFound = await Utils.waitUntil(() => (renderLeaf && renderLeaf.parent) || cancelled, 2000, 10);
+		let parentFound = await Utils.waitUntil(() => (renderLeaf && renderLeaf.parent) || checkCancelled(), 2000, 10);
 		
 		checkCancelled();
 
