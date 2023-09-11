@@ -5,8 +5,7 @@ let minBatchFraction = 0.3;
 repulsionForce /= batchFraction;
 let dt = 1;
 let targetFPS = 40;
-let startingCameraScale = undefined;
-let startingCameraOffset = undefined;
+let startingCameraRect = {minX: -1, minY: -1, maxX: 1, maxY: 1};
 
 let mouseWorldPos = { x: undefined, y: undefined };
 let scrollVelocity = 0;
@@ -96,9 +95,8 @@ class GraphAssembly
      * */ 
     static saveState(renderWorker)
     {
-        localStorage.setItem("positions", JSON.stringify(new Float32Array(GraphAssembly.positions)));
-        localStorage.setItem("cameraOffset", JSON.stringify(renderWorker.cameraOffset));
-        localStorage.setItem("cameraScale", JSON.stringify(renderWorker.cameraScale));
+		// save all rounded to int
+        localStorage.setItem("positions", JSON.stringify(new Float32Array(GraphAssembly.positions).map(x => Math.round(x))));
     }
 
     /**
@@ -121,8 +119,23 @@ class GraphAssembly
             }
         }
 
-        startingCameraOffset = JSON.parse(localStorage.getItem("cameraOffset"));
-        startingCameraScale = JSON.parse(localStorage.getItem("cameraScale"));
+		// fit view to positions
+		let minX = Infinity;
+		let maxX = -Infinity;
+		let minY = Infinity;
+		let maxY = -Infinity;
+		for (let i = 0; i < GraphAssembly.nodeCount-1; i+=2)
+		{
+			let pos = { x: positions[i], y: positions[i + 1] };
+			minX = Math.min(minX, pos.x);
+			maxX = Math.max(maxX, pos.x);
+			minY = Math.min(minY, pos.y);
+			maxY = Math.max(maxY, pos.y);
+		}
+
+		let margin = 50;
+
+		startingCameraRect = { minX: minX - margin, minY: minY - margin, maxX: maxX + margin, maxY: maxY + margin };
 
         return positions;
     }
@@ -243,15 +256,7 @@ class GraphRenderWorker
 
         this.autoResizeCanvas();
 
-        if (startingCameraOffset && startingCameraScale)
-        {
-            this.cameraOffset = startingCameraOffset;
-            this.cameraScale = startingCameraScale;
-        }
-        else
-        {
-            this.centerCamera();
-        }
+        this.fitToRect(startingCameraRect);
     }
 
     #pixiInit()
@@ -273,14 +278,28 @@ class GraphRenderWorker
         }, [this.view]);
     }
 
+	fitToRect(rect) // {minX, minY, maxX, maxY}
+	{
+		let min = {x: rect.minX, y: rect.minY};
+		let max = {x: rect.maxX, y: rect.maxY};
+
+		let width = max.x - min.x;
+		let height = max.y - min.y;
+
+		let scale = 1/Math.min(width/this.width, height / this.height);
+
+		this.cameraScale = scale;
+		this.cameraOffset = { x: (this.width / 2) - ((rect.minX + width / 2) * scale), y: (this.height / 2) - ((rect.minY + height / 2) * scale) };
+	}
+
     resampleColors()
     {
         function sampleColor(variable) 
         {
             let testEl = document.createElement('div');
+            document.body.appendChild(testEl);
             testEl.style.setProperty('display', 'none');
             testEl.style.setProperty('color', 'var(' + variable + ')');
-            document.body.appendChild(testEl);
 
             let col = getComputedStyle(testEl).color;
             let opacity = getComputedStyle(testEl).opacity;
@@ -646,11 +665,13 @@ function scaleGraphViewAroundPoint(point, scale, minScale = 0.15, maxScale = 15.
 {
 	let cameraCenter = renderWorker.getCameraCenterWorldspace();
 
+	let scaleBefore = renderWorker.cameraScale;
 	renderWorker.cameraScale = Math.max(Math.min(scale * renderWorker.cameraScale, maxScale), minScale);
-	if(renderWorker.cameraScale != minScale && renderWorker.cameraScale != maxScale && scrollVelocity > 0 && mouseWorldPos.x != undefined && mouseWorldPos.y != undefined)
+	let diff = (scaleBefore - renderWorker.cameraScale) / scaleBefore;
+	if(renderWorker.cameraScale != minScale && renderWorker.cameraScale != maxScale && scale != 0)
 	{
 		let aroundDiff = {x: point.x - cameraCenter.x, y: point.y - cameraCenter.y};
-		let movePos = {x: cameraCenter.x + aroundDiff.x * scale, y: cameraCenter.y + aroundDiff.y * scale};
+		let movePos = {x: cameraCenter.x - aroundDiff.x * diff, y: cameraCenter.y - aroundDiff.y * diff};
 		renderWorker.setCameraCenterWorldspace(movePos);
 	}
 	else renderWorker.setCameraCenterWorldspace(cameraCenter);
@@ -683,9 +704,19 @@ function initializeGraphEvents()
         }
     });
 
+    let container = document.querySelector(".graph-view-container");
+
+	function handleOutsideClick(event)
+	{
+		if (event.composedPath().includes(container)) 
+		{
+			return;
+		}
+		toggleExpandedGraph();
+	}
+
 	function toggleExpandedGraph()
     {
-        let container = document.querySelector(".graph-view-container");
         let initialWidth = container.clientWidth;
         let initialHeight = container.clientHeight;
 
@@ -716,6 +747,9 @@ function initializeGraphEvents()
         });
 
         graphExpanded = !graphExpanded;
+		
+		if (graphExpanded) document.addEventListener("pointerdown", handleOutsideClick);
+		else document.removeEventListener("pointerdown", handleOutsideClick);
     }
 
 	async function navigateToNode(nodeIndex)
@@ -743,53 +777,85 @@ function initializeGraphEvents()
 	let pointerPos = { x: 0, y: 0 };
 	let lastPointerPos = { x: 0, y: 0 };
 	let pointerDelta = { x: 0, y: 0 };
-	let pointerDeltaFromStart = { x: 0, y: 0 };
-	let lastTouchDistance = 0;
+	let dragDisplacement = { x: 0, y: 0 };
+	let startDragTime = 0;
 	let pointerDown = false;
 	let middleDown = false;
 	let pointerInside = false;
 	let graphContainer = document.querySelector(".graph-view-container");
+	let firstPointerDownId = -1;
 
 	function handlePointerEnter(enter)
 	{
-		let lasstDistance = 0;
+		let lastDistance = 0;
+		let startZoom = false;
 
-		function handlePointerMove(move)
+		function handleMouseMove(move)
 		{
 			pointerPos = getPointerPosOnCanvas(move);
 			mouseWorldPos = renderWorker.vecToWorldspace(pointerPos);
 			pointerDelta = { x: pointerPos.x - lastPointerPos.x, y: pointerPos.y - lastPointerPos.y };
-			if (pointerDown) pointerDeltaFromStart = { x: pointerPos.x - startPointerPos.x, y: pointerPos.y - startPointerPos.y };
 			lastPointerPos = pointerPos;
+
+			if (renderWorker.grabbedNode != -1) dragDisplacement = { x: pointerPos.x - startPointerPos.x, y: pointerPos.y - startPointerPos.y };
+
+			if (pointerDown && renderWorker.hoveredNode != -1 && renderWorker.grabbedNode == -1 && renderWorker.hoveredNode != renderWorker.grabbedNode)
+			{
+				renderWorker.grabbedNode = renderWorker.hoveredNode;
+			}
 
 			if ((pointerDown && renderWorker.hoveredNode == -1 && renderWorker.grabbedNode == -1) || middleDown)
 			{
 				renderWorker.cameraOffset = { x: renderWorker.cameraOffset.x + pointerDelta.x, y: renderWorker.cameraOffset.y + pointerDelta.y };
-				console.log("pan");
 			}
 			else
 			{
 				if (renderWorker.hoveredNode != -1) renderWorker.canvas.style.cursor = "pointer";
 				else renderWorker.canvas.style.cursor = "default";
 			}
+		}
+
+		function handleTouchMove(move)
+		{
+			if (move.touches?.length == 1) 
+			{
+				if(startZoom)
+				{
+					lastPointerPos = getPointerPosOnCanvas(move);
+					startZoom = false;
+				}
+
+				handleMouseMove(move);
+				return;
+			}
 
 			// pinch zoom
 			if (move.touches?.length == 2)
 			{
-				let touch1 = getTouchPosition(mouseMoveEv.touches[0]);
-				let touch2 = getTouchPosition(mouseMoveEv.touches[1]);
+				let touch1 = getTouchPosition(move.touches[0]);
+				let touch2 = getTouchPosition(move.touches[1]);
+
+				pointerPos = getPointerPosOnCanvas(move);
+				pointerDelta = { x: pointerPos.x - lastPointerPos.x, y: pointerPos.y - lastPointerPos.y };
+				lastPointerPos = pointerPos;
+
 				let distance = Math.sqrt(Math.pow(touch1.x - touch2.x, 2) + Math.pow(touch1.y - touch2.y, 2));
 
 				if (!startZoom)
 				{
 					startZoom = true;
 					lastDistance = distance;
+					pointerDelta = { x: 0, y: 0 };
+					mouseWorldPos = { x: undefined, y: undefined};
+					renderWorker.grabbedNode = -1;
+					renderWorker.hoveredNode = -1;
 				}
 
 				let distanceDelta = distance - lastDistance;
 				let scaleDelta = distanceDelta / lastDistance;
 
-				scaleGraphViewAroundPoint(1 + scaleDelta, touchCenter);
+				scaleGraphViewAroundPoint(renderWorker.vecToWorldspace(pointerPos), 1 + scaleDelta, 0.15, 15.0);
+				renderWorker.cameraOffset = { x: renderWorker.cameraOffset.x + pointerDelta.x, y: renderWorker.cameraOffset.y + pointerDelta.y };
 
 				lastDistance = distance;
 			}
@@ -798,58 +864,72 @@ function initializeGraphEvents()
 		function handlePointerUp(up)
 		{
 			document.removeEventListener("pointerup", handlePointerUp);
-			console.log("up");
+
+			let pointerUpTime = Date.now();
 
 			setTimeout(() => 
 			{
-				if (pointerDown && renderWorker.grabbedNode != -1)
+				if (pointerDown && renderWorker.hoveredNode != -1 && Math.abs(dragDisplacement.x) <= 4 && Math.abs(dragDisplacement.y) <= 4 && pointerUpTime - startDragTime < 300)
 				{
-					if (Math.abs(pointerDeltaFromStart.x) <= 2 && Math.abs(pointerDeltaFromStart.y) <= 2)
-					{
-						navigateToNode(renderWorker.grabbedNode);
-					}
-
-					renderWorker.grabbedNode = -1;
-					console.log("drop");
+					navigateToNode(renderWorker.hoveredNode);
 				}
 
-				if (up.button == 0 && (up.touches?.length ?? 0 != 1)) pointerDown = false;
+				if (pointerDown && renderWorker.grabbedNode != -1)
+				{
+					renderWorker.grabbedNode = -1;
+				}
+
+				if (up.button == 0) pointerDown = false;
+				if (up.pointerType == "touch" && firstPointerDownId == up.pointerId) 
+				{
+					firstPointerDownId = -1;
+					pointerDown = false;
+				}
 				if (up.button == 1) middleDown = false;
-				if (!pointerInside) document.removeEventListener("pointermove", handlePointerMove);
+				if (!pointerInside) 
+				{
+					document.removeEventListener("mousemove", handleMouseMove);
+					document.removeEventListener("touchmove", handleTouchMove);
+				}
 			}, 0);
 		}
 
 		function handlePointerDown(down)
 		{
 			document.addEventListener("pointerup", handlePointerUp);
-			startPointerPos = getPointerPosOnCanvas(down);
 			mouseWorldPos = renderWorker.vecToWorldspace(pointerPos);
-			pointerDeltaFromStart = { x: 0, y: 0 };
-			if (down.button == 0 || (down.touches?.length ?? 0 == 1)) pointerDown = true;
-			if (down.button == 1) middleDown = true;
-			console.log("down");
-
-			setTimeout(() =>
+			dragDisplacement = { x: 0, y: 0 };
+			if (down.button == 0) pointerDown = true;
+			if (down.pointerType == "touch" && firstPointerDownId == -1) 
 			{
-				if (pointerDown && renderWorker.hoveredNode != -1)
-				{
-					renderWorker.grabbedNode = renderWorker.hoveredNode;
-					console.log("grab");
-				}
-			}, 0);
+				firstPointerDownId = down.pointerId;
+				pointerDown = true;
+			}
+			if (down.button == 1) middleDown = true;
+
+			startPointerPos = pointerPos;
+			startDragTime = Date.now();
+
+			if (pointerDown && renderWorker.hoveredNode != -1)
+			{
+				renderWorker.grabbedNode = renderWorker.hoveredNode;
+			}
 		}
 
 		function handlePointerLeave(leave)
 		{
-			pointerInside = false;
-			if (!pointerDown) 
+			setTimeout(() => 
 			{
-				document.removeEventListener("pointermove", handlePointerMove);
-				mouseWorldPos = { x: undefined, y: undefined };
-			}
-			graphContainer.removeEventListener("pointerdown", handlePointerDown);
-			graphContainer.removeEventListener("pointerleave", handlePointerLeave);
-			console.log("leave");
+				pointerInside = false;
+				if (!pointerDown) 
+				{
+					document.removeEventListener("mousemove", handleMouseMove);
+					document.removeEventListener("touchmove", handleTouchMove);
+					mouseWorldPos = { x: undefined, y: undefined };
+				}
+				graphContainer.removeEventListener("pointerdown", handlePointerDown);
+				graphContainer.removeEventListener("pointerleave", handlePointerLeave);
+			}, 1);
 		}
 
 		pointerPos = getPointerPosOnCanvas(enter);
@@ -857,10 +937,10 @@ function initializeGraphEvents()
 		lastPointerPos = getPointerPosOnCanvas(enter);
 		pointerInside = true;
 
-		document.addEventListener("pointermove", handlePointerMove);
+		document.addEventListener("mousemove", handleMouseMove);
+		document.addEventListener("touchmove", handleTouchMove);
 		graphContainer.addEventListener("pointerdown", handlePointerDown);
 		graphContainer.addEventListener("pointerleave", handlePointerLeave);
-		console.log("enter");
 	}
 
 	graphContainer.addEventListener("pointerenter", handlePointerEnter);

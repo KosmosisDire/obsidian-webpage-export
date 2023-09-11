@@ -1,4 +1,4 @@
-import { Modal, Setting, TFile } from 'obsidian';
+import { ButtonComponent, Modal, Setting, TFile } from 'obsidian';
 import { Utils } from '../utils/utils';
 import HTMLExportPlugin from '../main';
 import { MainSettings } from './main-settings';
@@ -20,13 +20,18 @@ export class ExportModal extends Modal
 	private canceled: boolean = true;
 	private filePickerModalEl: HTMLElement;
 	private filePicker: FilePickerTree;
-	private pickedFiles: TFile[];
+	private pickedFiles: TFile[] | undefined = undefined;
 	private validPath: boolean = true;
 
 	public exportInfo: ExportInfo;
 
 	constructor() {
 		super(app);
+	}
+
+	overridePickedFiles(files: TFile[])
+	{
+		this.pickedFiles = files;
 	}
 
 	/**
@@ -73,7 +78,11 @@ export class ExportModal extends Modal
 			this.filePicker = new FilePickerTree(app.vault.getFiles(), true, true);
 			this.filePicker.generateWithItemsClosed = true;
 			await this.filePicker.generateTree(scrollArea);
-			if(MainSettings.settings.filesToExport[0].length > 0) this.filePicker.setSelectedFiles(MainSettings.settings.filesToExport[0].map(path => new Path(path)));
+			if(MainSettings.settings.filesToExport[0].length > 0) 
+			{
+				let filesToPick = this.pickedFiles?.map(file => new Path(file.path)) ?? MainSettings.settings.filesToExport[0].map(path => new Path(path));
+				this.filePicker.setSelectedFiles(filesToPick);
+			}
 
 			let saveFiles = new Setting(container).addButton((button) => 
 			{
@@ -145,7 +154,6 @@ export class ExportModal extends Modal
 							MainSettings.settings.inlineImages = true;
 							MainSettings.settings.makeNamesWebStyle = false;
 							MainSettings.settings.includeGraphView = false;
-							MainSettings.settings.includeFileTree = false;
 							await MainSettings.saveSettings();
 
 							break;
@@ -154,7 +162,7 @@ export class ExportModal extends Modal
 							MainSettings.settings.inlineJS = false;
 							MainSettings.settings.inlineImages = false;
 							MainSettings.settings.makeNamesWebStyle = true;
-							MainSettings.settings.includeGraphView = false;
+							MainSettings.settings.includeGraphView = true;
 							MainSettings.settings.includeFileTree = true;
 							await MainSettings.saveSettings();
 
@@ -167,7 +175,7 @@ export class ExportModal extends Modal
 
 		new Setting(contentEl)
 			.setName('Only Export Modified')
-			.setDesc('Disable this to do a full re-export.')
+			.setDesc('Disable this to do a full re-export. If you have an existing vault since before this feature was introduced, please do a full re-export before turning this on!')
 			.addToggle((toggle) => toggle
 				.setValue(MainSettings.settings.incrementalExport)
 				.onChange(async (value) => {
@@ -209,6 +217,18 @@ export class ExportModal extends Modal
 			this.validPath = false;
 		}
 
+		let exportButton : ButtonComponent | undefined = undefined;
+
+		function setExportDisabled(disabled: boolean)
+		{
+			if(exportButton) 
+			{
+				exportButton.setDisabled(disabled);
+				if (exportButton.disabled) exportButton.buttonEl.style.opacity = "0.5";
+				else exportButton.buttonEl.style.opacity = "1";
+			}
+		}
+
 		new Setting(contentEl)
 			.setName('')
 			.setHeading()
@@ -230,8 +250,9 @@ export class ExportModal extends Modal
 							text.setValue(MainSettings.settings.exportPath);
 							this.validPath = true;
 							await MainSettings.saveSettings();
-							this.open();
 						}
+
+						setExportDisabled(!path.isDirectory || !path.isAbsolute || !path.exists);
 					});
 			})
 			.addButton((button) =>
@@ -250,8 +271,8 @@ export class ExportModal extends Modal
 			})
 			.addButton((button) => 
 			{
-				button.setDisabled(!this.validPath);
-				if (button.disabled) button.buttonEl.style.opacity = "0.5";
+				exportButton = button;
+				setExportDisabled(!this.validPath);
 				button.setButtonText('Export').onClick(async () => 
 				{
 					this.canceled = false;

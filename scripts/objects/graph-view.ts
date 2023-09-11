@@ -88,9 +88,6 @@ export class GraphView
 			});
 
 		this.linkCount = this.linkSources.length;
-
-		console.log(this.paths, this.labels);
-
 	}
 
 	public static generateGraphEl(container: HTMLElement): HTMLElement
@@ -98,7 +95,7 @@ export class GraphView
 		let graphWrapper = container.createDiv();
 		graphWrapper.classList.add("graph-view-wrapper");
 
-		let graphHeader = graphWrapper.createSpan();
+		let graphHeader = graphWrapper.createDiv();
 		graphHeader.addClass("sidebar-section-header");
 		graphHeader.innerText = "Interactive Graph";
 
@@ -111,6 +108,6 @@ export class GraphView
 			<canvas id="graph-canvas" width="512px" height="512px"></canvas>
 		</div>
 		`
-		return graphEl;
+		return graphWrapper;
 	}
 }

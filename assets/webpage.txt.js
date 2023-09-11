@@ -225,7 +225,10 @@ function onResize(isInitial = false)
 		document.body.classList.toggle("is-tablet", false);
 		document.body.classList.toggle("is-phone", false);
 		sidebars.forEach(function (sidebar) { sidebar.collapse(false) });
-		sidebarGutters.forEach(function (gutter) { gutter.collapse(true) });
+		
+		if(document.body.classList.contains("sidebars-always-collapsible")) sidebarGutters.forEach(function (gutter) { gutter.collapse(false) });
+		else sidebarGutters.forEach(function (gutter) { gutter.collapse(true) });
+
 	}
 	else if (widthNowInRange(contentTargetWidth + sidebarTargetWidth, contentTargetWidth + sidebarTargetWidth * 2))
 	{
@@ -236,6 +239,7 @@ function onResize(isInitial = false)
 		document.body.classList.toggle("is-tablet", false);
 		document.body.classList.toggle("is-phone", false);
 		sidebarGutters.forEach(function (gutter) { gutter.collapse(false) });
+
 		if (!leftSidebar.collapsed) 
 		{
 			rightSidebar.collapse(true);
@@ -250,6 +254,7 @@ function onResize(isInitial = false)
 		document.body.classList.toggle("is-tablet", true);
 		document.body.classList.toggle("is-phone", false);
 		sidebarGutters.forEach(function (gutter) { gutter.collapse(false) });
+		
 		if (!leftSidebar.collapsed) 
 		{
 			rightSidebar.collapse(true);
@@ -1780,8 +1785,8 @@ function setupSidebars()
 			// if there isn't enough space for both sidebars then close the other one
 			if (deviceSize == "phone")
 			{
-				if (!collapsed) sidebar.otherSidebar.fullCollapse(true);
-				if (collapsed) sidebar.gutter.otherGutter.collapse(false);
+				if (!collapsed) sidebar.otherSidebar.fullCollapse(true, true);
+				if (collapsed) sidebar.gutter.otherGutter.collapse(false, true);
 			}
 
 			if (deviceSize == "tablet")
@@ -1799,10 +1804,10 @@ function setupSidebars()
 			this.gutter.collapse(false);
 			this.collapsed = collapsed;
 		}
-		sidebar.fullCollapse = function (collapsed = true)
+		sidebar.fullCollapse = function (collapsed = true, force = false)
 		{
 			this.collapse(collapsed);
-			this.gutter.collapse(true);
+			this.gutter.collapse(true, force);
 			this.collapsed = collapsed;
 		}
 		sidebar.toggleCollapse = function ()
@@ -1818,9 +1823,9 @@ function setupSidebars()
 	sidebarGutters.forEach(function (gutter)
 	{
 		gutter.collapsed = gutter.classList.contains("is-collapsed");
-		gutter.collapse = function (collapsed)
+		gutter.collapse = function (collapsed, force = false)
 		{
-			if(document.body.classList.contains("sidebars-always-collapsible")) return;
+			if(!force && document.body.classList.contains("sidebars-always-collapsible")) return;
 
 			this.classList.toggle("is-collapsed", collapsed);
 			this.collapsed = collapsed;

@@ -575,14 +575,14 @@ export namespace MarkdownRenderer
 
 			if (!hEl.querySelector(".heading-after")) 
 			{
-				let afterEl = hEl.createSpan({ cls: "heading-after" });
+				let afterEl = hEl.createDiv({ cls: "heading-after" });
 				afterEl.textContent = "...";
 			}
 
 			// the before element is for future styling
 			if (!hEl.querySelector(".heading-before")) 
 			{
-				let beforeEl = hEl.createSpan({ cls: "heading-before" });
+				let beforeEl = hEl.createDiv({ cls: "heading-before" });
 				hEl.prepend(beforeEl);
 				beforeEl.textContent = "";
 			}
@@ -651,6 +651,7 @@ export namespace MarkdownRenderer
 
 		// @ts-ignore
 		let renderBrowserWindow = window.electron.remote.BrowserWindow.getFocusedWindow();
+		if (!renderBrowserWindow) throw new Error("Failed to get render window!");
 		renderBrowserWindow.setAlwaysOnTop(true, "floating", 1);
 		renderBrowserWindow.webContents.setFrameRate(120);
 		renderBrowserWindow.on("close", () =>
@@ -714,6 +715,8 @@ export namespace MarkdownRenderer
 
 	export async function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
 	{
+		checkCancelled();
+
 		// @ts-ignore
 		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found)

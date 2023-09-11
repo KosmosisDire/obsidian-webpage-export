@@ -27,7 +27,6 @@ export interface MainSettingsData
 	startOutlineCollapsed: boolean;
 
 	// Export Options
-	dataviewBlockWaitTime: number;
 	logLevel: "all" | "warning" | "error" | "fatal" | "none";
 	incrementalExport: boolean;
 	deleteOldExportedFiles: boolean;
@@ -77,20 +76,19 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	startOutlineCollapsed: false,
 
 	// Export Options
-	dataviewBlockWaitTime: 700,
 	logLevel: "warning",
-	incrementalExport: true,
+	incrementalExport: false,
 	deleteOldExportedFiles: false,
 
 	// Page Features
 	addDarkModeToggle: true,
 	includeOutline: true,
-	includeGraphView: false,
+	includeGraphView: true,
 	includeFileTree: true,
 
 	// Main Export Options
 	exportPreset: 'website',
-	openAfterExport: true,
+	openAfterExport: false,
 
 	// Graph View Settings
 	graphAttractionForce: 1,
@@ -150,6 +148,20 @@ export class MainSettings extends PluginSettingTab
 				fileList[index] = file.path;
 			}
 		});
+	}
+
+	static getFilesToExport(): TFile[]
+	{
+		let files: TFile[] = [];
+		MainSettings.settings.filesToExport.forEach((fileList) =>
+		{
+			fileList.forEach((filePath) =>
+			{
+				let file = app.vault.getAbstractFileByPath(filePath);
+				if (file instanceof TFile) files.push(file);
+			});
+		});
+		return files;
 	}
 
 	// #endregion
@@ -392,19 +404,6 @@ export class MainSettings extends PluginSettingTab
 		new Setting(contentEl)
 			.setName('Export Options:')
 			.setHeading()
-
-		new Setting(contentEl)
-			.setName('Dataview Block Render Wait Time')
-			.setDesc('In milliseconds.\n\nWait this long for each dataview block to render. If you have large dataview queries this can help make sure they are rendered correctly.')
-			.addText((text) => text
-				.setValue(MainSettings.settings.dataviewBlockWaitTime.toString())
-				.setPlaceholder(DEFAULT_SETTINGS.dataviewBlockWaitTime.toString())
-				.onChange(async (value) => {
-					// is the input is not a number then don't let it change
-					if (isNaN(Number(value))) return;
-					MainSettings.settings.dataviewBlockWaitTime = Number(value);
-					await MainSettings.saveSettings();
-				}));
 
 		new Setting(contentEl)
 			.setName('Log Level')

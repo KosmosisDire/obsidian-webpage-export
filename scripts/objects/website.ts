@@ -14,7 +14,7 @@ const removeBodyClasses: string[] = ["mod-windows", "is-frameless", "is-maximize
 								"show-view-header", "css-settings-manager", "Heading", "minimal-theme", "minimal-default-dark", 
 								"minimal-default-light", "links-int-on", "links-ext-on", "full-width-media", "minimal-folding", 
 								"minimal-readable", "minimal-light", "minimal-dark", "chart-default-width", "table-default-width", 
-								"img-default-width", "iframe-default-width", "map-default-width", "sizing-readable", 
+								"img-default-width", "iframe-default-width", "map-default-width", "sizing-readable", "is-focused",
 								"sidebar-float-bottom", "check-color", "check-bg"];
 
 export class Website
@@ -46,11 +46,11 @@ export class Website
 			if (!removeBodyClasses.includes(className)) validClasses += className + " ";
 		});
 
-		if (MainSettings.settings.sidebarsAlwaysCollapsible) validClasses += " sidebars-always-collapsible";
+		if (MainSettings.settings.sidebarsAlwaysCollapsible) validClasses += " sidebars-always-collapsible ";
 
-		validClasses += "loading";
+		validClasses += " loading ";
 
-		return validClasses;
+		return validClasses.replace(/\s\s+/g, ' ');
 	}
 
 	private async updateGlobalsInExistingFile(webpage: Webpage)
@@ -60,33 +60,27 @@ export class Website
 		let timeThreshold = 1000 * 60 * 5; // 5 minutes
 		if (modTime && (modTime < this.globalFileTreeUnchangedTime - timeThreshold || modTime > this.globalFileTreeUnchangedTime + timeThreshold))
 		{
-			console.log("File tree changed");
 			this.globalFileTreeChanged = true;
 			this.globalGraphUnchangedTime = modTime;
 		}
 		if (modTime && (modTime < this.globalBodyClassesUnchangedTime - timeThreshold || modTime > this.globalBodyClassesUnchangedTime + timeThreshold))
 		{
-			console.log("Body classes changed");
 			this.globalBodyClassesChanged = true;
 			this.globalBodyClassesUnchangedTime = modTime;
 
 		}
 		if (modTime && (modTime < this.globalGraphUnchangedTime - timeThreshold || modTime > this.globalGraphUnchangedTime + timeThreshold))
 		{
-			console.log("Graph changed");
 			this.globalGraphChanged = true;
 			this.globalGraphUnchangedTime = modTime;
 		}
 
 		if ((!this.globalBodyClassesChanged && !this.globalFileTreeChanged && !this.globalGraphChanged) || !webpage.document)
 		{
-			RenderLog.progress(this.progress, this.batchFiles.length, "Unmodified File", "Unchanged Global Data: " + webpage.source.path, "var(--color-yellow)");
+			RenderLog.progress(this.progress, this.batchFiles.length, "Skipping Unmodified File", "File: " + webpage.source.path, "var(--color-yellow)");
 			await Utils.delay(1);
 			return;
 		}
-
-		RenderLog.progress(this.progress, this.batchFiles.length, "Unmodified File", "Updating Global Data: " + webpage.source.path, "var(--color-blue)");
-
 
 		let pageString = await webpage.exportPathAbsolute.readFileString();
 		if (!pageString) return;
@@ -101,15 +95,22 @@ export class Website
 			return;
 		}
 
+		RenderLog.progress(this.progress, this.batchFiles.length, "Update Global Data", "Updating Global Data: " + webpage.source.path, "var(--color-blue)");
+
 		if(this.globalBodyClassesChanged)
 		{
 			let newBodyClass = Website.getValidBodyClasses();
 			if (newBodyClass == webpage.document.body.getAttribute("class")) 
 			{
+				console.log("Body classes unchanged");
 				this.globalBodyClassesChanged = false;
 				this.globalBodyClassesUnchangedTime = modTime;
 			}
-			webpage.document.body.setAttribute("class", newBodyClass);
+			else 
+			{
+				console.log("Body classes changed");
+				webpage.document.body.setAttribute("class", newBodyClass);
+			}
 		}
 
 		if (this.globalFileTreeChanged)
@@ -117,29 +118,48 @@ export class Website
 			let fileTree = webpage.document.querySelector(".tree-container.file-tree");
 			if (this.fileTreeHtml == fileTree?.outerHTML ?? "") 
 			{
+				console.log("File tree unchanged");
 				this.globalFileTreeChanged = false;
 				this.globalFileTreeUnchangedTime = modTime;
 			}
-			if(fileTree) fileTree.outerHTML = this.fileTreeHtml;
+
+			if (MainSettings.settings.includeFileTree && !fileTree) 
+			{
+				console.log("File tree added");
+				let treeContainer = webpage.document?.querySelector(".sidebar-left .sidebar-content")?.createDiv();
+				if(treeContainer) treeContainer.outerHTML = this.fileTreeHtml;
+			}
+			else if (!MainSettings.settings.includeFileTree && fileTree)
+			{
+				console.log("File tree removed");
+				fileTree.remove();
+			}
 		}
 
 		if (this.globalGraphChanged)
 		{
 			let graph = webpage.document.querySelector(".graph-view-wrapper");
-			if (graph && !MainSettings.settings.includeGraphView) graph.remove();
-			else if (!graph && MainSettings.settings.includeGraphView)
+			if (graph && MainSettings.settings.includeGraphView || !graph && !MainSettings.settings.includeGraphView)
 			{
-				let rightSidebar = webpage.document.querySelector(".right-sidebar") as HTMLElement;
+				console.log("Graph unchanged");
+				this.globalGraphChanged = false;
+				this.globalGraphUnchangedTime = modTime;
+			}
+
+			if (MainSettings.settings.includeGraphView && !graph)
+			{
+				let rightSidebar = webpage.document.querySelector(".sidebar-right .sidebar-content") as HTMLElement;
 				if (rightSidebar)
 				{
+					console.log("Graph added");
 					let graphEl = GraphView.generateGraphEl(rightSidebar);
 					rightSidebar.prepend(graphEl);
 				}
 			}
-			else if (graph && MainSettings.settings.includeGraphView || !graph && !MainSettings.settings.includeGraphView)
+			else if (!MainSettings.settings.includeGraphView && graph) 
 			{
-				this.globalGraphChanged = false;
-				this.globalGraphUnchangedTime = modTime;
+				console.log("Graph removed");
+				graph.remove();
 			}
 		}
 

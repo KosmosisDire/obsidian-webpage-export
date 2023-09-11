@@ -75,6 +75,9 @@ export class HTMLExporter
 		{
 			let file = folderFiles[i];
 			let path = folder.joinString(file);
+
+			RenderLog.progress(i, folderFiles.length, "Finding Old Files", "Searching: " + folder.asString, "var(--color-yellow)");
+
 			if ((await fs.stat(path.asString)).isDirectory())
 			{
 				files.push(...await this.getAllFilesInFolderRecursive(path));
@@ -97,6 +100,10 @@ export class HTMLExporter
 		{
 			let file = folderFiles[i];
 			let path = folder.joinString(file);
+
+			RenderLog.progress(i, folderFiles.length, "Finding Old Files", "Searching: " + folder.asString, "var(--color-yellow)");
+
+
 			if ((await fs.stat(path.asString)).isDirectory())
 			{
 				let subFolders = await this.getAllEmptyFoldersRecursive(path);
@@ -125,6 +132,8 @@ export class HTMLExporter
 		let toDelete = [];
 		for (let i = 0; i < files.length; i++)
 		{
+			RenderLog.progress(i, files.length, "Finding Old Files", "Checking: " + files[i].asString, "var(--color-yellow)");
+
 			let file = files[i];
 			if(!webpages.find((exportedFile) => exportedFile.exportPathAbsolute.makeUnixStyle().asString == file.makeUnixStyle().asString))
 			{
