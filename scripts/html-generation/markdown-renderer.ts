@@ -17,8 +17,6 @@ export namespace MarkdownRenderer
 	export let cancelled: boolean = false;
 	export let batchStarted: boolean = false;
 
-	let renderDocument: Document = document.implementation.createHTMLDocument("renderDocument");
-
 	export function isConvertable(extention: string)
 	{
 		return convertableExtensions.contains(extention);
@@ -26,15 +24,11 @@ export namespace MarkdownRenderer
 
 	export function checkCancelled(): boolean
 	{
-		if (cancelled) 
+		if (MarkdownRenderer.cancelled || !MarkdownRenderer.renderLeaf) 
 		{
+			console.log("cancelled");
 			endBatch();
-			throw new Error("Markdown rendering cancelled");
-		}
-		if (!renderLeaf)
-		{
-			endBatch();
-			throw new Error("Markdown rendering leaf not found! Cancelled.");
+			return true;
 		}
 
 		return false;
@@ -42,8 +36,10 @@ export namespace MarkdownRenderer
 
 	function failRender(file: TFile, message: any): undefined
 	{
+		if (checkCancelled()) return undefined;
+
 		RenderLog.error(`Rendering ${file.path} failed: `, message);
-		return undefined;
+		return;
 	}
 
 	export async function renderFile(file: Webpage): Promise<HTMLElement | undefined>
@@ -55,9 +51,8 @@ export namespace MarkdownRenderer
 			await MarkdownRenderer.beginBatch();
 		}
 
-		await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 10);
-
-		if (!renderLeaf) return failRender(file.source, "Failed to create leaf for rendering!");
+		let success = await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 10);
+		if (!success || !renderLeaf) return failRender(file.source, "Failed to create leaf for rendering!");
 		
 		try
 		{ 
@@ -106,7 +101,7 @@ export namespace MarkdownRenderer
 		return html;
 	}
 
-	export async function renderMarkdownView(preview: MarkdownPreviewView): Promise<HTMLElement>
+	export async function renderMarkdownView(preview: MarkdownPreviewView): Promise<HTMLElement | undefined>
 	{
 		// @ts-ignore
 		let renderer = preview.renderer;
@@ -120,10 +115,7 @@ export namespace MarkdownRenderer
 			await loadMermaid();
 		}
 
-		checkCancelled();
-
 		let sections = renderer.sections as {"rendered": boolean, "height": number, "computed": boolean, "lines": number, "lineStart": number, "lineEnd": number, "used": boolean, "highlightRanges": number, "level": number, "headingCollapsed": boolean, "shown": boolean, "usesFrontMatter": boolean, "html": string, "el": HTMLElement}[];
-
 
 		// @ts-ignore
 		let promises = []
@@ -143,7 +135,8 @@ export namespace MarkdownRenderer
 			await section.render();
 
 			// @ts-ignore
-			await Utils.waitUntil(() => (section.el && section.rendered == true) || checkCancelled(), 2000, 5);
+			let success = await Utils.waitUntil(() => (section.el && section.rendered == true) || checkCancelled(), 2000, 5);
+			if (!success) return failRender(preview.file, "Failed to render section!");
 
 			section.el.querySelectorAll(".language-mermaid").forEach(async (element: HTMLElement) =>
 			{
@@ -161,12 +154,11 @@ export namespace MarkdownRenderer
 
 			await renderer.measureSection(section);
 
-			await Utils.waitUntil(() => section.computed == true || checkCancelled(), 2000, 5);
+			success = await Utils.waitUntil(() => section.computed == true || checkCancelled(), 2000, 5);
+			if (!success) return failRender(preview.file, "Failed to compute section!");
 
 			// @ts-ignore
 			await preview.postProcess(section, promises, renderer.frontmatter);
-
-			checkCancelled();
 		}
 
 		await Utils.delay(100);
@@ -280,9 +272,6 @@ export namespace MarkdownRenderer
 	{
 		// @ts-ignore
 		let previewModeFound = await Utils.waitUntil(() => view.previewMode || checkCancelled(), 2000, 10);
-		
-		checkCancelled()
-
 		if (!previewModeFound) return failRender(file, "Failed to open preview mode!");
 
 		Utils.changeViewMode(view, "preview");
@@ -290,11 +279,11 @@ export namespace MarkdownRenderer
 		return await renderMarkdownView(view.previewMode);
 	}
 
-	async function renderGeneric(file:Webpage, view: any): Promise<HTMLElement>
+	async function renderGeneric(file:Webpage, view: any): Promise<HTMLElement | undefined>
 	{
 		await Utils.delay(2000);
 
-		checkCancelled();
+		if (checkCancelled()) return undefined;
 
 		// @ts-ignore
 		let container = view.contentEl;
@@ -305,7 +294,7 @@ export namespace MarkdownRenderer
 		return container;
 	}
 
-	async function renderExcalidraw(file:Webpage, view: any): Promise<HTMLElement>
+	async function renderExcalidraw(file:Webpage, view: any): Promise<HTMLElement | undefined>
 	{
 		await Utils.delay(500);
 
@@ -330,13 +319,15 @@ export namespace MarkdownRenderer
 		await postProcessHTML(contentEl);
 		await AssetHandler.loadMathjaxStyles();
 
-		checkCancelled();
+		if (checkCancelled()) return undefined;
 
 		return contentEl;
 	}
 
-	async function renderCanvas(file:Webpage, view: any): Promise<HTMLElement>
+	async function renderCanvas(file:Webpage, view: any): Promise<HTMLElement | undefined>
 	{
+		if (checkCancelled()) return undefined;
+
 		let canvas = view.canvas;
 
 		let nodes = canvas.nodes;
@@ -377,12 +368,14 @@ export namespace MarkdownRenderer
 				if (node[1].child.file)
 				{
 					let results = await GenHelper.getViewHTML(view, node[1].child.file.path);
+					if (!results) continue;
 					html = results.html;
 					file.downloads.push(...results.downloads);
 				}
 				else
 				{
 					let results = await GenHelper.getViewHTML(view, file.source.path);
+					if (!results) continue;
 					html = results.html;
 					file.downloads.push(...results.downloads);
 				}
@@ -411,9 +404,7 @@ export namespace MarkdownRenderer
 			}
 		}
 
-		checkCancelled();
-
-		
+		if (checkCancelled()) return undefined;
 
 		return container;
 	}
@@ -498,8 +489,6 @@ export namespace MarkdownRenderer
 		}
 
 		makeHeadingsTrees(html);
-
-		checkCancelled();
 	}
 	
 	function makeHeadingsTrees(html: HTMLElement)
@@ -519,7 +508,7 @@ export namespace MarkdownRenderer
 		{
 			let first = headingContainer.firstElementChild;
 			if (first && /[Hh][1-6]/g.test(first.tagName)) return first;
-			else return undefined;
+			else return;
 		}
 		
 		function makeHeaderTree(headerDiv: HTMLDivElement, childrenContainer: HTMLElement)
@@ -600,7 +589,7 @@ export namespace MarkdownRenderer
 
     export async function beginBatch()
 	{
-		if(batchStarted && !cancelled)
+		if(batchStarted)
 		{
 			throw new Error("Cannot start a new batch while one is already running!");
 		}
@@ -613,9 +602,6 @@ export namespace MarkdownRenderer
 		renderLeaf = TabManager.openNewTab("window", "vertical");
 		// @ts-ignore
 		let parentFound = await Utils.waitUntil(() => (renderLeaf && renderLeaf.parent) || checkCancelled(), 2000, 10);
-		
-		checkCancelled();
-
 		if (!parentFound) 
 		{
 			try
@@ -627,8 +613,13 @@ export namespace MarkdownRenderer
 				RenderLog.error("Failed to detach render leaf: ", e);
 			}
 			
-			new Notice("Error: Failed to create leaf for rendering!");
-			throw new Error("Failed to create leaf for rendering!");
+			if (!checkCancelled())
+			{
+				new Notice("Error: Failed to create leaf for rendering!");
+				throw new Error("Failed to create leaf for rendering!");
+			}
+			
+			return;
 		}
 
 		// hide the leaf so we can render without intruding on the user
@@ -642,19 +633,45 @@ export namespace MarkdownRenderer
 		renderLeaf.parent.parent.containerEl.classList.remove("mod-vertical");
 		// @ts-ignore
 		renderLeaf.parent.parent.containerEl.classList.add("mod-horizontal");
-		renderLeaf.view.containerEl.win.resizeTo(800, 400);
-		renderLeaf.view.containerEl.win.moveTo(window.screen.width / 2 - 450, window.screen.height - 450 - 75);
 
+		let newSize = { width: 800, height: 400 };
+		renderLeaf.view.containerEl.win.resizeTo(newSize.width, newSize.height);
+		let newPosition = {x: window.screen.width / 2 - 450, y: window.screen.height - 450 - 75};
+		renderLeaf.view.containerEl.win.moveTo(newPosition.x, newPosition.y);
+
+		let renderBrowserWindow = undefined;
 		// @ts-ignore
-		let renderBrowserWindow = window.electron.remote.BrowserWindow.getFocusedWindow();
-		if (!renderBrowserWindow) throw new Error("Failed to get render window!");
+		let windows = window.electron.remote.BrowserWindow.getAllWindows()
+		for (const win of windows)
+		{
+			let bounds = win.getBounds();
+			if (bounds.x == newPosition.x && bounds.y == newPosition.y && bounds.width == newSize.width && bounds.height == newSize.height)
+			{
+				renderBrowserWindow = win;
+				break;
+			}
+		}
+
+		if (!renderBrowserWindow) 
+		{
+			new Notice("Failed to get the render window, please try again.");
+			problemLog = "";
+			errorInBatch = false;
+			cancelled = false;
+			batchStarted = false;
+			renderLeaf = undefined;
+			return;
+		}
+
 		renderBrowserWindow.setAlwaysOnTop(true, "floating", 1);
 		renderBrowserWindow.webContents.setFrameRate(120);
+		
 		renderBrowserWindow.on("close", () =>
 		{
+			if (cancelled) return;
+			endBatch();
 			cancelled = true;
-			console.log("cancelled");
-		});
+		}, { once: true });
 
 		// @ts-ignore
 		let allWindows = window.electron.remote.BrowserWindow.getAllWindows()
@@ -711,8 +728,6 @@ export namespace MarkdownRenderer
 
 	export async function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
 	{
-		checkCancelled();
-
 		// @ts-ignore
 		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found)

@@ -1,4 +1,4 @@
-import { TFile, TFolder } from "obsidian";
+import { Notice, TFile, TFolder } from "obsidian";
 import { Webpage } from "./objects/webpage";
 import { GenHelper } from "./html-generation/html-generator";
 import { Path } from "./utils/path";
@@ -15,11 +15,15 @@ import { Website } from "./objects/website";
 
 export class HTMLExporter
 {
-	public static async exportFiles(files: TFile[], destination: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website>
+	public static async exportFiles(files: TFile[], destination: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website | undefined>
 	{
 		var website = await new Website().createWithFiles(files, destination);
 
-		MarkdownRenderer.checkCancelled();
+		if (!website)
+		{
+			new Notice("❌ Export Cancelled", 5000);
+			return;
+		}
 
 		if (clearDirectory) await this.deleteNonExports(website.webpages, destination);
 		if (saveFiles) await this.saveExports(website.webpages, destination);
@@ -29,7 +33,7 @@ export class HTMLExporter
 		return website;
 	}
 
-	public static async exportFolder(folder: TFolder, rootExportPath: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website>
+	public static async exportFolder(folder: TFolder, rootExportPath: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website | undefined>
 	{
 		let folderPath = new Path(folder.path);
 		let allFiles = HTMLExportPlugin.plugin.app.vault.getFiles();
@@ -38,7 +42,7 @@ export class HTMLExporter
 		return await this.exportFiles(files, rootExportPath, saveFiles, clearDirectory);
 	}
 
-	public static async exportVault(rootExportPath: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website>
+	public static async exportVault(rootExportPath: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website | undefined>
 	{
 		let files = HTMLExportPlugin.plugin.app.vault.getFiles();
 		return await this.exportFiles(files, rootExportPath, saveFiles, clearDirectory);

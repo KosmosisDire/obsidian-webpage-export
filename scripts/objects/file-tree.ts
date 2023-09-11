@@ -11,6 +11,8 @@ export class FileTree extends Tree
 	{
 		super();
 
+		this.renderMarkdownTitles = false;
+
 		for (let file of files)
 		{
 			let pathSections: TAbstractFile[] = [];

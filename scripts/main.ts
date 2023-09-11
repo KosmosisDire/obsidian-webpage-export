@@ -29,9 +29,12 @@ export default class HTMLExportPlugin extends Plugin
 			let info = await modal.open();
 			if (info.canceled) return;
 
-			await HTMLExporter.exportFiles(info.pickedFiles, info.exportPath, true, MainSettings.settings.deleteOldExportedFiles);
-			new Notice("✅ Finished HTML Export:\n\n" + info.exportPath, 5000);
-			if (MainSettings.settings.openAfterExport) await Utils.openPath(info.exportPath);
+			let website = await HTMLExporter.exportFiles(info.pickedFiles, info.exportPath, true, MainSettings.settings.deleteOldExportedFiles);
+			if (website)
+			{
+				new Notice("✅ Finished HTML Export:\n\n" + info.exportPath, 5000);
+				if (MainSettings.settings.openAfterExport) Utils.openPath(info.exportPath);
+			}
 		});
 
 		// register callback for file rename so we can update the saved files to export
@@ -43,9 +46,12 @@ export default class HTMLExportPlugin extends Plugin
 			callback: async () =>
 			{
 				let path = new Path(MainSettings.settings.exportPath);
-				await HTMLExporter.exportFiles(MainSettings.getFilesToExport(), path, true, MainSettings.settings.deleteOldExportedFiles);
-				new Notice("✅ Finished HTML Export:\n\n" + path.asString, 5000);
-				if (MainSettings.settings.openAfterExport) await Utils.openPath(path);
+				let website = await HTMLExporter.exportFiles(MainSettings.getFilesToExport(), path, true, MainSettings.settings.deleteOldExportedFiles);
+				if (website)
+				{
+					new Notice("✅ Finished HTML Export:\n\n" + path, 5000);
+					if (MainSettings.settings.openAfterExport) Utils.openPath(path);
+				}
 			}
 		});
 
@@ -66,9 +72,12 @@ export default class HTMLExportPlugin extends Plugin
 								let info = await modal.open();
 								if (info.canceled) return;
 
-								await HTMLExporter.exportFiles(info.pickedFiles, info.exportPath, true, MainSettings.settings.deleteOldExportedFiles);
-								new Notice("✅ Finished HTML Export:\n\n" + info.exportPath, 5000);
-								if (MainSettings.settings.openAfterExport) await Utils.openPath(info.exportPath);
+								let website = await HTMLExporter.exportFiles(info.pickedFiles, info.exportPath, true, MainSettings.settings.deleteOldExportedFiles);
+								if (website)
+								{
+									new Notice("✅ Finished HTML Export:\n\n" + info.exportPath, 5000);
+									if (MainSettings.settings.openAfterExport) Utils.openPath(info.exportPath);
+								}
 							}
 							else if(file instanceof TFolder)
 							{
@@ -78,9 +87,12 @@ export default class HTMLExportPlugin extends Plugin
 								let info = await modal.open();
 								if (info.canceled) return;
 
-								await HTMLExporter.exportFiles(info.pickedFiles, info.exportPath, true, MainSettings.settings.deleteOldExportedFiles);
-								new Notice("✅ Finished HTML Export:\n\n" + info.exportPath, 5000);
-								if (MainSettings.settings.openAfterExport) await Utils.openPath(info.exportPath);
+								let website = await HTMLExporter.exportFiles(info.pickedFiles, info.exportPath, true, MainSettings.settings.deleteOldExportedFiles);
+								if (website)
+								{
+									new Notice("✅ Finished HTML Export:\n\n" + info.exportPath, 5000);
+									if (MainSettings.settings.openAfterExport) Utils.openPath(info.exportPath);
+								}
 							}
 							else
 							{

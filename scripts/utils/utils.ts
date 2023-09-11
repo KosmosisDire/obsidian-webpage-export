@@ -87,7 +87,7 @@ export class Utils
 			properties: ["showOverwriteConfirmation"]
 		})
 
-		if (picker.canceled) return undefined;
+		if (picker.canceled) return;
 		
 		let pickedPath = new Path(picker.filePath);
 		MainSettings.settings.exportPath = pickedPath.asString;
@@ -106,7 +106,7 @@ export class Utils
 			properties: ["openDirectory"]
 		});
 
-		if (picker.canceled) return undefined;
+		if (picker.canceled) return;
 
 		let path = new Path(picker.filePaths[0]);
 		MainSettings.settings.exportPath = path.directory.asString;
