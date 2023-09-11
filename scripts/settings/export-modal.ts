@@ -89,7 +89,6 @@ export class ExportModal extends Modal
 				button.setButtonText("Save").onClick(async () =>
 				{
 					MainSettings.settings.filesToExport[0] = this.filePicker.getSelectedFiles().map(file => file.path);
-					console.log(MainSettings.settings.filesToExport[0]);
 					await MainSettings.saveSettings();
 				});
 			});
