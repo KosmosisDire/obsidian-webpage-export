@@ -11,7 +11,7 @@ export class GenHelper
 {
 	//#region Main Generation Functions
 	
-	public static async getViewHTML(view: MarkdownPreviewView, filePath: Path | string, addSelfToDownloads: boolean = false): Promise<{html: string, downloads: Downloadable[]}>
+	public static async getViewHTML(view: MarkdownPreviewView, filePath: Path | string, addSelfToDownloads: boolean = false): Promise<{html: string, downloads: Downloadable[]} | undefined>
 	{
 		if (typeof filePath == "string") filePath = new Path(filePath);
 
@@ -25,6 +25,7 @@ export class GenHelper
 		if (!tempFile.document) return {html: "", downloads: []};
 
 		let content = await MarkdownRenderer.renderMarkdownView(view);
+		if (!content) return;
 		tempFile.document.body.appendChild(content);
 		let container = tempFile.document.body;
 
@@ -39,7 +40,7 @@ export class GenHelper
 			// continue if heading already has an arrow
 			if (element.querySelector(".heading-collapse-indicator") != null) return;
 
-			if (!tempFile.document) return {html: "", downloads: []};
+			if (!tempFile.document) return;
 
 
 			let el = tempFile.document.createElement("div");

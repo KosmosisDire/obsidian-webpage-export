@@ -11,6 +11,8 @@ export class FilePickerTree extends FileTree
 	public constructor(files: TFile[], keepOriginalExtensions: boolean = false, sort = true)
 	{
 		super(files, keepOriginalExtensions, sort);
+
+		this.renderMarkdownTitles = false;
 		
 		for (let file of files)
 		{

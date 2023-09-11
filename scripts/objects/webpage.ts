@@ -157,7 +157,7 @@ export class Webpage
 		return new Downloadable(this.name, content, this.exportPath.directory.makeForceFolder());
 	}
 
-	private async getDocumentHTML(): Promise<Webpage>
+	private async getDocumentHTML(): Promise<Webpage | undefined>
 	{
 		if (!this.isConvertable || !this.document) return this;
 
@@ -167,8 +167,8 @@ export class Webpage
 
 		// create obsidian document containers
 		let contentEl = await MarkdownRenderer.renderFile(this);
-		if (!contentEl) throw new Error("Could not render file: " + this.source.path);
-		MarkdownRenderer.checkCancelled();
+		if (!contentEl) return undefined;
+		if (MarkdownRenderer.checkCancelled()) return undefined;
 
 		body.appendChild(contentEl);
 
@@ -218,11 +218,11 @@ export class Webpage
 	}
 
 
-	public async create(): Promise<Webpage>
+	public async create(): Promise<Webpage | undefined>
 	{
 		if (!this.isConvertable || !this.document) return this;
 
-		await this.getDocumentHTML();
+		if(!(await this.getDocumentHTML())) return;
 
 		let sidebars = GenHelper.generateSideBarLayout(this.contentElement, this);
 		let rightSidebar = sidebars.right;

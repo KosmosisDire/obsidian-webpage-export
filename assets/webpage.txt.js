@@ -407,7 +407,7 @@ function extentionToTag(extention)
 	if (["mp4", "mov", "avi", "webm", "mpeg"].includes(extention)) return "video";
 	if (["mp3", "wav", "ogg", "aac"].includes(extention)) return "audio";
 	if (["pdf"].includes(extention)) return "embed";
-	return undefined;
+	return;
 }
 
 
@@ -861,7 +861,7 @@ function getHeaderSizerEl(headingWrapper)
 	while (parent && !parent.classList.contains("markdown-preview-sizer")) parent = parent.parentElement;
 
 	if (parent) return parent;
-	else return undefined;
+	else return;
 }
 
 async function collapseHeader(headingWrapper, collapse, openParents = true, instant = false)

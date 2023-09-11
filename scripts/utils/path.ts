@@ -494,7 +494,7 @@ export class Path
 
 	get stat(): Stats|undefined
 	{
-		if(!this.exists) return undefined;
+		if(!this.exists) return;
 
 		try
 		{
@@ -505,7 +505,7 @@ export class Path
 		catch (error)
 		{
 			Path.log("Error getting stat: " + this.asString, error.stack, "error");
-			return undefined;
+			return;
 		}
 	}
 
@@ -577,7 +577,7 @@ export class Path
 
 	async readFileString(encoding: "ascii" | "utf8" | "utf-8" | "utf16le" | "ucs2" | "ucs-2" | "base64" | "base64url" | "latin1" | "binary" | "hex" = "utf-8"): Promise<string|undefined>
 	{
-		if(!this.exists || this.isDirectory) return undefined;
+		if(!this.exists || this.isDirectory) return;
 
 		try
 		{
@@ -587,13 +587,13 @@ export class Path
 		catch (error)
 		{
 			Path.log("Error reading file: " + this.asString, error.stack, "error");
-			return undefined;
+			return;
 		}
 	}
 
 	async readFileBuffer(): Promise<Buffer|undefined>
 	{
-		if(!this.exists || this.isDirectory) return undefined;
+		if(!this.exists || this.isDirectory) return;
 
 		try
 		{
@@ -603,7 +603,7 @@ export class Path
 		catch (error)
 		{
 			Path.log("Error reading file buffer: " + this.asString, error.stack, "error");
-			return undefined;
+			return;
 		}
 	}
 

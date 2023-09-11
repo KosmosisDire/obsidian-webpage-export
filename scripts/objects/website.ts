@@ -102,13 +102,11 @@ export class Website
 			let newBodyClass = Website.getValidBodyClasses();
 			if (newBodyClass == webpage.document.body.getAttribute("class")) 
 			{
-				console.log("Body classes unchanged");
 				this.globalBodyClassesChanged = false;
 				this.globalBodyClassesUnchangedTime = modTime;
 			}
 			else 
 			{
-				console.log("Body classes changed");
 				webpage.document.body.setAttribute("class", newBodyClass);
 			}
 		}
@@ -118,20 +116,17 @@ export class Website
 			let fileTree = webpage.document.querySelector(".tree-container.file-tree");
 			if (this.fileTreeHtml == fileTree?.outerHTML ?? "") 
 			{
-				console.log("File tree unchanged");
 				this.globalFileTreeChanged = false;
 				this.globalFileTreeUnchangedTime = modTime;
 			}
 
 			if (MainSettings.settings.includeFileTree && !fileTree) 
 			{
-				console.log("File tree added");
 				let treeContainer = webpage.document?.querySelector(".sidebar-left .sidebar-content")?.createDiv();
 				if(treeContainer) treeContainer.outerHTML = this.fileTreeHtml;
 			}
 			else if (!MainSettings.settings.includeFileTree && fileTree)
 			{
-				console.log("File tree removed");
 				fileTree.remove();
 			}
 		}
@@ -141,7 +136,6 @@ export class Website
 			let graph = webpage.document.querySelector(".graph-view-wrapper");
 			if (graph && MainSettings.settings.includeGraphView || !graph && !MainSettings.settings.includeGraphView)
 			{
-				console.log("Graph unchanged");
 				this.globalGraphChanged = false;
 				this.globalGraphUnchangedTime = modTime;
 			}
@@ -151,17 +145,17 @@ export class Website
 				let rightSidebar = webpage.document.querySelector(".sidebar-right .sidebar-content") as HTMLElement;
 				if (rightSidebar)
 				{
-					console.log("Graph added");
 					let graphEl = GraphView.generateGraphEl(rightSidebar);
 					rightSidebar.prepend(graphEl);
 				}
 			}
 			else if (!MainSettings.settings.includeGraphView && graph) 
 			{
-				console.log("Graph removed");
 				graph.remove();
 			}
 		}
+
+		if(MarkdownRenderer.checkCancelled()) return undefined;
 
 		// write the new html to the file
 		await webpage.exportPathAbsolute.writeFile(await webpage.getHTML());
@@ -173,6 +167,8 @@ export class Website
 
 	private async checkIncrementalExport(webpage: Webpage): Promise<boolean>
 	{		
+		if(MarkdownRenderer.checkCancelled()) return false;
+
 		if (!MainSettings.settings.incrementalExport || webpage.isFileModified) // don't skip the file if it's modified
 		{
 			return true;
@@ -186,7 +182,7 @@ export class Website
 		return false;
 	}
 
-	public async createWithFiles(files: TFile[], destination: Path): Promise<Website>
+	public async createWithFiles(files: TFile[], destination: Path): Promise<Website | undefined>
 	{
 		this.batchFiles = files;
 
@@ -220,6 +216,8 @@ export class Website
 
 		for (let file of files)
 		{			
+			if(MarkdownRenderer.checkCancelled()) return undefined;
+
 			this.progress++;
 
 			try
@@ -231,7 +229,9 @@ export class Website
 				{
 					RenderLog.progress(this.progress, this.batchFiles.length, "Generating HTML", "Exporting: " + file.path, "var(--color-accent)");
 					if (!webpage.isConvertable) webpage.downloads.push(await webpage.getSelfDownloadable());
-					await webpage.create();
+					if(!await webpage.create()) return undefined;
+
+					
 				}
 
 				this.webpages.push(webpage);
@@ -242,10 +242,7 @@ export class Website
 				continue;
 			}
 
-			if (MarkdownRenderer.cancelled)
-			{
-				throw new Error("Export cancelled");
-			}
+			if(MarkdownRenderer.checkCancelled()) return undefined;
 		}
 
 		return this;

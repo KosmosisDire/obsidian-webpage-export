@@ -12,6 +12,7 @@ export class Tree
 	public minDepth: number = 1; 
 	public generateWithItemsClosed: boolean = false;
 	public makeLinksWebStyle: boolean = false;
+	public renderMarkdownTitles: boolean = true;
 	public container: HTMLElement | undefined = undefined;
 
 	protected async buildTreeRecursive(tree: TreeItem, container: HTMLElement, minDepth:number = 1, closeAllItems: boolean = false): Promise<void>
@@ -253,7 +254,8 @@ export class TreeItem
 	protected async createItemTitle(container: HTMLElement): Promise<HTMLSpanElement>
 	{
 		let titleEl = container.createEl("span", { cls: "tree-item-title" });
-		MarkdownRenderer.renderSingleLineMarkdown(this.title, titleEl);
+		if (this.tree.renderMarkdownTitles) MarkdownRenderer.renderSingleLineMarkdown(this.title, titleEl);
+		else titleEl.innerText = this.title;
 		return titleEl;
 	}
 
