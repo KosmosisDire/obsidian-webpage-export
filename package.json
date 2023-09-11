@@ -12,7 +12,6 @@
 	"author": "Nathan George",
 	"license": "GPL-3.0",
 	"devDependencies": {
-		"@types/js-beautify": "^1.13.3",
 		"@types/node": "^16.11.6",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
@@ -25,7 +24,6 @@
 	},
 	"dependencies": {
 		"html-minifier-terser": "^7.2.0",
-		"js-beautify": "^1.14.7",
 		"upath": "^2.0.1"
 	}
 }

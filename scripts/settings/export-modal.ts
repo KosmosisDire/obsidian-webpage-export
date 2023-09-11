@@ -267,7 +267,14 @@ export class ExportModal extends Modal
 					{
 						MainSettings.settings.exportPath = path.directory.asString;
 						await MainSettings.saveSettings();
+
 						setExportDisabled(!path.isDirectory || !path.isAbsolute || !path.exists);
+
+						if(!path.isDirectory) errorMessage.setText("Path must be a directory!");
+						else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
+						else if(!path.exists) errorMessage.setText("Path does not exist!");
+						else errorMessage.setText("");
+
 						pathInput?.setValue(MainSettings.settings.exportPath);
 					}
 				});
