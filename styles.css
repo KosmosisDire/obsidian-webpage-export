@@ -42,4 +42,265 @@
 }
 
 
+/*#region Tree */
 
+.tree-container
+{
+	--checkbox-size: 1.2em;
+    --collapse-arrow-size: 0.5em;
+    --tree-horizontal-spacing: calc(var(--collapse-arrow-size) * 2);
+    --tree-vertical-spacing: 0.5em;
+    --sidebar-margin: 12px;
+
+	font-size: 14px;
+	font-family: var(--font-family);
+}
+
+input[type=checkbox].file-checkbox 
+{
+    position: absolute;
+    margin-left: calc(0px - var(--collapse-arrow-size) * 2 - 0.5em - var(--checkbox-size) - 0.5em);
+    z-index: 20;
+}
+
+.theme-dark .tree-item:has(.file-checkbox.checked).mod-tree-folder
+{
+	transition: border-radius 0.2s, background-color 0.2s;
+	background-color: rgba(var(--color-blue-rgb), 0.05);
+	border-radius: 3px var(--radius-l) var(--radius-l) 3px;
+}
+
+.tree-item:has(.file-checkbox).mod-tree-folder
+{
+	margin-top: 2px;
+	margin-bottom: 2px;
+}
+
+.tree-item:has(.file-checkbox.checked).mod-tree-folder.is-collapsed
+{
+	border-radius: 3px;
+}
+
+.tree-item-title *
+{
+	padding: 0;
+	margin: 0;
+	overflow: visible;
+}
+
+.theme-dark .tree-item:has(> .tree-item-contents > .tree-item-link > .file-checkbox:not(.checked)):has(.file-checkbox.checked).mod-tree-folder
+{
+	background-color: rgba(var(--color-pink-rgb), 0.1);
+}
+
+.theme-light .tree-item:has(.file-checkbox.checked).mod-tree-folder
+{
+	transition: border-radius 0.2s, background-color 0.2s;
+	background-color: rgba(var(--color-blue-rgb), 0.15);
+	border-radius: 3px var(--radius-l) var(--radius-l) 3px;
+}
+
+.theme-light .tree-item:has(> .tree-item-contents > .tree-item-link  > .file-checkbox:not(.checked)):has(.file-checkbox.checked).mod-tree-folder
+{
+	background-color: rgba(var(--color-pink-rgb), 0.15);
+}
+
+
+/* Base tree */
+.tree-container 
+{
+	/* padding-bottom: 12px; */
+	/* margin: 12px; */
+	/* height: 100%; */
+	/* position: relative; */
+	/* display: contents; */
+	position: relative;
+	height: 100%;
+	width: auto;
+	margin: var(--sidebar-margin);
+	margin-top: 3em;
+    margin-bottom: 0;
+}
+
+.tree-container .tree-header 
+{
+	display: flex;
+	flex-direction: row;
+	align-items: center;
+	position: absolute;
+	top: -3em;
+}
+
+.tree-container .tree-header .sidebar-section-header
+{
+    margin: 1em;
+    margin-left: 0;
+}
+
+.tree-container:has(.tree-scroll-area:empty) 
+{
+    display: none;
+}
+
+.tree-container .tree-scroll-area 
+{
+	width: 100%;
+	height: 100%;
+	max-height: 100%;
+	overflow-y: scroll;
+	padding: 1em;
+	padding-right: calc(1em + var(--sidebar-margin));
+	padding-bottom: 3em;
+	border-radius: var(--radius-m);
+}
+
+.tree-container .tree-item 
+{
+	transition: background-color 0.2s;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0;
+}
+
+.tree-container .tree-item-children
+{
+    padding: 0;
+    margin-bottom: 0;
+    margin-left: 0;
+
+    border-left: none;
+    width: -webkit-fill-available;
+}
+
+.tree-container .tree-item.mod-active > .tree-item-contents > .tree-item-link
+{
+    color: var(--color-accent);
+}
+
+.tree-container .tree-item-contents {
+    position: relative;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    /* border-radius: 0.4em; */
+    color: var(--nav-item-color);
+    width: -webkit-fill-available;
+    margin-left: var(--tree-horizontal-spacing);
+}
+
+.tree-container .tree-item-contents:active 
+{
+    color: var(--nav-item-color-active);
+}
+
+.tree-container .tree-item-link 
+{
+	font-weight: bold;
+    width: -webkit-fill-available;
+    height: 100%;
+    transition: background-color 0.1s;
+    border-radius: var(--radius-s);
+    padding-left: calc(var(--tree-horizontal-spacing) + var(--checkbox-size) * 2 + 1px);
+    padding-bottom: calc(var(--tree-vertical-spacing) / 2);
+    padding-top: calc(var(--tree-vertical-spacing) / 2);
+    color: var(--nav-item-color);
+    text-decoration: none;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+}
+
+/* .tree-container .tree-item-icon.collapse-icon {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    border-radius: var(--radius-s);
+    transition: background-color 0.1s;
+    position: absolute;
+    height: 100%;
+	z-index: 10;
+} */
+
+.tree-container .tree-item-icon.collapse-icon {
+    margin-left: calc(0px - var(--collapse-arrow-size) * 2 - 0.5em);
+    position: absolute;
+}
+
+.tree-container .tree-item.mod-tree-folder > .tree-item-contents > .tree-item-icon.collapse-icon
+{
+    width: 100%;
+}
+
+.tree-container .collapse-icon > svg {
+    color: unset !important;
+}
+
+.tree-container .collapse-icon:hover 
+{
+    color: var(--nav-item-color-hover);
+}
+
+.tree-container .tree-item.is-collapsed > .tree-item-contents > .tree-item-link > .tree-item-icon.collapse-icon > svg
+{
+    transition: transform 0.1s ease-in-out;
+    transform: rotate(-90deg);
+}
+
+.tree-container .tree-item-link:hover 
+{
+    cursor: default;
+    /* color: var(--nav-item-color-hover); */
+    text-decoration: none;
+}
+
+/* Indentation guide */
+
+.tree-container > .tree-scroll-area > * .tree-item
+{
+    margin-left: calc(var(--tree-horizontal-spacing) + var(--collapse-arrow-size) / 2 + 1px);
+    border-left: var(--nav-indentation-guide-width) solid var(--nav-indentation-guide-color);
+}
+
+.tree-container .tree-scroll-area > * > * > .tree-item
+{
+    margin-left: calc(var(--collapse-arrow-size) / 2 + 1px);
+}
+
+.tree-container .tree-item.mod-active
+{
+    border-left: var(--nav-indentation-guide-width) solid var(--color-accent);
+}
+
+
+.tree-container .tree-item:hover:not(.mod-active):not(.mod-collapsible):not(:has(.tree-item:hover)) /* Hover */
+{
+    border-left: var(--nav-indentation-guide-width) solid var(--nav-item-color-hover);
+}
+
+.tree-container .tree-item:not(.mod-collapsible) > .tree-item-children > .tree-item,
+.tree-container > .tree-scroll-area > .tree-item,
+.tree-container:not(.mod-nav-indicator) .tree-item
+{
+    border-left: none !important;
+}
+
+.tree-container .tree-item:not(.mod-collapsible) > .tree-item-children > .tree-item > .tree-item-contents,
+.tree-container:not(.mod-nav-indicator) .tree-item .tree-item-contents,
+.tree-container > .tree-scroll-area > .tree-item > .tree-item-contents
+{
+    margin-left: 0 !important;
+}
+
+/* Special */
+
+.tree-container.outline-tree .tree-item[data-depth='1'] > .tree-item-contents > .tree-item-link
+{
+    font-weight: 900;
+    font-size: 1.1em;
+    margin-left: 0em;
+}
+
+
+
+/*#endregion */

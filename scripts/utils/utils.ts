@@ -1,8 +1,8 @@
 import {  MarkdownView, PluginManifest, TextFileView } from 'obsidian';
-import { ExportSettings } from '../export-settings';
 import { Path } from './path';
 import { RenderLog } from '../html-generation/render-log';
 import { Downloadable } from './downloadable';
+import { MainSettings } from 'scripts/settings/main-settings';
 
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;
@@ -68,8 +68,8 @@ export class Utils
 		
 		// add filters
 		let filters = [{
-			name: Utils.trimStart(absoluteDefaultPath.extenstion, ".").toUpperCase() + " Files",
-			extensions: [Utils.trimStart(absoluteDefaultPath.extenstion, ".")]
+			name: Utils.trimStart(absoluteDefaultPath.extension, ".").toUpperCase() + " Files",
+			extensions: [Utils.trimStart(absoluteDefaultPath.extension, ".")]
 		}];
 
 		if (showAllFilesOption)
@@ -90,8 +90,8 @@ export class Utils
 		if (picker.canceled) return undefined;
 		
 		let pickedPath = new Path(picker.filePath);
-		ExportSettings.settings.lastExportPath = pickedPath.asString;
-		ExportSettings.saveSettings();
+		MainSettings.settings.exportPath = pickedPath.asString;
+		MainSettings.saveSettings();
 		
 		return pickedPath;
 	}
@@ -109,15 +109,15 @@ export class Utils
 		if (picker.canceled) return undefined;
 
 		let path = new Path(picker.filePaths[0]);
-		ExportSettings.settings.lastExportPath = path.directory.asString;
-		ExportSettings.saveSettings();
+		MainSettings.settings.exportPath = path.directory.asString;
+		MainSettings.saveSettings();
 
 		return path;
 	}
 
 	static idealDefaultPath() : Path
 	{
-		let lastPath = new Path(ExportSettings.settings.lastExportPath);
+		let lastPath = new Path(MainSettings.settings.exportPath);
 
 		if (lastPath.asString != "" && lastPath.exists)
 		{
@@ -127,9 +127,9 @@ export class Utils
 		return Path.vaultPath;
 	}
 
-	static async downloadFiles(files: Downloadable[], folderPath: Path)
+	static async downloadFiles(files: Downloadable[], rootPath: Path)
 	{
-		if (!folderPath.isAbsolute) throw new Error("folderPath must be absolute: " + folderPath.asString);
+		if (!rootPath.isAbsolute) throw new Error("folderPath must be absolute: " + rootPath.asString);
 
 		RenderLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)")
 		
@@ -139,7 +139,7 @@ export class Utils
 
 			try
 			{
-				await file.download(folderPath.directory);
+				await file.download(rootPath.directory);
 				RenderLog.progress(i+1, files.length, "Saving HTML files to disk", "Saving: " + file.filename, "var(--color-green)");
 			}
 			catch (e)
@@ -223,5 +223,11 @@ export class Utils
 		}
 
 		return inputString;
+	}
+
+	static async openPath(path: Path)
+	{
+		// @ts-ignore
+		await window.electron.remote.shell.openPath(path.asString);
 	}
 }

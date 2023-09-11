@@ -3,24 +3,24 @@ import { MarkdownRenderer } from "./markdown-renderer";
 
 export namespace RenderLog
 {
-    export function log(messageTitle: string, message: string)
+    export function log(messageTitle: string, message: any)
     {
         pullPathLogs();
-        console.log(messageTitle + ": \n" + message);
+        console.log(messageTitle + ": \n", message);
         MarkdownRenderer._reportInfo(messageTitle, message);
     }
 
-    export function warning(messageTitle: string, message: string)
+    export function warning(messageTitle: string, message: any)
     {
         pullPathLogs();
-        console.warn(messageTitle + ": \n" + message);
+        console.warn(messageTitle + ": \n", message);
         MarkdownRenderer._reportWarning(messageTitle, message);
     }
 
-    export function error(messageTitle: string, message: string, fatal: boolean = false)
+    export function error(messageTitle: string, message: any, fatal: boolean = false)
     {
         pullPathLogs();
-        console.error(messageTitle + ": \n" + message);
+        console.error(messageTitle + ": \n", message);
         MarkdownRenderer._reportError(messageTitle, message, fatal);
     }
 

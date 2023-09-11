@@ -1,130 +1,434 @@
-import { MarkdownView, Notice, WorkspaceLeaf } from "obsidian";
-import { ExportSettings } from "scripts/export-settings";
+import { Component, MarkdownView, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, FileView, View, MarkdownPreviewRenderer, MarkdownPreviewView, loadMermaid, TFile } from "obsidian";
 import { Utils } from "scripts/utils/utils";
-import { ExportFile } from "./export-file";
+import { Webpage } from "../objects/webpage";
 import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
-const { clipboard } = require('electron')
 import { RenderLog } from "./render-log";
-
+import { MainSettings } from "scripts/settings/main-settings";
+import { GenHelper } from "./html-generator";
+import { get } from "http";
 
 export namespace MarkdownRenderer
 {
+	export var convertableExtensions = ["md", "canvas"];
 	export let problemLog: string = "";
 	export let renderLeaf: WorkspaceLeaf | undefined;
     export let errorInBatch: boolean = false;
 	export let cancelled: boolean = false;
+	export let batchStarted: boolean = false;
 
-    export async function renderMarkdown(file: ExportFile): Promise<string>
+	let renderDocument: Document = document.implementation.createHTMLDocument("renderDocument");
+
+	export function isConvertable(extention: string)
 	{
+		return convertableExtensions.contains(extention);
+	}
+
+	export function checkCancelled()
+	{
+		if (cancelled) 
+		{
+			endBatch();
+			cancelled = false;
+			throw new Error("Markdown rendering cancelled");
+		}
 		if (!renderLeaf)
 		{
-			throw new Error("Cannot render document without a render leaf! Please call beginBatch() before calling this function, and endBatch() after you are done exporting all files.");
+			endBatch();
+			cancelled = false;
+			throw new Error("Markdown rendering leaf not found! Cancelled.");
+		}
+	}
+
+	function failRender(file: TFile, message: any): undefined
+	{
+		RenderLog.error(`Rendering ${file.path} failed: `, message);
+		return undefined;
+	}
+
+	export async function renderFile(file: Webpage): Promise<HTMLElement | undefined>
+	{
+		let loneFile = !batchStarted;
+		if (loneFile) 
+		{
+			console.log("beginning lone batch");
+			await MarkdownRenderer.beginBatch();
 		}
 
+		await Utils.waitUntil(() => renderLeaf != undefined || cancelled, 2000, 10);
+		checkCancelled();
+		if (!renderLeaf) return failRender(file.source, "Failed to create leaf for rendering!");
+		
 		try
-		{
-			await renderLeaf.openFile(file.markdownFile, { active: false});
+		{ 
+			await renderLeaf.openFile(file.source, { active: false}); 
 		}
 		catch (e)
 		{
-			let message = "Failed to open file! File: " + file.markdownFile.path;
-			RenderLog.warning("Cannot render file: ", message);
-			return generateFailDocument();
+			return failRender(file.source, e);
 		}
 
-		if (cancelled) throw new Error("Markdown rendering cancelled");
+		checkCancelled();
 
-		if(!(renderLeaf.view instanceof MarkdownView))
+		let html: HTMLElement | undefined;
+
+		if(renderLeaf.view instanceof MarkdownView) html = await renderMarkdownFile(file.source, renderLeaf.view);
+		else
 		{
-			let message = "This file was not a normal markdown file! File: " + file.markdownFile.path;
-			RenderLog.warning("Cannot render file: ", message);
-			return generateFailDocument();
+			file.isCustomView = true;
+
+			// @ts-ignore
+			let view = renderLeaf.view;
+			let viewType = view.getViewType();
+
+			switch(viewType)
+			{
+				case "kanban":
+					html = await renderGeneric(file, view);
+					break;
+				case "excalidraw":
+					html = await renderExcalidraw(file, view);
+					break;
+				case "canvas":
+					html = await renderCanvas(file, view);
+					break;
+				default:
+					html = await renderGeneric(file, view);
+			}
 		}
 
-		// @ts-ignore
-		let previewModeFound = await Utils.waitUntil(() => (renderLeaf != undefined && renderLeaf.view.previewMode) || cancelled, 2000, 10);
-		
-		if (cancelled) throw new Error("Markdown rendering cancelled");
+		if (!html) return failRender(file.source, "Failed to render file!");
 
-		if (!previewModeFound)
-		{
-			let message = "Failed to open preview mode! File: " + file.markdownFile.path;
-			RenderLog.warning("Cannot render file: ", message);
-			return generateFailDocument();
-		}
+		await postProcessHTML(html);
+		makeHeadingsTrees(html);
+		await AssetHandler.loadMathjaxStyles();
 
-		let preview = renderLeaf.view.previewMode;
+		if (loneFile) MarkdownRenderer.endBatch();
 
-		await Utils.changeViewMode(renderLeaf.view, "preview");
-		if (cancelled) throw new Error("Markdown rendering cancelled");
-
-
-		// @ts-ignore
-		preview.renderer.showAll = true;
-		// @ts-ignore
-		await preview.renderer.unfoldAllHeadings();
-		if (cancelled) throw new Error("Markdown rendering cancelled");
-
-		// @ts-ignore
-		let lastRender = preview.renderer.lastRender;
-		// @ts-ignore
-		preview.renderer.rerender(true);
-
-		let isRendered = false;
-		// @ts-ignore
-		preview.renderer.onRendered(() => 
-		{
-			isRendered = true;
-		});
-
-		// @ts-ignore
-		let renderfinished = await Utils.waitUntil(() => (preview.renderer.lastRender != lastRender && isRendered) || cancelled, 30000, 50);
-
-		if (cancelled) throw new Error("Markdown rendering cancelled");
-
-		if (!renderfinished)
-		{
-			let message = "Failed to render file within 30 seconds! File: " + file.markdownFile.path;
-			RenderLog.warning("Cannot render file: ", message);
-			return generateFailDocument();
-		}
-
-		// wait for dataview blocks to render
-		let text = renderLeaf.view.data;
-		let dataviews = text.matchAll(/```(dataview|dataviewjs)/g);
-		let dataviewCount = Array.from(dataviews).length;
-
-		if (dataviewCount > 0)
-		{
-			await Utils.delay(ExportSettings.settings.dataviewBlockWaitTime * dataviewCount);
-		}
-
-		if (cancelled) throw new Error("Markdown rendering cancelled");
-
-		// If everything worked then do a bit of postprocessing
-		let container = preview.containerEl;
-		if (container)
-		{
-			postProcessHTML(file, container);
-
-			AssetHandler.loadMathjaxStyles();
-
-			return container.innerHTML;
-		}
-
-		let message = "Could not find container with rendered content! File: " + file.markdownFile.path;
-		RenderLog.warning("Cannot render file: ", message);
-		return generateFailDocument();
+		return html;
 	}
 
-	function postProcessHTML(file: ExportFile, html: HTMLElement)
+	export async function renderMarkdownView(preview: MarkdownPreviewView): Promise<HTMLElement>
+	{
+		// @ts-ignore
+		let renderer = preview.renderer;
+		await renderer.unfoldAllHeadings();
+		await renderer.unfoldAllLists();
+		await renderer.parseSync();
+
+		// @ts-ignore
+		if (!window.mermaid)
+		{
+			await loadMermaid();
+		}
+
+		checkCancelled();
+
+		let sections = renderer.sections as {"rendered": boolean, "height": number, "computed": boolean, "lines": number, "lineStart": number, "lineEnd": number, "used": boolean, "highlightRanges": number, "level": number, "headingCollapsed": boolean, "shown": boolean, "usesFrontMatter": boolean, "html": string, "el": HTMLElement}[];
+
+
+		// @ts-ignore
+		let promises = []
+
+		for (let i = 0; i < sections.length; i++)
+		{
+			let section = sections[i];
+			section.shown = true;
+			section.rendered = false;
+			// @ts-ignore
+			section.resetCompute();
+			// @ts-ignore
+			section.setCollapsed(false);
+			section.el.innerHTML = "";
+
+			// @ts-ignore
+			await section.render();
+
+			// @ts-ignore
+			await Utils.waitUntil(() => (section.el && section.rendered == true) || cancelled, 2000, 5);
+			
+			checkCancelled();
+
+			section.el.querySelectorAll(".language-mermaid").forEach(async (element: HTMLElement) =>
+			{
+				let code = element.innerText;
+				
+				// @ts-ignore
+				const { svg, bindFunctions } = await mermaid.render("mermaid-" + preview.docId + "-" + i, code);
+
+				if(element.parentElement)
+				{
+					element.parentElement.outerHTML = `<div class="mermaid">${svg}</div>`;
+					bindFunctions(element.parentElement);
+				}
+			});
+
+			await renderer.measureSection(section);
+
+			await Utils.waitUntil(() => section.computed == true || cancelled, 2000, 5);
+
+			// @ts-ignore
+			await preview.postProcess(section, promises, renderer.frontmatter);
+
+			checkCancelled();
+		}
+
+		await Utils.delay(100);
+		// @ts-ignore
+		await Promise.all(promises);
+		await Utils.delay(100);
+
+
+		let container = renderer.sizerEl;
+		if (!container) container = document.body.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
+		container.innerHTML = `<div class="markdown-preview-pusher" style="width: 1px; height: 0.1px; margin-bottom: 0px;"></div>`
+
+		for (let i = 0; i < sections.length; i++)
+		{
+			let section = sections[i];
+			container.innerHTML += section.el.outerHTML;
+		}
+		
+		//@ts-ignore
+		let htmlRoot = renderer.previewEl;
+		if (!htmlRoot) 
+		{
+			htmlRoot = document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
+		}
+
+		htmlRoot.innerHTML = container.outerHTML;
+
+		await postProcessHTML(htmlRoot);
+		await AssetHandler.loadMathjaxStyles();
+
+		return htmlRoot;
+	}
+
+	export async function renderSingleLineMarkdown(markdown: string, container: HTMLElement)
+	{
+		let renderComp = new Component();
+		renderComp.load();
+		await ObsidianRenderer.renderMarkdown(markdown, container, "/", renderComp);
+		renderComp.unload();
+		
+		//remove rendered lists and replace them with plain text
+		container.querySelectorAll("ol").forEach((listEl: HTMLElement) =>
+		{
+			if(listEl.parentElement)
+			{
+				let start = listEl.getAttribute("start") ?? "1";
+				listEl.parentElement.createSpan().outerHTML = `<p>${start}. ${listEl.innerText}</p>`;
+				listEl.remove();
+			}
+		});
+		container.querySelectorAll("ul").forEach((listEl: HTMLElement) =>
+		{
+			if(listEl.parentElement)
+			{
+				listEl.parentElement.createSpan().innerHTML = "- " + listEl.innerHTML;
+				listEl.remove();
+			}
+		});
+		container.querySelectorAll("li").forEach((listEl: HTMLElement) =>
+		{
+			if(listEl.parentElement)
+			{
+				listEl.parentElement.createSpan().innerHTML = listEl.innerHTML;
+				listEl.remove();
+			}
+		});
+	}
+
+	export async function filterOutMarkdown(markdown: string): Promise<string>
+	{
+		let renderComp = new Component();
+		renderComp.load();
+		let container = document.createElement("div");
+		await ObsidianRenderer.renderMarkdown(markdown, container, "/", renderComp);
+		renderComp.unload();
+		
+		//remove rendered lists and replace them with plain text
+		container.querySelectorAll("ol").forEach((listEl: HTMLElement) =>
+		{
+			if(listEl.parentElement)
+			{
+				let start = listEl.getAttribute("start") ?? "1";
+				listEl.parentElement.createSpan().outerHTML = `<p>${start}. ${listEl.innerText}</p>`;
+				listEl.remove();
+			}
+		});
+		container.querySelectorAll("ul").forEach((listEl: HTMLElement) =>
+		{
+			if(listEl.parentElement)
+			{
+				listEl.parentElement.createSpan().innerHTML = "- " + listEl.innerHTML;
+				listEl.remove();
+			}
+		});
+		container.querySelectorAll("li").forEach((listEl: HTMLElement) =>
+		{
+			if(listEl.parentElement)
+			{
+				listEl.parentElement.createSpan().innerHTML = listEl.innerHTML;
+				listEl.remove();
+			}
+		});
+
+		let text = container.textContent ?? "";
+		container.remove();
+
+		return text;
+	}
+
+    async function renderMarkdownFile(file: TFile, view: MarkdownView): Promise<HTMLElement | undefined>
+	{
+		// @ts-ignore
+		let previewModeFound = await Utils.waitUntil(() => view.previewMode || cancelled, 2000, 10);
+		
+		checkCancelled()
+
+		if (!previewModeFound) return failRender(file, "Failed to open preview mode!");
+
+		Utils.changeViewMode(view, "preview");
+
+		return await renderMarkdownView(view.previewMode);
+	}
+
+	async function renderGeneric(file:Webpage, view: any): Promise<HTMLElement>
+	{
+		await Utils.delay(2000);
+
+		checkCancelled();
+
+		// @ts-ignore
+		let container = view.contentEl;
+
+		await postProcessHTML(container);
+		await AssetHandler.loadMathjaxStyles();
+
+		return container;
+	}
+
+	async function renderExcalidraw(file:Webpage, view: any): Promise<HTMLElement>
+	{
+		await Utils.delay(500);
+
+		// @ts-ignore
+		let scene = view.excalidrawData.scene;
+
+		// @ts-ignore
+		let svg = await view.svg(scene, "", false);
+
+		// remove rect fill
+		let isLight = !svg.getAttribute("filter");
+		if (!isLight) svg.removeAttribute("filter");
+		svg.classList.add(isLight ? "light" : "dark");
+
+		let contentEl = document.createElement("div");
+		contentEl.classList.add("view-content");
+		let sizerEl = contentEl.createDiv();
+		sizerEl.classList.add("excalidraw-plugin");
+
+		sizerEl.appendChild(svg);
+
+		await postProcessHTML(contentEl);
+		await AssetHandler.loadMathjaxStyles();
+
+		checkCancelled();
+
+		return contentEl;
+	}
+
+	async function renderCanvas(file:Webpage, view: any): Promise<HTMLElement>
+	{
+		let canvas = view.canvas;
+
+		let nodes = canvas.nodes;
+		let edges = canvas.edges;
+
+		for (const node of nodes)
+		{
+			await node[1].render();
+		}
+
+		for (const edge of edges)
+		{
+			await edge[1].render();
+		}
+
+		canvas.zoomToFit();
+		await Utils.delay(500);
+
+		let container = view.contentEl.cloneNode(true);
+		let canvasEl = container.querySelector(".canvas");
+		canvasEl.innerHTML = "";
+
+		let edgeContainer = canvasEl.createEl("svg", { cls: "canvas-edges" });
+		let edgeHeadContainer = canvasEl.createEl("svg", { cls: "canvas-edges" });
+
+		for (const node of nodes)
+		{
+			let nodeEl = node[1].nodeEl.cloneNode(true);
+			let view = node[1]?.child?.previewMode;
+			
+			if (view) 
+			{
+				let embedEl = nodeEl.querySelector(".markdown-embed-content.node-insert-event");
+				
+				let html = "";
+				node[1].render();
+
+				if (node[1].child.file)
+				{
+					let results = await GenHelper.getViewHTML(view, node[1].child.file.path);
+					html = results.html;
+					file.downloads.push(...results.downloads);
+				}
+				else
+				{
+					let results = await GenHelper.getViewHTML(view, file.source.path);
+					html = results.html;
+					file.downloads.push(...results.downloads);
+				}
+				
+				if(embedEl) 
+				{
+					embedEl.innerHTML = html;
+				}
+			}
+			
+			canvasEl.appendChild(nodeEl);
+		}
+
+		for (const edge of edges)
+		{
+			let edgeEl = edge[1].lineGroupEl.cloneNode(true);
+			let headEl = edge[1].lineEndGroupEl.cloneNode(true);
+
+			edgeContainer.appendChild(edgeEl);
+			edgeHeadContainer.appendChild(headEl);
+
+			if(edge[1].label)
+			{
+				let labelEl = edge[1].labelElement.wrapperEl.cloneNode(true);
+				canvasEl.appendChild(labelEl);
+			}
+		}
+
+		checkCancelled();
+
+		
+
+		return container;
+	}
+
+	async function postProcessHTML(html: HTMLElement)
 	{
 		// transclusions put a div inside a p tag, which is invalid html. Fix it here
 		html.querySelectorAll("p:has(div)").forEach((element) =>
 		{
 			// replace the p tag with a span
-			let span = file.document.createElement("span");
+			let span = document.body.createEl("span");
 			span.innerHTML = element.innerHTML;
 			element.replaceWith(span);
 		});
@@ -143,17 +447,179 @@ export namespace MarkdownRenderer
 			// @ts-ignore
 			element.textContent = element.value;
 		});
+
+		// convert all hard coded image / media widths into max widths
+		html.querySelectorAll("img, video, svg").forEach((element: HTMLElement) =>
+		{
+			let width = element.getAttribute("width");
+			if (width)
+			{
+				element.style.width = width || "100%";
+				element.style.maxWidth = "100%";
+				element.removeAttribute("width");
+			}
+		});
+
+		// convert canvas elements into images
+		html.querySelectorAll("canvas").forEach((canvas: HTMLCanvasElement) =>
+		{
+			let image = document.createElement("img");
+			let data = canvas.toDataURL();
+			console.log(canvas, data);
+			image.src = data;
+			image.style.width = canvas.style.width || "100%";
+			image.style.maxWidth = "100%";
+			canvas.replaceWith(image);
+		});
+
+		// replace obsidian's pdf embeds with normal embeds
+		html.querySelectorAll("span.internal-embed.pdf-embed").forEach((pdf: HTMLElement) =>
+		{
+			let embed = document.createElement("embed");
+			embed.setAttribute("src", pdf.getAttribute("src") ?? "");
+			embed.style.width = pdf.style.width || '100%';
+			embed.style.maxWidth = "100%";
+			embed.style.height = pdf.style.height || '800px';
+
+			let container = pdf.parentElement?.parentElement;
+			
+			container?.querySelectorAll("*").forEach((el) => el.remove());
+
+			if (container) container.appendChild(embed);
+
+			console.log(container?.innerHTML);
+		});
+
+		// if the dynamic table of contents plugin is included on this page
+		// then parse each list item and render markdown for it
+		let tocEls = Array.from(html.querySelectorAll(".block-language-toc.dynamic-toc li > a"));
+		for (const element of tocEls)
+		{
+			let renderEl = document.body.createDiv();
+			renderSingleLineMarkdown(element.textContent ?? "", renderEl);
+			element.textContent = renderEl.textContent;
+			renderEl.remove();
+		}
+
+		makeHeadingsTrees(html);
+
+		checkCancelled();
 	}
 	
+	function makeHeadingsTrees(html: HTMLElement)
+	{
+		// make headers into formet:
+		/*
+		- .heading-wrapper
+			- h1.heading
+				- .heading-before
+				- .heading-collapse-indicator.collapse-indicator.collapse-icon
+				- "Text"
+				- .heading-after
+			- .heading-children
+		*/
+
+		function getHeaderEl(headingContainer: HTMLDivElement)
+		{
+			let first = headingContainer.firstElementChild;
+			if (first && /[Hh][1-6]/g.test(first.tagName)) return first;
+			else return undefined;
+		}
+		
+		function makeHeaderTree(headerDiv: HTMLDivElement, childrenContainer: HTMLElement)
+		{
+			let headerEl = getHeaderEl(headerDiv);
+
+			if (!headerEl) return;
+
+			let possibleChild = headerDiv.nextElementSibling;
+
+			while (possibleChild != null)
+			{
+				let possibleChildHeader = getHeaderEl(possibleChild as HTMLDivElement);
+
+				if(possibleChildHeader)
+				{
+					// if header is a sibling of this header then break
+					if (possibleChildHeader.tagName <= headerEl.tagName)
+					{
+						break;
+					}
+				}
+
+				let nextEl = possibleChild.nextElementSibling;
+				childrenContainer.appendChild(possibleChild);
+				possibleChild = nextEl;
+			}
+		}
+
+		const arrowHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='svg-icon right-triangle'><path d='M3 8L12 17L21 8'></path></svg>";
+
+		html.querySelectorAll("div:has(> :is(h1, h2, h3, h4, h5, h6))").forEach(function (header: HTMLDivElement)
+		{
+			header.classList.add("heading-wrapper");
+
+			let hEl = getHeaderEl(header) as HTMLHeadingElement;
+
+			if (!hEl || hEl.classList.contains("heading")) return;
+
+			hEl.classList.add("heading");
+
+			let collapseIcon = hEl.querySelector(".heading-collapse-indicator");
+			if (!collapseIcon)
+			{
+				collapseIcon = hEl.createDiv({ cls: "heading-collapse-indicator collapse-indicator collapse-icon" });
+				collapseIcon.innerHTML = arrowHTML;
+				hEl.prepend(collapseIcon);
+			}
+
+			if (!hEl.querySelector(".heading-after")) 
+			{
+				let afterEl = hEl.createDiv({ cls: "heading-after" });
+				afterEl.textContent = "...";
+			}
+
+			// the before element is for future styling
+			if (!hEl.querySelector(".heading-before")) 
+			{
+				let beforeEl = hEl.createDiv({ cls: "heading-before" });
+				hEl.prepend(beforeEl);
+				beforeEl.textContent = "";
+			}
+
+			let children = header.createDiv({ cls: "heading-children" });
+
+			makeHeaderTree(header, children);
+		});
+
+		// remove collapsible arrows from h1 and inline titles
+		html.querySelectorAll("div h1, div .inline-title").forEach((element) =>
+		{
+			element.querySelector(".heading-collapse-indicator")?.remove();
+		});
+
+		// remove all new lines from header elements which cause spacing issues
+		html.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((el) => el.innerHTML = el.innerHTML.replaceAll("\n", "")); 
+	}
+
     export async function beginBatch()
 	{
+		if(batchStarted && !cancelled)
+		{
+			throw new Error("Cannot start a new batch while one is already running!");
+		}
+
 		problemLog = "";
         errorInBatch = false;
 		cancelled = false;
+		batchStarted = true;
 
 		renderLeaf = TabManager.openNewTab("window", "vertical");
 		// @ts-ignore
-		let parentFound = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent, 2000, 10);
+		let parentFound = await Utils.waitUntil(() => (renderLeaf && renderLeaf.parent) || cancelled, 2000, 10);
+		
+		checkCancelled();
+
 		if (!parentFound) 
 		{
 			try
@@ -162,7 +628,7 @@ export namespace MarkdownRenderer
 			}
 			catch (e)
 			{
-				console.log(e);
+				RenderLog.error("Failed to detach render leaf: ", e);
 			}
 			
 			new Notice("Error: Failed to create leaf for rendering!");
@@ -180,11 +646,12 @@ export namespace MarkdownRenderer
 		renderLeaf.parent.parent.containerEl.classList.remove("mod-vertical");
 		// @ts-ignore
 		renderLeaf.parent.parent.containerEl.classList.add("mod-horizontal");
-		renderLeaf.view.containerEl.win.resizeTo(600, 300);
+		renderLeaf.view.containerEl.win.resizeTo(800, 400);
 		renderLeaf.view.containerEl.win.moveTo(window.screen.width / 2 - 450, window.screen.height - 450 - 75);
 
 		// @ts-ignore
 		let renderBrowserWindow = window.electron.remote.BrowserWindow.getFocusedWindow();
+		if (!renderBrowserWindow) throw new Error("Failed to get render window!");
 		renderBrowserWindow.setAlwaysOnTop(true, "floating", 1);
 		renderBrowserWindow.webContents.setFrameRate(120);
 		renderBrowserWindow.on("close", () =>
@@ -203,10 +670,14 @@ export namespace MarkdownRenderer
 
 	export function endBatch()
 	{
+		if (!batchStarted) return;
+
 		if (renderLeaf)
 		{
             if (!errorInBatch)
 			    renderLeaf.detach();
+			else
+				console.log("error in batch, not detaching");
 		}
 
 		// @ts-ignore
@@ -215,6 +686,8 @@ export namespace MarkdownRenderer
 		{
 			win.webContents.setBackgroundThrottling(false);
 		}
+
+		batchStarted = false;
 	}
 
 	export function generateLogEl(title: string, message: string, textColor: string, backgroundColor: string): HTMLElement
@@ -242,9 +715,15 @@ export namespace MarkdownRenderer
 
 	export async function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
 	{
+		checkCancelled();
+
 		// @ts-ignore
 		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
-		if (!found) return;
+		if (!found)
+		{
+			console.log("failed to find render leaf");
+			return;
+		}
 
 		// @ts-ignore
 		let loadingContainer = renderLeaf.parent.parent.containerEl.querySelector(`.html-render-progress-container`);
@@ -279,7 +758,7 @@ export namespace MarkdownRenderer
 				copyButton.addEventListener("click", () => 
 				{
 					console.log(problemLog);
-					clipboard.writeText(problemLog);
+					navigator.clipboard.writeText(problemLog);
 					new Notice("Copied to clipboard! Please paste this into your github issue as is.");
 				});
 			}
@@ -311,18 +790,19 @@ export namespace MarkdownRenderer
 
 	export async function _reportError(messageTitle: string, message: string, fatal: boolean)
 	{
+		let firstLog = problemLog == "";
         messageTitle = (fatal ? "[Fatal Error] " : "[Error] ") + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
 		errorInBatch = true;
 
 		// Return if log levels do not match
-		if (!fatal && !["error", "warning", "all"].contains(ExportSettings.settings.logLevel))
+		if (!fatal && !["error", "warning", "all"].contains(MainSettings.settings.logLevel))
 		{
 			return;
 		}
 
-		if(problemLog == "")
+		if(firstLog)
 		{
 			this.renderLeaf.view.containerEl.win.resizeTo(900, 500);
 		}
@@ -364,13 +844,14 @@ export namespace MarkdownRenderer
 
 	export async function _reportWarning(messageTitle: string, message: string)
 	{
+		let firstLog = problemLog == "";
 		messageTitle = "[Warning] " + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
 		// return if log level does not include warnings
-		if(!["warning", "all"].contains(ExportSettings.settings.logLevel)) return;
+		if(!["warning", "all"].contains(MainSettings.settings.logLevel)) return;
 
-		if(problemLog == "")
+		if(firstLog)
 		{
 			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
 		}
@@ -395,12 +876,13 @@ export namespace MarkdownRenderer
 
     export async function _reportInfo(messageTitle: string, message: string)
 	{
+		let firstLog = problemLog == "";
         messageTitle = "[Info] " + messageTitle;
 		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
 
-		if(!(ExportSettings.settings.logLevel == "all")) return;
+		if(!(MainSettings.settings.logLevel == "all")) return;
 
-		if(problemLog == "")
+		if(firstLog)
 		{
 			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
 		}
@@ -421,19 +903,8 @@ export namespace MarkdownRenderer
 			logContainer.appendChild(logEl);
 		}
 	}
-    
-    export function generateFailDocument(message: string = "Page Not Found"): string
-	{
-		return `
-		<div class="markdown-preview-view markdown-rendered">
-			<div class="markdown-preview-sizer" style="width: 100%; height: 100%; margin: 0px; padding: 0px; max-width: 100%; min-height: 100%;">
-				<div>
-					<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
-						<h1 style>${message}</h1>
-					</center>
-				</div>
-			</div>
-		</div>
-		`;
-	}
+
+
+	
+
 }

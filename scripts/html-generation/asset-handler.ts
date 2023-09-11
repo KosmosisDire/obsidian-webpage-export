@@ -8,19 +8,33 @@ import graphWASM from "assets/graph_wasm.wasm";
 import tinyColorJS from "assets/tinycolor.txt.js";
 // @ts-ignore
 import webpageJS from "assets/webpage.txt.js";
-
 import appStyles from "assets/obsidian-styles.txt.css";
 import webpageStyles from "assets/plugin-styles.txt.css";
 import { Path } from "scripts/utils/path.js";
 import { Downloadable } from "scripts/utils/downloadable.js";
-import { ExportSettings } from "scripts/export-settings.js";
 import { RenderLog } from "./render-log.js";
-import { Utils } from "scripts/utils/utils.js";
+import { MainSettings } from "scripts/settings/main-settings.js";
+import { GenHelper } from "./html-generator.js";
+import { Website } from "scripts/objects/website.js";
+const { minify } = require('html-minifier-terser');
+
 
 export class AssetHandler
 {
 	private static vaultPluginsPath: Path;
 	private static thisPluginPath: Path;
+
+	private static obsidianStylesFilter = 
+	["workspace-", "cm-", "ghost", "leaf", "CodeMirror", 
+	"@media", "pdf", "xfa", "annotation", "@keyframes", 
+	"load", "@-webkit", "setting", "filter", "decorator", 
+	"dictionary", "status", "windows", "titlebar", "source",
+	"menu", "message", "popover", "suggestion", "prompt", 
+	"tab", "HyperMD", "workspace", "publish", 
+	"backlink", "sync", "vault", "mobile", "tablet", "phone", 
+	"textLayer", "header", "linux", "macos", "rename", "edit",
+	"progress", "scrollbar", "native", "aria", "tooltip", 
+	"drop", "sidebar"];
 
 	// this path is used to generate the relative path to the images folder, likewise for the other paths
 	public static readonly mediaFolderName: Path = new Path("lib/media");
@@ -33,6 +47,7 @@ export class AssetHandler
 	public static themeStyles: string = "";
 	public static snippetStyles: string = "";
 	public static pluginStyles: string = "";
+	public static generatedStyles: string = "";
 
 	private static lastEnabledPluginStyles: string = "";
 	private static lastEnabledSnippets: string[] = [];
@@ -46,6 +61,7 @@ export class AssetHandler
 	public static graphWASM: Buffer;
 	public static renderWorkerJS: string = "";
 	public static tinyColorJS: string = "";
+	public static generatedJS: string = "";
 
 	public static async initialize(pluginID: string)
 	{
@@ -53,25 +69,66 @@ export class AssetHandler
 		this.thisPluginPath = this.vaultPluginsPath.joinString(pluginID + "/").makeAbsolute();
 
 		await this.loadAppStyles();
-		this.webpageStyles = webpageStyles;
-		this.webpageJS = webpageJS;
-		this.graphViewJS = graphViewJS;
-		this.graphWASMJS = graphWASMJS;
-		this.renderWorkerJS = renderWorkerJS;
+		this.webpageStyles = await AssetHandler.minifyJSorCSS(webpageStyles, false);
+		this.webpageJS = await AssetHandler.minifyJSorCSS(webpageJS, true);
+		this.graphViewJS = await AssetHandler.minifyJSorCSS(graphViewJS, true);
+		this.graphWASMJS = await AssetHandler.minifyJSorCSS(graphWASMJS, true);
+		this.renderWorkerJS = await AssetHandler.minifyJSorCSS(renderWorkerJS, true);
 		// @ts-ignore
-		this.tinyColorJS = tinyColorJS;
+		this.tinyColorJS = await AssetHandler.minifyJSorCSS(tinyColorJS, true);
 		this.graphWASM = Buffer.from(graphWASM);
 
 		this.updateAssetCache();
 	}
 
+	static async minifyJSorCSS(content: string, isJSNotCSS: boolean) : Promise<string>
+	{
+		// for now this is disabled because I don't have time to make it clean
+		// return content;
+
+		let tempContent = content;
+
+		try
+		{
+			// add script or style tags so that minifier can minify it as html
+			if (isJSNotCSS)
+			{
+				content = `
+				<script>
+				${content}
+				</script>`;
+			}
+			else
+			{
+				content = `
+				<style>
+				${content}
+				</style>`;
+			}
+
+			content = await minify(content, { collapseBooleanAttributes: true, collapseWhitespace: true, minifyCSS: true, minifyJS: true, removeComments: true, removeEmptyAttributes: true, removeRedundantAttributes: true, removeScriptTypeAttributes: true, removeStyleLinkTypeAttributes: true, useShortDoctype: true});
+
+			// remove the <script> or <style> tags
+			content = content.replace("<script>", "").replace("</script>", "").replace("<style>", "").replace("</style>", "");
+		}
+		catch (e)
+		{
+			RenderLog.error("Error while minifying " + (isJSNotCSS ? "JS" : "CSS") + " file.", e.stack);
+			content = tempContent;
+		}
+
+		if (content == "") content = " ";
+
+		return content;
+	}
+
 	public static async getDownloads() : Promise<Downloadable[]>
 	{
 		let toDownload: Downloadable[] = [];
-		if (!ExportSettings.settings.inlineCSS)
+		if (!MainSettings.settings.inlineCSS)
 		{
 			let pluginCSS = this.webpageStyles;
-			let thirdPartyPluginCSS = await this.getPluginStyles();
+			let thirdPartyPluginCSS = await this.minifyJSorCSS(await this.getPluginStyles(), false);
 			pluginCSS += "\n" + thirdPartyPluginCSS + "\n";
 			let appcssDownload = new Downloadable("obsidian-styles.css", this.appStyles, this.cssFolderName);
 			let plugincssDownload = new Downloadable("plugin-styles.css", pluginCSS, this.cssFolderName);
@@ -81,13 +138,19 @@ export class AssetHandler
 			toDownload.push(plugincssDownload);
 			toDownload.push(themecssDownload);
 			toDownload.push(snippetsDownload);
+			toDownload.push(new Downloadable("generated-styles.css", this.generatedStyles, this.cssFolderName));
 		}
-		if (!ExportSettings.settings.inlineJS)
+		if (!MainSettings.settings.inlineJS)
 		{
 			let webpagejsDownload = new Downloadable("webpage.js", this.webpageJS, this.jsFolderName);
 			toDownload.push(webpagejsDownload);
+			if (this.generatedJS != "")
+			{
+				let generatedjsDownload = new Downloadable("generated.js", this.generatedJS, this.jsFolderName);
+				toDownload.push(generatedjsDownload);
+			}
 		}
-		if(ExportSettings.settings.includeGraphView)
+		if(MainSettings.settings.includeGraphView)
 		{
 			let graphWASMDownload = new Downloadable("graph_wasm.wasm", this.graphWASM, this.jsFolderName); // MIGHT NEED TO SPECIFY ENCODING
 			let renderWorkerJSDownload = new Downloadable("graph-render-worker.js", this.renderWorkerJS, this.jsFolderName);
@@ -101,6 +164,7 @@ export class AssetHandler
 			toDownload.push(graphViewJSDownload);
 			toDownload.push(tinyColorJS);
 		}
+
 		return toDownload;
 	}
 
@@ -108,27 +172,73 @@ export class AssetHandler
 	{
 		let snippetsNames = this.getEnabledSnippets();
 		let themeName = this.getCurrentThemeName();
-		let enabledPluginStyles = ExportSettings.settings.includePluginCSS;
+		let enabledPluginStyles = MainSettings.settings.includePluginCSS;
 		if (snippetsNames != this.lastEnabledSnippets)
 		{
 			this.lastEnabledSnippets = snippetsNames;
-			this.snippetStyles = await this.getSnippetsCSS(snippetsNames);
+			this.snippetStyles = await this.minifyJSorCSS(await this.getSnippetsCSS(snippetsNames), false);
 		}
 		if (themeName != this.lastEnabledTheme)
 		{
 			this.lastEnabledTheme = themeName;
-			this.themeStyles = await this.getThemeContent(themeName);
+			this.themeStyles = await this.minifyJSorCSS(await this.getThemeContent(themeName), false);
 		}
 		if (enabledPluginStyles != this.lastEnabledPluginStyles)
 		{
 			this.lastEnabledPluginStyles = enabledPluginStyles;
-			this.pluginStyles = await this.getPluginStyles();
+			this.pluginStyles = await this.minifyJSorCSS(await this.getPluginStyles(), false);
 		}
+		
+		let bodyStyle = (document.body.getAttribute("style") ?? "").replaceAll("\"", "'").replaceAll("; ", " !important;\n\t");
+		let lineWidth = MainSettings.settings.customLineWidth || "50em";
+		let contentWidth = MainSettings.settings.contentWidth || "500em";
+		let sidebarWidth = MainSettings.settings.sidebarWidth || "25em";
+		if (!isNaN(Number(lineWidth))) lineWidth += "px";
+		if (!isNaN(Number(contentWidth))) contentWidth += "px";
+		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
+
+		this.generatedStyles = 
+`
+body
+{
+	--line-width: ${lineWidth};
+	--line-width-adaptive: ${lineWidth};
+	--file-line-width: ${lineWidth};
+	--content-width: ${contentWidth};
+	--sidebar-width: calc(min(${sidebarWidth}, 80vw));
+	--collapse-arrow-size: 0.35em;
+	--tree-horizontal-spacing: 0.6em;
+	--tree-vertical-spacing: 0.6em;
+	--sidebar-margin: 24px;
+}
+
+body
+{
+	${bodyStyle}
+}
+`
+
+		this.generatedJS = "";
+		if (MainSettings.settings.includeGraphView)
+		{
+			this.generatedJS += 
+			`
+			let nodes=\n${JSON.stringify(Website.globalGraph)};
+			let attractionForce = ${MainSettings.settings.graphAttractionForce};
+			let linkLength = ${MainSettings.settings.graphLinkLength};
+			let repulsionForce = ${MainSettings.settings.graphRepulsionForce};
+			let centralForce = ${MainSettings.settings.graphCentralForce};
+			let edgePruning = ${MainSettings.settings.graphEdgePruning};
+			`
+		}
+
+		this.generatedJS = await this.minifyJSorCSS(this.generatedJS, true);
+		this.generatedStyles = await this.minifyJSorCSS(this.generatedStyles, false);
 
 		this.lastMathjaxChanged = -1;
 	}
 
-	public static loadMathjaxStyles()
+	public static async loadMathjaxStyles()
 	{
 		// @ts-ignore
 		if (this.mathjaxStylesheet == undefined) this.mathjaxStylesheet = Array.from(document.styleSheets).find((sheet) => sheet.ownerNode.id == ("MJX-CHTML-styles"));
@@ -144,11 +254,12 @@ export class AssetHandler
 				AssetHandler.mathStyles += this.mathjaxStylesheet.cssRules[i].cssText + "\n";
 			}
 
-			AssetHandler.mathStyles.replaceAll("app://obsidian.md/", "https://publish.obsidian.md/").trim();
+
+			AssetHandler.mathStyles = await this.minifyJSorCSS(AssetHandler.mathStyles.replaceAll("app://obsidian.md/", "https://publish.obsidian.md/"), false);
 		}
 		else
 		{
-			AssetHandler.mathStyles = "";
+			return;
 		}
 
 		this.lastMathjaxChanged = changed;
@@ -174,9 +285,18 @@ export class AssetHandler
 			let rule = appSheet.cssRules[i];
 			if (rule)
 			{
-				if (rule.cssText.startsWith("@font-face")) continue;
-				if (rule.cssText.startsWith(".CodeMirror")) continue;
-				if (rule.cssText.startsWith(".cm-")) continue;
+				let skip = false;
+				let selector = rule.cssText.split("{")[0];
+				for(let filter of this.obsidianStylesFilter)
+				{
+					if (selector.includes(filter))
+					{
+						skip = true;
+						break;
+					}
+				}
+
+				if (skip) continue;
 				
 				let cssText = rule.cssText + "\n";
 				cssText = cssText.replaceAll("public/", "https://publish.obsidian.md/public/");
@@ -190,7 +310,7 @@ export class AssetHandler
 		{
 			// @ts-ignore
 			let styleID = stylesheets[i].ownerNode?.id;
-			if (styleID.startsWith("svelte") && ExportSettings.settings.includeSvelteCSS || styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET")
+			if (styleID.startsWith("svelte") && MainSettings.settings.includeSvelteCSS || styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET")
 			{
 				let style = stylesheets[i].cssRules;
 
@@ -204,13 +324,15 @@ export class AssetHandler
 				}
 			}
 		}
+
+		this.appStyles = await this.minifyJSorCSS(this.appStyles, false);
 	}
 
 	private static async getPluginStyles() : Promise<string>
 	{
 		// load 3rd party plugin css
 		let pluginCSS = "";
-		let thirdPartyPluginStyleNames = ExportSettings.settings.includePluginCSS.split("\n");
+		let thirdPartyPluginStyleNames = MainSettings.settings.includePluginCSS.split("\n");
 		for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
 		{
 			if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
