@@ -33,7 +33,7 @@ export class AssetHandler
 	"tab", "HyperMD", "workspace", "publish", 
 	"backlink", "sync", "vault", "mobile", "tablet", "phone", 
 	"textLayer", "header", "linux", "macos", "rename", "edit",
-	"progress", "scrollbar", "native", "aria", "tooltip", 
+	"progress", "scrollbar", "aria", "tooltip", 
 	"drop", "sidebar"];
 
 	// this path is used to generate the relative path to the images folder, likewise for the other paths
