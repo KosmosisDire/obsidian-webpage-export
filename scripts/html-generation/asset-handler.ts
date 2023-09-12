@@ -33,8 +33,11 @@ export class AssetHandler
 	"tab", "HyperMD", "workspace", "publish", 
 	"backlink", "sync", "vault", "mobile", "tablet", "phone", 
 	"textLayer", "header", "linux", "macos", "rename", "edit",
-	"progress", "scrollbar", "aria", "tooltip", 
+	"progress", "native", "aria", "tooltip", 
 	"drop", "sidebar"];
+
+	private static obsidianStylesKeep = 
+	["scrollbar"];
 
 	// this path is used to generate the relative path to the images folder, likewise for the other paths
 	public static readonly mediaFolderName: Path = new Path("lib/media");
@@ -287,12 +290,19 @@ body
 			{
 				let skip = false;
 				let selector = rule.cssText.split("{")[0];
-				for(let filter of this.obsidianStylesFilter)
+
+				for (let keep of this.obsidianStylesKeep) 
 				{
-					if (selector.includes(filter))
+					if (!selector.includes(keep)) 
 					{
-						skip = true;
-						break;
+						for (let filter of this.obsidianStylesFilter) 
+						{
+							if (selector.includes(filter)) 
+							{
+								skip = true;
+								break;
+							}
+						}
 					}
 				}
 
