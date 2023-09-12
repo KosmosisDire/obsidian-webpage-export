@@ -639,18 +639,8 @@ export namespace MarkdownRenderer
 		let newPosition = {x: window.screen.width / 2 - 450, y: window.screen.height - 450 - 75};
 		renderLeaf.view.containerEl.win.moveTo(newPosition.x, newPosition.y);
 
-		let renderBrowserWindow = undefined;
 		// @ts-ignore
-		let windows = window.electron.remote.BrowserWindow.getAllWindows()
-		for (const win of windows)
-		{
-			let bounds = win.getBounds();
-			if (bounds.x == newPosition.x && bounds.y == newPosition.y && bounds.width == newSize.width && bounds.height == newSize.height)
-			{
-				renderBrowserWindow = win;
-				break;
-			}
-		}
+		let renderBrowserWindow = renderLeaf.view.containerEl.win.electronWindow;
 
 		if (!renderBrowserWindow) 
 		{
