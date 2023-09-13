@@ -1,20 +1,16 @@
-// @ts-ignore
 import graphViewJS from "assets/graph_view.txt.js";
 import graphWASMJS from "assets/graph_wasm.txt.js";
-// @ts-ignore
 import renderWorkerJS from "assets/graph-render-worker.txt.js";
 import graphWASM from "assets/graph_wasm.wasm";
-
 import tinyColorJS from "assets/tinycolor.txt.js";
-// @ts-ignore
 import webpageJS from "assets/webpage.txt.js";
 import appStyles from "assets/obsidian-styles.txt.css";
 import webpageStyles from "assets/plugin-styles.txt.css";
+
 import { Path } from "scripts/utils/path.js";
 import { Downloadable } from "scripts/utils/downloadable.js";
 import { RenderLog } from "./render-log.js";
 import { MainSettings } from "scripts/settings/main-settings.js";
-import { GenHelper } from "./html-generator.js";
 import { Website } from "scripts/objects/website.js";
 const { minify } = require('html-minifier-terser');
 

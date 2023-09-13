@@ -22,7 +22,7 @@ export class GenHelper
 		// @ts-ignore
 		let tempFile = new Webpage(tFile, null, Path.vaultPath, true, filePath.basename + ".html", false);
 
-		if (!tempFile.document) return {html: "", downloads: []};
+		if (!tempFile.document) return undefined;
 
 		let content = await MarkdownRenderer.renderMarkdownView(view);
 		if (!content) return;
