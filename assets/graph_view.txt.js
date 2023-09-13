@@ -221,7 +221,21 @@ class GraphRenderWorker
     constructor()
     {
         this.canvas = document.querySelector("#graph-canvas");
-		this.canvasSidebar = document.querySelector(".sidebar:has(#graph-canvas)");
+		this.canvasSidebar = undefined;
+
+		try
+		{
+			this.canvasSidebar = document.querySelector(".sidebar:has(#graph-canvas)");
+		}
+		catch(e)
+		{
+			console.log("Error: " + e + "\n\n Using fallback.");
+			
+			let rightSidebar = document.querySelector(".sidebar-right");
+			let leftSidebar = document.querySelector(".sidebar-left");
+
+			this.canvasSidebar = rightSidebar.querySelector("#graph-canvas") ? rightSidebar : leftSidebar;
+		}
 
         this.view = this.canvas.transferControlToOffscreen();
 
@@ -586,7 +600,7 @@ async function initializeGraphView()
 
         try
         {
-            var hidden = (isHidden(document.querySelector(".graph-view-placeholder")) || isHidden(document.querySelector(".sidebar:has(.graph-view-placeholder)")));
+            var hidden = (renderWorker.canvasSidebar.classList.contains("is-collapsed"));
         }
         catch(e)
         {
