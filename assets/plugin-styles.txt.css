@@ -168,8 +168,8 @@ body
 
 .document-container {
 	opacity: 0;
-    flex-basis: var(--content-width);
-    width: var(--content-width);
+    flex-basis: 100%;
+    width: 100%;
     height: 100%;
     z-index: 0;
     display: flex;
@@ -1142,6 +1142,45 @@ body.theme-light .excalidraw-svg svg.light, body.theme-light .excalidraw-plugin 
     flex-grow: 1;
     flex-basis: 0px;
 }
+/*#endregion */
+
+/*#region Banners */
+
+.obsidian-banner .lock-button
+{
+	display: none;
+}
+
+.obsidian-banner-wrapper
+{
+	height: 300px;
+    position: absolute;
+    top: 0;
+    z-index: 1;
+    max-height: 300px;
+    width: 100%;
+}
+
+.obsidian-banner
+{
+	width: 100%;
+	height: 100%;
+}
+
+.obsidian-banner img
+{
+	object-position: 50% 50%;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.obsidian-banner-wrapper + .markdown-preview-sizer
+{
+	margin-top: 300px;
+}
+
+
 /*#endregion */
 
 /*#region Mind Map  */

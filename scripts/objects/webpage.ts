@@ -1,6 +1,5 @@
-import { TFile } from "obsidian";
+import { MarkdownPreviewView, TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
-import { GenHelper } from "../html-generation/html-generator";
 import { Downloadable } from "scripts/utils/downloadable";
 import { MainSettings } from "scripts/settings/main-settings";
 import { OutlineTree } from "./outline-tree";
@@ -8,6 +7,7 @@ import { GraphView } from "./graph-view";
 import { Website } from "./website";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
+import { HTMLGeneration } from "scripts/html-generation/html-generator";
 const { minify } = require('html-minifier-terser');
 
 export class Webpage
@@ -55,7 +55,7 @@ export class Webpage
 	public downloads: Downloadable[] = [];
 
 
-	public isCustomView: boolean = false;
+	public viewType: string = "markdown";
 
 	public isConvertable: boolean = false;
 
@@ -114,7 +114,8 @@ export class Webpage
 	 */
 	get contentElement(): HTMLDivElement
 	{
-		if (this.isCustomView) return this.document?.querySelector(".view-content") as HTMLDivElement;
+		if (this.viewType != "markdown") return this.document?.querySelector(".view-content") as HTMLDivElement;
+		
 		return this.document?.querySelector(".markdown-preview-view") as HTMLDivElement ?? this.document?.querySelector(".view-content") as HTMLDivElement;
 	}
 
@@ -123,7 +124,8 @@ export class Webpage
 	 */
 	get sizerElement(): HTMLDivElement
 	{
-		if (this.isCustomView) return this.document?.querySelector(".view-content")?.firstChild as HTMLDivElement;
+		if (this.viewType != "markdown") return this.document?.querySelector(".view-content")?.firstChild as HTMLDivElement;
+
 		return this.document?.querySelector(".markdown-preview-sizer") as HTMLDivElement;
 	}
 
@@ -157,65 +159,6 @@ export class Webpage
 		return new Downloadable(this.name, content, this.exportPath.directory.makeForceFolder());
 	}
 
-	private async getDocumentHTML(): Promise<Webpage | undefined>
-	{
-		if (!this.isConvertable || !this.document) return this;
-
-		// set custom line width on body
-		let body = this.document.body;
-		body.setAttribute("class", Website.getValidBodyClasses());
-
-		// create obsidian document containers
-		let contentEl = await MarkdownRenderer.renderFile(this);
-		if (!contentEl) return undefined;
-		if (MarkdownRenderer.checkCancelled()) return undefined;
-
-		body.appendChild(contentEl);
-
-		if (!this.isCustomView)
-		{ 
-			contentEl.classList.toggle("allow-fold-headings", MainSettings.settings.allowFoldingHeadings);
-
-			if (MainSettings.settings.addFilenameTitle) GenHelper.addTitle(this);
-		}
-
-		if(this.sizerElement) this.sizerElement.style.paddingBottom = "";
-
-
-		// modify links to work outside of obsidian (including relative links)
-		GenHelper.fixLinks(this); 
-		
-		// inline / outline images
-		let outlinedImages : Downloadable[] = [];
-		if (MainSettings.settings.inlineImages)
-		{
-			await GenHelper.inlineMedia(this);
-		}
-		else
-		{
-			outlinedImages = await GenHelper.externalizeMedia(this);
-		}
-
-		// add math styles to the document. They are here and not in head because they are unique to each document
-		let mathStyleEl = document.createElement("style");
-		mathStyleEl.id = "MJX-CHTML-styles";
-		mathStyleEl.innerHTML = AssetHandler.mathStyles;
-		this.contentElement.prepend(mathStyleEl);
-
-		this.downloads.push(...outlinedImages);
-		this.downloads.push(...await AssetHandler.getDownloads());
-
-		if(MainSettings.settings.makeNamesWebStyle)
-		{
-			this.downloads.forEach((file) =>
-			{
-				file.filename = Path.toWebStyle(file.filename);
-				file.relativeDownloadPath = file.relativeDownloadPath?.makeWebStyle();
-			});
-		}
-
-		return this;
-	}
 
 
 	public async create(): Promise<Webpage | undefined>
@@ -224,12 +167,13 @@ export class Webpage
 
 		if(!(await this.getDocumentHTML())) return;
 
-		let sidebars = GenHelper.generateSideBarLayout(this.contentElement, this);
-		let rightSidebar = sidebars.right;
-		let leftSidebar = sidebars.left;
-		this.document.body.appendChild(sidebars.container);
+		let layout = this.generateWebpageLayout(this.contentElement);
+		this.document.body.appendChild(layout.container);
 
-		sidebars.center.classList.add("show");
+		let rightSidebar = layout.right;
+		let leftSidebar = layout.left;
+
+		layout.center.classList.add("show");
 
 		// inject graph view
 		if (MainSettings.settings.includeGraphView)
@@ -249,10 +193,9 @@ export class Webpage
 		}
 
 		// inject darkmode toggle
-		if (MainSettings.settings.addDarkModeToggle && !this.document.querySelector(".theme-toggle-container-inline, .theme-toggle-container"))
+		if (MainSettings.settings.addDarkModeToggle)
 		{
-			let toggle = GenHelper.generateDarkmodeToggle(false, this.document);
-			leftSidebar.appendChild(toggle);
+			HTMLGeneration.createThemeToggle(leftSidebar);
 		}
 
 		// inject file tree
@@ -261,10 +204,438 @@ export class Webpage
 			leftSidebar.createDiv().outerHTML = this.website.fileTreeHtml;
 		}
 
-		await GenHelper.fillInHead(this);
+		await this.addMetadata();
 
 		this.downloads.unshift(await this.getSelfDownloadable());
 
 		return this;
+	}
+
+	private async getDocumentHTML(): Promise<Webpage | undefined>
+	{
+		if (!this.isConvertable || !this.document) return this;
+
+		// set custom line width on body
+		let body = this.document.body;
+		body.setAttribute("class", Website.getValidBodyClasses());
+
+		// create obsidian document containers
+		let renderInfo = await MarkdownRenderer.renderFile(this.source, body);
+		let contentEl = renderInfo?.contentEl;
+		this.viewType = renderInfo?.viewType ?? "markdown";
+
+		if (!contentEl) return undefined;
+		if (MarkdownRenderer.checkCancelled()) return undefined;
+
+		if (this.viewType == "markdown")
+		{ 
+			contentEl.classList.toggle("allow-fold-headings", MainSettings.settings.allowFoldingHeadings);
+
+			if (MainSettings.settings.addFilenameTitle) this.addTitle();
+		}
+
+		if(this.sizerElement) this.sizerElement.style.paddingBottom = "";
+
+		// move banner plugin's wrapper above the sizer
+		let bannerWrapper = this.document.querySelector(".obsidian-banner-wrapper");
+		if(this.sizerElement && bannerWrapper) 
+		{
+			if(bannerWrapper) contentEl.appendChild(bannerWrapper);
+			if (this.sizerElement) contentEl.appendChild(this.sizerElement);
+		}
+
+		// convert headings from linear to trees
+		HTMLGeneration.makeHeadingsTrees(contentEl);
+
+		// modify links to work outside of obsidian (including relative links)
+		this.convertLinks();
+		
+		// inline / outline images
+		let outlinedImages : Downloadable[] = [];
+		if (MainSettings.settings.inlineImages) await this.inlineMedia();
+		else outlinedImages = await this.exportMedia();
+		
+
+		// add math styles to the document. They are here and not in <head> because they are unique to each document
+		let mathStyleEl = document.createElement("style");
+		mathStyleEl.id = "MJX-CHTML-styles";
+		mathStyleEl.innerHTML = AssetHandler.mathStyles;
+		this.contentElement.prepend(mathStyleEl);
+
+		this.downloads.push(...outlinedImages);
+		this.downloads.push(...await AssetHandler.getDownloads());
+
+		if(MainSettings.settings.makeNamesWebStyle)
+		{
+			this.downloads.forEach((file) =>
+			{
+				file.filename = Path.toWebStyle(file.filename);
+				file.relativeDownloadPath = file.relativeDownloadPath?.makeWebStyle();
+			});
+		}
+
+		return this;
+	}
+	
+	private generateWebpageLayout(middleContent: HTMLElement): {container: HTMLElement, left: HTMLElement, right: HTMLElement, center: HTMLElement}
+	{
+		if (!this.document) return {container: middleContent, left: middleContent, right: middleContent, center: middleContent};
+
+		/*
+		- div.webpage-container
+
+			- div.sidebar.sidebar-left
+				- div.sidebar-container
+					- div.sidebar-sizer
+						- div.sidebar-content-positioner
+							- div.sidebar-content
+				- div.sidebar-gutter
+					- div.clickable-icon.sidebar-collapse-icon
+						- svg
+
+			- div.document-container
+
+			- div.sidebar.sidebar-right
+				- div.sidebar-gutter
+						- div.clickable-icon.sidebar-collapse-icon
+							- svg
+				- div.sidebar-container
+					- div.sidebar-sizer
+						- div.sidebar-content-positioner
+							- div.sidebar-content
+		*/
+
+		let iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M21 3H3C1.89543 3 1 3.89543 1 5V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19V5C23 3.89543 22.1046 3 21 3Z"></path><path d="M10 4V20"></path><path d="M4 7H7"></path><path d="M4 10H7"></path><path d="M4 13H7"></path></svg>`
+		
+		let pageContainer = this.document.createElement("div");
+		let leftSidebar = this.document.createElement("div");
+		let leftSidebarContainer = this.document.createElement("div");
+		let leftSidebarSizer = this.document.createElement("div");
+		let leftSidebarContentPositioner = this.document.createElement("div");
+		let leftContent = this.document.createElement("div");
+		let leftGutter = this.document.createElement("div");
+		let leftGutterIcon = this.document.createElement("div");
+		let documentContainer = this.document.createElement("div");
+		let rightSidebar = this.document.createElement("div");
+		let rightSidebarContainer = this.document.createElement("div");
+		let rightSidebarSizer = this.document.createElement("div");
+		let rightSidebarContentPositioner = this.document.createElement("div");
+		let rightContent = this.document.createElement("div");
+		let rightGutter = this.document.createElement("div");
+		let rightGutterIcon = this.document.createElement("div");
+
+		pageContainer.setAttribute("class", "webpage-container");
+
+		leftSidebar.setAttribute("class", "sidebar-left sidebar");
+		leftSidebarContainer.setAttribute("class", "sidebar-container");
+		leftSidebarSizer.setAttribute("class", "sidebar-sizer");
+		leftSidebarContentPositioner.setAttribute("class", "sidebar-content-positioner");
+		leftContent.setAttribute("class", "sidebar-content");
+		leftGutter.setAttribute("class", "sidebar-gutter");
+		leftGutterIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
+
+		documentContainer.setAttribute("class", "document-container");
+
+		rightSidebar.setAttribute("class", "sidebar-right sidebar");
+		rightSidebarContainer.setAttribute("class", "sidebar-container");
+		rightSidebarSizer.setAttribute("class", "sidebar-sizer");
+		rightSidebarContentPositioner.setAttribute("class", "sidebar-content-positioner");
+		rightContent.setAttribute("class", "sidebar-content");
+		rightGutter.setAttribute("class", "sidebar-gutter");
+		rightGutterIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
+
+		pageContainer.appendChild(leftSidebar);
+		pageContainer.appendChild(documentContainer);
+		pageContainer.appendChild(rightSidebar);
+
+		leftSidebar.appendChild(leftSidebarContainer);
+		leftSidebarContainer.appendChild(leftSidebarSizer);
+		leftSidebarSizer.appendChild(leftSidebarContentPositioner);
+		leftSidebarContentPositioner.appendChild(leftContent);
+		leftSidebar.appendChild(leftGutter);
+		leftGutter.appendChild(leftGutterIcon);
+		leftGutterIcon.innerHTML = iconSVG;
+
+		documentContainer.appendChild(middleContent);
+
+		rightSidebar.appendChild(rightGutter);
+		rightGutter.appendChild(rightGutterIcon);
+		rightGutterIcon.innerHTML = iconSVG;
+		rightSidebar.appendChild(rightSidebarContainer);
+		rightSidebarContainer.appendChild(rightSidebarSizer);
+		rightSidebarSizer.appendChild(rightSidebarContentPositioner);
+		rightSidebarContentPositioner.appendChild(rightContent);
+		
+
+		return {container: pageContainer, left: leftContent, right: rightContent, center: documentContainer};
+	}
+
+	private addTitle()
+	{
+		if (!this.document) return;
+
+		let inlineTitle = this.document.querySelector(".inline-title");
+		let title = inlineTitle?.textContent ?? this.source.basename;
+		inlineTitle?.remove();
+
+		let titleEl = this.sizerElement.createEl("h1");
+		titleEl.setAttribute("data-heading", title);
+		titleEl.id = this.source.basename.replaceAll(" ", "_");
+	}
+
+	private async addMetadata()
+	{
+		if (!this.document) return;
+
+		let relativePaths = this.getRelativePaths();
+
+		let meta =
+		`
+		<title>${this.source.basename}</title>
+		<base href="${relativePaths.rootPath}/">
+		<meta id="root-path" root-path="${relativePaths.rootPath}/">
+
+		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
+		<meta charset="UTF-8">
+		`;
+
+		// --- JS ---
+		let scripts = "";
+
+		if (MainSettings.settings.includeGraphView) 
+		{
+			scripts += `\n<script type='module' src='${relativePaths.jsPath}/graph_view.js'></script>\n`;
+			scripts += `\n<script src='${relativePaths.jsPath}/graph_wasm.js'></script>\n`;
+			scripts += `\n<script src="${relativePaths.jsPath}/tinycolor.js"></script>\n`;
+			scripts += `\n<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js" integrity="sha512-Ch/O6kL8BqUwAfCF7Ie5SX1Hin+BJgYH4pNjRqXdTEqMsis1TUYg+j6nnI9uduPjGaj7DN4UKCZgpvoExt6dkw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>\n`;
+		}
+
+		if (MainSettings.settings.inlineJS)
+		{
+			scripts += `\n<script>\n${AssetHandler.webpageJS}\n</script>\n`;
+			scripts += `\n<script>\n${AssetHandler.generatedJS}\n</script>\n`;
+		}
+		else 
+		{
+			scripts += `\n<script src='${relativePaths.jsPath}/webpage.js'></script>\n`;
+			scripts += `\n<script src='${relativePaths.jsPath}/generated.js'></script>\n`;
+		}
+
+
+		// --- CSS ---
+		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
+		
+		if (MainSettings.settings.inlineCSS)
+		{
+			let pluginCSS = AssetHandler.webpageStyles;
+			let thirdPartyPluginStyles = AssetHandler.pluginStyles;
+			pluginCSS += thirdPartyPluginStyles;
+			
+			var header =
+			`
+			${meta}
+			
+			<!-- Obsidian App Styles / Other Built-in Styles -->
+			<style> ${AssetHandler.appStyles} </style>
+			<style> ${cssSettings} </style>
+
+			<!-- Theme Styles -->
+			<style> ${AssetHandler.themeStyles} </style>
+
+			<!-- Plugin Styles -->
+			<style> ${pluginCSS} </style>
+
+			<!-- Snippets -->
+			<style> ${AssetHandler.snippetStyles} </style>
+
+			<!-- Generated Styles -->
+			<style> ${AssetHandler.generatedStyles} </style>
+		
+			${scripts}
+			`;
+		}
+		else
+		{
+			header =
+			`
+			${meta}
+
+			<link rel="stylesheet" href="${relativePaths.cssPath}/obsidian-styles.css">
+			<link rel="stylesheet" href="${relativePaths.cssPath}/theme.css">
+			<link rel="stylesheet" href="${relativePaths.cssPath}/plugin-styles.css">
+			<link rel="stylesheet" href="${relativePaths.cssPath}/snippets.css">
+			<link rel="stylesheet" href="${relativePaths.cssPath}/generated-styles.css">
+			<style> ${cssSettings} </style>
+
+			${scripts}
+			`;
+		}
+
+		this.document.head.innerHTML = header;
+	}
+
+	private getRelativePaths(): {mediaPath: Path, jsPath: Path, cssPath: Path, rootPath: Path}
+	{
+		let rootPath = this.pathToRoot;
+		let imagePath = AssetHandler.mediaFolderName.makeUnixStyle();
+		let jsPath = AssetHandler.jsFolderName.makeUnixStyle();
+		let cssPath = AssetHandler.cssFolderName.makeUnixStyle();
+
+		if (MainSettings.settings.makeNamesWebStyle)
+		{
+			imagePath = imagePath.makeWebStyle();
+			jsPath = jsPath.makeWebStyle();
+			cssPath = cssPath.makeWebStyle();
+			rootPath = rootPath.makeWebStyle();
+		}
+
+		return {mediaPath: imagePath, jsPath: jsPath, cssPath: cssPath, rootPath: rootPath};
+	}
+
+	private convertLinks()
+	{
+		if (!this.document) return;
+
+		this.document.querySelectorAll("a.internal-link").forEach((linkEl) =>
+		{
+			linkEl.setAttribute("target", "_self");
+
+			let href = linkEl.getAttribute("href");
+			if (!href) return;
+
+			if (href.startsWith("#")) // link pointing to header of this document
+			{
+				linkEl.setAttribute("href", href.replaceAll(" ", "_"));
+			}
+			else // if it doesn't start with #, it's a link to another document
+			{
+				let targetHeader = href.split("#").length > 1 ? "#" + href.split("#")[1] : "";
+				let target = href.split("#")[0];
+
+				let targetFile = app.metadataCache.getFirstLinkpathDest(target, this.source.path);
+				if (!targetFile) return;
+
+				let targetPath = new Path(targetFile.path);
+				if (MarkdownRenderer.isConvertable(targetPath.extensionName)) targetPath.setExtension("html");
+				if (MainSettings.settings.makeNamesWebStyle) targetPath.makeWebStyle();
+
+				let finalHref = targetPath.makeUnixStyle() + targetHeader.replaceAll(" ", "_");
+				linkEl.setAttribute("href", finalHref);
+			}
+		});
+
+		this.document.querySelectorAll("a.footnote-link").forEach((linkEl) =>
+		{
+			linkEl.setAttribute("target", "_self");
+		});
+
+		this.document.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((headerEl) =>
+		{
+			// convert the data-heading to the id
+			headerEl.setAttribute("id", (headerEl.getAttribute("data-heading") ?? headerEl.textContent)?.replaceAll(" ", "_") ?? "");
+		});
+	}
+
+	private async inlineMedia()
+	{
+		if (!this.document) return;
+
+		let elements = Array.from(this.document.querySelectorAll("[src]:not(head [src])"))
+		for (let mediaEl of elements)
+		{
+			let rawSrc = mediaEl.getAttribute("src") ?? "";
+			let filePath = Webpage.getMediaPath(rawSrc, this.source.path);
+			if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
+
+			let base64 = await filePath.readFileString("base64") ?? "";
+			if (base64 === "") return;
+
+			let ext = filePath.extensionName;
+
+			//@ts-ignore
+			let type = app.viewRegistry.typeByExtension[ext] ?? "audio";
+
+			if(ext === "svg") ext += "+xml";
+			
+			mediaEl.setAttribute("src", `data:${type}/${ext};base64,${base64}`);
+		};
+	}
+
+	private async exportMedia(): Promise<Downloadable[]>
+	{
+		if (!this.document) return [];
+
+		let downloads: Downloadable[] = [];
+
+		let elements = Array.from(this.document.querySelectorAll("[src]:not(head [src])"))
+		for (let mediaEl of elements)
+		{
+			let rawSrc = mediaEl.getAttribute("src") ?? "";
+			let filePath = Webpage.getMediaPath(rawSrc, this.source.path);
+			if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
+
+			let exportLocation = filePath.copy;
+
+			// if the media is inside the exported folder then keep it in the same place
+			let mediaPathInExport = Path.getRelativePath(this.sourceFolder, filePath);
+			if (mediaPathInExport.asString.startsWith(".."))
+			{
+				// if path is outside of the vault, outline it into the media folder
+				exportLocation = AssetHandler.mediaFolderName.joinString(filePath.fullName);
+			}
+
+			// let relativeImagePath = Path.getRelativePath(this.exportPath, exportLocation)
+
+			if(MainSettings.settings.makeNamesWebStyle)
+			{
+				// relativeImagePath.makeWebStyle();
+				exportLocation.makeWebStyle();
+			}
+
+			mediaEl.setAttribute("src", exportLocation.asString);
+
+			let data = await filePath.readFileBuffer() ?? Buffer.from([]);
+			let imageDownload = new Downloadable(exportLocation.fullName, data, exportLocation.directory.makeForceFolder());
+			downloads.push(imageDownload);
+		};
+
+		return downloads;
+	}
+
+	private static getMediaPath(src: string, exportingFilePath: string): Path
+	{
+		// @ts-ignore
+		let pathString = "";
+		if (src.startsWith("app://"))
+		{
+			let fail = false;
+			try
+			{
+				// @ts-ignore
+				pathString = app.vault.resolveFileUrl(src)?.path ?? "";
+				if (pathString == "") fail = true;
+			}
+			catch
+			{
+				fail = true;
+			}
+
+			if(fail)
+			{
+				pathString = src.replaceAll("app://", "").replaceAll("\\", "/");
+				pathString = pathString.replaceAll(pathString.split("/")[0] + "/", "");
+				pathString = Path.getRelativePathFromVault(new Path(pathString), true).asString;
+				console.log("fallback: ", pathString);
+			}
+		}
+		else
+		{
+			pathString = app.metadataCache.getFirstLinkpathDest(src, exportingFilePath)?.path ?? "";
+		}
+
+		pathString = pathString ?? "";
+
+		return new Path(pathString);
 	}
 }

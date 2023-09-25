@@ -33,7 +33,7 @@ export class AssetHandler
 	"drop", "sidebar"];
 
 	private static obsidianStylesKeep = 
-	["scrollbar"];
+	["scrollbar", "input[type"];
 
 	// this path is used to generate the relative path to the images folder, likewise for the other paths
 	public static readonly mediaFolderName: Path = new Path("lib/media");
@@ -299,6 +299,11 @@ body
 								break;
 							}
 						}
+					}
+					else
+					{
+						skip = false;
+						break;
 					}
 				}
 

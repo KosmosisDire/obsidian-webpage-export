@@ -12,6 +12,8 @@ let sidebars;
 let sidebarTargetWidth;
 let contentTargetWidth;
 
+let themeToggle;
+
 let canvasWrapper;
 let canvas;
 let canvasNodes;
@@ -48,6 +50,8 @@ function initGlobalObjects()
 	sidebarCollapseIcons = Array.from(document.querySelectorAll(".sidebar-collapse-icon"));
 	sidebarGutters = [sidebarCollapseIcons[0].parentElement, sidebarCollapseIcons[1].parentElement];
 	sidebars = [sidebarGutters[0].parentElement, sidebarGutters[1].parentElement];
+
+	themeToggle = document.querySelector(".theme-toggle-input");
 }
 
 async function initializePage()
@@ -1866,23 +1870,12 @@ function getSidebarWidthProp()
 
 function setupThemeToggle()
 {
+	if (!themeToggle) return;
+
 	if (localStorage.getItem("theme_toggle") != null)
     {
         setThemeToggle(localStorage.getItem("theme_toggle") == "true");
     }
-
-	// var lastScheme = "theme-dark";
-	// change theme to match current system theme
-	// if (localStorage.getItem("theme_toggle") == null && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches)
-	// {
-	// 	setThemeToggle(true);
-	// 	lastScheme = "theme-light";
-	// }
-	// if (localStorage.getItem("theme_toggle") == null && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
-	// {
-	// 	setThemeToggle(true);
-	// 	lastScheme = "theme-dark";
-	// }
 
 	// set initial toggle state based on body theme class
 	if (document.body.classList.contains("theme-light"))
@@ -1896,9 +1889,8 @@ function setupThemeToggle()
 
 	function setThemeToggle(state, instant = false)
 	{
-		let toggle = document.querySelector(".theme-toggle-input");
 
-		toggle.checked = state;
+		themeToggle.checked = state;
 
 		if (instant) 
 		{	
@@ -1906,13 +1898,13 @@ function setupThemeToggle()
 			document.body.style.transition = "none";
 		}
 
-		if(!toggle.classList.contains("is-checked") && state)
+		if(!themeToggle.classList.contains("is-checked") && state)
 		{
-			toggle.classList.add("is-checked");
+			themeToggle.classList.add("is-checked");
 		}
-		else if (toggle.classList.contains("is-checked") && !state)
+		else if (themeToggle.classList.contains("is-checked") && !state)
 		{
-			toggle.classList.remove("is-checked");
+			themeToggle.classList.remove("is-checked");
 		}
 
 		if(!state)
@@ -1956,33 +1948,6 @@ function setupThemeToggle()
 		console.log("Theme toggle changed to: " + !(localStorage.getItem("theme_toggle") == "true"));
 		setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
 	});
-
-    // window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => 
-	// {
-	// 	// return if we are printing
-	// 	if (window.matchMedia('print').matches)
-	// 	{
-	// 		printing = true;
-	// 		return;
-	// 	}
-
-    //     let newColorScheme = event.matches ? "theme-dark" : "theme-light";
-
-	// 	if (newColorScheme == lastScheme) return;
-
-    //     if (newColorScheme == "theme-dark")
-    //     {
-	// 		setThemeToggle(false);
-    //     }
-
-    //     if (newColorScheme == "theme-light")
-    //     {
-	// 		setThemeToggle(true);
-    //     }
-
-	// 	lastScheme = newColorScheme;
-    // });
-
 }
 
 //#endregion
@@ -1994,11 +1959,8 @@ function setupScroll(setupOnNode)
 	// hide elements clipped by scrollable areas in markdown-preview-view elements
 	if(documentType != "canvas") return;
 
-	// let canvasNodes = Array.from(setupOnNode.querySelectorAll(".canvas-node, .canvas-edges > g"));
 	let markdownViews = Array.from(setupOnNode.querySelectorAll(".markdown-preview-view"));
 	let nextMarkdownViewId = 0;
-
-	
 
 	let marginMultiplier = 0.1;
 	let maxMargin = 150;
@@ -2055,8 +2017,6 @@ function setupScroll(setupOnNode)
 
 	async function periodicUpdate()
 	{
-		// updateVisibleWindowCanvas();
-		
 		if(markdownViews.length > 0)
 		{
 			markdownViews[nextMarkdownViewId].updateVisibleWindowMarkdown();
@@ -2065,79 +2025,6 @@ function setupScroll(setupOnNode)
 	}
 	
 	setInterval(periodicUpdate, 200);
-
-	// hide canvas elements that leave the view
-
-	// async function updateVisibleWindowCanvas(allowVirtualization = true, allowDevirtualization = true, forceAllVisible = false)
-	// {
-	// 	return;
-	// 	if (documentType != "canvas") return;
-
-	// 	if (forceAllVisible)
-	// 	{
-	// 		canvasNodes.forEach(function(node)
-	// 		{
-	// 			if (node.style.visibility == "hidden") 
-	// 			{
-	// 				node.style.visibility = "";
-	// 			}
-	// 		});
-	// 		return;
-	// 	}
-
-	// 	let viewBounds = getViewBounds();
-
-	// 	margin = Math.min(Math.min(viewBounds.height, viewBounds.width) * marginMultiplier, maxMargin);
-	// 	let viewBoundsTop = viewBounds.y - margin;
-	// 	let viewBoundsBottom = viewBounds.y + viewBounds.height + margin;
-	// 	let viewBoundsLeft = viewBounds.x - margin;
-	// 	let viewBoundsRight = viewBounds.x + viewBounds.width + margin;
-
-	// 	for (let i = 0; i < canvasNodes.length; i++)
-	// 	{
-	// 		let node = canvasNodes[i];
-	// 		let nodeBounds = getElBounds(node);
-
-	// 		let isClipped = (nodeBounds.y < viewBoundsTop && nodeBounds.maxY < viewBoundsTop) || 
-	// 						(nodeBounds.y > viewBoundsBottom && nodeBounds.maxY > viewBoundsBottom) ||
-	// 						(nodeBounds.x < viewBoundsLeft && nodeBounds.maxX < viewBoundsLeft) ||
-	// 						(nodeBounds.x > viewBoundsRight && nodeBounds.maxX > viewBoundsRight);
-
-	// 		if (isClipped && allowVirtualization)
-	// 		{
-	// 			if (node.style.visibility != "hidden") 
-	// 			{
-	// 				node.style.visibility = "hidden";
-	// 			}
-	// 		}
-	// 		else if (!isClipped && allowDevirtualization)
-	// 		{
-	// 			if (node.style.visibility == "hidden") 
-	// 			{
-	// 				node.style.visibility = "";
-	// 			}
-	// 		}
-	// 	}
-	// }
-
-	// if(canvas) canvas.updateVisibleWindowCanvas = updateVisibleWindowCanvas;
-
-	// if(documentType == "canvas")
-	// {
-	// 	check if the pan position has changed every 50ms and update the visible window if it has
-	// 	let lastPanPos = { x: 0, y: 0 };
-	// 	function checkPan()
-	// 	{
-	// 		let panPos = getCanvasTranslation();
-	// 		if (Math.abs(panPos.x - lastPanPos.x) > margin / 2 || Math.abs(panPos.y - lastPanPos.y) > margin / 2)
-	// 		{
-	// 			updateVisibleWindowCanvas(false, true);
-	// 			lastPanPos = panPos;
-	// 		}
-	// 	}
-	// 	setInterval(checkPan, 50);
-	// }	
-	
 }
 
 //#endregion

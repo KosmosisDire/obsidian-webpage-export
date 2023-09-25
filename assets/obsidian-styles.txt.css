@@ -59,7 +59,7 @@ hr
 	display: none !important;
 } */
 
-.mod-header
+.mod-header .metadata-container
 {
 	display: none !important;
 }
@@ -70,11 +70,6 @@ hr
 .markdown-embed .markdown-embed-content .markdown-preview-sizer
 {
 	padding-left: 1em !important;
-}
-
-.markdown-embed .embed-title.markdown-embed-title
-{
-	display: none;
 }
 
 .markdown-embed-link

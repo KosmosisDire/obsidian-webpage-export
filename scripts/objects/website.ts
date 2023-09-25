@@ -23,6 +23,7 @@ export class Website
 	public dependencies: Downloadable[] = [];
 	public batchFiles: TFile[] = [];
 	public progress: number = 0;
+	public destination: Path;
 
 	public static globalGraph: GraphView;
 	public fileTree: FileTree;
@@ -35,6 +36,7 @@ export class Website
 	private globalGraphChanged = true;
 	private globalGraphUnchangedTime = 0;
 
+	private created = false;
 
 	public static getValidBodyClasses(): string
 	{
@@ -185,6 +187,7 @@ export class Website
 	public async createWithFiles(files: TFile[], destination: Path): Promise<Website | undefined>
 	{
 		this.batchFiles = files;
+		this.destination = destination;
 
 		if (MainSettings.settings.includeGraphView)
 		{
@@ -223,15 +226,19 @@ export class Website
 			try
 			{
 				let filename = new Path(file.path).basename;
-				let webpage = new Webpage(file, this, destination, this.batchFiles.length > 1, filename);
+				let webpage = new Webpage(file, this, destination, this.batchFiles.length > 1, filename, MainSettings.isAllInline());
 
 				if (await this.checkIncrementalExport(webpage)) // Skip creating the webpage if it's unchanged since last export
 				{
 					RenderLog.progress(this.progress, this.batchFiles.length, "Generating HTML", "Exporting: " + file.path, "var(--color-accent)");
 					if (!webpage.isConvertable) webpage.downloads.push(await webpage.getSelfDownloadable());
-					if(!await webpage.create()) return undefined;
-
-					
+					let createdPage = await webpage.create();
+					if(!createdPage) 
+					{
+						if (MarkdownRenderer.cancelled) return undefined;
+						
+						continue;
+					}
 				}
 
 				this.webpages.push(webpage);
@@ -245,7 +252,35 @@ export class Website
 			if(MarkdownRenderer.checkCancelled()) return undefined;
 		}
 
+		this.created = true;
+
 		return this;
+	}
+
+	// saves a .json file with all the data needed to recreate the website
+	public async saveAsDatabase()
+	{
+		if (!this.created) throw new Error("Cannot save website database before generating the website.");
+
+		// data is a dictionary mapping a file path to file data
+		let data: { [path: string] : string; } = {};
+		
+		for (let webpage of this.webpages)
+		{
+			let webpageData: string = await webpage.getHTML();
+			data[webpage.source.path] = webpageData;
+		}
+
+		for (let file of this.dependencies)
+		{
+			let fileData: string | Buffer = file.content;
+			if (fileData instanceof Buffer) fileData = fileData.toString();
+			data[file.relativeDownloadPath.asString] = fileData;
+		}
+
+		let json = JSON.stringify(data);
+		let databasePath = this.destination.directory.joinString("database.json");
+		await databasePath.writeFile(json);
 	}
 
 }

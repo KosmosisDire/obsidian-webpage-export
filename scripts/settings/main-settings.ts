@@ -3,6 +3,7 @@ import { Utils } from '../utils/utils';
 import { Path } from '../utils/path';
 import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
 import { FlowList } from './flow-list';
+import { ExportInfo, ExportModal } from './export-modal';
 
 // #region Settings Definition
 
@@ -140,14 +141,41 @@ export class MainSettings extends PluginSettingTab
 
 	static renameFile(file: TFile, oldPath: string)
 	{
+		let oldPathParsed = new Path(oldPath).asString;
 		MainSettings.settings.filesToExport.forEach((fileList) =>
 		{
-			let index = fileList.indexOf(oldPath);
+			let index = fileList.indexOf(oldPathParsed);
 			if (index >= 0)
 			{
 				fileList[index] = file.path;
 			}
 		});
+	}
+
+	static async updateSettings(usePreviousSettings: boolean = false, overrideFiles: TFile[] | undefined = undefined): Promise<ExportInfo | undefined>
+	{
+		if (!usePreviousSettings) 
+		{
+			let modal = new ExportModal();
+			if(overrideFiles) modal.overridePickedFiles(overrideFiles);
+			return await modal.open();
+		}
+		
+		let files = MainSettings.settings.filesToExport[0];
+		let path = new Path(MainSettings.settings.exportPath);
+		if ((files.length == 0 && overrideFiles == undefined) || !path.exists || !path.isAbsolute || !path.isDirectory)
+		{
+			let modal = new ExportModal();
+			if(overrideFiles) modal.overridePickedFiles(overrideFiles);
+			return await modal.open();
+		}
+
+		return undefined;
+	}
+
+	static isAllInline(): boolean
+	{
+		return MainSettings.settings.inlineCSS && MainSettings.settings.inlineJS && MainSettings.settings.inlineImages;
 	}
 
 	static getFilesToExport(): TFile[]

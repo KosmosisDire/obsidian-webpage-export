@@ -78,7 +78,8 @@ export class ExportModal extends Modal
 			this.filePicker = new FilePickerTree(app.vault.getFiles(), true, true);
 			this.filePicker.generateWithItemsClosed = true;
 			await this.filePicker.generateTree(scrollArea);
-			if(MainSettings.settings.filesToExport[0].length > 0) 
+			
+			if((this.pickedFiles?.length ?? 0 > 0) || MainSettings.settings.filesToExport[0].length > 0) 
 			{
 				let filesToPick = this.pickedFiles?.map(file => new Path(file.path)) ?? MainSettings.settings.filesToExport[0].map(path => new Path(path));
 				this.filePicker.setSelectedFiles(filesToPick);

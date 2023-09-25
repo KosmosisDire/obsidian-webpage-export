@@ -3,10 +3,12 @@ import { FileTree, FileTreeItem } from "./file-tree";
 import { Path } from "scripts/utils/path";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { Tree } from "./tree";
+import { Utils } from "scripts/utils/utils";
 
 export class FilePickerTree extends FileTree
 {
 	public children: FilePickerTreeItem[] = [];
+	public selectAllItem: FilePickerTreeItem | undefined;
 
 	public constructor(files: TFile[], keepOriginalExtensions: boolean = false, sort = true)
 	{
@@ -66,6 +68,51 @@ export class FilePickerTree extends FileTree
 			this.sortByIsFolder();
 		}
 	}
+
+	public async generateTree(container: HTMLElement): Promise<void> 
+	{
+		await super.generateTree(container);
+
+		// add a select all button at the top
+		let item = new FilePickerTreeItem(this, this, 0);
+		item.title = "Select All";
+		item.itemClass = "mod-tree-control";
+		let itemEl = await item.generateItemHTML(container);
+
+		// remove all event listeners from the select all button
+		let oldItemEl = itemEl;
+		itemEl = itemEl.cloneNode(true) as HTMLDivElement;
+		item.checkbox = itemEl.querySelector("input") as HTMLInputElement;
+		item.itemEl = itemEl;
+		item.childContainer = itemEl.querySelector(".tree-item-children") as HTMLDivElement;
+
+		container.prepend(itemEl);
+
+		oldItemEl.remove();
+
+
+		let localThis = this;
+		function selectAll()
+		{
+			let checked = item.checkbox.checked;
+			item.check(!checked);
+			localThis.forAllChildren((child) => child.check(!checked));
+		}
+
+		item.checkbox.addEventListener("click", (event) =>
+		{
+			item.checkbox.checked = !item.checkbox.checked;
+			selectAll();
+			event.stopPropagation();
+		});
+
+		item.itemEl.addEventListener("click", () =>
+		{
+			selectAll();
+		});
+
+		this.selectAllItem = item;
+	}
 	
 	public getSelectedFiles(): TFile[]
 	{
@@ -85,7 +132,10 @@ export class FilePickerTree extends FileTree
 
 		this.forAllChildren((child) =>
 		{
-			child.check(stringfiles.includes(new Path(child.href ?? "").makeUnixStyle().asString));
+			if(stringfiles.includes(new Path(child.href ?? "").makeUnixStyle().asString))
+			{
+				child.check(true);
+			}
 		});
 
 		this.evaluateFolderChecks();
@@ -97,6 +147,7 @@ export class FilePickerTree extends FileTree
 
 	public evaluateFolderChecks()
 	{
+		// if all a folder's children are checked, check the folder, otherwise uncheck it
 		this.forAllChildren((child) => 
 		{
 			if(child.isFolder)
@@ -112,7 +163,17 @@ export class FilePickerTree extends FileTree
 					child.check(false);
 				}
 			}
-		});
+		});	
+
+		// if all folders are checked, check the select all button, otherwise uncheck it
+		if (this.children.reduce((acc, child) => acc && child.checked, true))
+		{
+			this.selectAllItem?.check(true);
+		}
+		else
+		{
+			this.selectAllItem?.check(false);
+		}
 	}
 }
 
@@ -151,6 +212,7 @@ export class FilePickerTreeItem extends FileTreeItem
 
 	public check(checked: boolean, evaluate: boolean = false)
 	{
+		// if (!this.checkbox) return;
 		this.checked = checked;
 		this.checkbox.checked = checked;
 		this.checkbox.classList.toggle("checked", checked);
