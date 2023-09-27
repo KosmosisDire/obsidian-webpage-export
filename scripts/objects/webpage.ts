@@ -174,39 +174,45 @@ export class Webpage
 
 		let layout = this.generateWebpageLayout(this.contentElement);
 		this.document.body.appendChild(layout.container);
-
-		let rightSidebar = layout.right;
-		let leftSidebar = layout.left;
-
 		layout.center.classList.add("show");
 
-		// inject graph view
-		if (MainSettings.settings.includeGraphView)
+		if (MainSettings.settings.exportPreset != "raw-documents")
 		{
-			GraphView.generateGraphEl(rightSidebar);
-		}
+			let rightSidebar = layout.right;
+			let leftSidebar = layout.left;
 
-		// inject outline
-		if (MainSettings.settings.includeOutline)
-		{
-			let headerTree = new OutlineTree(this.source, 1);
-			headerTree.class = "outline-tree";
-			headerTree.title = "Table Of Contents";
-			headerTree.showNestingIndicator = false;
-			headerTree.generateWithItemsClosed = MainSettings.settings.startOutlineCollapsed;
-			await headerTree.generateTreeWithContainer(rightSidebar);
-		}
+			// inject graph view
+			if (MainSettings.settings.includeGraphView)
+			{
+				GraphView.generateGraphEl(rightSidebar);
+			}
 
-		// inject darkmode toggle
-		if (MainSettings.settings.addDarkModeToggle)
-		{
-			HTMLGeneration.createThemeToggle(leftSidebar);
-		}
+			// inject outline
+			if (MainSettings.settings.includeOutline)
+			{
+				let headerTree = new OutlineTree(this.source, 1);
+				headerTree.class = "outline-tree";
+				headerTree.title = "Table Of Contents";
+				headerTree.showNestingIndicator = false;
+				headerTree.generateWithItemsClosed = MainSettings.settings.startOutlineCollapsed;
+				await headerTree.generateTreeWithContainer(rightSidebar);
+			}
 
-		// inject file tree
-		if (MainSettings.settings.includeFileTree)
+			// inject darkmode toggle
+			if (MainSettings.settings.addDarkModeToggle)
+			{
+				HTMLGeneration.createThemeToggle(leftSidebar);
+			}
+
+			// inject file tree
+			if (MainSettings.settings.includeFileTree)
+			{
+				leftSidebar.createDiv().outerHTML = this.website.fileTreeHtml;
+			}
+		}
+		else
 		{
-			leftSidebar.createDiv().outerHTML = this.website.fileTreeHtml;
+			layout.container.querySelectorAll(".sidebar").forEach((el) => el.remove());
 		}
 
 		await this.addMetadata();
@@ -243,10 +249,13 @@ export class Webpage
 
 		// move banner plugin's wrapper above the sizer
 		let bannerWrapper = this.document.querySelector(".obsidian-banner-wrapper");
-		if(this.sizerElement && bannerWrapper) 
+
+		let sizerParent = bannerWrapper?.closest(".markdown-preview-sizer");
+		let contentParent = bannerWrapper?.closest(".markdown-preview-view");
+		if(sizerParent && contentParent && bannerWrapper) 
 		{
-			if(bannerWrapper) contentEl.appendChild(bannerWrapper);
-			if (this.sizerElement) contentEl.appendChild(this.sizerElement);
+			if(bannerWrapper) contentParent.appendChild(bannerWrapper);
+			if (sizerParent) contentParent.appendChild(sizerParent);
 		}
 
 		// convert headings from linear to trees
@@ -480,6 +489,8 @@ export class Webpage
 			${scripts}
 			`;
 		}
+
+		header += "\n<!-- Custom Head Content -->\n" + AssetHandler.customHeadContent + "\n";
 
 		this.document.head.innerHTML = header;
 	}

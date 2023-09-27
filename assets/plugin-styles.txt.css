@@ -1045,10 +1045,29 @@ body.post-load .sidebar-gutter
 
 @media print 
 {
-    .sidebar, .outline-container, .theme-toggle-container, .theme-toggle-container-inline, .toggle-background, .theme-toggle-input
+    .sidebar, .outline-container, .theme-toggle-container, .theme-toggle-container-inline, .toggle-background, .theme-toggle-input, .obsidian-banner-wrapper, .heading-after
     {
         display: none !important;
     }
+
+	head, body, .webpage-container, .document-container, .markdown-preview-sizer, .markdown-preview-view, .view-content
+	{
+		display: block !important;
+		margin: 0 !important;
+		overflow: visible !important;
+		contain: none !important;
+		position: relative;
+	}
+
+	.heading-children
+	{
+		display: contents !important;
+	}
+
+	*:has(+ .heading-children)
+	{
+		padding-bottom: 1em;
+	}
 }
 
 /* Not a media query, but related to resizing */
@@ -1154,7 +1173,6 @@ body.theme-light .excalidraw-svg svg.light, body.theme-light .excalidraw-plugin 
 .obsidian-banner-wrapper
 {
 	height: 300px;
-    position: absolute;
     top: 0;
     z-index: 1;
     max-height: 300px;
@@ -1175,7 +1193,7 @@ body.theme-light .excalidraw-svg svg.light, body.theme-light .excalidraw-plugin 
     object-fit: cover;
 }
 
-.obsidian-banner-wrapper + .markdown-preview-sizer
+.obsidian-banner-wrapper + .markdown-preview-sizer:is(.document-container>.markdown-preview-view>.markdown-preview-sizer)
 {
 	margin-top: 300px;
 }

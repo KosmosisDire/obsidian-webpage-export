@@ -23,7 +23,7 @@ export default class HTMLExportPlugin extends Plugin
 		this.addSettingTab(new MainSettings(this));
 		MainSettings.loadSettings();
 
-		this.addRibbonIcon("folder-up", "Export Vault to HTML", async () =>
+		this.addRibbonIcon("folder-up", "Export Vault to HTML", () =>
 		{
 			HTMLExporter.export(false);
 		});
@@ -34,7 +34,7 @@ export default class HTMLExportPlugin extends Plugin
 		this.addCommand({
 			id: 'export-html-vault',
 			name: 'Export website using previously selected files and settings',
-			callback: async () =>
+			callback: () =>
 			{
 				HTMLExporter.export(true);
 			}
@@ -43,7 +43,7 @@ export default class HTMLExportPlugin extends Plugin
 		this.addCommand({
 			id: 'export-html-current',
 			name: 'Export current file using previous settings',
-			callback: async () =>
+			callback: () =>
 			{
 				let file = this.app.workspace.getActiveFile();
 
@@ -60,7 +60,7 @@ export default class HTMLExportPlugin extends Plugin
 		this.addCommand({
 			id: 'export-html-setting',
 			name: 'Set export options and files',
-			callback: async () =>
+			callback: () =>
 			{
 				HTMLExporter.export(false);
 			}
@@ -74,7 +74,7 @@ export default class HTMLExportPlugin extends Plugin
 					item.setTitle("Export as HTML")
 						.setIcon("download")
 						.setSection("export")
-						.onClick(async () =>
+						.onClick(() =>
 						{
 							if(file instanceof TFile)
 							{

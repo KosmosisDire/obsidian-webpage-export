@@ -47,9 +47,16 @@ function initGlobalObjects()
 	documentContainer = document.querySelector(".document-container");
 	leftSidebar = document.querySelector(".sidebar-left");
 	rightSidebar = document.querySelector(".sidebar-right");
-	sidebarCollapseIcons = Array.from(document.querySelectorAll(".sidebar-collapse-icon"));
-	sidebarGutters = [sidebarCollapseIcons[0].parentElement, sidebarCollapseIcons[1].parentElement];
-	sidebars = [sidebarGutters[0].parentElement, sidebarGutters[1].parentElement];
+
+	sidebars = []
+	sidebarGutters = []
+	sidebarCollapseIcons = []
+	if (leftSidebar && rightSidebar)
+	{
+		sidebarCollapseIcons = Array.from(document.querySelectorAll(".sidebar-collapse-icon"));
+		sidebarGutters = [sidebarCollapseIcons[0].parentElement, sidebarCollapseIcons[1].parentElement];
+		sidebars = [sidebarGutters[0].parentElement, sidebarGutters[1].parentElement];
+	}
 
 	themeToggle = document.querySelector(".theme-toggle-input");
 }
@@ -91,7 +98,7 @@ async function initializePage()
 	}
 
 	// hide the right sidebar when viewing specific file types
-	if ((embedType == "video" || embedType == "embed" || customType == "excalidraw" || customType == "kanban" || documentType == "canvas")) 
+	if (rightSidebar && (embedType == "video" || embedType == "embed" || customType == "excalidraw" || customType == "kanban" || documentType == "canvas")) 
 	{
 		if(!rightSidebar.collapsed)
 		{
@@ -101,7 +108,7 @@ async function initializePage()
 	else
 	{
 		// if the right sidebar was temporarily collapsed and it is still collapsed, uncollapse it
-		if (rightSidebar.temporarilyCollapsed && rightSidebar.collapsed) 
+		if (rightSidebar && rightSidebar.temporarilyCollapsed && rightSidebar.collapsed) 
 		{
 			rightSidebar.collapse(false);
 			rightSidebar.temporarilyCollapsed = false;
@@ -244,7 +251,7 @@ function onResize(isInitial = false)
 		document.body.classList.toggle("is-phone", false);
 		sidebarGutters.forEach(function (gutter) { gutter.collapse(false) });
 
-		if (!leftSidebar.collapsed) 
+		if (leftSidebar && rightSidebar && !leftSidebar.collapsed) 
 		{
 			rightSidebar.collapse(true);
 		}
@@ -259,12 +266,12 @@ function onResize(isInitial = false)
 		document.body.classList.toggle("is-phone", false);
 		sidebarGutters.forEach(function (gutter) { gutter.collapse(false) });
 		
-		if (!leftSidebar.collapsed) 
+		if (leftSidebar && rightSidebar && !leftSidebar.collapsed) 
 		{
 			rightSidebar.collapse(true);
 		}
 
-		if(!fullyInitialized) leftSidebar.collapse(true);
+		if(leftSidebar && !fullyInitialized) leftSidebar.collapse(true);
 	}
 	else if (widthNowLessThan(sidebarTargetWidth * 1.5))
 	{
@@ -1749,6 +1756,7 @@ function setupLinks(setupOnNode)
 
 function setupSidebars()
 {
+	if (!rightSidebar || !leftSidebar) return;
 
 	//#region sidebar object references
 	sidebarCollapseIcons[0].otherIcon = sidebarCollapseIcons[1];

@@ -26,3 +26,6 @@ app-styles.css
 webpage-html-export.code-workspace
 
 *.bat
+
+build
+dist

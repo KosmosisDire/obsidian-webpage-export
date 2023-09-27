@@ -115,6 +115,22 @@ export class Utils
 		return path;
 	}
 
+	static async showSelectFileDialog(defaultPath: Path): Promise<Path | undefined>
+	{
+		if(!defaultPath.exists) defaultPath = Path.vaultPath;
+
+		// show picker
+		let picker = await dialog.showOpenDialog({
+			defaultPath: defaultPath.directory.asString,
+			properties: ["openFile"]
+		});
+
+		if (picker.canceled) return;
+
+		let path = new Path(picker.filePaths[0]);
+		return path;
+	}
+
 	static idealDefaultPath() : Path
 	{
 		let lastPath = new Path(MainSettings.settings.exportPath);

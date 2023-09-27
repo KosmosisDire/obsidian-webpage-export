@@ -18,7 +18,6 @@ const { minify } = require('html-minifier-terser');
 export class AssetHandler
 {
 	private static vaultPluginsPath: Path;
-	private static thisPluginPath: Path;
 
 	private static obsidianStylesFilter = 
 	["workspace-", "cm-", "ghost", "leaf", "CodeMirror", 
@@ -62,10 +61,11 @@ export class AssetHandler
 	public static tinyColorJS: string = "";
 	public static generatedJS: string = "";
 
+	public static customHeadContent: string = "";
+
 	public static async initialize(pluginID: string)
 	{
 		this.vaultPluginsPath = Path.vaultPath.joinString(app.vault.configDir, "plugins/").makeAbsolute();
-		this.thisPluginPath = this.vaultPluginsPath.joinString(pluginID + "/").makeAbsolute();
 
 		await this.loadAppStyles();
 		this.webpageStyles = await AssetHandler.minifyJSorCSS(webpageStyles, false);
@@ -195,6 +195,9 @@ export class AssetHandler
 		if (!isNaN(Number(lineWidth))) lineWidth += "px";
 		if (!isNaN(Number(contentWidth))) contentWidth += "px";
 		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
+
+		let customHeadPath = new Path(MainSettings.settings.customHeadContentPath);
+		this.customHeadContent = await customHeadPath.readFileString() ?? "";
 
 		this.generatedStyles = 
 `
