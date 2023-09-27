@@ -8,12 +8,12 @@ import internal from 'stream';
 
 export class Path
 {
-	private static logQueue: { title: string, message: string, type: "info" | "warn" | "error" | "fatal" }[] = [];
-	private static log(title: string, message: string, type: "info" | "warn" | "error" | "fatal")
+	private static logQueue: { title: string, message: any, type: "info" | "warn" | "error" | "fatal" }[] = [];
+	private static log(title: string, message: any, type: "info" | "warn" | "error" | "fatal")
 	{
 		this.logQueue.push({ title: title, message: message, type: type });
 	}
-	public static dequeueLog(): { title: string, message: string, type: "info" | "warn" | "error" | "fatal" }[]
+	public static dequeueLog(): { title: string, message: any, type: "info" | "warn" | "error" | "fatal" }[]
 	{
 		let queue = this.logQueue;
 		this.logQueue = [];
@@ -75,9 +75,16 @@ export class Path
 		{
 			path = decodeURI(path);
 		}
-		catch (e)
+		catch (trash)
 		{
-			this.log("Could not decode path:" + path, e.stack, "error");
+			try
+			{
+				path = decodeURI(path.replaceAll("%", ""));
+			}
+			catch (e)
+			{
+				this.log("Could not decode path:" + path, e, "error");
+			}
 		}
 
 		let parsed = pathTools.parse(path) as { root: string, dir: string, base: string, ext: string, name: string };
@@ -130,7 +137,7 @@ export class Path
 		}
 		catch (e)
 		{
-			this.log("Could not decode joined paths: " + joined, e.stack, "error");
+			this.log("Could not decode joined paths: " + joined, e, "error");
 			return joined;
 		}
 	}
@@ -485,7 +492,7 @@ export class Path
 			catch (error)
 			{
 				this._exists = false;
-				Path.log("Error checking if path exists: " + this.asString, error.stack, "error");
+				Path.log("Error checking if path exists: " + this.asString, error, "error");
 			}
 		}
 
@@ -504,7 +511,7 @@ export class Path
 		}
 		catch (error)
 		{
-			Path.log("Error getting stat: " + this.asString, error.stack, "error");
+			Path.log("Error getting stat: " + this.asString, error, "error");
 			return;
 		}
 	}
@@ -567,7 +574,7 @@ export class Path
 			}
 			catch (error)
 			{
-				Path.log("Error creating directory: " + path, error.stack, "error");
+				Path.log("Error creating directory: " + path, error, "error");
 				return false;
 			}
 		}
@@ -586,7 +593,7 @@ export class Path
 		}
 		catch (error)
 		{
-			Path.log("Error reading file: " + this.asString, error.stack, "error");
+			Path.log("Error reading file: " + this.asString, error, "error");
 			return;
 		}
 	}
@@ -602,7 +609,7 @@ export class Path
 		}
 		catch (error)
 		{
-			Path.log("Error reading file buffer: " + this.asString, error.stack, "error");
+			Path.log("Error reading file buffer: " + this.asString, error, "error");
 			return;
 		}
 	}
@@ -621,7 +628,7 @@ export class Path
 		}
 		catch (error)
 		{
-			Path.log("Error writing file: " + this.asString, error.stack, "error");
+			Path.log("Error writing file: " + this.asString, error, "error");
 			return false;
 		}
 	}

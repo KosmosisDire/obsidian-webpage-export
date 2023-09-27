@@ -1,6 +1,5 @@
 import { Notice, TFile, TFolder } from "obsidian";
 import { Webpage } from "./objects/webpage";
-import { GenHelper } from "./html-generation/html-generator";
 import { Path } from "./utils/path";
 import { MainSettings } from "./settings/main-settings";
 import { RenderLog } from "./html-generation/render-log";
@@ -15,6 +14,22 @@ import { Website } from "./objects/website";
 
 export class HTMLExporter
 {
+	public static async export(usePreviousSettings: boolean = true, overrideFiles: TFile[] | undefined = undefined)
+	{
+		let info = await MainSettings.updateSettings(usePreviousSettings, overrideFiles);
+		if ((!info && !usePreviousSettings) || (info && info.canceled)) return;
+
+		let files = overrideFiles ?? info?.pickedFiles ?? MainSettings.getFilesToExport();
+		let exportPath = info?.exportPath ?? new Path(MainSettings.settings.exportPath);
+
+		let website = await HTMLExporter.exportFiles(files, exportPath, true, MainSettings.settings.deleteOldExportedFiles);
+		if (website)
+		{
+			new Notice("✅ Finished HTML Export:\n\n" + exportPath, 5000);
+			if (MainSettings.settings.openAfterExport) await Utils.openPath(exportPath);
+		}
+	}
+
 	public static async exportFiles(files: TFile[], destination: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website | undefined>
 	{
 		var website = await new Website().createWithFiles(files, destination);
@@ -25,8 +40,17 @@ export class HTMLExporter
 			return;
 		}
 
-		if (clearDirectory) await this.deleteNonExports(website.webpages, destination);
-		if (saveFiles) await this.saveExports(website.webpages, destination);
+		if (clearDirectory && MainSettings.settings.exportPreset != "local") await this.deleteNonExports(website.webpages, destination);
+		if (saveFiles) 
+		{
+			if (MainSettings.settings.exportPreset == "local") 
+			{
+				website.saveAsDatabase();
+				return website;
+			}
+
+			await this.saveExports(website.webpages, destination);
+		}
 
 		MarkdownRenderer.endBatch();
 

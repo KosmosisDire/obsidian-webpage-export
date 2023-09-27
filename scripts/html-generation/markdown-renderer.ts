@@ -1,12 +1,9 @@
-import { Component, MarkdownView, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, FileView, View, MarkdownPreviewRenderer, MarkdownPreviewView, loadMermaid, TFile } from "obsidian";
+import { Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, MarkdownPreviewView, loadMermaid, TFile } from "obsidian";
 import { Utils } from "scripts/utils/utils";
-import { Webpage } from "../objects/webpage";
 import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
 import { RenderLog } from "./render-log";
 import { MainSettings } from "scripts/settings/main-settings";
-import { GenHelper } from "./html-generator";
-import { get } from "http";
 
 export namespace MarkdownRenderer
 {
@@ -42,7 +39,7 @@ export namespace MarkdownRenderer
 		return;
 	}
 
-	export async function renderFile(file: Webpage): Promise<HTMLElement | undefined>
+	export async function renderFile(file: TFile, container: HTMLElement): Promise<{contentEl: HTMLElement, viewType: string} | undefined>
 	{
 		let loneFile = !batchStarted;
 		if (loneFile) 
@@ -52,56 +49,55 @@ export namespace MarkdownRenderer
 		}
 
 		let success = await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 10);
-		if (!success || !renderLeaf) return failRender(file.source, "Failed to create leaf for rendering!");
+		if (!success || !renderLeaf) return failRender(file, "Failed to get leaf for rendering!");
 		
 		try
 		{ 
-			await renderLeaf.openFile(file.source, { active: false}); 
+			await renderLeaf.openFile(file, { active: false});
 		}
 		catch (e)
 		{
-			return failRender(file.source, e);
+			return failRender(file, e);
 		}
+
 
 		let html: HTMLElement | undefined;
+		let view = renderLeaf.view;
+		let viewType = view.getViewType();
 
-		if(renderLeaf.view instanceof MarkdownView) html = await renderMarkdownFile(file.source, renderLeaf.view);
-		else
+		switch(viewType)
 		{
-			file.isCustomView = true;
-
-			// @ts-ignore
-			let view = renderLeaf.view;
-			let viewType = view.getViewType();
-
-			switch(viewType)
-			{
-				case "kanban":
-					html = await renderGeneric(file, view);
-					break;
-				case "excalidraw":
-					html = await renderExcalidraw(file, view);
-					break;
-				case "canvas":
-					html = await renderCanvas(file, view);
-					break;
-				default:
-					html = await renderGeneric(file, view);
-			}
+			case "markdown":
+				// @ts-ignore
+				let preview = view.previewMode;
+				html = await renderMarkdownView(preview, container);
+				break;
+			case "kanban":
+				html = await renderGeneric(view, container);
+				break;
+			case "excalidraw":
+				html = await renderExcalidraw(view, container);
+				break;
+			case "canvas":
+				html = await renderCanvas(view, container);
+				break;
+			default:
+				html = await renderGeneric(view, container);
+				break;
 		}
 
-		if (!html) return failRender(file.source, "Failed to render file!");
+		if(checkCancelled()) return undefined;
+		if (!html) return failRender(file, "Failed to render file!");
 
 		await postProcessHTML(html);
-		makeHeadingsTrees(html);
 		await AssetHandler.loadMathjaxStyles();
 
 		if (loneFile) MarkdownRenderer.endBatch();
 
-		return html;
+		return {contentEl: html, viewType: viewType};
 	}
 
-	export async function renderMarkdownView(preview: MarkdownPreviewView): Promise<HTMLElement | undefined>
+	export async function renderMarkdownView(preview: MarkdownPreviewView, container: HTMLElement): Promise<HTMLElement | undefined>
 	{
 		// @ts-ignore
 		let renderer = preview.renderer;
@@ -117,12 +113,20 @@ export namespace MarkdownRenderer
 
 		let sections = renderer.sections as {"rendered": boolean, "height": number, "computed": boolean, "lines": number, "lineStart": number, "lineEnd": number, "used": boolean, "highlightRanges": number, "level": number, "headingCollapsed": boolean, "shown": boolean, "usesFrontMatter": boolean, "html": string, "el": HTMLElement}[];
 
+		let viewEl = document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
+		let sizerEl = viewEl.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
+		let pusherEl = sizerEl.createDiv({ cls: "markdown-preview-pusher" });
+		pusherEl.style.height = "0.1px";
+		pusherEl.style.marginBottom = "0px";
+		pusherEl.style.width = "1px";
+
 		// @ts-ignore
 		let promises = []
 
 		for (let i = 0; i < sections.length; i++)
 		{
 			let section = sections[i];
+
 			section.shown = true;
 			section.rendered = false;
 			// @ts-ignore
@@ -130,6 +134,8 @@ export namespace MarkdownRenderer
 			// @ts-ignore
 			section.setCollapsed(false);
 			section.el.innerHTML = "";
+
+			sizerEl.appendChild(section.el);
 
 			// @ts-ignore
 			await section.render();
@@ -161,35 +167,20 @@ export namespace MarkdownRenderer
 			await preview.postProcess(section, promises, renderer.frontmatter);
 		}
 
-		await Utils.delay(100);
 		// @ts-ignore
 		await Promise.all(promises);
-		await Utils.delay(100);
 
-
-		let container = renderer.sizerEl;
-		if (!container) container = document.body.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
-		container.innerHTML = `<div class="markdown-preview-pusher" style="width: 1px; height: 0.1px; margin-bottom: 0px;"></div>`
-
+		// move all of them back in since rendering can cause some sections to move themselves out of their container
 		for (let i = 0; i < sections.length; i++)
 		{
 			let section = sections[i];
-			container.innerHTML += section.el.outerHTML;
-		}
-		
-		//@ts-ignore
-		let htmlRoot = renderer.previewEl;
-		if (!htmlRoot) 
-		{
-			htmlRoot = document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
+			sizerEl.appendChild(section.el);
 		}
 
-		htmlRoot.innerHTML = container.outerHTML;
-
-		await postProcessHTML(htmlRoot);
+		container.appendChild(viewEl);
 		await AssetHandler.loadMathjaxStyles();
 
-		return htmlRoot;
+		return viewEl;
 	}
 
 	export async function renderSingleLineMarkdown(markdown: string, container: HTMLElement)
@@ -268,33 +259,22 @@ export namespace MarkdownRenderer
 		return text;
 	}
 
-    async function renderMarkdownFile(file: TFile, view: MarkdownView): Promise<HTMLElement | undefined>
-	{
-		// @ts-ignore
-		let previewModeFound = await Utils.waitUntil(() => view.previewMode || checkCancelled(), 2000, 10);
-		if (!previewModeFound) return failRender(file, "Failed to open preview mode!");
-
-		Utils.changeViewMode(view, "preview");
-
-		return await renderMarkdownView(view.previewMode);
-	}
-
-	async function renderGeneric(file:Webpage, view: any): Promise<HTMLElement | undefined>
+	async function renderGeneric(view: any, container: HTMLElement): Promise<HTMLElement | undefined>
 	{
 		await Utils.delay(2000);
 
 		if (checkCancelled()) return undefined;
 
 		// @ts-ignore
-		let container = view.contentEl;
+		let content = view.contentEl;
+		container.appendChild(content);
 
-		await postProcessHTML(container);
 		await AssetHandler.loadMathjaxStyles();
 
-		return container;
+		return content;
 	}
 
-	async function renderExcalidraw(file:Webpage, view: any): Promise<HTMLElement | undefined>
+	async function renderExcalidraw(view: any, container: HTMLElement): Promise<HTMLElement | undefined>
 	{
 		await Utils.delay(500);
 
@@ -316,15 +296,16 @@ export namespace MarkdownRenderer
 
 		sizerEl.appendChild(svg);
 
-		await postProcessHTML(contentEl);
 		await AssetHandler.loadMathjaxStyles();
 
 		if (checkCancelled()) return undefined;
 
+		container.appendChild(contentEl);
+
 		return contentEl;
 	}
 
-	async function renderCanvas(file:Webpage, view: any): Promise<HTMLElement | undefined>
+	async function renderCanvas(view: any, container: HTMLElement): Promise<HTMLElement | undefined>
 	{
 		if (checkCancelled()) return undefined;
 
@@ -346,8 +327,8 @@ export namespace MarkdownRenderer
 		canvas.zoomToFit();
 		await Utils.delay(500);
 
-		let container = view.contentEl.cloneNode(true);
-		let canvasEl = container.querySelector(".canvas");
+		let contentEl = view.contentEl;
+		let canvasEl = contentEl.querySelector(".canvas");
 		canvasEl.innerHTML = "";
 
 		let edgeContainer = canvasEl.createEl("svg", { cls: "canvas-edges" });
@@ -355,35 +336,15 @@ export namespace MarkdownRenderer
 
 		for (const node of nodes)
 		{
-			let nodeEl = node[1].nodeEl.cloneNode(true);
-			let view = node[1]?.child?.previewMode;
+			let nodeEl = node[1].nodeEl;
+			let childPreview = node[1]?.child?.previewMode;
+			let embedEl = nodeEl.querySelector(".markdown-embed-content.node-insert-event");
 			
-			if (view) 
+			if (childPreview && embedEl) 
 			{
-				let embedEl = nodeEl.querySelector(".markdown-embed-content.node-insert-event");
-				
-				let html = "";
 				node[1].render();
-
-				if (node[1].child.file)
-				{
-					let results = await GenHelper.getViewHTML(view, node[1].child.file.path);
-					if (!results) continue;
-					html = results.html;
-					file.downloads.push(...results.downloads);
-				}
-				else
-				{
-					let results = await GenHelper.getViewHTML(view, file.source.path);
-					if (!results) continue;
-					html = results.html;
-					file.downloads.push(...results.downloads);
-				}
-				
-				if(embedEl) 
-				{
-					embedEl.innerHTML = html;
-				}
+				embedEl.innerHTML = "";
+				await renderMarkdownView(childPreview, embedEl);
 			}
 			
 			canvasEl.appendChild(nodeEl);
@@ -391,22 +352,24 @@ export namespace MarkdownRenderer
 
 		for (const edge of edges)
 		{
-			let edgeEl = edge[1].lineGroupEl.cloneNode(true);
-			let headEl = edge[1].lineEndGroupEl.cloneNode(true);
+			let edgeEl = edge[1].lineGroupEl;
+			let headEl = edge[1].lineEndGroupEl;
 
 			edgeContainer.appendChild(edgeEl);
 			edgeHeadContainer.appendChild(headEl);
 
 			if(edge[1].label)
 			{
-				let labelEl = edge[1].labelElement.wrapperEl.cloneNode(true);
+				let labelEl = edge[1].labelElement.wrapperEl;
 				canvasEl.appendChild(labelEl);
 			}
 		}
 
 		if (checkCancelled()) return undefined;
 
-		return container;
+		container.appendChild(contentEl);
+
+		return contentEl;
 	}
 
 	async function postProcessHTML(html: HTMLElement)
@@ -436,30 +399,19 @@ export namespace MarkdownRenderer
 		});
 
 		// convert all hard coded image / media widths into max widths
-		html.querySelectorAll("img, video, svg").forEach((element: HTMLElement) =>
+		html.querySelectorAll("img, video, .media-embed:has( > :is(img, video))").forEach((element: HTMLElement) =>
 		{
 			let width = element.getAttribute("width");
 			if (width)
 			{
-				element.style.width = width || "100%";
-				element.style.maxWidth = "100%";
 				element.removeAttribute("width");
+				element.style.width = (width.trim() != "") ? (width + "px") : "";
+				element.style.maxWidth = "100%";
 			}
 		});
 
-		// convert canvas elements into images
-		html.querySelectorAll("canvas").forEach((canvas: HTMLCanvasElement) =>
-		{
-			let image = document.createElement("img");
-			let data = canvas.toDataURL();
-			console.log(canvas, data);
-			image.src = data;
-			image.style.width = canvas.style.width || "100%";
-			image.style.maxWidth = "100%";
-			canvas.replaceWith(image);
-		});
-
 		// replace obsidian's pdf embeds with normal embeds
+		// this has to happen before converting canvases because the pdf embeds use canvas elements
 		html.querySelectorAll("span.internal-embed.pdf-embed").forEach((pdf: HTMLElement) =>
 		{
 			let embed = document.createElement("embed");
@@ -477,6 +429,18 @@ export namespace MarkdownRenderer
 			console.log(container?.innerHTML);
 		});
 
+		// convert canvas elements into images
+		html.querySelectorAll("canvas").forEach((canvas: HTMLCanvasElement) =>
+		{
+			let image = document.createElement("img");
+			let data = canvas.toDataURL();
+			console.log(canvas, data);
+			image.src = data;
+			image.style.width = canvas.style.width || "100%";
+			image.style.maxWidth = "100%";
+			canvas.replaceWith(image);
+		});
+
 		// if the dynamic table of contents plugin is included on this page
 		// then parse each list item and render markdown for it
 		let tocEls = Array.from(html.querySelectorAll(".block-language-toc.dynamic-toc li > a"));
@@ -487,104 +451,6 @@ export namespace MarkdownRenderer
 			element.textContent = renderEl.textContent;
 			renderEl.remove();
 		}
-
-		makeHeadingsTrees(html);
-	}
-	
-	function makeHeadingsTrees(html: HTMLElement)
-	{
-		// make headers into formet:
-		/*
-		- .heading-wrapper
-			- h1.heading
-				- .heading-before
-				- .heading-collapse-indicator.collapse-indicator.collapse-icon
-				- "Text"
-				- .heading-after
-			- .heading-children
-		*/
-
-		function getHeaderEl(headingContainer: HTMLDivElement)
-		{
-			let first = headingContainer.firstElementChild;
-			if (first && /[Hh][1-6]/g.test(first.tagName)) return first;
-			else return;
-		}
-		
-		function makeHeaderTree(headerDiv: HTMLDivElement, childrenContainer: HTMLElement)
-		{
-			let headerEl = getHeaderEl(headerDiv);
-
-			if (!headerEl) return;
-
-			let possibleChild = headerDiv.nextElementSibling;
-
-			while (possibleChild != null)
-			{
-				let possibleChildHeader = getHeaderEl(possibleChild as HTMLDivElement);
-
-				if(possibleChildHeader)
-				{
-					// if header is a sibling of this header then break
-					if (possibleChildHeader.tagName <= headerEl.tagName)
-					{
-						break;
-					}
-				}
-
-				let nextEl = possibleChild.nextElementSibling;
-				childrenContainer.appendChild(possibleChild);
-				possibleChild = nextEl;
-			}
-		}
-
-		const arrowHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='svg-icon right-triangle'><path d='M3 8L12 17L21 8'></path></svg>";
-
-		html.querySelectorAll("div:has(> :is(h1, h2, h3, h4, h5, h6))").forEach(function (header: HTMLDivElement)
-		{
-			header.classList.add("heading-wrapper");
-
-			let hEl = getHeaderEl(header) as HTMLHeadingElement;
-
-			if (!hEl || hEl.classList.contains("heading")) return;
-
-			hEl.classList.add("heading");
-
-			let collapseIcon = hEl.querySelector(".heading-collapse-indicator");
-			if (!collapseIcon)
-			{
-				collapseIcon = hEl.createDiv({ cls: "heading-collapse-indicator collapse-indicator collapse-icon" });
-				collapseIcon.innerHTML = arrowHTML;
-				hEl.prepend(collapseIcon);
-			}
-
-			if (!hEl.querySelector(".heading-after")) 
-			{
-				let afterEl = hEl.createDiv({ cls: "heading-after" });
-				afterEl.textContent = "...";
-			}
-
-			// the before element is for future styling
-			if (!hEl.querySelector(".heading-before")) 
-			{
-				let beforeEl = hEl.createDiv({ cls: "heading-before" });
-				hEl.prepend(beforeEl);
-				beforeEl.textContent = "";
-			}
-
-			let children = header.createDiv({ cls: "heading-children" });
-
-			makeHeaderTree(header, children);
-		});
-
-		// remove collapsible arrows from h1 and inline titles
-		html.querySelectorAll("div h1, div .inline-title").forEach((element) =>
-		{
-			element.querySelector(".heading-collapse-indicator")?.remove();
-		});
-
-		// remove all new lines from header elements which cause spacing issues
-		html.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((el) => el.innerHTML = el.innerHTML.replaceAll("\n", "")); 
 	}
 
     export async function beginBatch()
@@ -678,7 +544,10 @@ export namespace MarkdownRenderer
 		if (renderLeaf)
 		{
             if (!errorInBatch)
+			{
+				console.log("detaching");
 			    renderLeaf.detach();
+			}
 			else
 				console.log("error in batch, not detaching");
 		}
@@ -719,12 +588,7 @@ export namespace MarkdownRenderer
 	export async function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
 	{
 		// @ts-ignore
-		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
-		if (!found)
-		{
-			console.log("failed to find render leaf");
-			return;
-		}
+		if (!renderLeaf || !renderLeaf.parent || !renderLeaf.parent.parent) return;
 
 		// @ts-ignore
 		let loadingContainer = renderLeaf.parent.parent.containerEl.querySelector(`.html-render-progress-container`);
@@ -904,8 +768,5 @@ export namespace MarkdownRenderer
 			logContainer.appendChild(logEl);
 		}
 	}
-
-
-	
 
 }

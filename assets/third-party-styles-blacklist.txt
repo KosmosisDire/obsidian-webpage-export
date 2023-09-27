@@ -31,3 +31,4 @@ obsidian-admonition
 obsidian-banners
 obsidian-charts
 obsidian-excalidraw-plugin
+obsidian42-brat

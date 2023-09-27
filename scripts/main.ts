@@ -23,18 +23,9 @@ export default class HTMLExportPlugin extends Plugin
 		this.addSettingTab(new MainSettings(this));
 		MainSettings.loadSettings();
 
-		this.addRibbonIcon("folder-up", "Export Vault to HTML", async () =>
+		this.addRibbonIcon("folder-up", "Export Vault to HTML", () =>
 		{
-			let modal = new ExportModal();
-			let info = await modal.open();
-			if (info.canceled) return;
-
-			let website = await HTMLExporter.exportFiles(info.pickedFiles, info.exportPath, true, MainSettings.settings.deleteOldExportedFiles);
-			if (website)
-			{
-				new Notice("✅ Finished HTML Export:\n\n" + info.exportPath, 5000);
-				if (MainSettings.settings.openAfterExport) Utils.openPath(info.exportPath);
-			}
+			HTMLExporter.export(false);
 		});
 
 		// register callback for file rename so we can update the saved files to export
@@ -43,15 +34,35 @@ export default class HTMLExportPlugin extends Plugin
 		this.addCommand({
 			id: 'export-html-vault',
 			name: 'Export website using previously selected files and settings',
-			callback: async () =>
+			callback: () =>
 			{
-				let path = new Path(MainSettings.settings.exportPath);
-				let website = await HTMLExporter.exportFiles(MainSettings.getFilesToExport(), path, true, MainSettings.settings.deleteOldExportedFiles);
-				if (website)
+				HTMLExporter.export(true);
+			}
+		});
+
+		this.addCommand({
+			id: 'export-html-current',
+			name: 'Export current file using previous settings',
+			callback: () =>
+			{
+				let file = this.app.workspace.getActiveFile();
+
+				if (!file) 
 				{
-					new Notice("✅ Finished HTML Export:\n\n" + path, 5000);
-					if (MainSettings.settings.openAfterExport) Utils.openPath(path);
+					new Notice("No file is currently open!", 5000);
+					return;
 				}
+
+				HTMLExporter.export(true, [file]);
+			}
+		});
+
+		this.addCommand({
+			id: 'export-html-setting',
+			name: 'Set export options and files',
+			callback: () =>
+			{
+				HTMLExporter.export(false);
 			}
 		});
 
@@ -63,36 +74,16 @@ export default class HTMLExportPlugin extends Plugin
 					item.setTitle("Export as HTML")
 						.setIcon("download")
 						.setSection("export")
-						.onClick(async () =>
+						.onClick(() =>
 						{
 							if(file instanceof TFile)
 							{
-								let modal = new ExportModal();
-								modal.overridePickedFiles([file]);
-								let info = await modal.open();
-								if (info.canceled) return;
-
-								let website = await HTMLExporter.exportFiles(info.pickedFiles, info.exportPath, true, MainSettings.settings.deleteOldExportedFiles);
-								if (website)
-								{
-									new Notice("✅ Finished HTML Export:\n\n" + info.exportPath, 5000);
-									if (MainSettings.settings.openAfterExport) Utils.openPath(info.exportPath);
-								}
+								HTMLExporter.export(false, [file]);
 							}
 							else if(file instanceof TFolder)
 							{
-								let modal = new ExportModal();
 								let filesInFolder = this.app.vault.getFiles().filter((f) => new Path(f.path).directory.asString.startsWith(file.path));
-								modal.overridePickedFiles(filesInFolder);
-								let info = await modal.open();
-								if (info.canceled) return;
-
-								let website = await HTMLExporter.exportFiles(info.pickedFiles, info.exportPath, true, MainSettings.settings.deleteOldExportedFiles);
-								if (website)
-								{
-									new Notice("✅ Finished HTML Export:\n\n" + info.exportPath, 5000);
-									if (MainSettings.settings.openAfterExport) Utils.openPath(info.exportPath);
-								}
+								HTMLExporter.export(false, filesInFolder);
 							}
 							else
 							{

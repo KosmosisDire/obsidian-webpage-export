@@ -13,7 +13,6 @@ export interface ExportInfo
 	validPath: boolean;
 }
 
-
 export class ExportModal extends Modal 
 {
 	private isClosed: boolean = true;
@@ -78,7 +77,8 @@ export class ExportModal extends Modal
 			this.filePicker = new FilePickerTree(app.vault.getFiles(), true, true);
 			this.filePicker.generateWithItemsClosed = true;
 			await this.filePicker.generateTree(scrollArea);
-			if(MainSettings.settings.filesToExport[0].length > 0) 
+			
+			if((this.pickedFiles?.length ?? 0 > 0) || MainSettings.settings.filesToExport[0].length > 0) 
 			{
 				let filesToPick = this.pickedFiles?.map(file => new Path(file.path)) ?? MainSettings.settings.filesToExport[0].map(path => new Path(path));
 				this.filePicker.setSelectedFiles(filesToPick);
@@ -135,13 +135,25 @@ export class ExportModal extends Modal
 			white-space: pre-wrap;`)
 		}
 
-		new Setting(contentEl)
-			.setName('Export Presets')
+		let modeDescriptions = 
+		{
+			"website": "This will export a file structure suitable for uploading to your own web server.",
+			"local": "This will export an executable file along with a database file. This makes it easy to share the whole vault with others by only sharing 2 files.",
+			"documents": "This will export self-contained html documents.",
+			"raw-documents": "This will export raw, self-contained documents without the website layout. This is useful for sharing individual notes, or printing."
+		}
+
+		let exportModeSetting = new Setting(contentEl)
+			.setName('Export Mode')
+			// @ts-ignore
+			.setDesc(modeDescriptions[MainSettings.settings.exportPreset ?? 'website'])
 			.setHeading()
 			.addDropdown((dropdown) => dropdown
-				.addOption('website', 'Multi-File Website')
-				.addOption('documents', 'Self-contained Documents')
-				.setValue(MainSettings.settings.exportPreset)
+				.addOption('website', 'Online Web Server')
+				// .addOption('local', 'Local Shareable Web Server') This feature is not ready yet, so it is disabled for now
+				.addOption('documents', 'HTML Documents')
+				.addOption('raw-documents', 'Raw HTML Documents')
+				.setValue(["website", "local", "documents", "raw-documents"].contains(MainSettings.settings.exportPreset) ? MainSettings.settings.exportPreset : 'website')
 				.onChange(async (value) => 
 				{
 					MainSettings.settings.exportPreset = value;
@@ -153,6 +165,25 @@ export class ExportModal extends Modal
 							MainSettings.settings.inlineImages = true;
 							MainSettings.settings.makeNamesWebStyle = false;
 							MainSettings.settings.includeGraphView = false;
+							await MainSettings.saveSettings();
+
+							break;
+						case 'raw-documents':
+								MainSettings.settings.inlineCSS = true;
+								MainSettings.settings.inlineJS = true;
+								MainSettings.settings.inlineImages = true;
+								MainSettings.settings.makeNamesWebStyle = false;
+								MainSettings.settings.includeGraphView = false;
+								await MainSettings.saveSettings();
+	
+								break;
+						case 'local':
+							MainSettings.settings.inlineCSS = false;
+							MainSettings.settings.inlineJS = false;
+							MainSettings.settings.inlineImages = false;
+							MainSettings.settings.makeNamesWebStyle = true;
+							MainSettings.settings.includeGraphView = true;
+							MainSettings.settings.includeFileTree = true;
 							await MainSettings.saveSettings();
 
 							break;
