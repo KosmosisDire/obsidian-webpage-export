@@ -54,6 +54,11 @@ export class Webpage
 	 */
 	public downloads: Downloadable[] = [];
 
+	/**
+	 * The external files that need to be downloaded for this file to work NOT including the file itself.
+	 */
+	public dependencies: Downloadable[] = [];
+
 
 	public viewType: string = "markdown";
 
@@ -262,8 +267,10 @@ export class Webpage
 		mathStyleEl.innerHTML = AssetHandler.mathStyles;
 		this.contentElement.prepend(mathStyleEl);
 
-		this.downloads.push(...outlinedImages);
-		this.downloads.push(...await AssetHandler.getDownloads());
+		let dependencies_temp = await AssetHandler.getDownloads();
+		dependencies_temp.push(...outlinedImages);
+
+		this.downloads.push(...dependencies_temp);
 
 		if(MainSettings.settings.makeNamesWebStyle)
 		{
@@ -273,6 +280,8 @@ export class Webpage
 				file.relativeDownloadPath = file.relativeDownloadPath?.makeWebStyle();
 			});
 		}
+
+		this.dependencies.push(...this.downloads);
 
 		return this;
 	}
@@ -597,6 +606,7 @@ export class Webpage
 
 			let data = await filePath.readFileBuffer() ?? Buffer.from([]);
 			let imageDownload = new Downloadable(exportLocation.fullName, data, exportLocation.directory.makeForceFolder());
+			if (data.length == 0) console.log(filePath);
 			downloads.push(imageDownload);
 		};
 

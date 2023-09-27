@@ -40,8 +40,17 @@ export class HTMLExporter
 			return;
 		}
 
-		if (clearDirectory) await this.deleteNonExports(website.webpages, destination);
-		if (saveFiles) await this.saveExports(website.webpages, destination);
+		if (clearDirectory && MainSettings.settings.exportPreset != "local") await this.deleteNonExports(website.webpages, destination);
+		if (saveFiles) 
+		{
+			if (MainSettings.settings.exportPreset == "local") 
+			{
+				website.saveAsDatabase();
+				return website;
+			}
+
+			await this.saveExports(website.webpages, destination);
+		}
 
 		MarkdownRenderer.endBatch();
 

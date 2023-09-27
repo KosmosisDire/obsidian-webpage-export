@@ -94,8 +94,6 @@ export namespace MarkdownRenderer
 
 		if (loneFile) MarkdownRenderer.endBatch();
 
-		console.log(html.innerHTML);
-
 		return {contentEl: html, viewType: viewType};
 	}
 
@@ -401,14 +399,14 @@ export namespace MarkdownRenderer
 		});
 
 		// convert all hard coded image / media widths into max widths
-		html.querySelectorAll("img, video, svg").forEach((element: HTMLElement) =>
+		html.querySelectorAll("img, video, .media-embed:has( > :is(img, video))").forEach((element: HTMLElement) =>
 		{
 			let width = element.getAttribute("width");
 			if (width)
 			{
-				element.style.width = width || "100%";
-				element.style.maxWidth = "100%";
 				element.removeAttribute("width");
+				element.style.width = (width.trim() != "") ? (width + "px") : "";
+				element.style.maxWidth = "100%";
 			}
 		});
 

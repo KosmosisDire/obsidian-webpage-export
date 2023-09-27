@@ -21,6 +21,7 @@ export class Website
 {
 	public webpages: Webpage[] = [];
 	public dependencies: Downloadable[] = [];
+	public downloads: Downloadable[] = [];
 	public batchFiles: TFile[] = [];
 	public progress: number = 0;
 	public destination: Path;
@@ -242,6 +243,8 @@ export class Website
 				}
 
 				this.webpages.push(webpage);
+				this.dependencies.push(...webpage.dependencies);
+				this.downloads.push(...webpage.downloads);
 			}
 			catch (e)
 			{
@@ -251,6 +254,10 @@ export class Website
 
 			if(MarkdownRenderer.checkCancelled()) return undefined;
 		}
+
+		// remove duplicates from the dependencies and downloads
+		this.dependencies = this.dependencies.filter((file, index) => this.dependencies.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath && f.filename === file.filename) == index);
+		this.downloads = this.downloads.filter((file, index) => this.downloads.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath && f.filename === file.filename) == index);
 
 		this.created = true;
 
@@ -268,14 +275,22 @@ export class Website
 		for (let webpage of this.webpages)
 		{
 			let webpageData: string = await webpage.getHTML();
-			data[webpage.source.path] = webpageData;
+			let path = encodeURI(webpage.exportPath.copy.makeUnixStyle().asString);
+			data[path] = webpageData;
 		}
 
 		for (let file of this.dependencies)
 		{
 			let fileData: string | Buffer = file.content;
-			if (fileData instanceof Buffer) fileData = fileData.toString();
-			data[file.relativeDownloadPath.asString] = fileData;
+			if (fileData instanceof Buffer) fileData = fileData.toString("base64");
+			let path = encodeURI(file.relativeDownloadPath.joinString(file.filename).makeUnixStyle().asString);
+
+			if(fileData == "")
+			{
+				console.log(file.content);
+			}
+
+			data[path] = fileData;
 		}
 
 		let json = JSON.stringify(data);

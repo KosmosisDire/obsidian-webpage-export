@@ -141,6 +141,7 @@ export class ExportModal extends Modal
 			.setHeading()
 			.addDropdown((dropdown) => dropdown
 				.addOption('website', 'Multi-File Website')
+				.addOption('local', 'Local Database')
 				.addOption('documents', 'Self-contained Documents')
 				.setValue(MainSettings.settings.exportPreset)
 				.onChange(async (value) => 
@@ -154,6 +155,16 @@ export class ExportModal extends Modal
 							MainSettings.settings.inlineImages = true;
 							MainSettings.settings.makeNamesWebStyle = false;
 							MainSettings.settings.includeGraphView = false;
+							await MainSettings.saveSettings();
+
+							break;
+						case 'local':
+							MainSettings.settings.inlineCSS = false;
+							MainSettings.settings.inlineJS = false;
+							MainSettings.settings.inlineImages = false;
+							MainSettings.settings.makeNamesWebStyle = true;
+							MainSettings.settings.includeGraphView = true;
+							MainSettings.settings.includeFileTree = true;
 							await MainSettings.saveSettings();
 
 							break;
