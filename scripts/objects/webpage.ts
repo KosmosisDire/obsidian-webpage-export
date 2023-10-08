@@ -1,4 +1,4 @@
-import { MarkdownPreviewView, TFile } from "obsidian";
+import { TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
 import { Downloadable } from "scripts/utils/downloadable";
 import { MainSettings } from "scripts/settings/main-settings";
@@ -8,6 +8,7 @@ import { Website } from "./website";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
 import { HTMLGeneration } from "scripts/html-generation/html-generator";
+import { RenderLog } from "scripts/html-generation/render-log";
 const { minify } = require('html-minifier-terser');
 
 export class Webpage
@@ -617,7 +618,7 @@ export class Webpage
 
 			let data = await filePath.readFileBuffer() ?? Buffer.from([]);
 			let imageDownload = new Downloadable(exportLocation.fullName, data, exportLocation.directory.makeForceFolder());
-			if (data.length == 0) console.log(filePath);
+			if (data.length == 0) RenderLog.log(filePath, "No data for file: ");
 			downloads.push(imageDownload);
 		};
 
@@ -647,7 +648,7 @@ export class Webpage
 				pathString = src.replaceAll("app://", "").replaceAll("\\", "/");
 				pathString = pathString.replaceAll(pathString.split("/")[0] + "/", "");
 				pathString = Path.getRelativePathFromVault(new Path(pathString), true).asString;
-				console.log("fallback: ", pathString);
+				RenderLog.log(pathString, "Fallback path parsing:");
 			}
 		}
 		else

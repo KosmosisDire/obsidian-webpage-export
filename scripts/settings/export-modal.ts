@@ -204,26 +204,6 @@ export class ExportModal extends Modal
 				));
 
 		new Setting(contentEl)
-			.setName('Only Export Modified')
-			.setDesc('Disable this to do a full re-export. If you have an existing vault since before this feature was introduced, please do a full re-export before turning this on!')
-			.addToggle((toggle) => toggle
-				.setValue(MainSettings.settings.incrementalExport)
-				.onChange(async (value) => {
-					MainSettings.settings.incrementalExport = value;
-					await MainSettings.saveSettings();
-		}));
-
-		new Setting(contentEl)
-			.setName('Delete Old Files')
-			.setDesc('Delete *ALL* files in the export directory that are not included in this export.')
-			.addToggle((toggle) => toggle
-				.setValue(MainSettings.settings.deleteOldExportedFiles)
-				.onChange(async (value) => {
-					MainSettings.settings.deleteOldExportedFiles = value;
-					await MainSettings.saveSettings();
-		}));
-
-		new Setting(contentEl)
 			.setName('Open after export')
 			.addToggle((toggle) => toggle
 				.setTooltip('Open the exported file after exporting.')

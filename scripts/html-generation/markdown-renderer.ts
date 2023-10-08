@@ -3,16 +3,23 @@ import { Utils } from "scripts/utils/utils";
 import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
 import { RenderLog } from "./render-log";
-import { MainSettings } from "scripts/settings/main-settings";
 
 export namespace MarkdownRenderer
 {
-	export var convertableExtensions = ["md", "canvas"];
-	export let problemLog: string = "";
+	export let convertableExtensions = ["md", "canvas"];
 	export let renderLeaf: WorkspaceLeaf | undefined;
     export let errorInBatch: boolean = false;
 	export let cancelled: boolean = false;
 	export let batchStarted: boolean = false;
+	let logContainer: HTMLElement | undefined;
+	let loadingContainer: HTMLElement | undefined;
+
+	let infoColor = "var(--text-normal)";
+	let warningColor = "var(--color-yellow)";
+	let errorColor = "var(--color-red)";
+	let infoBoxColor = "rgba(0,0,0,0.15)"
+	let warningBoxColor = "rgba(var(--color-yellow-rgb), 0.15)";
+	let errorBoxColor = "rgba(var(--color-red-rgb), 0.15)";
 
 	export function isConvertable(extention: string)
 	{
@@ -23,7 +30,7 @@ export namespace MarkdownRenderer
 	{
 		if (MarkdownRenderer.cancelled || !MarkdownRenderer.renderLeaf) 
 		{
-			console.log("cancelled");
+			RenderLog.log("cancelled");
 			endBatch();
 			return true;
 		}
@@ -35,7 +42,7 @@ export namespace MarkdownRenderer
 	{
 		if (checkCancelled()) return undefined;
 
-		RenderLog.error(`Rendering ${file.path} failed: `, message);
+		RenderLog.error(message, `Rendering ${file.path} failed: `);
 		return;
 	}
 
@@ -44,7 +51,7 @@ export namespace MarkdownRenderer
 		let loneFile = !batchStarted;
 		if (loneFile) 
 		{
-			console.log("beginning lone batch");
+			RenderLog.log("beginning lone batch");
 			await MarkdownRenderer.beginBatch();
 		}
 
@@ -426,7 +433,7 @@ export namespace MarkdownRenderer
 
 			if (container) container.appendChild(embed);
 
-			console.log(container?.innerHTML);
+			RenderLog.log(container?.innerHTML);
 		});
 
 		// convert canvas elements into images
@@ -434,7 +441,7 @@ export namespace MarkdownRenderer
 		{
 			let image = document.createElement("img");
 			let data = canvas.toDataURL();
-			console.log(canvas, data);
+			RenderLog.log(canvas, data);
 			image.src = data;
 			image.style.width = canvas.style.width || "100%";
 			image.style.maxWidth = "100%";
@@ -460,10 +467,11 @@ export namespace MarkdownRenderer
 			throw new Error("Cannot start a new batch while one is already running!");
 		}
 
-		problemLog = "";
         errorInBatch = false;
 		cancelled = false;
 		batchStarted = true;
+		loadingContainer = undefined;
+		logContainer = undefined;
 
 		renderLeaf = TabManager.openNewTab("window", "vertical");
 		// @ts-ignore
@@ -476,7 +484,7 @@ export namespace MarkdownRenderer
 			}
 			catch (e)
 			{
-				RenderLog.error("Failed to detach render leaf: ", e);
+				RenderLog.error(e, "Failed to detach render leaf: ");
 			}
 			
 			if (!checkCancelled())
@@ -511,7 +519,6 @@ export namespace MarkdownRenderer
 		if (!renderBrowserWindow) 
 		{
 			new Notice("Failed to get the render window, please try again.");
-			problemLog = "";
 			errorInBatch = false;
 			cancelled = false;
 			batchStarted = false;
@@ -535,6 +542,8 @@ export namespace MarkdownRenderer
 		{
 			win.webContents.setBackgroundThrottling(false);
 		}
+
+		createLoadingContainer();
 	}
 
 	export function endBatch()
@@ -545,11 +554,11 @@ export namespace MarkdownRenderer
 		{
             if (!errorInBatch)
 			{
-				console.log("detaching");
+				RenderLog.log("detaching");
 			    renderLeaf.detach();
 			}
 			else
-				console.log("error in batch, not detaching");
+				RenderLog.log("error in batch, not detaching");
 		}
 
 		// @ts-ignore
@@ -585,13 +594,8 @@ export namespace MarkdownRenderer
 		return logEl;
 	}
 
-	export async function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
+	function createLoadingContainer()
 	{
-		// @ts-ignore
-		if (!renderLeaf || !renderLeaf.parent || !renderLeaf.parent.parent) return;
-
-		// @ts-ignore
-		let loadingContainer = renderLeaf.parent.parent.containerEl.querySelector(`.html-render-progress-container`);
 		if (!loadingContainer) 
 		{
 			loadingContainer = document.createElement("div");
@@ -622,12 +626,38 @@ export namespace MarkdownRenderer
 			{
 				copyButton.addEventListener("click", () => 
 				{
-					console.log(problemLog);
-					navigator.clipboard.writeText(problemLog);
+					navigator.clipboard.writeText(RenderLog.fullLog);
 					new Notice("Copied to clipboard! Please paste this into your github issue as is.");
 				});
 			}
 		}
+	}
+
+	let logShowing = false;
+	function appendLogEl(logEl: HTMLElement)
+	{
+		if(!logContainer || !renderLeaf) return;
+
+		if (!logShowing) 
+		{
+			renderLeaf.view.containerEl.win.resizeTo(900, 500);
+			logContainer.style.display = "flex";
+			logShowing = true;
+		}
+
+		logContainer.appendChild(logEl);
+	}
+
+	export async function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
+	{
+		if (!batchStarted) return;
+
+		// @ts-ignore
+		if (!renderLeaf || !renderLeaf.parent || !renderLeaf.parent.parent) return;
+
+		// @ts-ignore
+		let loadingContainer = renderLeaf.parent.parent.containerEl.querySelector(`.html-render-progress-container`);
+		
 
 		let progress = complete / total;
 
@@ -655,118 +685,44 @@ export namespace MarkdownRenderer
 
 	export async function _reportError(messageTitle: string, message: string, fatal: boolean)
 	{
-		let firstLog = problemLog == "";
-        messageTitle = (fatal ? "[Fatal Error] " : "[Error] ") + messageTitle;
-		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
+		if (!batchStarted) return;
 
 		errorInBatch = true;
-
-		// Return if log levels do not match
-		if (!fatal && !["error", "warning", "all"].contains(MainSettings.settings.logLevel))
-		{
-			return;
-		}
-
-		if(firstLog)
-		{
-			this.renderLeaf.view.containerEl.win.resizeTo(900, 500);
-		}
 
 		// @ts-ignore
 		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
-		// @ts-ignore
-		let loadingContainer = renderLeaf.parent.parent.containerEl.querySelector(`.html-render-progress-container`);
-		if (!loadingContainer) return;
-
-		let titleElement = loadingContainer.querySelector("h1");
-		if (titleElement)
-		{
-			titleElement.innerText = "⚠️ " + messageTitle;
-			titleElement.style.color = "var(--color-red) !important";
-		}
-
-		let messageElement = loadingContainer.querySelector("span.html-render-submessage");
-		if (messageElement)
-		{
-			messageElement.innerText = messageElement.innerText + "\n\n" + "See the problem log ⟶\nConsider copying the log and reporting an issue on github.";
-		}
-
-		let logContainer = loadingContainer.querySelector(".html-render-log");
-		if (logContainer)
-		{
-			logContainer.style.display = "flex";
-			let logEl = generateLogEl(messageTitle, message, "var(--color-red)", "rgba(170, 10, 30, 0.1)");
-			logContainer.appendChild(logEl);
-		}
+		appendLogEl(generateLogEl(messageTitle, message, errorColor, errorBoxColor));
 
 		if (fatal)
         {
 			renderLeaf = undefined;
+			loadingContainer = undefined;
+			logContainer = undefined;
         }
 	}
 
 	export async function _reportWarning(messageTitle: string, message: string)
 	{
-		let firstLog = problemLog == "";
-		messageTitle = "[Warning] " + messageTitle;
-		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
-
-		// return if log level does not include warnings
-		if(!["warning", "all"].contains(MainSettings.settings.logLevel)) return;
-
-		if(firstLog)
-		{
-			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
-		}
+		if (!batchStarted) return;
 
 		// @ts-ignore
 		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
-		// @ts-ignore
-		let loadingContainer = renderLeaf.parent.parent.containerEl.querySelector(`.html-render-progress-container`);
-		if (!loadingContainer) return;
-
-		let logContainer = loadingContainer.querySelector(".html-render-log");
-		if (logContainer)
-		{
-			logContainer.style.display = "flex";
-			let logEl = generateLogEl(messageTitle, message, "var(--color-yellow)", "rgba(170, 170, 10, 0.1)");
-			logContainer.appendChild(logEl);
-		}
-
+		appendLogEl(generateLogEl(messageTitle, message, warningColor, warningBoxColor));
 	}
 
     export async function _reportInfo(messageTitle: string, message: string)
 	{
-		let firstLog = problemLog == "";
-        messageTitle = "[Info] " + messageTitle;
-		problemLog += "\n\n##### " + messageTitle + "\n```\n" + message + "\n```";
-
-		if(!(MainSettings.settings.logLevel == "all")) return;
-
-		if(firstLog)
-		{
-			this.renderLeaf.view.containerEl.win.resizeTo(900, 300);
-		}
+		if (!batchStarted) return;
 
 		// @ts-ignore
 		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
-		// @ts-ignore
-		let loadingContainer = renderLeaf.parent.parent.containerEl.querySelector(`.html-render-progress-container`);
-		if (!loadingContainer) return;
-
-		let logContainer = loadingContainer.querySelector(".html-render-log");
-		if (logContainer)
-		{
-			logContainer.style.display = "flex";
-			let logEl = generateLogEl(messageTitle, message, "var(--text-normal)", "rgba(0, 0, 0, 0.15)");
-			logContainer.appendChild(logEl);
-		}
+		appendLogEl(generateLogEl(messageTitle, message, infoColor, infoBoxColor));
 	}
 
 }

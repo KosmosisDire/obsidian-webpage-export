@@ -10,12 +10,19 @@ import { Path } from "scripts/utils/path";
 import { RenderLog } from "scripts/html-generation/render-log";
 import { Utils } from "scripts/utils/utils";
 
-const removeBodyClasses: string[] = ["mod-windows", "is-frameless", "is-maximized", "is-hidden-frameless", "obsidian-app", 
-								"show-view-header", "css-settings-manager", "Heading", "minimal-theme", "minimal-default-dark", 
-								"minimal-default-light", "links-int-on", "links-ext-on", "full-width-media", "minimal-folding", 
-								"minimal-readable", "minimal-light", "minimal-dark", "chart-default-width", "table-default-width", 
-								"img-default-width", "iframe-default-width", "map-default-width", "sizing-readable", "is-focused",
-								"sidebar-float-bottom", "check-color", "check-bg"];
+// const ignoreBodyClases: string[] = [
+// 	"mod-windows", "is-frameless", "is-maximized", "is-hidden-frameless",
+// 	"obsidian-app","show-view-header", "Heading", "minimal-theme", 
+// 	"minimal-default-dark","minimal-default-light", "links-int-on", "links-ext-on", 
+// 	"minimal-folding","minimal-readable", "minimal-light", 
+// 	"minimal-dark", "chart-default-width", "table-default-width",
+// 	"img-default-width", "iframe-default-width", "map-default-width", 
+// 	"sizing-readable", "is-focused","sidebar-float-bottom", "check-color", 
+// 	"check-bg", "colorful-active", "folder-notes-plugin",
+// 	"hide-folder-note", "folder-note-underline", "folder-note-underline-path",
+// 	"fn-whitespace-stop-collapsing", "callouts-default", "trim-cols", 
+// 	"sidebar-tabs-default", "maximize-tables","tabs-default", 
+// 	"tab-stack-top", "minimal-tab-title-hover"];
 
 export class Website
 {
@@ -44,15 +51,14 @@ export class Website
 		let bodyClasses = document.body.classList;
 		let validClasses = "";
 
-		bodyClasses.forEach((className) =>
-		{
-			if (!removeBodyClasses.includes(className)) validClasses += className + " ";
-		});
+		// bodyClasses.forEach((className) =>
+		// {
+		// 	if (!ignoreBodyClases.includes(className)) validClasses += className + " ";
+		// });
 
+		validClasses += bodyClasses.contains("theme-light") ? " theme-light " : " theme-dark ";
 		if (MainSettings.settings.sidebarsAlwaysCollapsible) validClasses += " sidebars-always-collapsible ";
-
 		validClasses += " loading ";
-
 		return validClasses.replace(/\s\s+/g, ' ');
 	}
 
@@ -94,7 +100,7 @@ export class Website
 
 		if (webpage.document.head.children.length == 0)
 		{
-			RenderLog.warning("Could not update global data in file: " + webpage.source.path, "File is missing a head element");
+			RenderLog.warning("Could not update global data in file: " + webpage.source.path + "\nFile is missing a head element");
 			return;
 		}
 
@@ -248,7 +254,7 @@ export class Website
 			}
 			catch (e)
 			{
-				RenderLog.error("Could not export file: " + file.name, e);
+				RenderLog.error(e, "Could not export file: " + file.name);
 				continue;
 			}
 
@@ -287,7 +293,7 @@ export class Website
 
 			if(fileData == "")
 			{
-				console.log(file.content);
+				RenderLog.log(file.content);
 			}
 
 			data[path] = fileData;

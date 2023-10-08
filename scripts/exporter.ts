@@ -158,7 +158,7 @@ export class HTMLExporter
 		// delete all files in root path that are not in exports
 		let files = (await this.getAllFilesInFolderRecursive(rootPath)).filter((file) => !file.makeUnixStyle().asString.contains(AssetHandler.mediaFolderName.makeUnixStyle().asString));
 
-		console.log(files);
+		RenderLog.log(files, "Deletion candidates");
 
 		let toDelete = [];
 		for (let i = 0; i < files.length; i++)

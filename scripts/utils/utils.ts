@@ -160,7 +160,7 @@ export class Utils
 			}
 			catch (e)
 			{
-				RenderLog.error("Could not save file: " + file.filename, e.stack);
+				RenderLog.error(e.stack, "Could not save file: " + file.filename);
 				continue;
 			}
 		}

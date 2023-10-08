@@ -29,7 +29,9 @@ export class AssetHandler
 	"backlink", "sync", "vault", "mobile", "tablet", "phone", 
 	"textLayer", "header", "linux", "macos", "rename", "edit",
 	"progress", "native", "aria", "tooltip", 
-	"drop", "sidebar"];
+	"drop", "sidebar", "mod-windows", "is-frameless", 
+	"is-hidden-frameless", "obsidian-app", "show-view-header", 
+	"is-maximized"];
 
 	private static obsidianStylesKeep = 
 	["scrollbar", "input[type"];
@@ -112,7 +114,7 @@ export class AssetHandler
 		}
 		catch (e)
 		{
-			RenderLog.error("Error while minifying " + (isJSNotCSS ? "JS" : "CSS") + " file.", e.stack);
+			RenderLog.error(e.stack, "Error while minifying " + (isJSNotCSS ? "JS" : "CSS") + " file.");
 			content = tempContent;
 		}
 
@@ -267,6 +269,31 @@ body
 		this.lastMathjaxChanged = changed;
 	}
 
+	private static filterBodyClasses(inputCSS: string): string
+	{
+		// replace all selectors that change based on the body's class to always be applied
+		let matchCount = 1;
+		while (matchCount != 0)
+		{
+			let matches = Array.from(inputCSS.matchAll(/body\.(?!theme-dark|theme-light)[\w-]+/g));
+			
+			matchCount = 0;
+			matches.forEach((match) =>
+			{
+				let selector = match[0];
+				let classes = selector.split(".")[1];
+				if (selector && classes && document.body.classList.contains(classes))
+				{
+					inputCSS = inputCSS.replace(match[0].toString(), "body");
+					RenderLog.log(classes);
+					matchCount++;
+				}
+			});
+		}
+
+		return inputCSS;
+	}
+
 	private static async loadAppStyles()
 	{
 		let appSheet = document.styleSheets[1];
@@ -311,10 +338,12 @@ body
 				}
 
 				if (skip) continue;
+
+				
 				
 				let cssText = rule.cssText + "\n";
 				cssText = cssText.replaceAll("public/", "https://publish.obsidian.md/public/");
-				cssText = cssText.replaceAll("lib/", "https://publish.obsidian.md/lib/")
+				cssText = cssText.replaceAll("lib/", "https://publish.obsidian.md/lib/");
 				
 				this.appStyles += cssText;
 			}
@@ -324,8 +353,9 @@ body
 		{
 			// @ts-ignore
 			let styleID = stylesheets[i].ownerNode?.id;
-			if (styleID.startsWith("svelte") && MainSettings.settings.includeSvelteCSS || styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET")
+			if ((styleID.startsWith("svelte") && MainSettings.settings.includeSvelteCSS) || styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET")
 			{
+				RenderLog.log("Including stylesheet: " + styleID);
 				let style = stylesheets[i].cssRules;
 
 				for(let item in style) 
@@ -338,6 +368,8 @@ body
 				}
 			}
 		}
+
+		this.appStyles = this.filterBodyClasses(this.appStyles);
 
 		this.appStyles = await this.minifyJSorCSS(this.appStyles, false);
 	}
@@ -360,6 +392,9 @@ body
 				pluginCSS += style;
 			}
 		}
+
+		pluginCSS = this.filterBodyClasses(pluginCSS);
+
 		return pluginCSS;
 	}
 
@@ -370,10 +405,13 @@ body
 		let themePath = new Path(`.obsidian/themes/${themeName}/theme.css`).absolute();
 		if (!themePath.exists)
 		{
-			RenderLog.warning("Warning: could not load theme.", "Cannot find theme at path: \n\n" + themePath);
+			RenderLog.warning("Cannot find theme at path: \n\n" + themePath);
 			return "";
 		}
 		let themeContent = await themePath.readFileString() ?? "";
+
+		themeContent = this.filterBodyClasses(themeContent);
+
 		return themeContent;
 	}
 	

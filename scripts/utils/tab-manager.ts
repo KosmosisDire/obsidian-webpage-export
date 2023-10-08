@@ -1,4 +1,5 @@
 import {  PaneType, SplitDirection, TFile, View, WorkspaceLeaf } from "obsidian";
+import { RenderLog } from "scripts/html-generation/render-log";
 
 
 export namespace TabManager
@@ -17,12 +18,12 @@ export namespace TabManager
 		{
 			await leaf.openFile(file, undefined).catch((reason) =>
 			{
-				console.log(reason);
+				RenderLog.log(reason);
 			});
 		}
 		catch (error)
 		{
-			console.log(error);
+			RenderLog.log(error);
 		}
 
 		return leaf;

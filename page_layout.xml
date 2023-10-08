@@ -1,0 +1,30 @@
+<html>
+    <head>
+        <head-content />
+        <custom-head-content />
+    </head>
+    <body>
+        <vertical>
+            <webpage>
+                <left-sidebar>
+                    <theme-toggle />
+                    <file-viewer />
+                </left-sidebar>
+                <vertical>
+                    <document />
+                </vertical>
+                <right-sidebar>
+                    <graph-view />
+                    <outline />
+                </right-sidebar>
+            </webpage>
+        </vertical>
+    </body>
+</html>
+
+<!-- Possible Tags:
+    HTML Tags: html, body, head
+    Layout Tags: vertical, horizontal
+    Main Element Tags: theme-toggle, file-viewer, document, graph-view, outline, head-content, custom-head-content
+    Website Layout Tags: webpage, left-sidebar, right-sidebar
+ -->

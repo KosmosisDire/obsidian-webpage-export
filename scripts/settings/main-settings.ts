@@ -1,14 +1,19 @@
-import { Plugin, PluginSettingTab, Setting, TFile, TextComponent } from 'obsidian';
+import { Notice, Plugin, PluginSettingTab, Setting, TFile, TextComponent } from 'obsidian';
 import { Utils } from '../utils/utils';
 import { Path } from '../utils/path';
 import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
 import { FlowList } from './flow-list';
 import { ExportInfo, ExportModal } from './export-modal';
+import HTMLExportPlugin from 'scripts/main';
+import { migrateSettings } from './settings-migration';
 
 // #region Settings Definition
 
 export interface MainSettingsData 
 {
+	settingsVersion: string;
+	upgradedFrom: string;
+
 	// Inlining Options
 	inlineCSS: boolean;
 	inlineJS: boolean;
@@ -59,6 +64,9 @@ export interface MainSettingsData
 
 const DEFAULT_SETTINGS: MainSettingsData =
 {
+	settingsVersion: "0.0.0",
+	upgradedFrom: "0.0.0",
+
 	// Inlining Options
 	inlineCSS: false,
 	inlineJS: false,
@@ -116,6 +124,7 @@ export class MainSettings extends PluginSettingTab
 
 	static settings: MainSettingsData = DEFAULT_SETTINGS;
 	static plugin: Plugin;
+	static loaded = false;
 
 
 	private blacklistedPluginIDs: string[] = [];
@@ -136,6 +145,8 @@ export class MainSettings extends PluginSettingTab
 		MainSettings.settings = Object.assign({}, DEFAULT_SETTINGS, await MainSettings.plugin.loadData());
 		MainSettings.settings.customLineWidth = MainSettings.settings.customLineWidth.toString();
 		if (MainSettings.settings.customLineWidth === "0") MainSettings.settings.customLineWidth = "";
+		await migrateSettings(MainSettings.settings);
+		MainSettings.loaded = true;
 	}
 
 	static async saveSettings() {
@@ -168,6 +179,7 @@ export class MainSettings extends PluginSettingTab
 		let path = new Path(MainSettings.settings.exportPath);
 		if ((files.length == 0 && overrideFiles == undefined) || !path.exists || !path.isAbsolute || !path.isDirectory)
 		{
+			new Notice("Please set the export path and files to export in the settings first.", 5000);
 			let modal = new ExportModal();
 			if(overrideFiles) modal.overridePickedFiles(overrideFiles);
 			return await modal.open();
@@ -273,10 +285,13 @@ export class MainSettings extends PluginSettingTab
 		errorMessage.style.color = "var(--color-red)";
 		errorMessage.style.marginBottom = "0.75rem";
 
-		let tempPath = new Path(MainSettings.settings.customHeadContentPath);
-		if(tempPath.isDirectory) errorMessage.setText("Path must be a file!");
-		else if(!tempPath.isAbsolute) errorMessage.setText("Path must be absolute!");
-		else if(!tempPath.exists) errorMessage.setText("Path does not exist!");
+		if (!(MainSettings.settings.customHeadContentPath.trim() == ""))
+		{
+			let tempPath = new Path(MainSettings.settings.customHeadContentPath);
+			if(tempPath.isDirectory) errorMessage.setText("Path must be a file!");
+			else if(!tempPath.isAbsolute) errorMessage.setText("Path must be absolute!");
+			else if(!tempPath.exists) errorMessage.setText("Path does not exist!");
+		}
 
 		let pathInput : TextComponent | undefined = undefined;
 
@@ -291,7 +306,8 @@ export class MainSettings extends PluginSettingTab
 					.onChange(async (value) => 
 					{
 						let path = new Path(value);
-						if(path.isDirectory) errorMessage.setText("Path must be a file!");
+						if(value == "") errorMessage.setText("");
+						else if(path.isDirectory) errorMessage.setText("Path must be a file!");
 						else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
 						else if(!path.exists) errorMessage.setText("Path does not exist!");
 						else
@@ -555,6 +571,26 @@ export class MainSettings extends PluginSettingTab
 		experimentalHR2.style.flexGrow = "1";
 		experimentalHeader.style.flexGrow = "0.1";
 		experimentalHeader.style.textAlign = "center";
+
+		new Setting(contentEl)
+			.setName('Only Export Modified')
+			.setDesc('Disable this to do a full re-export. If you have an existing vault since before this feature was introduced, please do a full re-export before turning this on!')
+			.addToggle((toggle) => toggle
+				.setValue(MainSettings.settings.incrementalExport)
+				.onChange(async (value) => {
+					MainSettings.settings.incrementalExport = value;
+					await MainSettings.saveSettings();
+		}));
+
+		new Setting(contentEl)
+			.setName('Delete Old Files')
+			.setDesc('Delete *ALL* files in the export directory that are not included in this export.')
+			.addToggle((toggle) => toggle
+				.setValue(MainSettings.settings.deleteOldExportedFiles)
+				.onChange(async (value) => {
+					MainSettings.settings.deleteOldExportedFiles = value;
+					await MainSettings.saveSettings();
+		}));
 
 		
 		if (MainSettings.settings.exportPreset != "raw-documents")
