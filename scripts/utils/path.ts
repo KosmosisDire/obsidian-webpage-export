@@ -5,6 +5,7 @@ import { Utils } from './utils';
 import { promises as fs } from 'fs';
 import { statSync } from 'fs';
 import internal from 'stream';
+import { RenderLog } from 'scripts/html-generation/render-log';
 
 export class Path
 {
@@ -521,7 +522,7 @@ export class Path
 		if(!this.exists)
 		{
 			new Notice("Error: Path does not exist: \n\n" + this.asString, 5000);
-			console.error("Path does not exist: " + this.asString);
+			RenderLog.error("Path does not exist: " + this.asString);
 		}
 
 		return this.exists;

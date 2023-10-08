@@ -1,0 +1,12 @@
+{
+	"id": "webpage-html-export",
+	"name": "Webpage HTML Export",
+	"version": "1.7.4",
+	"minAppVersion": "1.4.0",
+	"description": "Webpage HTML Export is a plugin for Obsidian which lets you export single files or whole vaults as HTML websites / webpages. It is similar to publish, but you get the .html files to do whatever you want with. Its goal is to support as many features of obsidian possible including themes, dataview, graph view, and more.",
+	"author": "Nathan George",
+	"authorUrl": "https://github.com/KosmosisDire/obsidian-webpage-export",
+	"isDesktopOnly": true,
+	"fundingUrl": "https://www.buymeacoffee.com/nathangeorge",
+	"updateNote": "- Added custom head content\n- Add select all button\n- Fixed printing\n- Fixed missing callout icons\n- Fixed image widths"
+}

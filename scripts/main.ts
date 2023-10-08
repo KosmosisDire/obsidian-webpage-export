@@ -2,23 +2,25 @@
 import { Notice, Plugin, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
-import { ExportModal } from './settings/export-modal';
-import { Utils } from './utils/utils';
 import { AssetHandler } from './html-generation/asset-handler';
 import { MainSettings } from './settings/main-settings';
 import { HTMLExporter } from './exporter';
 import { Path } from './utils/path';
+import { RenderLog } from './html-generation/render-log';
 
 export default class HTMLExportPlugin extends Plugin
 {
 	static plugin: HTMLExportPlugin;
-	
+	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string} = {updateAvailable: false, latestVersion: "0", currentVersion: "0", updateNote: ""};
+	static pluginVersion: string = "0.0.0";
+
 	async onload()
 	{
-		console.log('loading webpage-html-export plugin');
+		RenderLog.log("Loading webpage-html-export plugin");
 
 		HTMLExportPlugin.plugin = this;
 		this.checkForUpdates();
+		HTMLExportPlugin.pluginVersion = this.manifest.version;
 		AssetHandler.initialize("webpage-html-export");
 		this.addSettingTab(new MainSettings(this));
 		MainSettings.loadSettings();
@@ -33,7 +35,7 @@ export default class HTMLExportPlugin extends Plugin
 
 		this.addCommand({
 			id: 'export-html-vault',
-			name: 'Export website using previously selected files and settings',
+			name: 'Export using previous settings',
 			callback: () =>
 			{
 				HTMLExporter.export(true);
@@ -42,7 +44,7 @@ export default class HTMLExportPlugin extends Plugin
 
 		this.addCommand({
 			id: 'export-html-current',
-			name: 'Export current file using previous settings',
+			name: 'Export only current file using previous settings',
 			callback: () =>
 			{
 				let file = this.app.workspace.getActiveFile();
@@ -59,7 +61,7 @@ export default class HTMLExportPlugin extends Plugin
 
 		this.addCommand({
 			id: 'export-html-setting',
-			name: 'Set export options and files',
+			name: 'Set html export settings',
 			callback: () =>
 			{
 				HTMLExporter.export(false);
@@ -87,7 +89,7 @@ export default class HTMLExportPlugin extends Plugin
 							}
 							else
 							{
-								console.error("File is not a TFile or TFolder! Invalid type: " + typeof file + "");
+								RenderLog.error("File is not a TFile or TFolder! Invalid type: " + typeof file + "");
 								new Notice("File is not a File or Folder! Invalid type: " + typeof file + "", 5000);
 							}
 						});
@@ -96,10 +98,10 @@ export default class HTMLExportPlugin extends Plugin
 		);
 	}
 
-	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string} = {updateAvailable: false, latestVersion: "0", currentVersion: "0", updateNote: ""};
 	async checkForUpdates(): Promise<{updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string}>
 	{	
 		let currentVersion = this.manifest.version;
+
 		try
 		{
 			let url = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/manifest.json?cache=" + Date.now() + "";
@@ -110,13 +112,13 @@ export default class HTMLExportPlugin extends Plugin
 			
 			HTMLExportPlugin.updateInfo = {updateAvailable: updateAvailable, latestVersion: latestVersion, currentVersion: currentVersion, updateNote: updateNote};
 			
-			if(updateAvailable) console.log("Update available: " + latestVersion + " (current: " + currentVersion + ")");
+			if(updateAvailable) RenderLog.log("Update available: " + latestVersion + " (current: " + currentVersion + ")");
 			
 			return HTMLExportPlugin.updateInfo;
 		}
 		catch
 		{
-			console.log("Could not check for update");
+			RenderLog.log("Could not check for update");
 			HTMLExportPlugin.updateInfo = {updateAvailable: false, latestVersion: currentVersion, currentVersion: currentVersion, updateNote: ""};
 			return HTMLExportPlugin.updateInfo;
 		}
@@ -124,6 +126,6 @@ export default class HTMLExportPlugin extends Plugin
 
 	onunload()
 	{
-		console.log('unloading webpage-html-export plugin');
+		RenderLog.log('unloading webpage-html-export plugin');
 	}
 }

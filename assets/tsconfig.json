@@ -1,0 +1,11 @@
+{
+	"compilerOptions": {
+		"target": "ES2015",
+		"module": "ES2015",
+		"moduleResolution": "node",
+		"sourceMap": true,
+		"skipLibCheck": true,
+	},
+    "include": ["webpage.ts"]
+	
+}
