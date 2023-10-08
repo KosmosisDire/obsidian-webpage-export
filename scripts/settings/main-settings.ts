@@ -1,4 +1,4 @@
-import { Notice, Plugin, PluginSettingTab, Setting, TFile, TextComponent } from 'obsidian';
+import { Notice, Plugin, PluginSettingTab, Setting, TFile, TextComponent, getIcon } from 'obsidian';
 import { Utils } from '../utils/utils';
 import { Path } from '../utils/path';
 import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
@@ -6,6 +6,7 @@ import { FlowList } from './flow-list';
 import { ExportInfo, ExportModal } from './export-modal';
 import HTMLExportPlugin from 'scripts/main';
 import { migrateSettings } from './settings-migration';
+import { RenderLog } from 'scripts/html-generation/render-log';
 
 // #region Settings Definition
 
@@ -221,15 +222,41 @@ export class MainSettings extends PluginSettingTab
 		header.style.display = 'block';
 		header.style.marginBottom = '15px';
 
+		let supportContainer = contentEl.createDiv();
+		supportContainer.style.marginBottom = '15px';
 		let supportLink = contentEl.createEl('a');
-
 		let buttonColor = Utils.sampleCSSColorHex("--color-accent", document.body).hex;
 		let buttonTextColor = Utils.sampleCSSColorHex("--text-on-accent", document.body).hex;
 		// @ts-ignore
-		supportLink.outerHTML = `<a href="https://www.buymeacoffee.com/nathangeorge"><img style="height:40px;" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=${buttonColor}&font_colour=${buttonTextColor}&font_family=Poppins&outline_colour=${buttonTextColor}&coffee_colour=FFDD00"></a>`;
+		supportLink.href = `href="https://www.buymeacoffee.com/nathangeorge"`;
+		supportLink.style.height = "40px"
+		supportLink.innerHTML = `<img style="height:40px;" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=${buttonColor}&font_colour=${buttonTextColor}&font_family=Poppins&outline_colour=${buttonTextColor}&coffee_colour=FFDD00">`;
 		let supportHeader = contentEl.createDiv({ text: 'Support the continued development of this plugin.', cls: "setting-item-description" });
 		supportHeader.style.display = 'block';
-		supportHeader.style.marginBottom = '20px';
+
+		supportContainer.style.display = 'grid';
+		supportContainer.style.gridTemplateColumns = "0.5fr 0.5fr";
+		supportContainer.style.gridTemplateRows = "40px 20px";
+		supportContainer.appendChild(supportLink);
+
+		// debug info button
+		let debugInfoButton = contentEl.createEl('button');
+		let bugIcon = getIcon('bug');
+		if (bugIcon) debugInfoButton.appendChild(bugIcon);
+		debugInfoButton.style.height = '100%';
+		debugInfoButton.style.aspectRatio = '1/1';
+		debugInfoButton.style.justifySelf = 'end';
+		let debugHeader = contentEl.createDiv({ text: 'Copy debug info to clipboard', cls: "setting-item-description" });
+		debugHeader.style.display = 'block';
+		debugHeader.style.justifySelf = 'end';
+		debugInfoButton.addEventListener('click', () => {
+			navigator.clipboard.writeText(RenderLog.getDebugInfo());
+			new Notice("Debug info copied to clipboard!");
+		});
+		supportContainer.appendChild(debugInfoButton);
+		supportContainer.appendChild(supportHeader);
+		supportContainer.appendChild(debugHeader);
+		
 
 		// #endregion
 

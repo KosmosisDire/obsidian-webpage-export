@@ -8,10 +8,39 @@ export namespace RenderLog
 {
     export let fullLog: string = "";
 
+    function logToString(message: any, title: string)
+    {
+        let messageString = (typeof message === "string") ? message : JSON.stringify(message).replaceAll("\n", "\n\t\t");
+        let titleString = title != "" ? title + "\t" : "";
+        let log = `${titleString}${messageString}\n`;
+        return log;
+    }
+
+    function humanReadableJSON(object: any)
+    {
+        let string = JSON.stringify(object, null, 2).replaceAll(/\"|\{|\}|,/g, "").split("\n").map((s) => s.trim()).join("\n\t");
+        // make the properties into a table
+        let lines = string.split("\n");
+        lines = lines.filter((line) => line.contains(":"));
+        let names = lines.map((line) => line.split(":")[0] + " ");
+        let values = lines.map((line) => line.split(":").slice(1).join(":"));
+        let maxLength = Math.max(...names.map((name) => name.length)) + 3;
+        let table = "";
+        for (let i = 0; i < names.length; i++)
+        {
+            let padString = i % 2 == 0 ? "-" : " ";
+            table += `${names[i].padEnd(maxLength, padString)}${values[i]}\n`;
+        }
+
+        return table;
+    }
+
     export function log(message: any, messageTitle: string = "")
     {
         pullPathLogs();
-        fullLog += messageTitle + ": \n" + JSON.stringify(message).replaceAll("\n", "\n\t\t") + "\n\n";
+
+        messageTitle = `[INFO] ${messageTitle}`
+        fullLog += logToString(message, messageTitle);
 
 		if(MainSettings.loaded && !(MainSettings.settings.logLevel == "all")) return;
 
@@ -23,7 +52,9 @@ export namespace RenderLog
     export function warning(message: any, messageTitle: string = "")
     {
         pullPathLogs();
-        fullLog += messageTitle + ": \n" + JSON.stringify(message).replaceAll("\n", "\n\t\t") + "\n\n";
+
+        messageTitle = `[WARNING] ${messageTitle}`
+        fullLog += logToString(message, messageTitle);
 
 		if(MainSettings.loaded && !["warning", "all"].contains(MainSettings.settings.logLevel)) return;
 
@@ -35,7 +66,9 @@ export namespace RenderLog
     export function error(message: any, messageTitle: string = "", fatal: boolean = false)
     {
         pullPathLogs();
-        fullLog += messageTitle + ": \n" + JSON.stringify(message).replaceAll("\n", "\n\t\t") + "\n\n";
+
+        messageTitle = (fatal ? "[FATAL ERROR] " : "[ERROR] ") + messageTitle;
+        fullLog += logToString(message, messageTitle);
 
         if (MainSettings.loaded && !fatal && !["error", "warning", "all"].contains(MainSettings.settings.logLevel)) return;
 		
@@ -76,18 +109,22 @@ export namespace RenderLog
         }
     }
 
-    function getDebugInfo()
+    export function getDebugInfo()
     {
         let debugInfo = "";
 
-        debugInfo += `${fullLog}\n\n\n`;
-        debugInfo += `Plugin Version: ${MainSettings.settings.settingsVersion}\n`;
-        debugInfo += `Updated From: ${MainSettings.settings.upgradedFrom}\n`;
-        debugInfo += `Settings:\n ${JSON.stringify(MainSettings.settings, null, 2).split("\n").join("\n\t\t")}\n\n`;
+        debugInfo += `Log:\n${fullLog}\n\n`;
+
+        let settingsCopy = Object.assign({}, MainSettings.settings);
+        //@ts-ignore
+        settingsCopy.filesToExport = settingsCopy.filesToExport[0].length;
+        settingsCopy.includePluginCSS = settingsCopy.includePluginCSS.split("\n").length + " plugins included";
+
+        debugInfo += `Settings:\n${humanReadableJSON(settingsCopy)}\n\n`;
 
         // @ts-ignore
-        let loadedPlugins = Object.values(app.plugins.plugins).filter((plugin) => plugin._loaded == true).map((plugin) => plugin.manifest.name).join("\n\t\t");
-        debugInfo += `Enabled Plugins:\n ${loadedPlugins}\n\n`;
+        let loadedPlugins = Object.values(app.plugins.plugins).filter((plugin) => plugin._loaded == true).map((plugin) => plugin.manifest.name).join("\n\t");
+        debugInfo += `Enabled Plugins:\n\t${loadedPlugins}`;
 
         return debugInfo;
     }
