@@ -61,7 +61,7 @@ body
     border-radius: var(--radius-l) 0 0 var(--radius-l);
 }
 
-.sidebar-gutter.is-collapsed, body.loading .sidebar-gutter {
+.sidebar-gutter.is-collapsed, body.loading:not(.file-protocol) .sidebar-gutter {
     height: 100%;
     width: 0 !important;
     padding: var(--sidebar-margin);
@@ -76,7 +76,7 @@ body
     min-width: var(--sidebar-width);
 }
 
-.sidebar.is-collapsed .sidebar-sizer, body.loading .sidebar-sizer {
+.sidebar.is-collapsed .sidebar-sizer, body.loading:not(.file-protocol) .sidebar-sizer {
     width: 0;
     min-width: 0;
 }
@@ -380,6 +380,16 @@ body:not(.loading) .document-container.show
     padding-top: calc(var(--tree-vertical-spacing) / 2);
     color: var(--nav-item-color);
     text-decoration: none;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.tree-container .tree-item-title
+{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap: nowrap;
 }
 
 .tree-container .mod-tree-file > .tree-item-contents > .tree-item-link
@@ -952,6 +962,18 @@ body.post-load .sidebar-gutter
 	transition-duration: 0.4s !important;
 }
 
+body.loading.file-protocol .sidebar-sizer
+{
+    transition-delay: 0s !important;
+    transition-duration: 0s !important;
+}
+
+body.loading.file-protocol .sidebar-gutter
+{
+    transition-delay: 0s !important;
+    transition-duration: 0s !important;
+}
+
 .loading-icon 
 {
 	--width: 80px;
@@ -1071,7 +1093,7 @@ body.post-load .sidebar-gutter
 }
 
 /* Not a media query, but related to resizing */
-body.resizing *:not(:is(.sidebar-sizer, .sidebar-gutter))
+body.resizing *:not(body:not(.file-protocol) :is(.sidebar-sizer, .sidebar-gutter))
 {
 	transition: none !important;
 }

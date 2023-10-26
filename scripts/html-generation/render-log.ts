@@ -83,6 +83,11 @@ export namespace RenderLog
     export function progress(complete: number, total:number, message: string, subMessage: string, progressColor: string = "var(--color-accent)")
     {
         pullPathLogs();
+		if (total == 0)
+		{
+			complete = 1;
+			total = 1;
+		}
         MarkdownRenderer._reportProgress(complete, total, message, subMessage, progressColor);
     }
 

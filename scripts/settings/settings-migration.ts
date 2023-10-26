@@ -3,7 +3,7 @@ import { MainSettings, MainSettingsData } from "./main-settings"
 import { RenderLog } from "scripts/html-generation/render-log";
 
 
-export async function migrateSettings(settings: MainSettingsData)
+export async function migrateSettings(settings: any)
 {
     if (settings.settingsVersion == HTMLExportPlugin.pluginVersion) return;
 
@@ -11,6 +11,13 @@ export async function migrateSettings(settings: MainSettingsData)
     {
         settings.incrementalExport = false;
         settings.deleteOldExportedFiles = false;
+        if (settings.inlineCSS && settings.inlineJS && settings.inlineImages)
+        {
+            settings.inlineAssets = true;
+            delete settings.inlineCSS;
+            delete settings.inlineJS;
+            delete settings.inlineImages;
+        }
     }
 
     RenderLog.log("Migrating webpage-html-export settings from " + settings.settingsVersion + " to " + HTMLExportPlugin.pluginVersion);

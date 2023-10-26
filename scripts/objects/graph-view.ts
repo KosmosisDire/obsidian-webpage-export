@@ -110,4 +110,16 @@ export class GraphView
 		`
 		return graphWrapper;
 	}
+
+	public getExportData(): string
+	{
+		return `
+let nodes=\n${JSON.stringify(this)};
+let attractionForce = ${MainSettings.settings.graphAttractionForce};
+let linkLength = ${MainSettings.settings.graphLinkLength};
+let repulsionForce = ${MainSettings.settings.graphRepulsionForce};
+let centralForce = ${MainSettings.settings.graphCentralForce};
+let edgePruning = ${MainSettings.settings.graphEdgePruning};
+`;
+	}
 }

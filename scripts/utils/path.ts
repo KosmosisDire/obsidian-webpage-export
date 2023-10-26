@@ -60,10 +60,18 @@ export class Path
 
 		if (this._isWindows)
 		{
-			this._root = this._root.replaceAll("/", "\\");
-			this._dir = this._dir.replaceAll("/", "\\");
-			this._parent = this._parent.replaceAll("/", "\\");
-			this._fullPath = this._fullPath.replaceAll("/", "\\");
+			if (this._root.startsWith("http:") || this._root.startsWith("https:"))
+			{
+				this.makeUnixStyle();
+			}
+			else
+			{
+				this._root = this._root.replaceAll("/", "\\");
+				this._dir = this._dir.replaceAll("/", "\\");
+				this._parent = this._parent.replaceAll("/", "\\");
+				this._fullPath = this._fullPath.replaceAll("/", "\\");
+				this._workingDirectory = this._workingDirectory.replaceAll("/", "\\");
+			}
 		}
 
 		this._exists; // force a re-evaluation of the exists property which will also throw an error if the path does not exist
@@ -72,6 +80,9 @@ export class Path
 
 	private static parsePath(path: string): { root: string, dir: string, parent: string, base: string, ext: string, name: string, fullPath: string }
 	{
+		let args = path.split("?")[1] ?? "";
+		path = path.split("?")[0];
+
 		try
 		{
 			path = decodeURI(path);
@@ -120,6 +131,16 @@ export class Path
 			fullPath = pathTools.join(parent, parsed.base);
 		}
 
+
+		if (args && args.trim() != "") fullPath += "?" + args; 
+
+		if(fullPath.startsWith("http:")) parsed.root = "http://";
+		else if(fullPath.startsWith("https:")) parsed.root = "https://"; 
+
+		// make sure that protocols and windows drives use two slashes
+		parsed.dir = parsed.dir.replace(/[:][\\](?![\\])/g, "://");
+		parent = parsed.dir;
+		fullPath = fullPath.replace(/[:][\\](?![\\])/g, "://");
 
 		return { root: parsed.root, dir: parsed.dir, parent: parent, base: parsed.base, ext: parsed.ext, name: parsed.name, fullPath: fullPath };
 	}
@@ -530,15 +551,18 @@ export class Path
 
 	get isAbsolute(): boolean
 	{
+		let asString = this.asString;
+		if (asString.startsWith("http:") || asString.startsWith("https:")) return true;
+
 		if(this._isWindows)
 		{
-			if (this.asString.match(/^[A-Za-z]:[\\|\/|\\\\|\/\/]/)) return true;
-			if (this.asString.startsWith("\\") && !this.asString.contains(":")) return true;
+			if (asString.match(/^[A-Za-z]:[\\|\/|\\\\|\/\/]/)) return true;
+			if (asString.startsWith("\\") && !asString.contains(":")) return true;
 			else return false;
 		}
 		else
 		{
-			if (this.asString.startsWith("/")) return true;
+			if (asString.startsWith("/")) return true;
 			else return false;
 		}
 	}
@@ -561,6 +585,49 @@ export class Path
 	absolute(workingDirectory: string | Path = this._workingDirectory): Path
 	{
 		return this.copy.makeAbsolute(workingDirectory);
+	}
+
+	validate(requireExists: boolean = false, requireAbsolute: boolean = false, requireRelative: boolean = false, requireIsFile: boolean = false, requireIsDirectory: boolean = false, requireExtention: string[] = []): {vaild: boolean, error: string}
+	{
+		let error = "";
+		let valid = true;
+
+		// remove dots from requireExtention
+		requireExtention = requireExtention.map(e => e.replace(".", ""));
+		let dottedExtention = requireExtention.map(e => "." + e);
+
+		if (requireExists && !this.exists)
+		{
+			error += "Path does not exist";
+			valid = false;
+		}
+		else if (requireAbsolute && !this.isAbsolute)
+		{
+			error += "Path must be absolute";
+			valid = false;
+		}
+		else if (requireRelative && !this.isRelative)
+		{
+			error += "Path must be relative";
+			valid = false;
+		}
+		else if (requireIsFile && !this.isFile)
+		{
+			error += "Path must be a file";
+			valid = false;
+		}
+		else if (requireIsDirectory && !this.isDirectory)
+		{
+			error += "Path must be a directory";
+			valid = false;
+		}
+		else if (requireExtention.length > 0 && !requireExtention.includes(this.extensionName))
+		{
+			error += "Path must be: " + dottedExtention.join(", ");
+			valid = false;
+		}
+
+		return { vaild: valid, error: error };
 	}
 
 	async createDirectory(): Promise<boolean>

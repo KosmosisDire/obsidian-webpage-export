@@ -4,6 +4,7 @@ import HTMLExportPlugin from '../main';
 import { MainSettings } from './main-settings';
 import { FilePickerTree } from '../objects/file-picker';
 import { Path } from 'scripts/utils/path';
+import { RenderLog } from 'scripts/html-generation/render-log';
 
 export interface ExportInfo
 {
@@ -76,11 +77,13 @@ export class ExportModal extends Modal
 
 			this.filePicker = new FilePickerTree(app.vault.getFiles(), true, true);
 			this.filePicker.generateWithItemsClosed = true;
+			this.filePicker.showFileExtentionTags = true;
+			this.filePicker.hideFileExtentionTags = ["md"];
 			await this.filePicker.generateTree(scrollArea);
 			
 			if((this.pickedFiles?.length ?? 0 > 0) || MainSettings.settings.filesToExport[0].length > 0) 
 			{
-				let filesToPick = this.pickedFiles?.map(file => new Path(file.path)) ?? MainSettings.settings.filesToExport[0].map(path => new Path(path));
+				let filesToPick = this.pickedFiles?.map(file => file.path) ?? MainSettings.settings.filesToExport[0];
 				this.filePicker.setSelectedFiles(filesToPick);
 			}
 
@@ -88,7 +91,7 @@ export class ExportModal extends Modal
 			{
 				button.setButtonText("Save").onClick(async () =>
 				{
-					MainSettings.settings.filesToExport[0] = this.filePicker.getSelectedFiles().map(file => file.path);
+					MainSettings.settings.filesToExport[0] = this.filePicker.getSelectedFilesSavePaths();
 					await MainSettings.saveSettings();
 				});
 			});
@@ -160,27 +163,21 @@ export class ExportModal extends Modal
 
 					switch (value) {
 						case 'documents':
-							MainSettings.settings.inlineCSS = true;
-							MainSettings.settings.inlineJS = true;
-							MainSettings.settings.inlineImages = true;
+							MainSettings.settings.inlineAssets = true;
 							MainSettings.settings.makeNamesWebStyle = false;
 							MainSettings.settings.includeGraphView = false;
 							await MainSettings.saveSettings();
 
 							break;
 						case 'raw-documents':
-								MainSettings.settings.inlineCSS = true;
-								MainSettings.settings.inlineJS = true;
-								MainSettings.settings.inlineImages = true;
+								MainSettings.settings.inlineAssets = true;
 								MainSettings.settings.makeNamesWebStyle = false;
 								MainSettings.settings.includeGraphView = false;
 								await MainSettings.saveSettings();
 	
 								break;
 						case 'local':
-							MainSettings.settings.inlineCSS = false;
-							MainSettings.settings.inlineJS = false;
-							MainSettings.settings.inlineImages = false;
+							MainSettings.settings.inlineAssets = false;
 							MainSettings.settings.makeNamesWebStyle = true;
 							MainSettings.settings.includeGraphView = true;
 							MainSettings.settings.includeFileTree = true;
@@ -188,9 +185,7 @@ export class ExportModal extends Modal
 
 							break;
 						case 'website':
-							MainSettings.settings.inlineCSS = false;
-							MainSettings.settings.inlineJS = false;
-							MainSettings.settings.inlineImages = false;
+							MainSettings.settings.inlineAssets = false;
 							MainSettings.settings.makeNamesWebStyle = true;
 							MainSettings.settings.includeGraphView = true;
 							MainSettings.settings.includeFileTree = true;

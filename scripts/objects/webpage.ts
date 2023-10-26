@@ -9,6 +9,7 @@ import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
 import { HTMLGeneration } from "scripts/html-generation/html-generator";
 import { RenderLog } from "scripts/html-generation/render-log";
+import { Asset, InlinePolicy } from "scripts/html-generation/assets/asset";
 const { minify } = require('html-minifier-terser');
 
 export class Webpage
@@ -208,7 +209,7 @@ export class Webpage
 			// inject file tree
 			if (MainSettings.settings.includeFileTree)
 			{
-				leftSidebar.createDiv().outerHTML = this.website.fileTreeHtml;
+				leftSidebar.createDiv().outerHTML = this.website.fileTreeAsset.getHTMLInclude();
 			}
 		}
 		else
@@ -267,17 +268,17 @@ export class Webpage
 		
 		// inline / outline images
 		let outlinedImages : Downloadable[] = [];
-		if (MainSettings.settings.inlineImages) await this.inlineMedia();
+		if (MainSettings.settings.inlineAssets) await this.inlineMedia();
 		else outlinedImages = await this.exportMedia();
 		
 
 		// add math styles to the document. They are here and not in <head> because they are unique to each document
 		let mathStyleEl = document.createElement("style");
 		mathStyleEl.id = "MJX-CHTML-styles";
-		mathStyleEl.innerHTML = AssetHandler.mathStyles;
+		mathStyleEl.innerHTML = AssetHandler.mathjaxStyles.content;
 		this.contentElement.prepend(mathStyleEl);
 
-		let dependencies_temp = await AssetHandler.getDownloads();
+		let dependencies_temp: Downloadable[] = AssetHandler.getAssetDownloads();
 		dependencies_temp.push(...outlinedImages);
 
 		this.downloads.push(...dependencies_temp);
@@ -287,7 +288,7 @@ export class Webpage
 			this.downloads.forEach((file) =>
 			{
 				file.filename = Path.toWebStyle(file.filename);
-				file.relativeDownloadPath = file.relativeDownloadPath?.makeWebStyle();
+				file.relativeDownloadDirectory = file.relativeDownloadDirectory?.makeWebStyle();
 			});
 		}
 
@@ -406,112 +407,27 @@ export class Webpage
 	{
 		if (!this.document) return;
 
-		let relativePaths = this.getRelativePaths();
+		let rootPath = MainSettings.settings.makeNamesWebStyle ? this.pathToRoot.copy.makeWebStyle().asString : this.pathToRoot.asString;
 
-		let meta =
+		let head =
 		`
 		<title>${this.source.basename}</title>
-		<base href="${relativePaths.rootPath}/">
-		<meta id="root-path" root-path="${relativePaths.rootPath}/">
-
-		<link rel="icon" sizes="96x96" href="https://publish-01.obsidian.md/access/f786db9fac45774fa4f0d8112e232d67/favicon-96x96.png">
+		<base href="${rootPath}/">
+		<meta id="root-path" root-path="${rootPath}/">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
 		<meta charset="UTF-8">
 		`;
 
-		// --- JS ---
-		let scripts = "";
-
-		if (MainSettings.settings.includeGraphView) 
+		let downloads = AssetHandler.getAssetDownloads(true);
+		for (let i = 0; i < downloads.length; i++)
 		{
-			scripts += `\n<script type='module' src='${relativePaths.jsPath}/graph_view.js'></script>\n`;
-			scripts += `\n<script src='${relativePaths.jsPath}/graph_wasm.js'></script>\n`;
-			scripts += `\n<script src="${relativePaths.jsPath}/tinycolor.js"></script>\n`;
-			scripts += `\n<script src="https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.2.4/pixi.min.js" integrity="sha512-Ch/O6kL8BqUwAfCF7Ie5SX1Hin+BJgYH4pNjRqXdTEqMsis1TUYg+j6nnI9uduPjGaj7DN4UKCZgpvoExt6dkw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>\n`;
+			let download = downloads[i];
+			head += download.getHTMLInclude(true);
 		}
 
-		if (MainSettings.settings.inlineJS)
-		{
-			scripts += `\n<script>\n${AssetHandler.webpageJS}\n</script>\n`;
-			scripts += `\n<script>\n${AssetHandler.generatedJS}\n</script>\n`;
-		}
-		else 
-		{
-			scripts += `\n<script src='${relativePaths.jsPath}/webpage.js'></script>\n`;
-			scripts += `\n<script src='${relativePaths.jsPath}/generated.js'></script>\n`;
-		}
+		head += `\n${AssetHandler.customHeadContent.getHTMLInclude()}\n`
 
-
-		// --- CSS ---
-		let cssSettings = document.getElementById("css-settings-manager")?.innerHTML ?? "";
-		
-		if (MainSettings.settings.inlineCSS)
-		{
-			let pluginCSS = AssetHandler.webpageStyles;
-			let thirdPartyPluginStyles = AssetHandler.pluginStyles;
-			pluginCSS += thirdPartyPluginStyles;
-			
-			var header =
-			`
-			${meta}
-			
-			<!-- Obsidian App Styles / Other Built-in Styles -->
-			<style> ${AssetHandler.appStyles} </style>
-			<style> ${cssSettings} </style>
-
-			<!-- Theme Styles -->
-			<style> ${AssetHandler.themeStyles} </style>
-
-			<!-- Plugin Styles -->
-			<style> ${pluginCSS} </style>
-
-			<!-- Snippets -->
-			<style> ${AssetHandler.snippetStyles} </style>
-
-			<!-- Generated Styles -->
-			<style> ${AssetHandler.generatedStyles} </style>
-		
-			${scripts}
-			`;
-		}
-		else
-		{
-			header =
-			`
-			${meta}
-
-			<link rel="stylesheet" href="${relativePaths.cssPath}/obsidian-styles.css">
-			<link rel="stylesheet" href="${relativePaths.cssPath}/theme.css">
-			<link rel="stylesheet" href="${relativePaths.cssPath}/plugin-styles.css">
-			<link rel="stylesheet" href="${relativePaths.cssPath}/snippets.css">
-			<link rel="stylesheet" href="${relativePaths.cssPath}/generated-styles.css">
-			<style> ${cssSettings} </style>
-
-			${scripts}
-			`;
-		}
-
-		header += "\n<!-- Custom Head Content -->\n" + AssetHandler.customHeadContent + "\n";
-
-		this.document.head.innerHTML = header;
-	}
-
-	private getRelativePaths(): {mediaPath: Path, jsPath: Path, cssPath: Path, rootPath: Path}
-	{
-		let rootPath = this.pathToRoot;
-		let imagePath = AssetHandler.mediaFolderName.makeUnixStyle();
-		let jsPath = AssetHandler.jsFolderName.makeUnixStyle();
-		let cssPath = AssetHandler.cssFolderName.makeUnixStyle();
-
-		if (MainSettings.settings.makeNamesWebStyle)
-		{
-			imagePath = imagePath.makeWebStyle();
-			jsPath = jsPath.makeWebStyle();
-			cssPath = cssPath.makeWebStyle();
-			rootPath = rootPath.makeWebStyle();
-		}
-
-		return {mediaPath: imagePath, jsPath: jsPath, cssPath: cssPath, rootPath: rootPath};
+		this.document.head.innerHTML = head;
 	}
 
 	private convertLinks()
@@ -603,7 +519,7 @@ export class Webpage
 			if (mediaPathInExport.asString.startsWith(".."))
 			{
 				// if path is outside of the vault, outline it into the media folder
-				exportLocation = AssetHandler.mediaFolderName.joinString(filePath.fullName);
+				exportLocation = Asset.mediaPath.joinString(filePath.fullName);
 			}
 
 			// let relativeImagePath = Path.getRelativePath(this.exportPath, exportLocation)

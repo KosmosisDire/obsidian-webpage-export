@@ -21,9 +21,9 @@ export default class HTMLExportPlugin extends Plugin
 		HTMLExportPlugin.plugin = this;
 		this.checkForUpdates();
 		HTMLExportPlugin.pluginVersion = this.manifest.version;
-		AssetHandler.initialize("webpage-html-export");
 		this.addSettingTab(new MainSettings(this));
-		MainSettings.loadSettings();
+		await MainSettings.loadSettings();
+		await AssetHandler.initialize();
 
 		this.addRibbonIcon("folder-up", "Export Vault to HTML", () =>
 		{

@@ -215,8 +215,16 @@ input[type=checkbox].file-checkbox
     color: var(--text-normal);
     text-decoration: none;
 	display: flex;
-	flex-direction: column;
-	justify-content: center;
+	flex-direction: row;
+	justify-content: flex-start;
+    align-items: center;
+}
+
+.tree-container .tree-item-title
+{
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap: nowrap;
 }
 
 /* .tree-container .tree-item-icon.collapse-icon {

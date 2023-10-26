@@ -9,20 +9,7 @@ import { GraphView } from "./graph-view";
 import { Path } from "scripts/utils/path";
 import { RenderLog } from "scripts/html-generation/render-log";
 import { Utils } from "scripts/utils/utils";
-
-// const ignoreBodyClases: string[] = [
-// 	"mod-windows", "is-frameless", "is-maximized", "is-hidden-frameless",
-// 	"obsidian-app","show-view-header", "Heading", "minimal-theme", 
-// 	"minimal-default-dark","minimal-default-light", "links-int-on", "links-ext-on", 
-// 	"minimal-folding","minimal-readable", "minimal-light", 
-// 	"minimal-dark", "chart-default-width", "table-default-width",
-// 	"img-default-width", "iframe-default-width", "map-default-width", 
-// 	"sizing-readable", "is-focused","sidebar-float-bottom", "check-color", 
-// 	"check-bg", "colorful-active", "folder-notes-plugin",
-// 	"hide-folder-note", "folder-note-underline", "folder-note-underline-path",
-// 	"fn-whitespace-stop-collapsing", "callouts-default", "trim-cols", 
-// 	"sidebar-tabs-default", "maximize-tables","tabs-default", 
-// 	"tab-stack-top", "minimal-tab-title-hover"];
+import { Asset, AssetType, InlinePolicy, Mutability } from "scripts/html-generation/assets/asset";
 
 export class Website
 {
@@ -33,16 +20,12 @@ export class Website
 	public progress: number = 0;
 	public destination: Path;
 
-	public static globalGraph: GraphView;
-	public fileTree: FileTree;
-	public fileTreeHtml: string = "";
+	private globalGraph: GraphView;
+	private fileTree: FileTree;
+	private fileTreeHtml: string = "";
 
-	private globalFileTreeChanged = true;
-	private globalFileTreeUnchangedTime = 0;
-	private globalBodyClassesChanged = true;
-	private globalBodyClassesUnchangedTime = 0;
-	private globalGraphChanged = true;
-	private globalGraphUnchangedTime = 0;
+	public graphDataAsset: Asset;
+	public fileTreeAsset: Asset;
 
 	private created = false;
 
@@ -51,127 +34,12 @@ export class Website
 		let bodyClasses = document.body.classList;
 		let validClasses = "";
 
-		// bodyClasses.forEach((className) =>
-		// {
-		// 	if (!ignoreBodyClases.includes(className)) validClasses += className + " ";
-		// });
-
 		validClasses += bodyClasses.contains("theme-light") ? " theme-light " : " theme-dark ";
 		if (MainSettings.settings.sidebarsAlwaysCollapsible) validClasses += " sidebars-always-collapsible ";
+		if (MainSettings.settings.inlineAssets) validClasses += " inlined-assets ";
 		validClasses += " loading ";
+
 		return validClasses.replace(/\s\s+/g, ' ');
-	}
-
-	private async updateGlobalsInExistingFile(webpage: Webpage)
-	{
-		// if the file was from a previous export then recheck if the global data has changed
-		let modTime = webpage.exportPathAbsolute.stat?.mtimeMs ?? 0;
-		let timeThreshold = 1000 * 60 * 5; // 5 minutes
-		if (modTime && (modTime < this.globalFileTreeUnchangedTime - timeThreshold || modTime > this.globalFileTreeUnchangedTime + timeThreshold))
-		{
-			this.globalFileTreeChanged = true;
-			this.globalGraphUnchangedTime = modTime;
-		}
-		if (modTime && (modTime < this.globalBodyClassesUnchangedTime - timeThreshold || modTime > this.globalBodyClassesUnchangedTime + timeThreshold))
-		{
-			this.globalBodyClassesChanged = true;
-			this.globalBodyClassesUnchangedTime = modTime;
-
-		}
-		if (modTime && (modTime < this.globalGraphUnchangedTime - timeThreshold || modTime > this.globalGraphUnchangedTime + timeThreshold))
-		{
-			this.globalGraphChanged = true;
-			this.globalGraphUnchangedTime = modTime;
-		}
-
-		if ((!this.globalBodyClassesChanged && !this.globalFileTreeChanged && !this.globalGraphChanged) || !webpage.document)
-		{
-			RenderLog.progress(this.progress, this.batchFiles.length, "Skipping Unmodified File", "File: " + webpage.source.path, "var(--color-yellow)");
-			await Utils.delay(1);
-			return;
-		}
-
-		let pageString = await webpage.exportPathAbsolute.readFileString();
-		if (!pageString) return;
-
-		webpage.document.close();
-		webpage.document.open();
-		webpage.document.write(pageString);
-
-		if (webpage.document.head.children.length == 0)
-		{
-			RenderLog.warning("Could not update global data in file: " + webpage.source.path + "\nFile is missing a head element");
-			return;
-		}
-
-		RenderLog.progress(this.progress, this.batchFiles.length, "Update Global Data", "Updating Global Data: " + webpage.source.path, "var(--color-blue)");
-
-		if(this.globalBodyClassesChanged)
-		{
-			let newBodyClass = Website.getValidBodyClasses();
-			if (newBodyClass == webpage.document.body.getAttribute("class")) 
-			{
-				this.globalBodyClassesChanged = false;
-				this.globalBodyClassesUnchangedTime = modTime;
-			}
-			else 
-			{
-				webpage.document.body.setAttribute("class", newBodyClass);
-			}
-		}
-
-		if (this.globalFileTreeChanged)
-		{
-			let fileTree = webpage.document.querySelector(".tree-container.file-tree");
-			if (this.fileTreeHtml == fileTree?.outerHTML ?? "") 
-			{
-				this.globalFileTreeChanged = false;
-				this.globalFileTreeUnchangedTime = modTime;
-			}
-
-			if (MainSettings.settings.includeFileTree && !fileTree) 
-			{
-				let treeContainer = webpage.document?.querySelector(".sidebar-left .sidebar-content")?.createDiv();
-				if(treeContainer) treeContainer.outerHTML = this.fileTreeHtml;
-			}
-			else if (!MainSettings.settings.includeFileTree && fileTree)
-			{
-				fileTree.remove();
-			}
-		}
-
-		if (this.globalGraphChanged)
-		{
-			let graph = webpage.document.querySelector(".graph-view-wrapper");
-			if (graph && MainSettings.settings.includeGraphView || !graph && !MainSettings.settings.includeGraphView)
-			{
-				this.globalGraphChanged = false;
-				this.globalGraphUnchangedTime = modTime;
-			}
-
-			if (MainSettings.settings.includeGraphView && !graph)
-			{
-				let rightSidebar = webpage.document.querySelector(".sidebar-right .sidebar-content") as HTMLElement;
-				if (rightSidebar)
-				{
-					let graphEl = GraphView.generateGraphEl(rightSidebar);
-					rightSidebar.prepend(graphEl);
-				}
-			}
-			else if (!MainSettings.settings.includeGraphView && graph) 
-			{
-				graph.remove();
-			}
-		}
-
-		if(MarkdownRenderer.checkCancelled()) return undefined;
-
-		// write the new html to the file
-		await webpage.exportPathAbsolute.writeFile(await webpage.getHTML());
-
-		webpage.document.close();
-
-		delete webpage.document;
 	}
 
 	private async checkIncrementalExport(webpage: Webpage): Promise<boolean>
@@ -182,11 +50,6 @@ export class Website
 		{
 			return true;
 		}
-		else if (webpage.isConvertable) // Skip the file if it's unchanged since last export
-		{
-			// if file was not modified then copy over any global changes to the html file
-			await this.updateGlobalsInExistingFile(webpage);
-		}
 
 		return false;
 	}
@@ -196,10 +59,12 @@ export class Website
 		this.batchFiles = files;
 		this.destination = destination;
 
+		await MarkdownRenderer.beginBatch();
+
 		if (MainSettings.settings.includeGraphView)
 		{
 			let convertableFiles = this.batchFiles.filter((file) => MarkdownRenderer.isConvertable(file.extension));
-			Website.globalGraph = new GraphView(convertableFiles, MainSettings.settings.graphMinNodeSize, MainSettings.settings.graphMaxNodeSize);
+			this.globalGraph = new GraphView(convertableFiles, MainSettings.settings.graphMinNodeSize, MainSettings.settings.graphMaxNodeSize);
 		}
 		
 		if (MainSettings.settings.includeFileTree)
@@ -208,6 +73,8 @@ export class Website
 			this.fileTree.makeLinksWebStyle = MainSettings.settings.makeNamesWebStyle;
 			this.fileTree.showNestingIndicator = true;
 			this.fileTree.generateWithItemsClosed = true;
+			this.fileTree.showFileExtentionTags = true;
+			this.fileTree.hideFileExtentionTags = ["md"]
 			this.fileTree.title = app.vault.getName();
 			this.fileTree.class = "file-tree";
 
@@ -217,8 +84,19 @@ export class Website
 			tempTreeContainer.remove();
 		}
 
-		await AssetHandler.updateAssetCache();
-		await MarkdownRenderer.beginBatch();
+		await AssetHandler.reloadAssets();
+
+		if (MainSettings.settings.includeGraphView)
+		{
+			this.graphDataAsset = new Asset("graph-data.js", this.globalGraph.getExportData(), AssetType.Script, InlinePolicy.Auto, true, Mutability.Temporary, 0);
+			this.graphDataAsset.load();
+		}
+
+		if (MainSettings.settings.includeFileTree)
+		{
+			this.fileTreeAsset = new Asset("file-tree.html", this.fileTreeHtml, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary, 0);
+			this.fileTreeAsset.load();
+		}
 
 		RenderLog.progress(0, files.length, "Generating HTML", "...", "var(--color-accent)");
 
@@ -233,7 +111,7 @@ export class Website
 			try
 			{
 				let filename = new Path(file.path).basename;
-				let webpage = new Webpage(file, this, destination, this.batchFiles.length > 1, filename, MainSettings.isAllInline());
+				let webpage = new Webpage(file, this, destination, this.batchFiles.length > 1, filename, MainSettings.settings.inlineAssets && this.batchFiles.length == 1);
 
 				if (await this.checkIncrementalExport(webpage)) // Skip creating the webpage if it's unchanged since last export
 				{
@@ -262,8 +140,8 @@ export class Website
 		}
 
 		// remove duplicates from the dependencies and downloads
-		this.dependencies = this.dependencies.filter((file, index) => this.dependencies.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath && f.filename === file.filename) == index);
-		this.downloads = this.downloads.filter((file, index) => this.downloads.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath && f.filename === file.filename) == index);
+		this.dependencies = this.dependencies.filter((file, index) => this.dependencies.findIndex((f) => f.relativeDownloadDirectory == file.relativeDownloadDirectory && f.filename === file.filename) == index);
+		this.downloads = this.downloads.filter((file, index) => this.downloads.findIndex((f) => f.relativeDownloadDirectory == file.relativeDownloadDirectory && f.filename === file.filename) == index);
 
 		this.created = true;
 
@@ -289,7 +167,7 @@ export class Website
 		{
 			let fileData: string | Buffer = file.content;
 			if (fileData instanceof Buffer) fileData = fileData.toString("base64");
-			let path = encodeURI(file.relativeDownloadPath.joinString(file.filename).makeUnixStyle().asString);
+			let path = encodeURI(file.relativeDownloadDirectory.joinString(file.filename).makeUnixStyle().asString);
 
 			if(fileData == "")
 			{

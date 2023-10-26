@@ -97,7 +97,7 @@ export namespace MarkdownRenderer
 		if (!html) return failRender(file, "Failed to render file!");
 
 		await postProcessHTML(html);
-		await AssetHandler.loadMathjaxStyles();
+		await AssetHandler.mathjaxStyles.load();
 
 		if (loneFile) MarkdownRenderer.endBatch();
 
@@ -185,7 +185,7 @@ export namespace MarkdownRenderer
 		}
 
 		container.appendChild(viewEl);
-		await AssetHandler.loadMathjaxStyles();
+		await AssetHandler.mathjaxStyles.load();
 
 		return viewEl;
 	}
@@ -276,7 +276,7 @@ export namespace MarkdownRenderer
 		let content = view.contentEl;
 		container.appendChild(content);
 
-		await AssetHandler.loadMathjaxStyles();
+		await AssetHandler.mathjaxStyles.load();
 
 		return content;
 	}
@@ -303,7 +303,7 @@ export namespace MarkdownRenderer
 
 		sizerEl.appendChild(svg);
 
-		await AssetHandler.loadMathjaxStyles();
+		await AssetHandler.mathjaxStyles.load();
 
 		if (checkCancelled()) return undefined;
 
@@ -459,6 +459,11 @@ export namespace MarkdownRenderer
 			renderEl.remove();
 		}
 	}
+
+
+
+
+
 
     export async function beginBatch()
 	{

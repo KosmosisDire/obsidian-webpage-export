@@ -6,10 +6,10 @@ import { RenderLog } from "./html-generation/render-log";
 import { Downloadable } from "./utils/downloadable";
 import HTMLExportPlugin from "./main";
 import { Utils } from "./utils/utils";
-import { AssetHandler } from "./html-generation/asset-handler";
 import { MarkdownRenderer } from "./html-generation/markdown-renderer";
 import { promises as fs } from 'fs';
 import { Website } from "./objects/website";
+import { Asset } from "./html-generation/assets/asset";
 
 
 export class HTMLExporter
@@ -25,8 +25,8 @@ export class HTMLExporter
 		let website = await HTMLExporter.exportFiles(files, exportPath, true, MainSettings.settings.deleteOldExportedFiles);
 		if (website)
 		{
+			if (MainSettings.settings.openAfterExport) Utils.openPath(exportPath);
 			new Notice("✅ Finished HTML Export:\n\n" + exportPath, 5000);
-			if (MainSettings.settings.openAfterExport) await Utils.openPath(exportPath);
 		}
 	}
 
@@ -86,13 +86,11 @@ export class HTMLExporter
 			if(MainSettings.settings.makeNamesWebStyle) 
 			{
 				file.filename = Path.toWebStyle(file.filename);
-				file.relativeDownloadPath.makeWebStyle();
+				file.relativeDownloadDirectory.makeWebStyle();
 			}
 		});
 
-		downloads.push(...await AssetHandler.getDownloads());
-
-		downloads = downloads.filter((file, index) => downloads.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath && f.filename === file.filename) == index);
+		downloads = downloads.filter((file, index) => downloads.findIndex((f) => f.relativeDownloadDirectory == file.relativeDownloadDirectory && f.filename === file.filename) == index);
 
 		await Utils.downloadFiles(downloads, rootPath);
 	}
@@ -155,8 +153,10 @@ export class HTMLExporter
 
 	public static async deleteNonExports(webpages: Webpage[], rootPath: Path)
 	{
+		return;
+
 		// delete all files in root path that are not in exports
-		let files = (await this.getAllFilesInFolderRecursive(rootPath)).filter((file) => !file.makeUnixStyle().asString.contains(AssetHandler.mediaFolderName.makeUnixStyle().asString));
+		let files = (await this.getAllFilesInFolderRecursive(rootPath)).filter((file) => !file.makeUnixStyle().asString.contains(Asset.mediaPath.makeUnixStyle().asString));
 
 		RenderLog.log(files, "Deletion candidates");
 
@@ -170,7 +170,7 @@ export class HTMLExporter
 			{
 				for (let webpage of webpages)
 				{
-					if (webpage.downloads.find((download) => download.relativeDownloadPath.makeUnixStyle().asString == file.makeUnixStyle().asString))
+					if (webpage.downloads.find((download) => download.relativeDownloadDirectory.makeUnixStyle().asString == file.makeUnixStyle().asString))
 					{
 						toDelete.push(file);
 						break;

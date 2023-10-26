@@ -144,21 +144,9 @@ export class TreeItem
 			- div.tree-item-children
 		*/
 
+		if(startClosed) this.isCollapsed = true;
 		this.itemEl = this.createItemWrapper(container);
-		let itemContentsEl = this.createItemContents(this.itemEl);
-		let itemLinkEl = this.createItemLink(itemContentsEl);
-
-		if (this.isCollapsible())
-		{
-			this.createItemIcon(itemLinkEl);
-			if (startClosed) 
-			{
-				this.itemEl.classList.add("is-collapsed");
-				this.isCollapsed = true;
-			}
-		}
-
-		await this.createItemTitle(itemLinkEl);
+		await this.createItemContents(this.itemEl);
 		this.createItemChildren(this.itemEl);
 
 		return this.itemEl;
@@ -228,17 +216,31 @@ export class TreeItem
 		return itemEl;
 	}
 
-	protected createItemContents(container: HTMLElement): HTMLDivElement
+	protected async createItemContents(container: HTMLElement): Promise<{ contentsEl: HTMLDivElement; linkEl: HTMLAnchorElement;}>
 	{
 		let itemContentsEl = container.createDiv("tree-item-contents");
-		return itemContentsEl;
+		let linkEl = await this.createItemLink(itemContentsEl);
+
+		return {contentsEl: itemContentsEl, linkEl: linkEl};
 	}
 
-	protected createItemLink(container: HTMLElement): HTMLAnchorElement
+	protected async createItemLink(container: HTMLElement): Promise<HTMLAnchorElement>
 	{
 		if (this.tree.makeLinksWebStyle && this.href) this.href = Path.toWebStyle(this.href);
 		let itemLinkEl = container.createEl("a", { cls: "internal-link tree-item-link" });
 		if (this.href) itemLinkEl.setAttribute("href", this.href);
+
+		if (this.isCollapsible())
+		{
+			this.createItemIcon(itemLinkEl);
+			if (this.isCollapsed) 
+			{
+				this.itemEl?.classList.add("is-collapsed");
+			}
+		}
+
+		await this.createItemTitle(itemLinkEl);
+
 		return itemLinkEl;
 	}
 

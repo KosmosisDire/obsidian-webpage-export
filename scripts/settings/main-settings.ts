@@ -15,13 +15,12 @@ export interface MainSettingsData
 	settingsVersion: string;
 	upgradedFrom: string;
 
-	// Inlining Options
-	inlineCSS: boolean;
-	inlineJS: boolean;
-	inlineImages: boolean;
+	// Asset Options
+	inlineAssets: boolean;
 	includePluginCSS: string;
 	includeSvelteCSS: boolean;
 	customHeadContentPath: string;
+	faviconPath: string;
 
 	// Formatting Options
 	makeNamesWebStyle: boolean;
@@ -68,13 +67,12 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	settingsVersion: "0.0.0",
 	upgradedFrom: "0.0.0",
 
-	// Inlining Options
-	inlineCSS: false,
-	inlineJS: false,
-	inlineImages: false,
+	// Asset Options
+	inlineAssets: false,
 	includePluginCSS: '',
 	includeSvelteCSS: true,
 	customHeadContentPath: '',
+	faviconPath: '',
 
 	// Formatting Options
 	makeNamesWebStyle: true,
@@ -142,11 +140,14 @@ export class MainSettings extends PluginSettingTab
 		MainSettings.plugin = plugin;
 	}
 
-	static async loadSettings() {
-		MainSettings.settings = Object.assign({}, DEFAULT_SETTINGS, await MainSettings.plugin.loadData());
+	static async loadSettings() 
+	{
+		let loadedSettings = await MainSettings.plugin.loadData();
+		await migrateSettings(loadedSettings);
+
+		MainSettings.settings = Object.assign({}, DEFAULT_SETTINGS, loadedSettings);
 		MainSettings.settings.customLineWidth = MainSettings.settings.customLineWidth.toString();
 		if (MainSettings.settings.customLineWidth === "0") MainSettings.settings.customLineWidth = "";
-		await migrateSettings(MainSettings.settings);
 		MainSettings.loaded = true;
 	}
 
@@ -187,11 +188,6 @@ export class MainSettings extends PluginSettingTab
 		}
 
 		return undefined;
-	}
-
-	static isAllInline(): boolean
-	{
-		return MainSettings.settings.inlineCSS && MainSettings.settings.inlineJS && MainSettings.settings.inlineImages;
 	}
 
 	static getFilesToExport(): TFile[]
@@ -308,16 +304,14 @@ export class MainSettings extends PluginSettingTab
 					));
 		}
 
-		let errorMessage = contentEl.createDiv({ cls: 'setting-item-description' });
-		errorMessage.style.color = "var(--color-red)";
-		errorMessage.style.marginBottom = "0.75rem";
+		let headContentErrorMessage = contentEl.createDiv({ cls: 'setting-item-description' });
+		headContentErrorMessage.style.color = "var(--color-red)";
+		headContentErrorMessage.style.marginBottom = "0.75rem";
 
 		if (!(MainSettings.settings.customHeadContentPath.trim() == ""))
 		{
 			let tempPath = new Path(MainSettings.settings.customHeadContentPath);
-			if(tempPath.isDirectory) errorMessage.setText("Path must be a file!");
-			else if(!tempPath.isAbsolute) errorMessage.setText("Path must be absolute!");
-			else if(!tempPath.exists) errorMessage.setText("Path does not exist!");
+			headContentErrorMessage.setText(tempPath.validate(true, true, false, true, false, ["html"]).error);
 		}
 
 		let pathInput : TextComponent | undefined = undefined;
@@ -333,13 +327,11 @@ export class MainSettings extends PluginSettingTab
 					.onChange(async (value) => 
 					{
 						let path = new Path(value);
-						if(value == "") errorMessage.setText("");
-						else if(path.isDirectory) errorMessage.setText("Path must be a file!");
-						else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
-						else if(!path.exists) errorMessage.setText("Path does not exist!");
-						else
+						let validation = path.validate(true, true, false, true, false, ["html"]);
+						headContentErrorMessage.setText(validation.error);
+						if (validation.vaild) 
 						{
-							errorMessage.setText("");
+							headContentErrorMessage.setText("");
 							MainSettings.settings.customHeadContentPath = value.replaceAll("\"", "");
 							text.setValue(MainSettings.settings.customHeadContentPath);
 							await MainSettings.saveSettings();
@@ -355,19 +347,76 @@ export class MainSettings extends PluginSettingTab
 					if (path) 
 					{
 						MainSettings.settings.customHeadContentPath = path.asString;
-						await MainSettings.saveSettings();
-
-						if(path.isDirectory) errorMessage.setText("Path must be a file!");
-						else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
-						else if(!path.exists) errorMessage.setText("Path does not exist!");
-						else errorMessage.setText("");
+						let validation = path.validate(true, true, false, true, false, ["html"]);
+						headContentErrorMessage.setText(validation.error);
+						if (validation.vaild)
+						{
+							await MainSettings.saveSettings();
+						}
 
 						pathInput?.setValue(MainSettings.settings.customHeadContentPath);
 					}
 				});
 			});
 
-		contentEl.appendChild(errorMessage);
+		contentEl.appendChild(headContentErrorMessage);
+		
+
+		let faviconErrorMessage = contentEl.createDiv({ cls: 'setting-item-description' });
+		faviconErrorMessage.style.color = "var(--color-red)";
+		faviconErrorMessage.style.marginBottom = "0.75rem";
+
+		if (!(MainSettings.settings.customHeadContentPath.trim() == ""))
+		{
+			let tempPath = new Path(MainSettings.settings.customHeadContentPath);
+			faviconErrorMessage.setText(tempPath.validate(true, true, false, true, false, ["html"]).error);
+		}
+
+		new Setting(contentEl)
+			.setName('Favicon path')
+			.addText((text) => 
+			{
+				pathInput = text;
+				text.inputEl.style.width = '100%';
+				text.setPlaceholder('Enter an absolute path to any text file')
+					.setValue(MainSettings.settings.faviconPath)
+					.onChange(async (value) => 
+					{
+						let path = new Path(value);
+						let validation = path.validate(true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]);
+						faviconErrorMessage.setText(validation.error);
+						if (validation.vaild) 
+						{
+							faviconErrorMessage.setText("");
+							MainSettings.settings.faviconPath = value.replaceAll("\"", "");
+							text.setValue(MainSettings.settings.faviconPath);
+							await MainSettings.saveSettings();
+						}
+					});
+			})
+			.addButton((button) =>
+			{
+				button.setButtonText('Browse').onClick(async () => 
+				{
+					let ideal = Utils.idealDefaultPath();
+					let path = (await Utils.showSelectFileDialog(ideal));
+					if (path) 
+					{
+						MainSettings.settings.faviconPath = path.asString;
+						let validation = path.validate(true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]);
+						faviconErrorMessage.setText(validation.error);
+						if (validation.vaild) 
+						{
+							await MainSettings.saveSettings();
+						}
+						
+						pathInput?.setValue(MainSettings.settings.faviconPath);
+					}
+				});
+			});
+
+		contentEl.appendChild(faviconErrorMessage);
+
 
 		if (MainSettings.settings.exportPreset != "raw-documents")
 		{

@@ -63,6 +63,17 @@ function initGlobalObjects()
 
 async function initializePage()
 {
+	// replace include tags with the contents of the file
+	let includeTags = document.querySelectorAll("include");
+	for (let i = 0; i < includeTags.length; i++)
+	{
+		let includeTag = includeTags[i];
+		let includePath = includeTag.getAttribute("src");
+		let includeResponse = await fetch(includePath);
+		let includeText = await includeResponse.text();
+		includeTag.outerHTML = includeText;
+	}
+
 	focusedCanvasNode = null;
 	canvasWrapper = document.querySelector(".canvas-wrapper") ?? canvasWrapper;
 	canvas = document.querySelector(".canvas") ?? canvas;
@@ -76,6 +87,7 @@ async function initializePage()
 
 	if(!fullyInitialized)
 	{	
+		if (window.location.protocol == "file:") initializeForFileProtocol();
 		initGlobalObjects();
 		initializeDocumentTypes();
 		setupSidebars();
@@ -93,6 +105,8 @@ async function initializePage()
 			document.body.classList.toggle("loaded", true);
 			document.body.classList.toggle("post-load", false); 
 		}, 2000);
+
+		// insert 
 
 		fullyInitialized = true;
 	}
@@ -142,6 +156,7 @@ function initializeDocumentTypes()
 
 function initializeForFileProtocol()
 {
+	document.body.classList.toggle("file-protocol", true);
 	let graphEl = document.querySelector(".graph-view-placeholder");
 	if(graphEl)
 	{
@@ -159,14 +174,22 @@ function onOffline(event)
 	isOffline = true;
 }
 
+function onOnline(event)
+{
+	event.preventDefault();
+	event.stopPropagation();
+	console.log("Online");
+	isOffline = false;
+}
+
 window.onload = async function()
 {
-	if (window.location.protocol == "file:") initializeForFileProtocol();
 	await initializePage();
 	initializePageEvents(document);
 }
 
 window.addEventListener('offline', onOffline);
+window.addEventListener('online', onOnline);
 
 window.onpopstate = function(event)
 {
@@ -1089,18 +1112,6 @@ function setupTrees(setupOnNode)
 					toggleTreeCollapsed(parent);
 				}
 			});
-		}
-		else
-		{
-			let ext = link.getAttribute("href").split(".").pop();
-
-			if (!ext.includes(" ") && ext != "html")
-			{
-				let tag = document.createElement("div");
-				tag.classList.add("nav-file-tag");
-				tag.textContent = ext.toUpperCase();
-				treeItem.querySelector(".tree-item-contents").appendChild(tag);
-			}
 		}
 	});
 	

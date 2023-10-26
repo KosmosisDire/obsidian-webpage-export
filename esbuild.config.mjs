@@ -15,7 +15,8 @@ esbuild.build({
 	loader: {
 		'.txt.js': 'text',
 		'.txt.css': 'text',
-		'.wasm': 'binary'
+		'.wasm': 'binary',
+		'.png': 'binary',
 	},
 	banner: {
 		js: banner,
