@@ -161,7 +161,7 @@ export class Webpage
 	public async getSelfDownloadable(): Promise<Downloadable>
 	{
 		let content = (this.isConvertable ? await this.getHTML() : await new Path(this.source.path).readFileBuffer()) ?? "";
-		return new Downloadable(this.name, content, this.exportPath.directory.makeForceFolder());
+		return new Downloadable(this.source.path, content, this.exportPath.directory.makeForceFolder());
 	}
 
 
