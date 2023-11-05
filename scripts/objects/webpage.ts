@@ -505,7 +505,67 @@ export class Webpage
 
 		let downloads: Downloadable[] = [];
 
-		let elements = Array.from(this.document.querySelectorAll("[src]:not(head [src])"))
+		// TODO: This is expensive searching through every DOM element
+		let styledElements = Array.from(this.document.querySelectorAll("*"));
+		for (let styledMediaEl of styledElements)
+		{
+			let c = styledMediaEl.getAttribute("class");
+			if (c == undefined || c == null) { continue; }
+
+			let style = styledMediaEl.getAttribute("style");
+
+			const oldStyles = style?.split(";");
+			let newStyles: string[] = [];
+
+			if (oldStyles === undefined) { continue; };
+
+			for (let s of oldStyles) {
+				// Split the styles into key value
+				var i = s.indexOf(':');
+				var [k, v] = [s.slice(0, i), s.slice(i + 1)];
+				v = v.trim();
+
+				if (v.trim().startsWith("url(")) {
+					let rawSrc = v.slice(5, v.length - 2);
+
+				let filePath = Webpage.getMediaPath(rawSrc, this.source.path);
+
+				let exportLocation = filePath.copy;
+
+				// if the media is inside the exported folder then keep it in the same place
+				let mediaPathInExport = Path.getRelativePath(this.sourceFolder, filePath);
+				console.log("mediapathinexport", mediaPathInExport);
+
+				if (mediaPathInExport.asString.startsWith("..")) {
+					// if path is outside of the vault, outline it into the media folder
+					exportLocation = Asset.mediaPath.joinString(filePath.fullName);
+				}
+
+				// let relativeImagePath = Path.getRelativePath(this.exportPath, exportLocation)
+
+				if (MainSettings.settings.makeNamesWebStyle) {
+					// relativeImagePath.makeWebStyle();
+					exportLocation.makeWebStyle();
+				}
+
+					const newStyleValue = "url('" + exportLocation.asString + "');";
+					const newStylePair = [k, newStyleValue].join(":");
+
+					newStyles.push(newStylePair);
+
+				let data = await filePath.readFileBuffer() ?? Buffer.from([]);
+				let imageDownload = new Downloadable(exportLocation.fullName, data, exportLocation.directory.makeForceFolder());
+				if (data.length == 0) RenderLog.log(filePath, "No data for file: ");
+				downloads.push(imageDownload);
+				} else {
+					newStyles.push(s);
+				}
+			}
+
+			styledMediaEl.setAttribute("style", newStyles.join(";"));
+		}
+
+		let elements = Array.from(this.document.querySelectorAll("[src]:not(head [src])"));
 		for (let mediaEl of elements)
 		{
 			let rawSrc = mediaEl.getAttribute("src") ?? "";
