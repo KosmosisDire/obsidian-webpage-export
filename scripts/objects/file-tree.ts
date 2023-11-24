@@ -2,6 +2,7 @@ import { TAbstractFile, TFile, TFolder } from "obsidian";
 import { Tree, TreeItem } from "./tree";
 import { Path } from "scripts/utils/path";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
+import { Website } from "./website";
 
 export class FileTree extends Tree
 {
@@ -52,8 +53,8 @@ export class FileTree extends Tree
 				let path = new Path(file.path).makeUnixStyle();
 				if (file instanceof TFolder) path.makeForceFolder();
 				else if(!keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
-				parent.href = path.asString;
-				parent.title = path.basename == "." ? "" : path.basename;
+				parent.href = path.asString;			
+				parent.title = path.basename == "." ? "" : Website.getTitle(file);
 			}
 		}
 
