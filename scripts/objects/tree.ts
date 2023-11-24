@@ -92,7 +92,7 @@ export class Tree
 
 	public sortAlphabetically(reverse: boolean = false)
 	{
-		this.children.sort((a, b) => reverse ? b.title.localeCompare(a.title) : a.title.localeCompare(b.title));
+		this.children.sort((a, b) => reverse ? b.title.localeCompare(a.title, undefined, { numeric: true }) : a.title.localeCompare(b.title, undefined, { numeric: true }));
 		for (let child of this.children)
 		{
 			child.sortAlphabetically();
@@ -206,7 +206,7 @@ export class TreeItem
 
 	public sortAlphabetically(reverse: boolean = false)
 	{
-		this.children.sort((a, b) => reverse ? b.title.localeCompare(a.title) : a.title.localeCompare(b.title));
+		this.children.sort((a, b) => reverse ? b.title.localeCompare(a.title, undefined, { numeric: true }) : a.title.localeCompare(b.title, undefined, { numeric: true }));
 		for (let child of this.children)
 		{
 			child.sortAlphabetically();
