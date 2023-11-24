@@ -15,6 +15,7 @@ export interface MainSettingsData
 	inlineImages: boolean;
 	includePluginCSS: string;
 	includeSvelteCSS: boolean;
+	titleProperty: string;
 	customHeadContentPath: string;
 
 	// Formatting Options
@@ -65,6 +66,7 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	inlineImages: false,
 	includePluginCSS: '',
 	includeSvelteCSS: true,
+	titleProperty: 'webpage-title',
 	customHeadContentPath: '',
 
 	// Formatting Options
@@ -268,6 +270,17 @@ export class MainSettings extends PluginSettingTab
 					}
 					));
 		}
+
+		new Setting(contentEl)
+			.setName('Property name for title')
+			.setDesc('Use this property to specify the page title. This also affects how the page is displayed in the file tree.')
+			.addText((text) => text
+				.setValue(MainSettings.settings.titleProperty)
+				.onChange(async (value) => {
+					MainSettings.settings.titleProperty = value;
+					await MainSettings.saveSettings();
+				})
+			);
 
 		let errorMessage = contentEl.createDiv({ cls: 'setting-item-description' });
 		errorMessage.style.color = "var(--color-red)";

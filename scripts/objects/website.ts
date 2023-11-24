@@ -301,7 +301,7 @@ export class Website
 
 	public static getTitle(file: TFile) {
 		const { app } = HTMLExportPlugin.plugin;
-		return app.metadataCache.getFileCache(file)?.frontmatter?.title ?? file.basename;
+		const { titleProperty } = MainSettings.settings;
+		return app.metadataCache.getFileCache(file)?.frontmatter?.[titleProperty] ?? file.basename;
 	}
-
 }
