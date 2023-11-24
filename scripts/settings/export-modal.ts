@@ -142,7 +142,7 @@ export class ExportModal extends Modal
 		{
 			"website": "This will export a file structure suitable for uploading to your own web server.",
 			"local": "This will export an executable file along with a database file. This makes it easy to share the whole vault with others by only sharing 2 files.",
-			"documents": "This will export self-contained html documents.",
+			"documents": "This will export self-contained, but slow loading and large, html documents.",
 			"raw-documents": "This will export raw, self-contained documents without the website layout. This is useful for sharing individual notes, or printing."
 		}
 

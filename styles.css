@@ -70,6 +70,11 @@ input[type=checkbox].file-checkbox
 	border-radius: 3px var(--radius-l) var(--radius-l) 3px;
 }
 
+.tree-item:has(.tree-item-link)
+{
+	cursor: pointer;
+}
+
 .tree-item:has(.file-checkbox).mod-tree-folder
 {
 	margin-top: 2px;
@@ -218,6 +223,11 @@ input[type=checkbox].file-checkbox
 	flex-direction: row;
 	justify-content: flex-start;
     align-items: center;
+}
+
+.tree-container .tree-item-link:has(.tree-item-icon.collapse-icon)
+{
+	cursor: pointer !important;
 }
 
 .tree-container .tree-item-title

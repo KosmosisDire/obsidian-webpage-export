@@ -448,6 +448,12 @@ export namespace MarkdownRenderer
 			canvas.replaceWith(image);
 		});
 
+		// add space after inline math
+		html.querySelectorAll("math-inline").forEach((element: HTMLElement) =>
+		{
+			element.style.marginRight = "0.5em";
+		});
+
 		// if the dynamic table of contents plugin is included on this page
 		// then parse each list item and render markdown for it
 		let tocEls = Array.from(html.querySelectorAll(".block-language-toc.dynamic-toc li > a"));
@@ -458,6 +464,8 @@ export namespace MarkdownRenderer
 			element.textContent = renderEl.textContent;
 			renderEl.remove();
 		}
+
+		console.log(html.innerHTML);
 	}
 
 
