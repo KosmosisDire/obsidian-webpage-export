@@ -409,7 +409,7 @@ export class Webpage
 
 		let meta =
 		`
-		<title>${this.source.basename}</title>
+		<title>${Website.getTitle(this.source)}</title>
 		<base href="${relativePaths.rootPath}/">
 		<meta id="root-path" root-path="${relativePaths.rootPath}/">
 

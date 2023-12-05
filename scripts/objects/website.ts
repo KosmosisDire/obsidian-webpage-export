@@ -9,6 +9,7 @@ import { GraphView } from "./graph-view";
 import { Path } from "scripts/utils/path";
 import { RenderLog } from "scripts/html-generation/render-log";
 import { Utils } from "scripts/utils/utils";
+import HTMLExportPlugin from "scripts/main";
 
 const removeBodyClasses: string[] = ["mod-windows", "is-frameless", "is-maximized", "is-hidden-frameless", "obsidian-app", 
 								"show-view-header", "css-settings-manager", "Heading", "minimal-theme", "minimal-default-dark", 
@@ -298,4 +299,9 @@ export class Website
 		await databasePath.writeFile(json);
 	}
 
+	public static getTitle(file: TFile) {
+		const { app } = HTMLExportPlugin.plugin;
+		const { titleProperty } = MainSettings.settings;
+		return app.metadataCache.getFileCache(file)?.frontmatter?.[titleProperty] ?? file.basename;
+	}
 }
