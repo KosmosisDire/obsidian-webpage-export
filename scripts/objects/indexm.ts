@@ -66,12 +66,8 @@ export class IndexM {
             const fileContent = fs.readFileSync(filePath, "utf-8");
             const $ = cheerio.load(fileContent, { xmlMode: true }); // Use xmlMode to handle self-closing tags
 
-            // Remove script and style tags
-            $("script").remove();
-            $("style").remove();
-            $("pre").remove();
-
-            // Remove header
+            // Remove header and pre
+			$("pre").remove();
             $("div.mod-header").remove();
 
             const title = $("title").text().trim();
