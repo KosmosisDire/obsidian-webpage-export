@@ -2051,3 +2051,51 @@ function setupExcalidraw(setupOnNode)
 
 
 //#endregion
+
+//#region -----------------        Search      -----------------
+
+(async () => {
+            await import('https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js');
+            const searchIndex = await fetch('lib/searchIndex.json').then(response => response.text());
+            const index = MiniSearch.loadJSON(searchIndex, { fields: ['title', 'content'] });
+
+            const input = document.querySelector('input[type=search]');
+
+			input.addEventListener('input', (event) => {
+				const query = event.target.value;
+				search(query);
+			});
+
+            const container = document.createElement('div');
+			container.setAttribute('id', 'search-results');
+
+			// Set a higher z-index for the results container
+			//container.style.zIndex = '9999';
+
+			//input.style.position = 'relative';
+			//container.style.position = 'absolute';
+			//container.style.top = '100%';
+			//container.style.left = '0';
+
+			const search = query => {
+				if (query.length > 1) {
+					const results = index.search(query, { prefix: true, fuzzy: 0.3 });
+					const list = document.createElement('ol');
+					results.slice(0, 10).forEach(result => {
+						const item = document.createElement('li');
+						const link = document.createElement('a');
+						link.setAttribute('href', result.path);
+						link.appendChild(document.createTextNode(result.title));
+						item.appendChild(link);
+						list.append(item);
+					});
+					container.replaceChildren(list);
+					input.after(container);
+				} else {
+					container.parentNode.removeChild(container);
+				}
+			};
+
+            })();
+
+//#endregion
