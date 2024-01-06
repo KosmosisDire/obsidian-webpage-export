@@ -173,8 +173,10 @@ export class Webpage
 		if(!(await this.getDocumentHTML())) return;
 
 		let layout = this.generateWebpageLayout(this.contentElement);
+
 		this.document.body.appendChild(layout.container);
 		layout.center.classList.add("show");
+
 
 		if (MainSettings.settings.exportPreset != "raw-documents")
 		{
@@ -217,6 +219,9 @@ export class Webpage
 
 		await this.addMetadata();
 
+		// if (MainSettings.settings.addFilenameTitle) commented if you want to add setting back
+		this.addTitle();
+
 		this.downloads.unshift(await this.getSelfDownloadable());
 
 		return this;
@@ -242,7 +247,6 @@ export class Webpage
 		{ 
 			contentEl.classList.toggle("allow-fold-headings", MainSettings.settings.allowFoldingHeadings);
 
-			if (MainSettings.settings.addFilenameTitle) this.addTitle();
 		}
 
 		if(this.sizerElement) this.sizerElement.style.paddingBottom = "";
@@ -388,18 +392,26 @@ export class Webpage
 		return {container: pageContainer, left: leftContent, right: rightContent, center: documentContainer};
 	}
 
-	private addTitle()
-	{
+	private addTitle() {
 		if (!this.document) return;
-
+	
 		let inlineTitle = this.document.querySelector(".inline-title");
-		let title = inlineTitle?.textContent ?? this.source.basename;
+		let title = Website.getTitle(this.source);
 		inlineTitle?.remove();
-
-		let titleEl = this.sizerElement.createEl("h1");
-		titleEl.setAttribute("data-heading", title);
+	
+		let titleEl = this.document.createElement("h1");
+		titleEl.textContent = title;
 		titleEl.id = this.source.basename.replaceAll(" ", "_");
-	}
+	
+		// Find the document container
+		let documentContainer = this.document.querySelector(".markdown-preview-section");
+	
+		if (documentContainer!) {
+			documentContainer.prepend(titleEl);
+		} else {
+			console.error("markdown-preview-section not found. Unable to append title.");
+		}
+	}	
 
 	private async addMetadata()
 	{
