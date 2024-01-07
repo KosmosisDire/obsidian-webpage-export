@@ -310,13 +310,15 @@ export class Website
 			const stickerNumber = parseInt(stickerProperty.replace(/^emoji\/\//, ''), 16);
 			if (!isNaN(stickerNumber)) {
 				const emoji = String.fromCodePoint(stickerNumber);
-				const modifiedTitle = `${emoji} ${titleFromFrontmatter || file.basename}`;	
-				return modifiedTitle;
+				const modifiedTitle = `${emoji} ${titleFromFrontmatter || file.basename}`;
+				return { title: titleFromFrontmatter ?? file.basename, emoji: emoji };
 			} else {
 				console.error(`Invalid sticker number in frontmatter: ${stickerProperty}`);
+				return { title: titleFromFrontmatter ?? file.basename, emoji: '' }
 			}
+		} else {
+			return { title: titleFromFrontmatter ?? file.basename, emoji: '' };
 		}
-		return titleFromFrontmatter ?? file.basename;
 	}
 	
 }

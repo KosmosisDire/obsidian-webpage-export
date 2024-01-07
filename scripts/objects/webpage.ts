@@ -396,32 +396,54 @@ export class Webpage
 		if (!this.document) return;
 	
 		let inlineTitle = this.document.querySelector(".inline-title");
-		let title = Website.getTitle(this.source);
+		let title = Website.getTitle(this.source).title;
+		let emoji = Website.getTitle(this.source).emoji;
 		inlineTitle?.remove();
 	
+		// Create a div with emoji
+		let stickerLogoDiv = this.document.createElement("div");
+		stickerLogoDiv.id = "stickerlogo";
+		stickerLogoDiv.textContent = emoji;
+		
+		// Create h1 with title
 		let titleEl = this.document.createElement("h1");
 		titleEl.textContent = title;
-		titleEl.id = this.source.basename.replaceAll(" ", "_");
+		titleEl.id = "grabbed-title";  // Set the id to "grabbed-title"
+
+		//Bundle them to only insert once
+		let bundle = this.document.createDocumentFragment();
+    	bundle.appendChild(stickerLogoDiv);
+    	bundle.appendChild(titleEl);
 	
 		// Find the document container
 		let documentContainer = this.document.querySelector(".markdown-preview-section");
 	
-		if (documentContainer!) {
-			documentContainer.prepend(titleEl);
+		if (documentContainer) {
+			// Find the element with class "mod-header" within the document container
+			let modHeader = documentContainer.querySelector(".mod-header");
+	
+			if (modHeader) {
+				// Append the title element as the last child of the document container
+				documentContainer.insertBefore(bundle, modHeader.nextSibling);
+			} else {
+				console.error("mod-header not found within markdown-preview-section. Unable to append title.");
+			}
 		} else {
 			console.error("markdown-preview-section not found. Unable to append title.");
 		}
-	}	
+	}
+	
 
 	private async addMetadata()
 	{
 		if (!this.document) return;
 
 		let relativePaths = this.getRelativePaths();
-
+		let titleInfo = Website.getTitle(this.source);
+		let domtitle =`${titleInfo.emoji} ${titleInfo.title}`
 		let meta =
 		`
-		<title>${Website.getTitle(this.source)}</title>
+		<title>${domtitle}</title>
 		<base href="${relativePaths.rootPath}/">
 		<meta id="root-path" root-path="${relativePaths.rootPath}/">
 
