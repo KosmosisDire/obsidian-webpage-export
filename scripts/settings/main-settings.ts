@@ -311,23 +311,23 @@ export class MainSettings extends PluginSettingTab
 		if (!(MainSettings.settings.customHeadContentPath.trim() == ""))
 		{
 			let tempPath = new Path(MainSettings.settings.customHeadContentPath);
-			headContentErrorMessage.setText(tempPath.validate(true, true, false, true, false, ["html"]).error);
+			headContentErrorMessage.setText(tempPath.validate(true, true, true, false, true, false, ["html"]).error);
 		}
 
-		let pathInput : TextComponent | undefined = undefined;
+		let headContentInput : TextComponent | undefined = undefined;
 
 		new Setting(contentEl)
 			.setName('Custom head content path')
 			.addText((text) => 
 			{
-				pathInput = text;
+				headContentInput = text;
 				text.inputEl.style.width = '100%';
-				text.setPlaceholder('Enter an absolute path to any text file')
+				text.setPlaceholder('Enter the absolute path to any .html file')
 					.setValue(MainSettings.settings.customHeadContentPath)
 					.onChange(async (value) => 
 					{
 						let path = new Path(value);
-						let validation = path.validate(true, true, false, true, false, ["html"]);
+						let validation = path.validate(true, true, true, false, true, false, ["html"]);
 						headContentErrorMessage.setText(validation.error);
 						if (validation.vaild) 
 						{
@@ -347,14 +347,14 @@ export class MainSettings extends PluginSettingTab
 					if (path) 
 					{
 						MainSettings.settings.customHeadContentPath = path.asString;
-						let validation = path.validate(true, true, false, true, false, ["html"]);
+						let validation = path.validate(true, true, true, false, true, false, ["html"]);
 						headContentErrorMessage.setText(validation.error);
 						if (validation.vaild)
 						{
 							await MainSettings.saveSettings();
 						}
 
-						pathInput?.setValue(MainSettings.settings.customHeadContentPath);
+						headContentInput?.setValue(MainSettings.settings.customHeadContentPath);
 					}
 				});
 			});
@@ -366,24 +366,26 @@ export class MainSettings extends PluginSettingTab
 		faviconErrorMessage.style.color = "var(--color-red)";
 		faviconErrorMessage.style.marginBottom = "0.75rem";
 
-		if (!(MainSettings.settings.customHeadContentPath.trim() == ""))
+		if (!(MainSettings.settings.faviconPath.trim() == ""))
 		{
-			let tempPath = new Path(MainSettings.settings.customHeadContentPath);
-			faviconErrorMessage.setText(tempPath.validate(true, true, false, true, false, ["html"]).error);
+			let tempPath = new Path(MainSettings.settings.faviconPath);
+			faviconErrorMessage.setText(tempPath.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]).error);
 		}
+
+		let faviconInput : TextComponent | undefined = undefined;
 
 		new Setting(contentEl)
 			.setName('Favicon path')
 			.addText((text) => 
 			{
-				pathInput = text;
+				faviconInput = text;
 				text.inputEl.style.width = '100%';
 				text.setPlaceholder('Enter an absolute path to any text file')
 					.setValue(MainSettings.settings.faviconPath)
 					.onChange(async (value) => 
 					{
 						let path = new Path(value);
-						let validation = path.validate(true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]);
+						let validation = path.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]);
 						faviconErrorMessage.setText(validation.error);
 						if (validation.vaild) 
 						{
@@ -403,14 +405,14 @@ export class MainSettings extends PluginSettingTab
 					if (path) 
 					{
 						MainSettings.settings.faviconPath = path.asString;
-						let validation = path.validate(true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]);
+						let validation = path.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]);
 						faviconErrorMessage.setText(validation.error);
 						if (validation.vaild) 
 						{
 							await MainSettings.saveSettings();
 						}
 						
-						pathInput?.setValue(MainSettings.settings.faviconPath);
+						faviconInput?.setValue(MainSettings.settings.faviconPath);
 					}
 				});
 			});
@@ -588,7 +590,7 @@ export class MainSettings extends PluginSettingTab
 		hr.style.opacity = "0.5";
 		new Setting(contentEl)
 			.setName('Include Plugin CSS')
-			.setDesc('Include the CSS from the following plugins in the exported HTML. If plugin features aren\'t rendering correctly, try adding the plugin to this list.')
+			.setDesc('Include the CSS from the following plugins in the exported HTML. If plugin features aren\'t rendering correctly, try adding the plugin to this list. Avoid adding plugins unless you specifically notice a problem, because more CSS will increase the loading time of your page.')
 			.setHeading()
 
 		let pluginsList = new FlowList(contentEl);
