@@ -346,6 +346,20 @@ body:not(.loading) .document-container.show
 	padding: 0;
 	margin: 0;
 	overflow: visible;
+	display: inline-block;
+}
+
+.tree-container .tree-item-icon > *
+{
+	color: var(--text-muted); 
+	font-family: emoji;
+	padding-right: 0.3em;
+}
+
+.tree-container .tree-item-icon svg
+{
+	height: 1em;
+	translate: 0px 1.5px;
 }
 
 .tree-container .tree-item.mod-active > .tree-item-contents > .tree-item-link
@@ -387,12 +401,12 @@ body:not(.loading) .document-container.show
 	padding-left: calc(var(--tree-horizontal-spacing) * 2);
 }
 
-.tree-container .tree-item-icon.collapse-icon {
+.tree-container .collapse-icon {
     margin-left: calc(0px - var(--collapse-arrow-size) - var(--tree-horizontal-spacing));
     position: absolute;
 }
 
-.tree-container .tree-item.mod-tree-folder > .tree-item-contents > .tree-item-icon.collapse-icon
+.tree-container .tree-item.mod-tree-folder > .tree-item-contents > .collapse-icon
 {
     width: 100%;
 }
@@ -412,7 +426,7 @@ body:not(.loading) .document-container.show
 	height: 2.2em;
 }
 
-.tree-container .tree-item.is-collapsed > .tree-item-contents > .tree-item-link > .tree-item-icon.collapse-icon > svg
+.tree-container .tree-item.is-collapsed > .tree-item-contents > .tree-item-link > .collapse-icon > svg
 {
     transition: transform 0.1s ease-in-out;
     transform: rotate(-90deg);
@@ -489,6 +503,27 @@ body:not(.loading) .document-container.show
 /*#endregion */
 
 /*#region Headers */
+
+#webpage-icon > svg
+{
+  width: 100%;
+  height: 100%;
+}
+
+#webpage-icon {
+  font-size: 2em;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 8px !important;
+  font-family: emoji;
+}
+
+#inline-title
+{
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+}
 
 .heading-wrapper 
 {

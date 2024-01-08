@@ -299,7 +299,8 @@ export class Website
 		await databasePath.writeFile(json);
 	}
 
-	public static getTitle(file: TFile) {
+	public static getTitle(file: TFile): { title: string, icon: string }
+	{
 		const { app } = HTMLExportPlugin.plugin;
 		const { titleProperty } = MainSettings.settings;
 		const fileCache = app.metadataCache.getFileCache(file);
@@ -314,12 +315,12 @@ export class Website
 				const stickerNumber = parseInt(stickerProperty.replace(/^emoji\/\//, ''), 16);
 				if (!isNaN(stickerNumber)) {
 					const emoji = String.fromCodePoint(stickerNumber);
-					return { title: titleFromFrontmatter ?? file.basename, emoji: emoji };
+					return { title: titleFromFrontmatter ?? file.basename, icon: emoji };
 				} 
 				else 
 				{
 					console.error(`Invalid sticker number in frontmatter: ${stickerProperty}`);
-					return { title: titleFromFrontmatter ?? file.basename, emoji: '' }
+					return { title: titleFromFrontmatter ?? file.basename, icon: '�' }
 				}
 			}
 
@@ -329,23 +330,22 @@ export class Website
 				var icon = getIcon(lucideIconName);
 				if (icon)
 				{
-					icon.setAttribute("style", "height: 1em; color: var(--text-muted); translate: 0px 1.5px;");
 					var svg = icon.outerHTML;
 					icon.remove();
-					return { title: titleFromFrontmatter ?? file.basename, emoji: svg };
+					return { title: titleFromFrontmatter ?? file.basename, icon: svg };
 				}
 				else 
 				{
 					console.error(`Invalid lucide icon name in frontmatter: ${stickerProperty}`);
-					return { title: titleFromFrontmatter ?? file.basename, emoji: '' }
+					return { title: titleFromFrontmatter ?? file.basename, icon: '�' }
 				}
 			}
 			
-			return { title: titleFromFrontmatter ?? file.basename, emoji: stickerProperty };
+			return { title: titleFromFrontmatter ?? file.basename, icon: stickerProperty };
 		} 
 		else 
 		{
-			return { title: titleFromFrontmatter ?? file.basename, emoji: '' };
+			return { title: titleFromFrontmatter ?? file.basename, icon: '' };
 		}
 	}
 	

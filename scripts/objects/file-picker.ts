@@ -64,7 +64,8 @@ export class FilePickerTree extends FileTree
 				else if(!keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
 
 				parent.href = path.asString;
-				parent.title = path.basename == "." ? "" : path.basename == ".." ? ".." : `${titleInfo.emoji} ${titleInfo.title}`;
+				parent.title = path.basename == "." ? "" : titleInfo.title;
+				parent.icon = titleInfo.icon || "";
 			}
 		}
 

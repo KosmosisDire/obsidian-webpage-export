@@ -117,6 +117,7 @@ export class TreeItem
 	public depth: number = 0;
 	public itemClass: string = "";
 	public title: string = "";
+	public icon: string = "";
 	public href: string | undefined = undefined;
 	public minCollapsableDepth: number = 1;
 	public isCollapsed: boolean = false;
@@ -150,7 +151,7 @@ export class TreeItem
 
 		if (this.isCollapsible())
 		{
-			this.createItemIcon(itemLinkEl);
+			this.createItemCollapseIcon(itemLinkEl);
 			if (startClosed) 
 			{
 				this.itemEl.classList.add("is-collapsed");
@@ -242,11 +243,11 @@ export class TreeItem
 		return itemLinkEl;
 	}
 
-	protected createItemIcon(container: HTMLElement): HTMLElement
+	protected createItemCollapseIcon(container: HTMLElement): HTMLElement
 	{
 		const arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg>`;
 
-		let itemIconEl = container.createDiv("tree-item-icon collapse-icon");
+		let itemIconEl = container.createDiv("collapse-icon");
 		itemIconEl.innerHTML = arrowIcon;
 		return itemIconEl;
 	}
@@ -254,9 +255,22 @@ export class TreeItem
 	protected async createItemTitle(container: HTMLElement): Promise<HTMLSpanElement>
 	{
 		let titleEl = container.createEl("span", { cls: "tree-item-title" });
+		this.createItemIcon(titleEl);
 		if (this.tree.renderMarkdownTitles) MarkdownRenderer.renderSingleLineMarkdown(this.title, titleEl);
 		else titleEl.innerText = this.title;
 		return titleEl;
+	}
+
+	protected createItemIcon(container: HTMLElement): HTMLDivElement | undefined
+	{
+		if (this.icon.trim() == "") return undefined;
+		
+		let itemIconEl = container.createDiv("tree-item-icon");
+
+		if (this.tree.renderMarkdownTitles) MarkdownRenderer.renderSingleLineMarkdown(this.icon, itemIconEl);
+		else itemIconEl.innerText = this.icon;
+
+		return itemIconEl;
 	}
 
 	protected createItemChildren(container: HTMLElement): HTMLDivElement

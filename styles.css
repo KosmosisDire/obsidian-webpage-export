@@ -95,6 +95,19 @@ input[type=checkbox].file-checkbox
 	padding: 0;
 	margin: 0;
 	overflow: visible;
+	display: inline-block;
+}
+
+.tree-container .tree-item-icon > *
+{
+	color: var(--text-muted); 
+	font-family: emoji;
+}
+
+.tree-container .tree-item-icon svg
+{
+	height: 1em;
+	translate: 0px 1.5px;
 }
 
 .theme-dark .tree-item:has(> .tree-item-contents > .tree-item-link > .file-checkbox:not(.checked)):has(.file-checkbox.checked).mod-tree-folder
@@ -219,23 +232,12 @@ input[type=checkbox].file-checkbox
 	justify-content: center;
 }
 
-/* .tree-container .tree-item-icon.collapse-icon {
-    display: flex;
-    justify-content: flex-start;
-    align-items: center;
-    border-radius: var(--radius-s);
-    transition: background-color 0.1s;
-    position: absolute;
-    height: 100%;
-	z-index: 10;
-} */
-
-.tree-container .tree-item-icon.collapse-icon {
+.tree-container .collapse-icon {
     margin-left: calc(0px - var(--collapse-arrow-size) * 2 - 0.5em);
     position: absolute;
 }
 
-.tree-container .tree-item.mod-tree-folder > .tree-item-contents > .tree-item-icon.collapse-icon
+.tree-container .tree-item.mod-tree-folder > .tree-item-contents > .collapse-icon
 {
     width: 100%;
 }
@@ -249,7 +251,7 @@ input[type=checkbox].file-checkbox
     color: var(--nav-item-color-hover);
 }
 
-.tree-container .tree-item.is-collapsed > .tree-item-contents > .tree-item-link > .tree-item-icon.collapse-icon > svg
+.tree-container .tree-item.is-collapsed > .tree-item-contents > .tree-item-link > .collapse-icon > svg
 {
     transition: transform 0.1s ease-in-out;
     transform: rotate(-90deg);
@@ -261,6 +263,7 @@ input[type=checkbox].file-checkbox
     /* color: var(--nav-item-color-hover); */
     text-decoration: none;
 }
+
 
 /* Indentation guide */
 

@@ -8,6 +8,8 @@ import { Website } from "./website";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
 import { HTMLGeneration } from "scripts/html-generation/html-generator";
+import { Utils } from "scripts/utils/utils";
+import { RenderLog } from "scripts/html-generation/render-log";
 const { minify } = require('html-minifier-terser');
 
 export class Webpage
@@ -163,8 +165,6 @@ export class Webpage
 		let content = (this.isConvertable ? await this.getHTML() : await new Path(this.source.path).readFileBuffer()) ?? "";
 		return new Downloadable(this.name, content, this.exportPath.directory.makeForceFolder());
 	}
-
-
 
 	public async create(): Promise<Webpage | undefined>
 	{
@@ -407,24 +407,40 @@ export class Webpage
 		if (!this.document) return;
 	
 		let inlineTitle = this.document.querySelector(".inline-title");
-		let title = Website.getTitle(this.source).title;
-		let emoji = Website.getTitle(this.source).emoji;
 		inlineTitle?.remove();
+
+		let title = Website.getTitle(this.source).title;
+		let icon = Website.getTitle(this.source).icon;
+
+		// if the first header element is basically the same as the title, remove it
+		let firstHeader = this.document.querySelector("h1, h2, h3, h4, h5, h6");
+		if (firstHeader)
+		{
+			let headerChildren = Array.from(firstHeader.childNodes);
+			let firstHeaderTextNode = headerChildren.find((el) => el.nodeType == Node.TEXT_NODE);
+			let firstHeaderTitle = (firstHeaderTextNode?.textContent ?? "").toLowerCase();
+			let lowerTitle = title.toLowerCase();
+			let titleDiff = Utils.levenshteinDistance(firstHeaderTitle, lowerTitle) / lowerTitle.length;
+			let basenameDiff = Utils.levenshteinDistance(firstHeaderTitle, this.source.basename.toLowerCase()) / this.source.basename.length;
+			let difference = Math.min(titleDiff, basenameDiff);
+
+			if (difference < 0.15)
+			{
+				firstHeader.remove();
+				RenderLog.log("Removed first header because it was the same as the title", firstHeaderTitle);
+			}
+		}
 	
-		// Create a div with emoji
-		let stickerLogoDiv = this.document.createElement("div");
-		stickerLogoDiv.id = "stickerlogo";
-		stickerLogoDiv.textContent = emoji;
+		// Create a div with icon
+		let pageIcon = this.document.createElement("div");
+		pageIcon.id = "webpage-icon";
+		pageIcon.innerHTML = icon;
 		
 		// Create h1 with title
 		let titleEl = this.document.createElement("h1");
-		titleEl.textContent = title;
-		titleEl.id = "grabbed-title";  // Set the id to "grabbed-title"
-
-		//Bundle them to only insert once
-		let bundle = this.document.createDocumentFragment();
-    	bundle.appendChild(stickerLogoDiv);
-    	bundle.appendChild(titleEl);
+		titleEl.id = "inline-title";
+		titleEl.appendChild(pageIcon); // Add the icon div as the first child of the title element
+		MarkdownRenderer.renderSingleLineMarkdown(title, titleEl);
 	
 		// Find the document container
 		let documentContainer = this.document.querySelector(".markdown-preview-section");
@@ -435,7 +451,7 @@ export class Webpage
 	
 			if (modHeader) {
 				// Append the title element as the last child of the document container
-				documentContainer.insertBefore(bundle, modHeader.nextSibling);
+				modHeader.appendChild(titleEl);
 			} else {
 				console.error("mod-header not found within markdown-preview-section. Unable to append title.");
 			}
@@ -451,7 +467,7 @@ export class Webpage
 
 		let relativePaths = this.getRelativePaths();
 		let titleInfo = Website.getTitle(this.source);
-		let domtitle =`${titleInfo.emoji} ${titleInfo.title}`
+		let domtitle =`${titleInfo.icon} ${titleInfo.title}`
 		let meta =
 		`
 		<title>${domtitle}</title>

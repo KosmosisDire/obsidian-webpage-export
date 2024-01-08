@@ -60,7 +60,8 @@ export class FileTree extends Tree
 				else if(!keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
 
 				parent.href = path.asString;	
-				parent.title = path.basename == "." ? "" : `${titleInfo.emoji} ${titleInfo.title}`;
+				parent.title = path.basename == "." ? "" : titleInfo.title;
+				parent.icon = titleInfo.icon || "";
 			}
 		}
 
