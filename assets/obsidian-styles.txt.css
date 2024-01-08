@@ -10,6 +10,13 @@
     animation-name: none !important;
 }
 
+#stickerlogo {
+    font-size: 40px; /* Set the font size to control the emoji size */
+    width: 60px;
+    height: 60px;
+    margin-bottom: 8px !important;
+}
+
 h1, h2, h3, h4, h5, h6
 {
 	margin-top: 0 !important;

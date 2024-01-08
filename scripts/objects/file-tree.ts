@@ -53,8 +53,9 @@ export class FileTree extends Tree
 				let path = new Path(file.path).makeUnixStyle();
 				if (file instanceof TFolder) path.makeForceFolder();
 				else if(!keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
-				parent.href = path.asString;			
-				parent.title = path.basename == "." ? "" : Website.getTitle(file);
+				parent.href = path.asString;	
+				let titleInfo = Website.getTitle(file);
+				parent.title = path.basename == "." ? "" : `${titleInfo.emoji} ${titleInfo.title}`;
 			}
 		}
 

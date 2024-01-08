@@ -302,6 +302,23 @@ export class Website
 	public static getTitle(file: TFile) {
 		const { app } = HTMLExportPlugin.plugin;
 		const { titleProperty } = MainSettings.settings;
-		return app.metadataCache.getFileCache(file)?.frontmatter?.[titleProperty] ?? file.basename;
+		const fileCache = app.metadataCache.getFileCache(file);
+		const frontmatter = fileCache?.frontmatter;
+		const titleFromFrontmatter = frontmatter?.[titleProperty];
+		const stickerProperty = frontmatter?.sticker;
+		if (stickerProperty) {
+			const stickerNumber = parseInt(stickerProperty.replace(/^emoji\/\//, ''), 16);
+			if (!isNaN(stickerNumber)) {
+				const emoji = String.fromCodePoint(stickerNumber);
+				const modifiedTitle = `${emoji} ${titleFromFrontmatter || file.basename}`;
+				return { title: titleFromFrontmatter ?? file.basename, emoji: emoji };
+			} else {
+				console.error(`Invalid sticker number in frontmatter: ${stickerProperty}`);
+				return { title: titleFromFrontmatter ?? file.basename, emoji: '' }
+			}
+		} else {
+			return { title: titleFromFrontmatter ?? file.basename, emoji: '' };
+		}
 	}
+	
 }
