@@ -204,6 +204,13 @@ export class Webpage
 				HTMLGeneration.createThemeToggle(leftSidebar);
 			}
 
+			// inject search bar
+			if (MainSettings.settings.includeSearchBar)
+			{
+				let searchbarHTML = `<input type="search" placeholder="Search..."></input>`;
+				leftSidebar.createDiv().outerHTML = searchbarHTML;
+			}
+
 			// inject file tree
 			if (MainSettings.settings.includeFileTree)
 			{

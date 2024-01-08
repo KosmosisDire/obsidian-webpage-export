@@ -38,6 +38,7 @@ export interface MainSettingsData
 	addDarkModeToggle: boolean;
 	includeOutline: boolean;
 	includeFileTree: boolean;
+	includeSearchBar: boolean;
 	includeGraphView: boolean;
 
 	// Main Export Options
@@ -88,8 +89,9 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	// Page Features
 	addDarkModeToggle: true,
 	includeOutline: true,
-	includeGraphView: true,
 	includeFileTree: true,
+	includeSearchBar: true,
+	includeGraphView: true,
 
 	// Main Export Options
 	exportPreset: 'website',
@@ -266,6 +268,17 @@ export class MainSettings extends PluginSettingTab
 					.setValue(MainSettings.settings.includeFileTree)
 					.onChange(async (value) => {
 						MainSettings.settings.includeFileTree = value;
+						await MainSettings.saveSettings();
+					}
+					));
+
+			new Setting(contentEl)
+				.setName('Include search bar')
+				.setDesc('Adds a full text search of the website to the left sidebar.')
+				.addToggle((toggle) => toggle
+					.setValue(MainSettings.settings.includeSearchBar)
+					.onChange(async (value) => {
+						MainSettings.settings.includeSearchBar = value;
 						await MainSettings.saveSettings();
 					}
 					));
