@@ -207,7 +207,11 @@ export class Webpage
 			// inject search bar
 			if (MainSettings.settings.includeSearchBar)
 			{
-				let searchbarHTML = `<input type="search" placeholder="Search..."></input>`;
+				let searchbarHTML = `<div class="search-input-container global-search-input-container">
+<input enterkeyhint="search" type="search" spellcheck="false" placeholder="Search...">
+<div class="search-input-clear-button" aria-label="Clear search"></div>
+</div>`;
+
 				leftSidebar.createDiv().outerHTML = searchbarHTML;
 			}
 

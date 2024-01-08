@@ -2056,43 +2056,59 @@ function setupExcalidraw(setupOnNode)
 
 (async () => {
             await import('https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js');
+            
             const searchIndex = await fetch('lib/searchIndex.json').then(response => response.text());
             const index = MiniSearch.loadJSON(searchIndex, { fields: ['title', 'content'] });
 
-            const input = document.querySelector('input[type=search]');
+            const input_parent = document.querySelector('.search-input-container');
+            const input = document.querySelector('input[type="search"]');
+			const inputClear = document.querySelector('.search-input-clear-button');
+			
+            inputClear.addEventListener('click', (event) => {
+				input.value = '';
+				search("");
+			});
 
 			input.addEventListener('input', (event) => {
-				const query = event.target.value;
+				const query = event.target.value ?? "";
 				search(query);
 			});
 
             const container = document.createElement('div');
 			container.setAttribute('id', 'search-results');
 
-			// Set a higher z-index for the results container
-			//container.style.zIndex = '9999';
-
-			//input.style.position = 'relative';
-			//container.style.position = 'absolute';
-			//container.style.top = '100%';
-			//container.style.left = '0';
-
 			const search = query => {
-				if (query.length > 1) {
+				if (query.length >= 1) 
+                {
 					const results = index.search(query, { prefix: true, fuzzy: 0.3 });
-					const list = document.createElement('ol');
+					const list = document.createElement('div');
 					results.slice(0, 10).forEach(result => {
-						const item = document.createElement('li');
+
+						const item = document.createElement('div');
+						item.classList.add('search-result');
+                        
 						const link = document.createElement('a');
+						link.classList.add('internal-link');
+
+                        const icon = document.createElement('span');
+						icon.classList.add('icon');
+						icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>`
+						link.appendChild(icon);
+
 						link.setAttribute('href', result.path);
 						link.appendChild(document.createTextNode(result.title));
 						item.appendChild(link);
 						list.append(item);
 					});
+					
 					container.replaceChildren(list);
-					input.after(container);
-				} else {
-					container.parentNode.removeChild(container);
+					input_parent.after(container);
+				
+					setupLinks(container);
+				} 
+                else
+                {
+					if (container && container.parentElement) container.parentNode.removeChild(container);
 				}
 			};
 
