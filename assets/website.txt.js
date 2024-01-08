@@ -1,5 +1,8 @@
 //#region -----------------   Initializations   ----------------- 
 
+let absoluteBasePath = undefined;
+let relativeBasePath = undefined;
+
 let webpageContainer;
 let documentContainer;
 let viewContent;
@@ -24,8 +27,8 @@ let focusedCanvasNode;
 let loadingIcon;
 let isOffline = false;
 
-let collapseIconUp = ["m7 15 5 5 5-5", "m7 9 5-5 5 5"]; // path 1, path 2
-let collapseIconDown = ["m7 20 5-5 5 5", "m7 4 5 5 5-5"]; // path 1, path 2
+let collapseIconUp = ["m7 15 5 5 5-5", "m7 9 5-5 5 5"]; // path 1, path 2 - svg paths
+let collapseIconDown = ["m7 20 5-5 5 5", "m7 4 5 5 5-5"]; // path 1, path 2 - svg paths
 
 let isTouchDevice = isTouchCapable();
 
@@ -61,18 +64,49 @@ function initGlobalObjects()
 	themeToggle = document.querySelector(".theme-toggle-input");
 }
 
+async function loadIncludes()
+{
+	if (location.protocol != "file:") 
+    {
+		// replace include tags with the contents of the file
+		let includeTags = document.querySelectorAll("include");
+		for (let i = 0; i < includeTags.length; i++)
+		{
+			let includeTag = includeTags[i];
+			let includePath = includeTag.getAttribute("src");
+			let includeResponse = await fetch(includePath);
+			if (!includeResponse.ok) 
+			{
+				console.log("Could not include file: " + includePath);
+				continue;
+			}
+			let includeText = await includeResponse.text();
+			includeTag.outerHTML = includeText;
+		}
+	}
+	else
+    {
+        let e = document.querySelectorAll("include");
+        if (e.length > 0)
+        {
+            var error = document.createElement("div");
+            error.textContent = "Web-server style exports cannot be opened locally. They must be hosted on a web server.";
+            error.style.position = "fixed";
+            error.style.top = "50%";
+            error.style.left = "50%";
+            error.style.transform = "translate(-50%, -50%)";
+            error.style.fontSize = "1.5em";
+            error.style.fontWeight = "bold";
+            error.style.textAlign = "center";
+            document.body.appendChild(error);
+            return;
+        }
+    }
+}
+
 async function initializePage()
 {
-	// replace include tags with the contents of the file
-	let includeTags = document.querySelectorAll("include");
-	for (let i = 0; i < includeTags.length; i++)
-	{
-		let includeTag = includeTags[i];
-		let includePath = includeTag.getAttribute("src");
-		let includeResponse = await fetch(includePath);
-		let includeText = await includeResponse.text();
-		includeTag.outerHTML = includeText;
-	}
+	await loadIncludes();
 
 	focusedCanvasNode = null;
 	canvasWrapper = document.querySelector(".canvas-wrapper") ?? canvasWrapper;
@@ -92,6 +126,7 @@ async function initializePage()
 		initializeDocumentTypes();
 		setupSidebars();
 		setupThemeToggle();
+		setupRootPath(document);
 
 		sidebarTargetWidth = await getComputedPixelValue("--sidebar-width");
 		contentTargetWidth = await getComputedPixelValue("--line-width") * 0.9;
@@ -204,6 +239,7 @@ window.onpopstate = function(event)
 	}
 
 	loadDocument(getURLPath(), false);
+	console.log("Popped state: " + getURLPath());
 }
 
 
@@ -619,11 +655,11 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 	<h1>You appear to be offline. Check your internet connection and then try reloading the page.</h1>
 </center>`;
 
-			document.querySelector(".outline-tree").innerHTML = "";
+			if (document.querySelector(".outline-tree")) document.querySelector(".outline-tree").innerHTML = "";
 
-			console.log("Page offline: " + getAbsoluteRootPath() + url);
-			let newRootPath = getURLRootPath(getAbsoluteRootPath() + url);
-			rootPath = newRootPath;
+			console.log("Page offline: " + absoluteBasePath + url);
+			let newRootPath = getURLRootPath(absoluteBasePath + url);
+			relativeBasePath = newRootPath;
 			document.querySelector("base").href = newRootPath;
 
 			document.title = "Page Offline";
@@ -673,12 +709,17 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 
 			// insert document as the second item under the webpage container
 			webpageContainer.insertBefore(documentContainer, webpageContainer.children[1]);
-
-			document.querySelector(".outline-tree").innerHTML = transferDocument.querySelector(".outline-tree").innerHTML;
+			
+			if (document.querySelector(".outline-tree") && transferDocument.querySelector(".outline-tree"))
+				document.querySelector(".outline-tree").innerHTML = transferDocument.querySelector(".outline-tree").innerHTML;
 		
 			// if the url has a heading, scroll to it
 			let headingTarget = splitURL.length > 1 ? splitURL[1] : null;
-			if (headingTarget) document.getElementById(headingTarget).scrollIntoView();
+			if (headingTarget) 
+			{
+				scrollIntoView(document.getElementById(headingTarget));
+				console.log("Scrolling to heading: " + headingTarget);
+			}
 
 			// Change the root path to match the match from the new page
 			setupRootPath(transferDocument);
@@ -690,7 +731,8 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 			setTimeout(function() 
 			{
 				initializePageEvents(documentContainer);
-				initializePageEvents(document.querySelector(".outline-tree"));
+				if (document.querySelector(".outline-tree")) 
+					initializePageEvents(document.querySelector(".outline-tree"));
 			}, 0);
 
 			document.title = transferDocument.title;
@@ -721,7 +763,8 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 				viewContent.setAttribute("class", "view-content embed");
 				viewContent.appendChild(media);
 
-				document.querySelector(".outline-tree").innerHTML = "";
+				if (document.querySelector(".outline-tree")) 
+					document.querySelector(".outline-tree").innerHTML = "";
 
 				document.title = url.split("/").pop();
 			}
@@ -748,11 +791,12 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 			</div>
 			`;
 
-			document.querySelector(".outline-tree").innerHTML = "";
+			if (document.querySelector(".outline-tree"))
+				document.querySelector(".outline-tree").innerHTML = "";
 
-			console.log("Page not found: " + getAbsoluteRootPath() + url);
-			let newRootPath = getURLRootPath(getAbsoluteRootPath() + url);
-			rootPath = newRootPath;
+			console.log("Page not found: " + absoluteBasePath + url);
+			let newRootPath = getURLRootPath(absoluteBasePath + url);
+			relativeBasePath = newRootPath;
 			document.querySelector("base").href = newRootPath;
 
 			document.title = "Page Not Found";
@@ -769,7 +813,6 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 
 	return transferDocument;
 }
-
 
 function setActiveDocument(url, scrollTo = true, pushHistory = true)
 {
@@ -798,7 +841,7 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 		}
 	}
 
-	if(scrollTo) treeItem?.scrollIntoView({block: "center", inline: "nearest"});
+	if(scrollTo && treeItem) scrollIntoView(treeItem, {block: "center", inline: "nearest"});
 
 	// set the active file in th graph view
 	if(typeof nodes != 'undefined' && window.renderWorker)
@@ -819,19 +862,16 @@ function setupRootPath(fromDocument)
 	let basePath = fromDocument.querySelector("#root-path").getAttribute("root-path");
 	document.querySelector("base").href = basePath;
 	document.querySelector("#root-path").setAttribute("root-path", basePath);
-	rootPath = basePath;
-}
-
-function getAbsoluteRootPath()
-{
-	if (typeof rootPath == 'undefined') setupRootPath(document);
-	return new URL(window.location.href + "/../" + rootPath).pathname;
+	relativeBasePath = basePath;
+	absoluteBasePath = new URL(basePath, window.location.href).href;
 }
 
 function getURLPath(url = window.location.pathname)
 {
-	let absoluteRoot = getAbsoluteRootPath();
-	let pathname = url.substring(absoluteRoot.length);
+	console.log("Getting URL path: " + url);
+	if (absoluteBasePath == undefined) setupRootPath(document);
+	let pathname = url.replace(absoluteBasePath, "");
+	console.log("Pathname: " + pathname);
 	return pathname;
 }
 
@@ -846,7 +886,6 @@ function getURLRootPath(url = window.location.pathname)
 	}
 	return rootPath;
 }
-
 
 //#endregion
 
@@ -956,6 +995,16 @@ async function collapseHeader(headingWrapper, collapse, openParents = true, inst
 
 	headingWrapper.collapsed = collapse;
 
+	function adjustSizerHeight(customHeight = undefined)
+	{
+		if (customHeight != undefined) headingWrapper.markdownPreviewSizer.style.minHeight = customHeight + "px";
+		else
+		{
+			let newTotalHeight = Array.from(headingWrapper.markdownPreviewSizer.children).reduce((acc, cur) => acc + cur.offsetHeight, 0);
+			headingWrapper.markdownPreviewSizer.style.minHeight = newTotalHeight + "px";
+		}
+	}
+
 	if (instant)
 	{
 		console.log("instant");
@@ -963,10 +1012,7 @@ async function collapseHeader(headingWrapper, collapse, openParents = true, inst
 		headingWrapper.classList.toggle("is-collapsed", collapse);
 		collapseContainer.style.height = "";
 		collapseContainer.style.transitionDuration = "";
-
-		let newTotalHeight = Array.from(headingWrapper.markdownPreviewSizer.children).reduce((acc, cur) => acc + cur.offsetHeight, 0);
-		headingWrapper.markdownPreviewSizer.style.minHeight = newTotalHeight + "px";
-
+		adjustSizerHeight()
 		return;
 	}
 
@@ -985,7 +1031,11 @@ async function collapseHeader(headingWrapper, collapse, openParents = true, inst
 	else collapseContainer.style.height = height + "px";
 	headingWrapper.classList.toggle("is-animating", true);
 	headingWrapper.classList.toggle("is-collapsed", collapse);
-	
+
+	if (headingWrapper.markdownPreviewSizer.closest(".markdown-embed")) // dont change the size of transcluded docments
+	{
+		adjustSizerHeight(collapse ? 0 : undefined);
+	}
 
 	setTimeout(function()
 	{
@@ -993,8 +1043,7 @@ async function collapseHeader(headingWrapper, collapse, openParents = true, inst
 		if(!collapse) collapseContainer.style.height = "";
 		headingWrapper.classList.toggle("is-animating", false);
 
-		let newTotalHeight = Array.from(headingWrapper.markdownPreviewSizer.children).reduce((acc, cur) => acc + cur.offsetHeight, 0);
-		headingWrapper.markdownPreviewSizer.style.minHeight = newTotalHeight + "px";
+		adjustSizerHeight()
 
 	}, transitionDurationMod * 1000);
 }
@@ -1304,7 +1353,16 @@ function setupCanvas(setupOnNode)
 						}
 					}
 				}
+				
+				if (mouseDownEv.button == 0 && focusedCanvasNode)
+				{
+					if (focusedCanvasNode.querySelector(".canvas-node-content").textContent.trim() != "") 
+					{
+						scrollInterferance = true;
+					}
+				}
 
+				
 				if (!scrollInterferance)
 				{
 					translateCanvas(deltaX, deltaY);
@@ -1731,7 +1789,7 @@ function setupLinks(setupOnNode)
 			if(!target) return;
 
 			// this is linking to a different page
-			if (!target.startsWith("#"))
+			if (!target.startsWith("#") && !link.classList.contains("heading-link"))
 			{
 				// load doc, if it is a tree link then don't scroll to the active doc in the file tree
 				loadDocument(target, true, !link.classList.contains("tree-item-link"));
@@ -1739,15 +1797,16 @@ function setupLinks(setupOnNode)
 			}
 			else
 			{
-				let targetEl = document.getElementById(target.substring(1));
+				let headingName = link.getAttribute("heading-name") || target.split("#")[1];
+				let targetEl = document.getElementById(headingName);
 				
 				if (targetEl)
 				{
 					targetEl.headingWrapper?.collapse(false, true, true);
 					setTimeout(function()
 					{
-						if(targetEl.classList.contains(".heading")) targetEl.headingWrapper?.scrollIntoView({ behavior: "smooth", block: "start"});
-						else targetEl.scrollIntoView({ behavior: "smooth", block: "start"});
+						if(targetEl.classList.contains(".heading") && targetEl.headingWrapper) scrollIntoView(targetEl.headingWrapper, { behavior: "smooth", block: "start"});
+						else scrollIntoView(targetEl, { behavior: "smooth", block: "start"});
 
 						if (deviceSize == "phone") rightSidebar.collapse(true);
 					}, 0);
@@ -1973,6 +2032,50 @@ function setupThemeToggle()
 
 //#region -----------------        Scroll       -----------------
 
+let flashElement = null;
+let flashAnimation = null;
+function scrollIntoView(element, options)
+{
+	element.style.marginTop = "-1.2em";
+	if(options) element.scrollIntoView(options);
+	else element.scrollIntoView();
+	element.style.marginTop = "";
+
+    
+	const flashTiming = 
+	{
+		duration: 500,
+		iterations: 2,
+		delay: 500,
+	};
+
+	const flashAnimationData =
+	[
+		{ opacity: 0 },
+		{ opacity: 0.8 },
+		{ opacity: 0 },
+	];
+
+	if(flashElement) 
+	{
+		flashElement.remove();
+		flashAnimation.cancel();
+	}
+	flashElement = document.createElement("div");
+	flashElement.classList.add("scroll-highlight");
+	element.appendChild(flashElement);
+
+	var savePos = element.style.position;
+	element.style.position = "relative";
+
+	flashAnimation = flashElement.animate(flashAnimationData, flashTiming);
+	flashAnimation.onfinish = function()
+	{
+		flashElement.remove();
+		element.style.position = savePos;
+	}
+}
+
 function setupScroll(setupOnNode)
 {
 	// hide elements clipped by scrollable areas in markdown-preview-view elements
@@ -2044,7 +2147,7 @@ function setupScroll(setupOnNode)
 	}
 	
 	setInterval(periodicUpdate, 200);
-}
+} 
 
 //#endregion
 
