@@ -10,7 +10,7 @@ import { MarkdownRenderer } from "./html-generation/markdown-renderer";
 import { promises as fs } from 'fs';
 import { Website } from "./objects/website";
 import { Asset } from "./html-generation/assets/asset";
-
+import { IndexM } from "./objects/indexm";
 
 export class HTMLExporter
 {
@@ -23,6 +23,8 @@ export class HTMLExporter
 		let exportPath = info?.exportPath ?? new Path(MainSettings.settings.exportPath);
 
 		let website = await HTMLExporter.exportFiles(files, exportPath, true, MainSettings.settings.deleteOldExportedFiles);
+		let IndexPath = exportPath.toString()
+		const Indexing = await IndexM.indexHTMLFiles(IndexPath);
 		if (website)
 		{
 			if (MainSettings.settings.openAfterExport) Utils.openPath(exportPath);

@@ -2,6 +2,7 @@ import { TAbstractFile, TFile, TFolder } from "obsidian";
 import { Tree, TreeItem } from "./tree";
 import { Path } from "scripts/utils/path";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
+import { Website } from "./website";
 
 export class FileTree extends Tree
 {
@@ -14,7 +15,7 @@ export class FileTree extends Tree
 	{
 		super();
 
-		this.renderMarkdownTitles = false;
+		this.renderMarkdownTitles = true;
 
 		for (let file of files)
 		{
@@ -34,6 +35,8 @@ export class FileTree extends Tree
 			{
 				let section = pathSections[i];
 				let isFolder = section instanceof TFolder;
+
+				// make sure this section hasn't already been added
 				let child = parent.children.find(sibling => sibling.title == section.name && sibling.isFolder == isFolder && sibling.depth == i) as FileTreeItem | undefined;
 				
 				if (child == undefined)
@@ -47,20 +50,25 @@ export class FileTree extends Tree
 
 					parent.children.push(child);
 				}
+
 				parent = child;
 			}
 			
 			if (parent instanceof FileTreeItem)
 			{
+				let titleInfo = Website.getTitle(file);
 				let path = new Path(file.path).makeUnixStyle();
+
 				if (file instanceof TFolder) path.makeForceFolder();
 				else 
 				{
 					parent.originalExtension = path.extensionName;
 					if(!keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
 				}
-				parent.href = path.asString;
-				parent.title = path.basename == "." ? "" : path.basename;
+
+				parent.href = path.asString;	
+				parent.title = path.basename == "." ? "" : titleInfo.title;
+				parent.icon = titleInfo.icon || "";
 			}
 		}
 

@@ -19,6 +19,7 @@ export interface MainSettingsData
 	inlineAssets: boolean;
 	includePluginCSS: string;
 	includeSvelteCSS: boolean;
+	titleProperty: string;
 	customHeadContentPath: string;
 	faviconPath: string;
 
@@ -42,6 +43,7 @@ export interface MainSettingsData
 	addDarkModeToggle: boolean;
 	includeOutline: boolean;
 	includeFileTree: boolean;
+	includeSearchBar: boolean;
 	includeGraphView: boolean;
 
 	// Main Export Options
@@ -71,6 +73,7 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	inlineAssets: false,
 	includePluginCSS: '',
 	includeSvelteCSS: true,
+	titleProperty: 'webpage-title',
 	customHeadContentPath: '',
 	faviconPath: '',
 
@@ -93,8 +96,9 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	// Page Features
 	addDarkModeToggle: true,
 	includeOutline: true,
-	includeGraphView: true,
 	includeFileTree: true,
+	includeSearchBar: true,
+	includeGraphView: true,
 
 	// Main Export Options
 	exportPreset: 'website',
@@ -302,7 +306,29 @@ export class MainSettings extends PluginSettingTab
 						await MainSettings.saveSettings();
 					}
 					));
+
+			new Setting(contentEl)
+				.setName('Include search bar')
+				.setDesc('Adds a full text search of the website to the left sidebar.')
+				.addToggle((toggle) => toggle
+					.setValue(MainSettings.settings.includeSearchBar)
+					.onChange(async (value) => {
+						MainSettings.settings.includeSearchBar = value;
+						await MainSettings.saveSettings();
+					}
+					));
 		}
+
+		new Setting(contentEl)
+			.setName('Property name for title')
+			.setDesc('Use this property to specify the page title. This also affects how the page is displayed in the file tree.')
+			.addText((text) => text
+				.setValue(MainSettings.settings.titleProperty)
+				.onChange(async (value) => {
+					MainSettings.settings.titleProperty = value;
+					await MainSettings.saveSettings();
+				})
+			);
 
 		let headContentErrorMessage = contentEl.createDiv({ cls: 'setting-item-description' });
 		headContentErrorMessage.style.color = "var(--color-red)";

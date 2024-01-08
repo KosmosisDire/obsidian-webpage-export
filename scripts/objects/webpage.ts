@@ -8,6 +8,7 @@ import { Website } from "./website";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
 import { HTMLGeneration } from "scripts/html-generation/html-generator";
+import { Utils } from "scripts/utils/utils";
 import { RenderLog } from "scripts/html-generation/render-log";
 import { Asset, InlinePolicy } from "scripts/html-generation/assets/asset";
 const { minify } = require('html-minifier-terser');
@@ -166,8 +167,6 @@ export class Webpage
 		return new Downloadable(this.name, content, this.exportPath.directory.makeForceFolder());
 	}
 
-
-
 	public async create(): Promise<Webpage | undefined>
 	{
 		if (!this.isConvertable || !this.document) return this;
@@ -175,8 +174,10 @@ export class Webpage
 		if(!(await this.getDocumentHTML())) return;
 
 		let layout = this.generateWebpageLayout(this.contentElement);
+
 		this.document.body.appendChild(layout.container);
 		layout.center.classList.add("show");
+
 
 		if (MainSettings.settings.exportPreset != "raw-documents")
 		{
@@ -206,6 +207,17 @@ export class Webpage
 				HTMLGeneration.createThemeToggle(leftSidebar);
 			}
 
+			// inject search bar
+			if (MainSettings.settings.includeSearchBar)
+			{
+				let searchbarHTML = `<div class="search-input-container global-search-input-container">
+<input enterkeyhint="search" type="search" spellcheck="false" placeholder="Search...">
+<div class="search-input-clear-button" aria-label="Clear search"></div>
+</div>`;
+
+				leftSidebar.createDiv().outerHTML = searchbarHTML;
+			}
+
 			// inject file tree
 			if (MainSettings.settings.includeFileTree)
 			{
@@ -218,6 +230,9 @@ export class Webpage
 		}
 
 		await this.addMetadata();
+
+		// if (MainSettings.settings.addFilenameTitle) commented if you want to add setting back
+		this.addTitle();
 
 		this.downloads.unshift(await this.getSelfDownloadable());
 
@@ -244,7 +259,6 @@ export class Webpage
 		{ 
 			contentEl.classList.toggle("allow-fold-headings", MainSettings.settings.allowFoldingHeadings);
 
-			if (MainSettings.settings.addFilenameTitle) this.addTitle();
 		}
 
 		if(this.sizerElement) this.sizerElement.style.paddingBottom = "";
@@ -390,28 +404,74 @@ export class Webpage
 		return {container: pageContainer, left: leftContent, right: rightContent, center: documentContainer};
 	}
 
-	private addTitle()
-	{
+	private addTitle() {
 		if (!this.document) return;
-
+	
 		let inlineTitle = this.document.querySelector(".inline-title");
-		let title = inlineTitle?.textContent ?? this.source.basename;
 		inlineTitle?.remove();
 
-		let titleEl = this.sizerElement.createEl("h1");
-		titleEl.setAttribute("data-heading", title);
-		titleEl.id = this.source.basename.replaceAll(" ", "_");
+		let title = Website.getTitle(this.source).title;
+		let icon = Website.getTitle(this.source).icon;
+
+		// if the first header element is basically the same as the title, remove it
+		let firstHeader = this.document.querySelector("h1, h2, h3, h4, h5, h6");
+		if (firstHeader)
+		{
+			let headerChildren = Array.from(firstHeader.childNodes);
+			let firstHeaderTextNode = headerChildren.find((el) => el.nodeType == Node.TEXT_NODE);
+			let firstHeaderTitle = (firstHeaderTextNode?.textContent ?? "").toLowerCase();
+			let lowerTitle = title.toLowerCase();
+			let titleDiff = Utils.levenshteinDistance(firstHeaderTitle, lowerTitle) / lowerTitle.length;
+			let basenameDiff = Utils.levenshteinDistance(firstHeaderTitle, this.source.basename.toLowerCase()) / this.source.basename.length;
+			let difference = Math.min(titleDiff, basenameDiff);
+
+			if (difference < 0.15)
+			{
+				firstHeader.remove();
+				RenderLog.log("Removed first header because it was the same as the title", firstHeaderTitle);
+			}
+		}
+	
+		// Create a div with icon
+		let pageIcon = this.document.createElement("div");
+		pageIcon.id = "webpage-icon";
+		pageIcon.innerHTML = icon;
+		
+		// Create h1 with title
+		let titleEl = this.document.createElement("h1");
+		titleEl.id = "inline-title";
+		titleEl.appendChild(pageIcon); // Add the icon div as the first child of the title element
+		MarkdownRenderer.renderSingleLineMarkdown(title, titleEl);
+	
+		// Find the document container
+		let documentContainer = this.document.querySelector(".markdown-preview-section");
+	
+		if (documentContainer) {
+			// Find the element with class "mod-header" within the document container
+			let modHeader = documentContainer.querySelector(".mod-header");
+	
+			if (modHeader) {
+				// Append the title element as the last child of the document container
+				modHeader.appendChild(titleEl);
+			} else {
+				console.error("mod-header not found within markdown-preview-section. Unable to append title.");
+			}
+		} else {
+			console.error("markdown-preview-section not found. Unable to append title.");
+		}
 	}
+	
 
 	private async addMetadata()
 	{
 		if (!this.document) return;
 
 		let rootPath = MainSettings.settings.makeNamesWebStyle ? this.pathToRoot.copy.makeWebStyle().asString : this.pathToRoot.asString;
-
+		let titleInfo = Website.getTitle(this.source);
+		let domtitle =`${titleInfo.icon} ${titleInfo.title}`
 		let head =
 		`
-		<title>${this.source.basename}</title>
+		<title>${domtitle}</title>
 		<base href="${rootPath}/">
 		<meta id="root-path" root-path="${rootPath}/">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">

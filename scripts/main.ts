@@ -29,6 +29,9 @@ export default class HTMLExportPlugin extends Plugin
 		{
 			HTMLExporter.export(false);
 		});
+		
+		let test = "Plugin Test";
+		console.log(Utils.levenshteinDistance(test + "...", test) / (test.length + 3)); 
 
 		// register callback for file rename so we can update the saved files to export
 		this.registerEvent(this.app.vault.on("rename", MainSettings.renameFile));
