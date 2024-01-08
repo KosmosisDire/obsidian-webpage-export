@@ -84,6 +84,11 @@ export class AssetHandler
 		await Promise.all(loadPromises);
 	}
 
+	public static getAssetsOfType(type: AssetType): Asset[]
+	{
+		return this.allAssets.filter(asset => asset.type == type);
+	}
+
 	public static getAssetDownloads(bypassInlineCheck: boolean = false): Asset[]
 	{
 		if(!bypassInlineCheck && MainSettings.settings.inlineAssets) return [];

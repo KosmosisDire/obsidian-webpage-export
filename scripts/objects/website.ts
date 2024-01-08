@@ -10,6 +10,7 @@ import { Path } from "scripts/utils/path";
 import { RenderLog } from "scripts/html-generation/render-log";
 import { Utils } from "scripts/utils/utils";
 import { Asset, AssetType, InlinePolicy, Mutability } from "scripts/html-generation/assets/asset";
+import { ExportModal } from "scripts/settings/export-modal";
 
 export class Website
 {
@@ -29,17 +30,42 @@ export class Website
 
 	private created = false;
 
+
+	private static _validBodyClasses: string | undefined = undefined;
 	public static getValidBodyClasses(): string
 	{
+		if (this._validBodyClasses) return this._validBodyClasses;
+
 		let bodyClasses = document.body.classList;
 		let validClasses = "";
 
-		validClasses += bodyClasses.contains("theme-light") ? " theme-light " : " theme-dark ";
+		// validClasses += bodyClasses.contains("theme-light") ? " theme-light " : " theme-dark ";
 		if (MainSettings.settings.sidebarsAlwaysCollapsible) validClasses += " sidebars-always-collapsible ";
 		if (MainSettings.settings.inlineAssets) validClasses += " inlined-assets ";
+		// validClasses += " css-settings-manager ";
 		validClasses += " loading ";
+		
+		// keep body classes that are referenced in the styles
+		for (var style of AssetHandler.getAssetsOfType(AssetType.Style))
+		{
+			if (typeof(style.content) != "string") continue;
 
-		return validClasses.replace(/\s\s+/g, ' ');
+			let matches = style.content.matchAll(/\.[^\s1234567890\.]{1,} /gm);
+			for (var match of matches)
+			{
+				let className = match[0].replace(".", "").trim();
+				if (bodyClasses.contains(className)) validClasses += " " + className + " ";
+			}
+		}
+
+		this._validBodyClasses = validClasses.replace(/\s\s+/g, ' ');
+
+		// convert to array and remove duplicates\
+		this._validBodyClasses = this._validBodyClasses.split(" ").filter((value, index, self) => self.indexOf(value) === index).join(" ");
+
+		RenderLog.log("Valid body classes: " + this._validBodyClasses);
+		
+		return this._validBodyClasses;
 	}
 
 	private async checkIncrementalExport(webpage: Webpage): Promise<boolean>
@@ -58,6 +84,7 @@ export class Website
 	{
 		this.batchFiles = files;
 		this.destination = destination;
+		Website._validBodyClasses = undefined;
 
 		await MarkdownRenderer.beginBatch();
 

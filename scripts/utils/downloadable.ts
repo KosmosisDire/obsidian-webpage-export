@@ -22,7 +22,7 @@ export class Downloadable
 	async download(downloadDirectory: Path)
 	{
 		let data = this.content instanceof Buffer ? this.content : Buffer.from(this.content.toString(), this.encoding);
-		let writePath = this.relativeDownloadDirectory.absolute(downloadDirectory).joinString(this.filename);
+		let writePath = this.getAbsoluteDownloadDirectory(downloadDirectory).joinString(this.filename);
 		await writePath.writeFile(data, this.encoding);
 	}
 
@@ -37,5 +37,15 @@ export class Downloadable
 		if (relativeDownloadDirectory.isFile) throw new Error("relativeDownloadDirectory must be a folder: " + relativeDownloadDirectory.asString);
 		this.relativeDownloadDirectory = relativeDownloadDirectory;
 		this.relativeDownloadPath = relativeDownloadDirectory.joinString(this.filename);
+	}
+
+	public getAbsoluteDownloadPath(downloadDirectory: Path): Path
+	{
+		return this.relativeDownloadDirectory.absolute(downloadDirectory).joinString(this.filename);
+	}
+
+	public getAbsoluteDownloadDirectory(downloadDirectory: Path): Path
+	{
+		return this.relativeDownloadDirectory.absolute(downloadDirectory);
 	}
 }

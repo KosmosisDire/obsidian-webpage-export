@@ -60,6 +60,9 @@ export namespace HTMLGeneration
 		html.querySelectorAll("div:has(> :is(h1, h2, h3, h4, h5, h6)):not(.markdown-preview-sizer)").forEach(function (header: HTMLDivElement)
 		{
 			header.classList.add("heading-wrapper");
+			header.createEl("div", { cls: "heading-wrapper-span" }); 
+			// the heading wrapper span is as wide as the whole screen, but has the same height and position as the heading wrapper
+			// this is used for vertical hover effects
 
 			let hEl = getHeaderEl(header) as HTMLHeadingElement;
 
@@ -93,6 +96,9 @@ export namespace HTMLGeneration
 
 			makeHeaderTree(header, children);
 		});
+
+		// add "heading" class to all headers that don't have it
+		html.querySelectorAll(":is(h1, h2, h3, h4, h5, h6):not(.heading)").forEach((el) => el.classList.add("heading"));
 
 		// remove collapsible arrows from h1 and inline titles
 		html.querySelectorAll("div h1, div .inline-title").forEach((element) =>

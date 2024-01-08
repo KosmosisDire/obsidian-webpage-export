@@ -2,9 +2,6 @@ import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
 import { MainSettings } from "scripts/settings/main-settings";
 import { RenderLog } from "../render-log";
 import obsidianStyleOverrides from "assets/obsidian-styles.txt.css";
-import { AssetHandler } from "../asset-handler";
-import { FetchBuffer } from "./local-fetch-buffer";
-
 
 export class ObsidianStyles extends Asset
 {
@@ -29,7 +26,7 @@ export class ObsidianStyles extends Asset
 	"is-hidden-frameless", "obsidian-app", "show-view-header", 
 	"is-maximized"];
 
-	private static obsidianStylesKeep = ["scrollbar", "input[type"];
+	private static obsidianStylesKeep = ["scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager"];
     
     override async load()
     {
@@ -60,6 +57,7 @@ export class ObsidianStyles extends Asset
                 {
                     if (!selector.includes(keep)) 
                     {
+						// filter out certain unused styles to reduce file size
                         for (let filter of ObsidianStyles.obsidianStylesFilter) 
                         {
                             if (selector.includes(filter)) 
@@ -90,7 +88,7 @@ export class ObsidianStyles extends Asset
         {
             // @ts-ignore
             let styleID = stylesheets[i].ownerNode?.id;
-            if ((styleID.startsWith("svelte") && MainSettings.settings.includeSvelteCSS) || styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET")
+            if ((styleID.startsWith("svelte") && MainSettings.settings.includeSvelteCSS) || styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET" || styleID == "css-settings-manager")
             {
                 RenderLog.log("Including stylesheet: " + styleID);
                 let style = stylesheets[i].cssRules;

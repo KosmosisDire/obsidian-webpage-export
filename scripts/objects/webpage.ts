@@ -192,7 +192,7 @@ export class Webpage
 			// inject outline
 			if (MainSettings.settings.includeOutline)
 			{
-				let headerTree = new OutlineTree(this.source, 1);
+				let headerTree = new OutlineTree(this, 1);
 				headerTree.class = "outline-tree";
 				headerTree.title = "Table Of Contents";
 				headerTree.showNestingIndicator = false;

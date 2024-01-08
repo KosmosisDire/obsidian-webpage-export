@@ -27,7 +27,6 @@ export class MathjaxStyles extends Asset
                 this.content += this.mathjaxStylesheet.cssRules[i].cssText + "\n";
             }
 
-
             this.content = await Asset.minify(this.content, false);
         }
         else

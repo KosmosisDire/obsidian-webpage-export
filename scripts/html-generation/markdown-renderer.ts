@@ -464,8 +464,6 @@ export namespace MarkdownRenderer
 			element.textContent = renderEl.textContent;
 			renderEl.remove();
 		}
-
-		console.log(html.innerHTML);
 	}
 
 
@@ -485,6 +483,7 @@ export namespace MarkdownRenderer
 		batchStarted = true;
 		loadingContainer = undefined;
 		logContainer = undefined;
+		logShowing = false;
 
 		renderLeaf = TabManager.openNewTab("window", "vertical");
 		// @ts-ignore
@@ -571,7 +570,10 @@ export namespace MarkdownRenderer
 			    renderLeaf.detach();
 			}
 			else
+			{
 				RenderLog.log("error in batch, not detaching");
+				_reportProgress(1, 1, "Completed with errors", "Please see the log for more details.", errorColor);
+			}
 		}
 
 		// @ts-ignore
@@ -584,7 +586,7 @@ export namespace MarkdownRenderer
 		batchStarted = false;
 	}
 
-	export function generateLogEl(title: string, message: string, textColor: string, backgroundColor: string): HTMLElement
+	export function generateLogEl(title: string, message: any, textColor: string, backgroundColor: string): HTMLElement
 	{
 		let logEl = document.createElement("div");
 		logEl.className = "html-render-log-item";
@@ -594,9 +596,11 @@ export namespace MarkdownRenderer
 		logEl.style.fontSize = "12px";
 		logEl.innerHTML =
 		`
-		<div class="html-render-log-title" style="font-weight: bold; margin-left: 1em;">${title}</div>
-		<div class="html-render-log-message" style="margin-left: 2em; font-size: 0.8em;white-space: pre-wrap;">${message}</div>
+		<div class="html-render-log-title" style="font-weight: bold; margin-left: 1em;"></div>
+		<div class="html-render-log-message" style="margin-left: 2em; font-size: 0.8em;white-space: pre-wrap;"></div>
 		`;
+		logEl.querySelector(".html-render-log-title")!.textContent = title;
+		logEl.querySelector(".html-render-log-message")!.textContent = message.toString();
 
 		logEl.style.color = textColor;
 		logEl.style.backgroundColor = backgroundColor;
@@ -649,7 +653,13 @@ export namespace MarkdownRenderer
 	let logShowing = false;
 	function appendLogEl(logEl: HTMLElement)
 	{
-		if(!logContainer || !renderLeaf) return;
+		logContainer = loadingContainer?.querySelector(".html-render-log") ?? undefined;
+
+		if(!logContainer || !renderLeaf)
+		{
+			console.error("Failed to append log element, log container or render leaf is undefined!");
+			return;
+		}
 
 		if (!logShowing) 
 		{
@@ -659,6 +669,7 @@ export namespace MarkdownRenderer
 		}
 
 		logContainer.appendChild(logEl);
+		logEl.scrollIntoView({ behavior: "instant", block: "end", inline: "end" });	
 	}
 
 	export async function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
@@ -696,7 +707,7 @@ export namespace MarkdownRenderer
 		}
 	}
 
-	export async function _reportError(messageTitle: string, message: string, fatal: boolean)
+	export async function _reportError(messageTitle: string, message: any, fatal: boolean)
 	{
 		if (!batchStarted) return;
 
@@ -716,7 +727,7 @@ export namespace MarkdownRenderer
         }
 	}
 
-	export async function _reportWarning(messageTitle: string, message: string)
+	export async function _reportWarning(messageTitle: string, message: any)
 	{
 		if (!batchStarted) return;
 
@@ -727,7 +738,7 @@ export namespace MarkdownRenderer
 		appendLogEl(generateLogEl(messageTitle, message, warningColor, warningBoxColor));
 	}
 
-    export async function _reportInfo(messageTitle: string, message: string)
+    export async function _reportInfo(messageTitle: string, message: any)
 	{
 		if (!batchStarted) return;
 

@@ -85,7 +85,6 @@ export class Asset extends Downloadable
         else if(mutability == Mutability.Dynamic) AssetHandler.dynamicAssets.push(this);
 		else if(mutability == Mutability.Temporary) AssetHandler.temporaryAssets.push(this);
         AssetHandler.allAssets.push(this);
-
     }
 
     public async load(): Promise<void>
@@ -104,6 +103,23 @@ export class Asset extends Downloadable
     override async download(downloadDirectory: Path): Promise<void> 
     {
         if (this.inlinePolicy == InlinePolicy.AlwaysInline) return;
+
+		// if file already exists and the content is the same, don't download it again
+		if (this.getAbsoluteDownloadPath(downloadDirectory).exists)
+		{
+			let existingContent: string | Buffer | undefined = undefined;
+			if (this.content instanceof Buffer)
+				existingContent = await this.getAbsoluteDownloadPath(downloadDirectory).readFileBuffer();
+			else if (typeof this.content == "string")
+				existingContent = await this.getAbsoluteDownloadPath(downloadDirectory).readFileString();
+
+			if (existingContent != undefined && existingContent.toString() == this.content.toString())
+			{
+				RenderLog.warning("Skipping download of " + this.filename + " because it already exists and the content is the same.");
+				return;
+			}
+		}
+
         await super.download(downloadDirectory);
     }
 
@@ -159,7 +175,7 @@ export class Asset extends Downloadable
                 let classes = selector.split(".")[1];
                 if (selector && classes && document.body.classList.contains(classes))
                 {
-                    inputCSS = inputCSS.replace(match[0].toString(), "body");
+                    inputCSS = inputCSS.replace(match[0].toString(), "body:is(.theme-dark, .theme-light)");
                     RenderLog.log(classes);
                     matchCount++;
                 }
@@ -192,7 +208,7 @@ export class Asset extends Downloadable
 				</style>`;
 			}
 
-			content = await runMinify(content, { collapseBooleanAttributes: true, collapseWhitespace: true, minifyCSS: true, minifyJS: true, removeComments: true, removeEmptyAttributes: true, removeRedundantAttributes: true, removeScriptTypeAttributes: true, removeStyleLinkTypeAttributes: true, useShortDoctype: true});
+			content = await runMinify(content, { collapseBooleanAttributes: true, minifyCSS: true, minifyJS: true, removeComments: true, removeEmptyAttributes: true, removeRedundantAttributes: true, removeScriptTypeAttributes: true, removeStyleLinkTypeAttributes: true, useShortDoctype: true});
 
 			// remove the <script> or <style> tags
 			content = content.replace("<script>", "").replace("</script>", "").replace("<style>", "").replace("</style>", "");

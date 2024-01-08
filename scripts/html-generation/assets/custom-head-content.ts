@@ -21,7 +21,7 @@ export class CustomHeadContent extends Asset
 			return;
 		}
 
-        let validation = customHeadPath.validate(true, true, false, true, false, ["html"]);
+        let validation = customHeadPath.validate(false, true, true, false, true, false, ["html"]);
         if (!validation.vaild)
         {
             this.content = "";
