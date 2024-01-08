@@ -32,6 +32,7 @@ export class Path
 	private _isFile: boolean = false;
 	private _exists: boolean | undefined = undefined;
 	private _workingDirectory: string;
+	private _rawString: string = "";
 
 	private _isWindows: boolean = process.platform === "win32";
 
@@ -57,6 +58,7 @@ export class Path
 		this._isDirectory = this._ext == "";
 		this._isFile = this._ext != "";
 		this._exists = undefined;
+		this._rawString = path;
 
 		if (this._isWindows)
 		{
@@ -458,6 +460,16 @@ export class Path
 	}
 
 	/**
+	 * The original unparsed uncleaned string that was used to create this path.
+	 * @example
+	 * Can be any string: "C:/Users//John Doe/../Documents\file.txt " or ""
+	 */
+	get rawString(): string
+	{
+		return this._rawString;
+	}
+
+	/**
 	 * The full path of the file or folder.
 	 * @example
 	 * "C:/Users/John Doe/Documents/file.txt"
@@ -587,15 +599,26 @@ export class Path
 		return this.copy.makeAbsolute(workingDirectory);
 	}
 
-	validate(requireExists: boolean = false, requireAbsolute: boolean = false, requireRelative: boolean = false, requireIsFile: boolean = false, requireIsDirectory: boolean = false, requireExtention: string[] = []): {vaild: boolean, error: string}
+	validate(allowEmpty: boolean = false, requireExists: boolean = false, requireAbsolute: boolean = false, requireRelative: boolean = false, requireIsFile: boolean = false, requireIsDirectory: boolean = false, requireExtention: string[] = []): {vaild: boolean, isEmpty: boolean, error: string}
 	{
 		let error = "";
 		let valid = true;
+		let isEmpty = this.rawString.trim() == "";
 
 		// remove dots from requireExtention
 		requireExtention = requireExtention.map(e => e.replace(".", ""));
 		let dottedExtention = requireExtention.map(e => "." + e);
 
+		if (!allowEmpty && isEmpty)
+		{
+			error += "Path cannot be empty";
+			valid = false;
+		}
+		else if (allowEmpty && isEmpty)
+		{
+			return { vaild: true, isEmpty: isEmpty, error: "" };
+		}
+		
 		if (requireExists && !this.exists)
 		{
 			error += "Path does not exist";
@@ -611,23 +634,23 @@ export class Path
 			error += "Path must be relative";
 			valid = false;
 		}
-		else if (requireIsFile && !this.isFile)
+		else if (requireIsFile && !this.isFile && !isEmpty)
 		{
 			error += "Path must be a file";
 			valid = false;
 		}
-		else if (requireIsDirectory && !this.isDirectory)
+		else if (requireIsDirectory && !this.isDirectory && !isEmpty)
 		{
 			error += "Path must be a directory";
 			valid = false;
 		}
-		else if (requireExtention.length > 0 && !requireExtention.includes(this.extensionName))
+		else if (requireExtention.length > 0 && !requireExtention.includes(this.extensionName) && !isEmpty)
 		{
 			error += "Path must be: " + dottedExtention.join(", ");
 			valid = false;
 		}
 
-		return { vaild: valid, error: error };
+		return { vaild: valid, isEmpty: isEmpty, error: error };
 	}
 
 	async createDirectory(): Promise<boolean>
