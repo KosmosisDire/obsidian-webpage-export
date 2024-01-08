@@ -3,7 +3,7 @@ import { Webpage } from "./webpage";
 import { FileTree } from "./file-tree";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
-import { TFile } from "obsidian";
+import { TFile, getIcon } from "obsidian";
 import { MainSettings } from "scripts/settings/main-settings";
 import { GraphView } from "./graph-view";
 import { Path } from "scripts/utils/path";
@@ -306,17 +306,45 @@ export class Website
 		const frontmatter = fileCache?.frontmatter;
 		const titleFromFrontmatter = frontmatter?.[titleProperty];
 		const stickerProperty = frontmatter?.sticker;
-		if (stickerProperty) {
-			const stickerNumber = parseInt(stickerProperty.replace(/^emoji\/\//, ''), 16);
-			if (!isNaN(stickerNumber)) {
-				const emoji = String.fromCodePoint(stickerNumber);
-				const modifiedTitle = `${emoji} ${titleFromFrontmatter || file.basename}`;
-				return { title: titleFromFrontmatter ?? file.basename, emoji: emoji };
-			} else {
-				console.error(`Invalid sticker number in frontmatter: ${stickerProperty}`);
-				return { title: titleFromFrontmatter ?? file.basename, emoji: '' }
+
+		if (stickerProperty) 
+		{
+			if (stickerProperty.startsWith('emoji//'))
+			{
+				const stickerNumber = parseInt(stickerProperty.replace(/^emoji\/\//, ''), 16);
+				if (!isNaN(stickerNumber)) {
+					const emoji = String.fromCodePoint(stickerNumber);
+					return { title: titleFromFrontmatter ?? file.basename, emoji: emoji };
+				} 
+				else 
+				{
+					console.error(`Invalid sticker number in frontmatter: ${stickerProperty}`);
+					return { title: titleFromFrontmatter ?? file.basename, emoji: '' }
+				}
 			}
-		} else {
+
+			if (stickerProperty.startsWith('lucide//'))
+			{
+				var lucideIconName = stickerProperty.replace(/^lucide\/\//, '');
+				var icon = getIcon(lucideIconName);
+				if (icon)
+				{
+					icon.setAttribute("style", "height: 1em; color: var(--text-muted); translate: 0px 1.5px;");
+					var svg = icon.outerHTML;
+					icon.remove();
+					return { title: titleFromFrontmatter ?? file.basename, emoji: svg };
+				}
+				else 
+				{
+					console.error(`Invalid lucide icon name in frontmatter: ${stickerProperty}`);
+					return { title: titleFromFrontmatter ?? file.basename, emoji: '' }
+				}
+			}
+			
+			return { title: titleFromFrontmatter ?? file.basename, emoji: stickerProperty };
+		} 
+		else 
+		{
 			return { title: titleFromFrontmatter ?? file.basename, emoji: '' };
 		}
 	}

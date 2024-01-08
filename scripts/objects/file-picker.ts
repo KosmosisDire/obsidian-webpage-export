@@ -4,6 +4,7 @@ import { Path } from "scripts/utils/path";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { Tree } from "./tree";
 import { Utils } from "scripts/utils/utils";
+import { Website } from "./website";
 
 export class FilePickerTree extends FileTree
 {
@@ -14,7 +15,7 @@ export class FilePickerTree extends FileTree
 	{
 		super(files, keepOriginalExtensions, sort);
 
-		this.renderMarkdownTitles = false;
+		this.renderMarkdownTitles = true;
 		
 		for (let file of files)
 		{
@@ -34,6 +35,8 @@ export class FilePickerTree extends FileTree
 			{
 				let section = pathSections[i];
 				let isFolder = section instanceof TFolder;
+
+				// make sure this section hasn't already been added
 				let child = parent.children.find(sibling => sibling.title == section.name && sibling.isFolder == isFolder && sibling.depth == i) as FilePickerTreeItem | undefined;
 				
 				if (child == undefined)
@@ -54,11 +57,14 @@ export class FilePickerTree extends FileTree
 			
 			if (parent instanceof FilePickerTreeItem)
 			{
+				let titleInfo = Website.getTitle(file);
 				let path = new Path(file.path).makeUnixStyle();
+
 				if (file instanceof TFolder) path.makeForceFolder();
 				else if(!keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
+
 				parent.href = path.asString;
-				parent.title = path.basename == "." ? "" : path.basename;
+				parent.title = path.basename == "." ? "" : path.basename == ".." ? ".." : `${titleInfo.emoji} ${titleInfo.title}`;
 			}
 		}
 
@@ -212,7 +218,6 @@ export class FilePickerTreeItem extends FileTreeItem
 
 	public check(checked: boolean, evaluate: boolean = false)
 	{
-		// if (!this.checkbox) return;
 		this.checked = checked;
 		this.checkbox.checked = checked;
 		this.checkbox.classList.toggle("checked", checked);

@@ -12,7 +12,7 @@ export class FileTree extends Tree
 	{
 		super();
 
-		this.renderMarkdownTitles = false;
+		this.renderMarkdownTitles = true;
 
 		for (let file of files)
 		{
@@ -32,6 +32,8 @@ export class FileTree extends Tree
 			{
 				let section = pathSections[i];
 				let isFolder = section instanceof TFolder;
+
+				// make sure this section hasn't already been added
 				let child = parent.children.find(sibling => sibling.title == section.name && sibling.isFolder == isFolder && sibling.depth == i) as FileTreeItem | undefined;
 				
 				if (child == undefined)
@@ -45,16 +47,19 @@ export class FileTree extends Tree
 
 					parent.children.push(child);
 				}
+
 				parent = child;
 			}
 			
 			if (parent instanceof FileTreeItem)
 			{
+				let titleInfo = Website.getTitle(file);
 				let path = new Path(file.path).makeUnixStyle();
+
 				if (file instanceof TFolder) path.makeForceFolder();
 				else if(!keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
+
 				parent.href = path.asString;	
-				let titleInfo = Website.getTitle(file);
 				parent.title = path.basename == "." ? "" : `${titleInfo.emoji} ${titleInfo.title}`;
 			}
 		}
