@@ -500,15 +500,22 @@ body:not(.loading) .document-container.show
 
 /*#region Headers */
 
+.heading
+{
+	position: relative;
+}
+
 .heading-wrapper 
 {
     transition: height ease-in-out, margin-bottom ease-in-out;
     transition-duration: 0.2s;
     display: block;
+	position: relative;
+    /* margin-block-end: var(--p-spacing) !important; */
 }
 
 /* high specificity in order to override other style */
-html > body > .webpage-container > .document-container .heading-wrapper, html > body > .webpage-container > .document-container > .markdown-preview-view >  .markdown-preview-sizer > *
+html > body > .webpage-container > .document-container > .markdown-preview-view >  .markdown-preview-sizer > *
 {
 	margin-inline: 0 !important;
     margin: 0 !important;
@@ -517,30 +524,18 @@ html > body > .webpage-container > .document-container .heading-wrapper, html > 
 	max-width: 100%;
 }
 
-body > .webpage-container > .document-container .heading-wrapper > .heading
+.markdown-rendered .heading-wrapper:has(> .heading-children > div:last-child > :is(p,pre,table,ul,ol)) + .heading-wrapper > .heading:first-child
 {
-	margin: 0;
-	margin-inline: 0;
-	margin-block: 0;
-}
-
-.markdown-preview-sizer > .heading-wrapper > h1
-{
-	margin-top: var(--p-spacing) !important;
-}
-
-body > .webpage-container > .document-container .heading-children > div:not(.heading-wrapper):first-child > *
-{
-	margin-top: 0;
+    margin-top: var(--heading-spacing);
 }
 
 .heading-children
 {
 	transition: height ease-in-out, margin-bottom ease-in-out;
 	transition-duration: 0.2s;
-	display: inline-block;
-	width: 100%;
-	padding-top: 1em;
+	display: flow;
+	position: relative;
+	/* z-index: 1; */
 }
 
 .heading-children.is-collapsed
@@ -550,10 +545,8 @@ body > .webpage-container > .document-container .heading-children > div:not(.hea
 
 .heading-wrapper.is-collapsed > .heading-children, .heading-wrapper.is-animating > .heading-children
 {
-    overflow: hidden;
+    overflow: clip;
 }
-
-
 
 .heading-wrapper > .heading > .heading-after
 {
@@ -596,9 +589,36 @@ div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
     transform: rotate(-90deg);
 }
 
-body .webpage-container > .document-container .heading-collapse-indicator, body .webpage-container > .document-container .heading-collapse-indicator > svg
+.heading-wrapper .heading-collapse-indicator
 {
-	position: relative !important;
+	opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+	position: absolute;
+	z-index: 1;
+	padding: 0 !important;
+	padding-left: 40px !important;
+	left: -40px !important;
+}
+
+.heading:hover > .heading-collapse-indicator,
+.heading-wrapper:hover .heading-collapse-indicator
+{
+	opacity: 1;
+}
+
+.heading-wrapper-span 
+{
+    position: absolute;
+    width: 200vw;
+    height: calc(100% + var(--p-spacing) * 2);
+    top: calc(0px - var(--p-spacing));
+    left: -100vw;
+	z-index: -1;
+}
+
+.markdown-embed .markdown-embed-content .markdown-preview-view .heading-wrapper-span 
+{
+    width: 100%;
 }
 
 /*#endregion */
@@ -608,7 +628,7 @@ a {
     overflow-wrap: anywhere;
 }
 
-* 
+*
 {
     overflow-wrap: break-word;
 }
@@ -906,6 +926,11 @@ body.is-small-screen .graph-view-container.expanded
 
 /*#region Canvas */
 
+body :is(.canvas-node-container, .canvas-wrapper)
+{
+	cursor: unset !important;
+}
+
 .canvas
 {
 	translate: 0 0;
@@ -949,6 +974,20 @@ body.is-phone
 /*#endregion */
 
 /*#region Loading */
+
+.scroll-highlight {
+    position: absolute;
+    left: -100vw;
+    top: 50%;
+    translate: 0 -50%;
+    width: 200vw;
+    height: 100%;
+    padding: 1em;
+    border-radius: 0;
+    pointer-events: none;
+    z-index: 1000;
+    box-shadow: 0 0 1em .1em var(--color-accent) inset;
+}
 
 body.post-load .sidebar-sizer
 {
