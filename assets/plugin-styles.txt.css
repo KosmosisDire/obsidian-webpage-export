@@ -1021,9 +1021,14 @@ body.is-phone .sidebar
 
 body.is-phone
 {
-	--collapse-arrow-size: 13em;
+	--collapse-arrow-size: 13px;
 	--tree-vertical-spacing: 0.8em;
 	--tree-horizontal-spacing: 0.5em;
+}
+
+body.is-phone .heading-wrapper .heading-collapse-indicator
+{
+	transition: transform 0.2s ease-in-out 0.2s;
 }
 
 /*#endregion */
