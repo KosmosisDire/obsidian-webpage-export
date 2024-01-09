@@ -367,6 +367,11 @@ body .webpage-container .tree-container .tree-scroll-area
 	translate: 0px 1.5px;
 }
 
+.tree-container .tree-item-icon
+{
+	width: 1.5em;
+}
+
 .tree-container .tree-item.mod-active > .tree-item-contents > .tree-item-link
 {
     color: var(--color-accent);
