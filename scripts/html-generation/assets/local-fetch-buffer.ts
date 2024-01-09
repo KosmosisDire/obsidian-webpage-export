@@ -11,7 +11,6 @@ export class FetchBuffer extends Asset
     {
         super(filename, "", type, inlinePolicy, minify, mutability, loadPriority);
         this.url = url;
-        this.load();
     }
     
     override async load()

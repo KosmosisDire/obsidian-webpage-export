@@ -42,6 +42,6 @@ export class GlobalVariableStyles extends Asset
 
 		this.modifiedTime = Date.now();
 
-        super.load();
+        await super.load();
     }
 }

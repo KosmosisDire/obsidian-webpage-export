@@ -38,10 +38,8 @@ export class Website
 		let bodyClasses = document.body.classList;
 		let validClasses = "";
 
-		// validClasses += bodyClasses.contains("theme-light") ? " theme-light " : " theme-dark ";
 		if (MainSettings.settings.sidebarsAlwaysCollapsible) validClasses += " sidebars-always-collapsible ";
 		if (MainSettings.settings.inlineAssets) validClasses += " inlined-assets ";
-		// validClasses += " css-settings-manager ";
 		validClasses += " loading ";
 		
 		// keep body classes that are referenced in the styles
@@ -49,7 +47,7 @@ export class Website
 		{
 			if (typeof(style.content) != "string") continue;
 
-			let matches = style.content.matchAll(/\.[^\s1234567890\.]{1,} /gm);
+			let matches = style.content.matchAll(/\.[^\s1234567890\.]{1,}/gm);
 			for (var match of matches)
 			{
 				let className = match[0].replace(".", "").trim();
@@ -208,54 +206,54 @@ export class Website
 		await databasePath.writeFile(json);
 	}
 
-	public static getTitle(file: TFile): { title: string, icon: string }
+	public static getTitle(file: TFile): { title: string, icon: string, isDefaultIcon: boolean }
 	{
 		const { app } = HTMLExportPlugin.plugin;
 		const { titleProperty } = MainSettings.settings;
 		const fileCache = app.metadataCache.getFileCache(file);
 		const frontmatter = fileCache?.frontmatter;
 		const titleFromFrontmatter = frontmatter?.[titleProperty];
-		const stickerProperty = frontmatter?.sticker;
+		const title = titleFromFrontmatter ?? file.basename;
 
-		if (stickerProperty) 
+		let iconProperty = frontmatter?.icon ?? frontmatter?.sticker;
+		let iconOutput = '';
+		let isDefaultIcon = false;
+		if (!iconProperty) 
 		{
-			if (stickerProperty.startsWith('emoji//'))
-			{
-				const stickerNumber = parseInt(stickerProperty.replace(/^emoji\/\//, ''), 16);
-				if (!isNaN(stickerNumber)) {
-					const emoji = String.fromCodePoint(stickerNumber);
-					return { title: titleFromFrontmatter ?? file.basename, icon: emoji };
-				} 
-				else 
-				{
-					console.error(`Invalid sticker number in frontmatter: ${stickerProperty}`);
-					return { title: titleFromFrontmatter ?? file.basename, icon: '�' }
-				}
-			}
-
-			if (stickerProperty.startsWith('lucide//'))
-			{
-				var lucideIconName = stickerProperty.replace(/^lucide\/\//, '');
-				var icon = getIcon(lucideIconName);
-				if (icon)
-				{
-					var svg = icon.outerHTML;
-					icon.remove();
-					return { title: titleFromFrontmatter ?? file.basename, icon: svg };
-				}
-				else 
-				{
-					console.error(`Invalid lucide icon name in frontmatter: ${stickerProperty}`);
-					return { title: titleFromFrontmatter ?? file.basename, icon: '�' }
-				}
-			}
-			
-			return { title: titleFromFrontmatter ?? file.basename, icon: stickerProperty };
-		} 
-		else 
-		{
-			return { title: titleFromFrontmatter ?? file.basename, icon: '' };
+			iconProperty = MainSettings.settings.defaultFileIcon;
+			isDefaultIcon = true;
 		}
+
+		if (iconProperty.startsWith('emoji//'))
+		{
+			const stickerNumber = parseInt(iconProperty.replace(/^emoji\/\//, ''), 16);
+			if (!isNaN(stickerNumber)) 
+			{
+				iconOutput = String.fromCodePoint(stickerNumber);
+			} 
+			else 
+			{
+				console.error(`Invalid sticker number in frontmatter: ${iconProperty}`);
+				iconOutput = '�';
+			}
+		}
+		else if (iconProperty.startsWith('lucide//'))
+		{
+			const lucideIconName = iconProperty.replace(/^lucide\/\//, '');
+			const iconEl = getIcon(lucideIconName);
+			if (iconEl)
+			{
+				iconOutput = iconEl.outerHTML;
+				iconEl.remove();
+			}
+			else 
+			{
+				console.error(`Invalid lucide icon name in frontmatter: ${iconProperty}`);
+				iconOutput = '�';
+			}
+		}
+		
+		return { title: title, icon: iconOutput, isDefaultIcon: isDefaultIcon };
 	}
 	
 }

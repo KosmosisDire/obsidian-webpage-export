@@ -45,8 +45,8 @@ export class FileTree extends Tree
 					child.title = section.name;
 					child.isFolder = isFolder;
 
-					if(child.isFolder) child.itemClass = "mod-tree-folder"
-					else child.itemClass = "mod-tree-file"
+					if(child.isFolder) child.itemClass = "mod-tree-folder nav-folder"
+					else child.itemClass = "mod-tree-file nav-file"
 
 					parent.children.push(child);
 				}
@@ -131,5 +131,13 @@ export class FileTreeItem extends TreeItem
 		}
 
 		return linkEl;
+	}
+
+	protected override async createItemTitle(container: HTMLElement): Promise<HTMLSpanElement>
+	{
+		let titleEl = await super.createItemTitle(container);
+		if (this.isFolder) titleEl.addClass("nav-folder-title");
+		else titleEl.addClass("nav-file-title");
+		return titleEl; 
 	}
 }

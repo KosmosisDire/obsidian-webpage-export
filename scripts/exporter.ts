@@ -24,7 +24,9 @@ export class HTMLExporter
 
 		let website = await HTMLExporter.exportFiles(files, exportPath, true, MainSettings.settings.deleteOldExportedFiles);
 		let IndexPath = exportPath.toString()
-		const Indexing = await IndexM.indexHTMLFiles(IndexPath);
+
+		if (MainSettings.settings.includeSearchBar) await IndexM.indexHTMLFiles(IndexPath); // only index if search bar is enabled
+
 		if (website)
 		{
 			if (MainSettings.settings.openAfterExport) Utils.openPath(exportPath);

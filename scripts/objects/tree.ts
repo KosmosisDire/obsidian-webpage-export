@@ -46,12 +46,13 @@ export class Tree
 	public async generateTreeWithContainer(container: HTMLElement)
 	{
 		/*
-		- div.tree-container
+		- div.tree-container.mod-root.nav-folder
 			- div.tree-header
 				- span.sidebar-section-header
 				- button.collapse-tree-button
 					- svg
-			- div.tree-scroll-area
+			- div.tree-scroll-area.tree-item-children
+				- div.tree-item // invisible first item
 				- div.tree-item
 					- div.tree-item-contents
 						- div.tree-item-icon
@@ -69,12 +70,14 @@ export class Tree
 		let collapseAllEl = container.createEl('button');
 		let treeScrollAreaEl = container.createDiv();
 
-		treeContainerEl.classList.add('tree-container', this.class);
+		treeContainerEl.classList.add('tree-container', "mod-root", "nav-folder", "tree-item", this.class);
 		treeHeaderEl.classList.add("tree-header");
 		sectionHeaderEl.classList.add("sidebar-section-header");
 		collapseAllEl.classList.add("clickable-icon", "collapse-tree-button");
 		collapseAllEl.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'></svg>";
-		treeScrollAreaEl.classList.add("tree-scroll-area");
+		treeScrollAreaEl.classList.add("tree-scroll-area", "tree-item-children", "nav-folder-children");
+		let invisFirst = treeScrollAreaEl.createDiv("tree-item mod-tree-folder nav-folder mod-collapsible is-collapsed"); // invisible first item
+		invisFirst.style.display = "none";
 
 		if (this.generateWithItemsClosed) collapseAllEl.classList.add("is-collapsed");
 		if (this.showNestingIndicator) treeContainerEl.classList.add("mod-nav-indicator");
@@ -138,7 +141,7 @@ export class TreeItem
 		/*
 		- div.tree-item-wrapper
 			- div.tree-item-contents
-				- a.internal-link.tree-item-link
+				- a.webpage-link.tree-item-link
 					- div.tree-item-icon
 						- svg
 					- span.tree-item-title
@@ -211,7 +214,7 @@ export class TreeItem
 	{
 		let itemEl = container.createDiv();
 		itemEl.classList.add("tree-item");
-		if (this.itemClass.trim() != "") itemEl.classList.add(this.itemClass);
+		if (this.itemClass.trim() != "") itemEl.classList.add(...this.itemClass.split(" "));
 		itemEl.setAttribute("data-depth", this.depth.toString());
 		if (this.isCollapsible()) itemEl.classList.add("mod-collapsible");
 		return itemEl;
@@ -228,7 +231,7 @@ export class TreeItem
 	protected async createItemLink(container: HTMLElement): Promise<HTMLAnchorElement>
 	{
 		if (this.tree.makeLinksWebStyle && this.href) this.href = Path.toWebStyle(this.href);
-		let itemLinkEl = container.createEl("a", { cls: "internal-link tree-item-link" });
+		let itemLinkEl = container.createEl("a", { cls: "webpage-link tree-item-link" });
 		if (this.href) itemLinkEl.setAttribute("href", this.href);
 
 		if (this.isCollapsible())
@@ -240,6 +243,7 @@ export class TreeItem
 			}
 		}
 
+		this.createItemIcon(itemLinkEl);
 		await this.createItemTitle(itemLinkEl);
 
 		return itemLinkEl;
@@ -257,7 +261,6 @@ export class TreeItem
 	protected async createItemTitle(container: HTMLElement): Promise<HTMLSpanElement>
 	{
 		let titleEl = container.createEl("span", { cls: "tree-item-title" });
-		this.createItemIcon(titleEl);
 		if (this.tree.renderMarkdownTitles) MarkdownRenderer.renderSingleLineMarkdown(this.title, titleEl);
 		else titleEl.innerText = this.title;
 		return titleEl;
@@ -277,7 +280,7 @@ export class TreeItem
 
 	protected createItemChildren(container: HTMLElement): HTMLDivElement
 	{
-		this.childContainer = container.createDiv("tree-item-children");
+		this.childContainer = container.createDiv("tree-item-children nav-folder-children");
 		return this.childContainer;
 	}
 

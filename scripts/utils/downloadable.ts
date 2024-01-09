@@ -34,11 +34,10 @@ export class Downloadable
 			{
 				let existingSize = existingStat?.size;
 				let existingTime = Math.max(existingStat?.mtimeMs ?? 0, existingStat?.ctimeMs ?? 0);
-				console.log("existingSize: " + existingSize + ", contentLength: " + this.content.length + ", existingTime: " + existingTime + ", modifiedTime: " + this.modifiedTime + ", filename: " + this.filename);
 				
 				if (existingSize == this.content.length && this.modifiedTime <= existingTime)
 				{
-					RenderLog.warning("File size and modified time are the same, skipping download of " + this.filename);
+					// RenderLog.warning("File size and modified time are the same, skipping download of " + this.filename);
 					return;
 				}
 				else if (existingSize == this.content.length)
@@ -48,7 +47,7 @@ export class Downloadable
 					let contentBuffer = Buffer.from(this.content);
 					if (existingContent && existingContent.equals(contentBuffer))
 					{
-						RenderLog.warning("File content is the same, skipping download of " + this.filename);
+						// RenderLog.warning("File content is the same, skipping download of " + this.filename);
 						return;
 					}
 				}

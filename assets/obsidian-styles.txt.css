@@ -58,6 +58,12 @@ hr
 
 /*#region Transclusions */
 
+.webpage-container .internal-embed.markdown-embed .markdown-rendered .heading
+{
+	margin-block-start: var(--p-spacing) !important;
+	margin-block-end: var(--p-spacing) !important;
+}
+
 .markdown-embed .markdown-embed-content .markdown-preview-sizer
 {
 	padding-left: 1em !important;

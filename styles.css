@@ -105,8 +105,8 @@ input[type=checkbox].file-checkbox
 
 .tree-container .tree-item-icon > *
 {
-	color: var(--text-muted); 
-	font-family: emoji;
+	color: var(--text-muted);
+	padding-right: 0.3em;
 }
 
 .tree-container .tree-item-icon svg
@@ -323,13 +323,52 @@ input[type=checkbox].file-checkbox
 
 /* Special */
 
+
+/* AnuPpuccin rainbow indent support */
+.anp-simple-rainbow-color-toggle.anp-simple-rainbow-indentation-toggle .tree-container .tree-item
+{
+	border-color: rgba(var(--rainbow-folder-color), 0.5);
+}
+
 .tree-container.outline-tree .tree-item[data-depth='1'] > .tree-item-contents > .tree-item-link
 {
     font-weight: 900;
     font-size: 1.1em;
-    margin-left: 0em;
+    margin-left: 0;
+	padding-left: 1em;
 }
 
+.tree-container .nav-folder.mod-root .nav-folder>.nav-folder-children
+{
+	padding: 0 !important;
+	margin: 0 !important;
+	border: none !important;
+}
 
+.tree-container .nav-file
+{
+	border-radius: 0 !important;
+}
 
+.tree-container .nav-folder.mod-root .nav-folder > .nav-folder-children
+{
+	border-radius: var(--radius-s) !important;;
+}
+
+.tree-container  .nav-file-tag
+{
+	margin-inline-end: 1em;
+}
+
+.tree-container .nav-file-title, .tree-container .nav-folder-title 
+{
+    margin-bottom: unset !important;
+    display: unset !important;
+    border-radius: unset !important;
+    cursor: unset !important;
+    font-size: unset !important;
+    font-weight: unset !important;
+    line-height: unset !important;
+	padding: unset !important;
+}
 /*#endregion */

@@ -59,6 +59,11 @@ export interface MainSettingsData
 	graphMinNodeSize: number;
 	graphMaxNodeSize: number;
 
+	// icons
+	defaultFileIcon: string,
+	defaultFolderIcon: string,
+	defaultMediaIcon: string,
+
 	// Cache
 	exportPath: string;
 	filesToExport: string[][];
@@ -112,6 +117,11 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	graphEdgePruning: 100,
 	graphMinNodeSize: 3,
 	graphMaxNodeSize: 7,
+
+	// icons
+	defaultFileIcon: "lucide//file",
+	defaultFolderIcon: "lucide//folder",
+	defaultMediaIcon: "lucide//file-image",
 
 	// Cache
 	exportPath: '',

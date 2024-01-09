@@ -177,7 +177,7 @@ body
     align-items: center;
     padding: 1em;
     max-width: 100%;
-    padding-right: 0;
+	padding-bottom: 0;
 }
 
 @keyframes hide {
@@ -230,6 +230,9 @@ body:not(.loading) .document-container.show
     padding-bottom: 30em;
     align-items: flex-start;
     justify-content: center;
+	background-color: var(--background-primary);
+    border-top-right-radius: var(--window-radius);
+	border-top-left-radius: var(--window-radius);
     overflow-x: hidden;
     overflow-y: scroll;
 	z-index: 0;
@@ -241,8 +244,6 @@ body:not(.loading) .document-container.show
     padding-bottom: 50vh;
     width: 100%;
     position: absolute;
-    background-color: var(--background-primary);
-    border-radius: var(--window-radius);
     max-width: var(--line-width);
     flex-basis: var(--line-width);
     transition: background-color var(--color-fade-speed) ease-in-out;
@@ -316,14 +317,14 @@ body:not(.loading) .document-container.show
     display: none;
 }
 
-.tree-container .tree-scroll-area 
+body .webpage-container .tree-container .tree-scroll-area 
 {
 	width: 100%;
 	height: 100%;
 	max-height: 100%;
 	overflow-y: scroll;
-	padding-right: 1em;
-	border-radius: var(--radius-m);
+	padding-right: calc(var(--collapse-arrow-size) / 2);
+	border-radius: var(--radius-s);
 	position: absolute;
 }
 
@@ -333,6 +334,7 @@ body:not(.loading) .document-container.show
     flex-direction: column;
     align-items: flex-start;
     padding: 0;
+	overflow: hidden !important;
 }
 
 .tree-container .tree-item-children
@@ -355,8 +357,8 @@ body:not(.loading) .document-container.show
 .tree-container .tree-item-icon > *
 {
 	color: var(--text-muted); 
-	font-family: emoji;
 	padding-right: 0.3em;
+	font-family: emoji;
 }
 
 .tree-container .tree-item-icon svg
@@ -375,9 +377,13 @@ body:not(.loading) .document-container.show
     display: flex;
     flex-direction: row;
     align-items: center;
-    border-radius: 0.4em;
+    border-radius: var(--radius-s);
     color: var(--nav-item-color);
-    width: 100%;
+
+    width: -webkit-fill-available;
+	width: -moz-available;
+	width: fill-available;
+
     margin-left: var(--tree-horizontal-spacing);
 }
 
@@ -407,9 +413,23 @@ body:not(.loading) .document-container.show
     overflow: hidden;
     text-overflow: ellipsis;
     text-wrap: nowrap;
+
+	width: 100%;
+	width: -webkit-fill-available;
+	width: -moz-available;
+	width: fill-available;
+
+	position: relative;
 }
 
-.tree-container .mod-tree-file > .tree-item-contents > .tree-item-link
+.tree-container .tree-item-title::after
+{
+	right: 0;
+	position: absolute !important;
+	margin-right: 0.5em !important;
+}
+
+.tree-container .mod-tree-folder:not(:has(.mod-tree-folder)) .mod-tree-file > .tree-item-contents > .tree-item-link
 {
 	padding-left: calc(var(--tree-horizontal-spacing) * 2);
 }
@@ -445,12 +465,18 @@ body:not(.loading) .document-container.show
     transform: rotate(-90deg);
 }
 
+.tree-container .mod-tree-file .tree-item-contents .tree-item-link:hover 
+{
+    text-decoration: underline;
+}
+
 .tree-container .tree-item-link:hover 
 {
     cursor: pointer;
-    color: var(--nav-item-color-hover);
-    text-decoration: underline;
+	color: var(--nav-item-color-hover);
 }
+
+
 
 /* Indentation guide */
 
@@ -476,7 +502,7 @@ body:not(.loading) .document-container.show
 }
 
 
-.tree-container .tree-item:hover:not(.mod-active):not(.mod-collapsible):not(:has(.tree-item:hover)) /* Hover */
+.tree-container .tree-item:hover:not(.mod-active):not(.mod-collapsible):not(:has(.tree-item:hover)):not(.mod-root > * > *) /* Hover */
 {
     border-left: var(--nav-indentation-guide-width) solid var(--nav-item-color-hover);
 }
@@ -486,22 +512,27 @@ body:not(.loading) .document-container.show
 	background-color: var(--nav-item-background-hover);
 }
 
-.webpage-container .tree-container .tree-item:not(.mod-collapsible) > .tree-item-children > .tree-item,
+/* .webpage-container .tree-container .tree-item:not(.mod-collapsible) > .tree-item-children > .tree-item,
 .webpage-container .tree-container > .tree-scroll-area > .tree-item,
 .webpage-container .tree-container:not(.mod-nav-indicator) .tree-item
 {
     border-left: none !important;
-}
+} */
 
 .webpage-container .tree-container .tree-item:not(.mod-collapsible) > .tree-item-children > .tree-item > .tree-item-contents,
 .webpage-container .tree-container:not(.mod-nav-indicator) .tree-item .tree-item-contents,
 .webpage-container .tree-container > .tree-scroll-area > .tree-item > .tree-item-contents
 {
     margin-left: 0 !important;
-	width: calc(100% + var(--tree-horizontal-spacing));
 }
 
 /* Special */
+
+/* AnuPpuccin rainbow indent support */
+.anp-simple-rainbow-color-toggle.anp-simple-rainbow-indentation-toggle .tree-container .tree-item
+{
+	border-color: rgba(var(--rainbow-folder-color), 0.5);
+}
 
 .tree-container.outline-tree .tree-item[data-depth='1'] > .tree-item-contents > .tree-item-link
 {
@@ -511,7 +542,39 @@ body:not(.loading) .document-container.show
 	padding-left: 1em;
 }
 
+.nav-folder.mod-root .nav-folder>.nav-folder-children
+{
+	padding: 0 !important;
+	margin: 0 !important;
+	border: none !important;
+}
 
+.nav-file
+{
+	border-radius: 0 !important;
+}
+
+.nav-folder.mod-root .nav-folder > .nav-folder-children
+{
+	border-radius: var(--radius-s) !important;;
+}
+
+.webpage-container .nav-file-tag
+{
+	margin-inline-end: 1em;
+}
+
+.nav-file-title, .nav-folder-title 
+{
+    margin-bottom: unset !important;
+    display: unset !important;
+    border-radius: unset !important;
+    cursor: unset !important;
+    font-size: unset !important;
+    font-weight: unset !important;
+    line-height: unset !important;
+	padding: unset !important;
+}
 
 /*#endregion */
 
@@ -523,10 +586,16 @@ body:not(.loading) .document-container.show
   height: 100%;
 }
 
+#webpage-icon:has(svg)
+{
+	font-size: 1em;
+	width: 40px;
+	height: 40px;
+	margin-bottom: 0 !important;
+}
+
 #webpage-icon {
   font-size: 2em;
-  width: 40px;
-  height: 40px;
   margin-bottom: 8px !important;
   font-family: emoji;
 }
@@ -1359,13 +1428,14 @@ body.theme-light .excalidraw-svg svg.light, body.theme-light .excalidraw-plugin 
 	display: none;
 }
 
-.obsidian-banner-wrapper
-{
-	height: 300px;
+.obsidian-banner-wrapper {
+    height: 300px;
     top: 0;
+    left: 0;
     z-index: 1;
     max-height: 300px;
     width: 100%;
+    position: absolute;
 }
 
 .obsidian-banner

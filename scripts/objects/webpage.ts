@@ -291,8 +291,10 @@ export class Webpage
 		// add math styles to the document. They are here and not in <head> because they are unique to each document
 		let mathStyleEl = document.createElement("style");
 		mathStyleEl.id = "MJX-CHTML-styles";
+		await AssetHandler.mathjaxStyles.load();
 		mathStyleEl.innerHTML = AssetHandler.mathjaxStyles.content;
 		this.contentElement.prepend(mathStyleEl);
+		console.log(AssetHandler.mathjaxStyles.content);
 
 		let dependencies_temp: Downloadable[] = AssetHandler.getAssetDownloads();
 		dependencies_temp.push(...outlinedImages);
@@ -409,15 +411,21 @@ export class Webpage
 	private addTitle() 
 	{
 		if (!this.document) return;
-	
+		
+		// remove inline title
 		let inlineTitle = this.document.querySelector(".inline-title");
 		inlineTitle?.remove();
 
-		let title = Website.getTitle(this.source).title;
-		let icon = Website.getTitle(this.source).icon;
+		// remove make.md title
+		let makeTitle = this.document.querySelector(".mk-inline-context");
+		makeTitle?.remove();
+
+		let titleInfo = Website.getTitle(this.source);
+		let title = titleInfo.title;
+		let icon = titleInfo.icon;
 
 		// if the first header element is basically the same as the title, remove it
-		let firstHeader = this.document.querySelector("h1, h2, h3, h4, h5, h6");
+		let firstHeader = this.document.querySelector(":is(h1, h2, h3, h4, h5, h6):not(.markdown-embed-content *)");
 		if (firstHeader)
 		{
 			let headerChildren = Array.from(firstHeader.childNodes);
@@ -441,26 +449,28 @@ export class Webpage
 				RenderLog.warning(`First header in ${this.source.basename} has no text node.`);
 			}
 		}
-	
-		// Create a div with icon
-		let pageIcon = this.document.createElement("div");
-		pageIcon.id = "webpage-icon";
-		pageIcon.innerHTML = icon;
-		
+
 		// Create h1 with title
 		let titleEl = this.document.createElement("h1");
 		titleEl.id = "inline-title";
 		MarkdownRenderer.renderSingleLineMarkdown(title, titleEl);
-		titleEl.appendChild(pageIcon); // Add the icon div as the second child of the title element
 	
-		// Find the document container
-		let documentContainer = this.document.querySelector(".markdown-preview-section");
+		// Create a div with icon
+		if (icon != "" && !titleInfo.isDefaultIcon)
+		{
+			let pageIcon = this.document.createElement("div");
+			pageIcon.id = "webpage-icon";
+			pageIcon.innerHTML = icon;
+			titleEl.appendChild(pageIcon); // Add the icon div as the second child of the title element
+		}
 	
-		if (documentContainer) {
+		if (this.contentElement)
+		{
 			// Find the element with class "mod-header" within the document container
-			let modHeader = documentContainer.querySelector(".mod-header");
+			let modHeader = this.contentElement.querySelector(".mod-header:not(.markdown-embed-content *)");
 	
-			if (modHeader) {
+			if (modHeader) 
+			{
 				// Append the title element as the last child of the document container
 				modHeader.appendChild(titleEl);
 			} else {

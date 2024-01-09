@@ -15,7 +15,13 @@ export class MathjaxStyles extends Asset
     {
         // @ts-ignore
         if (this.mathjaxStylesheet == undefined) this.mathjaxStylesheet = Array.from(document.styleSheets).find((sheet) => sheet.ownerNode.id == ("MJX-CHTML-styles"));
-        if (this.mathjaxStylesheet == undefined) return;
+        if (this.mathjaxStylesheet == undefined) 
+		{
+			console.warn("Mathjax stylesheet not found");
+			return;
+		}
+		
+		this.modifiedTime = Date.now();
 
         // @ts-ignore
         let changed = this.mathjaxStylesheet?.ownerNode.getAttribute("data-change");
@@ -35,8 +41,6 @@ export class MathjaxStyles extends Asset
         }
 
         this.lastMathjaxChanged = changed;
-		this.modifiedTime = Date.now();
-
-        super.load();
+        await super.load();
     }
 }

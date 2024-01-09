@@ -5,6 +5,8 @@ import { RenderLog } from "scripts/html-generation/render-log";
 
 export async function migrateSettings(settings: any)
 {
+	if (!settings) return;
+	
     if (settings.settingsVersion == HTMLExportPlugin.pluginVersion) return;
 
     if ((settings.settingsVersion == "1.7.3" || settings.settingsVersion == "0.0.0") && HTMLExportPlugin.pluginVersion == "1.7.4")

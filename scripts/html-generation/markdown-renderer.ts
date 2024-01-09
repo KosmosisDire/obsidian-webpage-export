@@ -97,7 +97,7 @@ export namespace MarkdownRenderer
 		if (!html) return failRender(file, "Failed to render file!");
 
 		await postProcessHTML(html);
-		await AssetHandler.mathjaxStyles.load();
+		// await AssetHandler.mathjaxStyles.load();
 
 		if (loneFile) MarkdownRenderer.endBatch();
 
@@ -128,7 +128,7 @@ export namespace MarkdownRenderer
 		pusherEl.style.width = "1px";
 
 		// @ts-ignore
-		let promises = []
+		let promises: Promise<any>[] = [];
 
 		for (let i = 0; i < sections.length; i++)
 		{
@@ -148,7 +148,7 @@ export namespace MarkdownRenderer
 			await section.render();
 
 			// @ts-ignore
-			let success = await Utils.waitUntil(() => (section.el && section.rendered == true) || checkCancelled(), 2000, 1);
+			let success = await Utils.waitUntil(() => (section.el && section.rendered) || checkCancelled(), 2000, 1);
 			if (!success) return failRender(preview.file, "Failed to render section!");
 
 			section.el.querySelectorAll(".language-mermaid").forEach(async (element: HTMLElement) =>
@@ -167,11 +167,13 @@ export namespace MarkdownRenderer
 
 			await renderer.measureSection(section);
 
-			success = await Utils.waitUntil(() => section.computed == true || checkCancelled(), 2000, 1);
+			success = await Utils.waitUntil(() => section.computed || checkCancelled(), 2000, 1);
 			if (!success) return failRender(preview.file, "Failed to compute section!");
-
+			
 			// @ts-ignore
 			await preview.postProcess(section, promises, renderer.frontmatter);
+
+			await Utils.delay(0);
 		}
 
 		// @ts-ignore
@@ -185,7 +187,7 @@ export namespace MarkdownRenderer
 		}
 
 		container.appendChild(viewEl);
-		await AssetHandler.mathjaxStyles.load();
+		// await AssetHandler.mathjaxStyles.load();
 
 		return viewEl;
 	}
@@ -196,6 +198,12 @@ export namespace MarkdownRenderer
 		renderComp.load();
 		await ObsidianRenderer.renderMarkdown(markdown, container, "/", renderComp);
 		renderComp.unload();
+
+		let renderedEl = container.children[container.children.length - 1];
+		if (renderedEl && renderedEl.tagName == "P")
+		{
+			renderedEl.outerHTML = renderedEl.innerHTML; // remove the outer <p> tag
+		}
 		
 		//remove rendered lists and replace them with plain text
 		container.querySelectorAll("ol").forEach((listEl: HTMLElement) =>
@@ -203,7 +211,7 @@ export namespace MarkdownRenderer
 			if(listEl.parentElement)
 			{
 				let start = listEl.getAttribute("start") ?? "1";
-				listEl.parentElement.createSpan().outerHTML = `<p>${start}. ${listEl.innerText}</p>`;
+				listEl.parentElement.createSpan().outerHTML = `${start}. ${listEl.innerText}`;
 				listEl.remove();
 			}
 		});
@@ -276,7 +284,7 @@ export namespace MarkdownRenderer
 		let content = view.contentEl;
 		container.appendChild(content);
 
-		await AssetHandler.mathjaxStyles.load();
+		// await AssetHandler.mathjaxStyles.load();
 
 		return content;
 	}
@@ -303,7 +311,7 @@ export namespace MarkdownRenderer
 
 		sizerEl.appendChild(svg);
 
-		await AssetHandler.mathjaxStyles.load();
+		// await AssetHandler.mathjaxStyles.load();
 
 		if (checkCancelled()) return undefined;
 
@@ -434,6 +442,12 @@ export namespace MarkdownRenderer
 			if (container) container.appendChild(embed);
 
 			RenderLog.log(container?.innerHTML);
+		});
+
+		// remove all MAKE.md elements
+		html.querySelectorAll("div[class^='mk-']").forEach((element: HTMLElement) =>
+		{
+			element.remove();
 		});
 
 		// convert canvas elements into images
@@ -669,6 +683,7 @@ export namespace MarkdownRenderer
 		}
 
 		logContainer.appendChild(logEl);
+		// @ts-ignore
 		logEl.scrollIntoView({ behavior: "instant", block: "end", inline: "end" });	
 	}
 
@@ -714,7 +729,7 @@ export namespace MarkdownRenderer
 		errorInBatch = true;
 
 		// @ts-ignore
-		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 1);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		appendLogEl(generateLogEl(messageTitle, message, errorColor, errorBoxColor));
@@ -732,7 +747,7 @@ export namespace MarkdownRenderer
 		if (!batchStarted) return;
 
 		// @ts-ignore
-		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 1);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		appendLogEl(generateLogEl(messageTitle, message, warningColor, warningBoxColor));
@@ -743,7 +758,7 @@ export namespace MarkdownRenderer
 		if (!batchStarted) return;
 
 		// @ts-ignore
-		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 1);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		appendLogEl(generateLogEl(messageTitle, message, infoColor, infoBoxColor));

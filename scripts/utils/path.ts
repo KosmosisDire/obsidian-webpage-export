@@ -239,7 +239,7 @@ export class Path
 	
 	static toWebStyle(path: string): string
 	{
-		return path.replaceAll(" ", "-").replaceAll(/-{2,}/g, "-").replace(".-", "-").toLowerCase();
+		return path.replaceAll(" ", "-").replaceAll(/-{2,}/g, "-").toLowerCase();
 	}
 
 	joinString(...paths: string[]): Path

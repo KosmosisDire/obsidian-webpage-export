@@ -1779,7 +1779,7 @@ function setupCodeblocks(setupOnNode)
 
 function setupLinks(setupOnNode)
 {
-	setupOnNode.querySelectorAll(".internal-link, .footnote-link, .tree-item:not(.mod-tree-folder) > .tree-item-contents > .tree-item-link").forEach(function(link)
+	setupOnNode.querySelectorAll(".internal-link, .webpage-link, .footnote-link, .tree-item:not(.mod-tree-folder) > .tree-item-contents > .tree-item-link").forEach(function(link)
 	{
 		link.addEventListener("click", function(event)
 		{
@@ -2202,7 +2202,7 @@ function setupExcalidraw(setupOnNode)
 						item.classList.add('search-result');
                         
 						const link = document.createElement('a');
-						link.classList.add('internal-link');
+						link.classList.add('webpage-link');
 
                         const icon = document.createElement('span');
 						icon.classList.add('icon');

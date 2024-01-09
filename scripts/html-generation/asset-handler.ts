@@ -64,21 +64,20 @@ export class AssetHandler
 		
 		this.allAssets.sort((a, b) => a.loadPriority - b.loadPriority);
 		
+		// by default all static assets have a modified time the same as main.js
+		this.mainJsModTime = this.vaultPluginsPath.joinString("webpage-html-export/main.js").stat?.mtimeMs ?? 0;
+		this.staticAssets.forEach(asset => asset.modifiedTime = this.mainJsModTime);
+		
 		this.allAssets.forEach(async (asset) => await asset.load());
 		
 		let graphViewPath = this.graphViewJS.getAssetPath();
 		this.graphViewJS.getHTMLInclude = () => `<script type="module" src="${graphViewPath}"></script>`;
-		
-		this.mainJsModTime = this.vaultPluginsPath.joinString("webpage-html-export/main.js").stat?.mtimeMs ?? 0;
-
-		// by deafult all static assets have a modified time the same as main.js
-		this.staticAssets.forEach(asset => asset.modifiedTime = this.mainJsModTime);
 	}
 
 	public static async reloadAssets()
 	{
 		// remove all temporary assets from allAssets
-		this.allAssets = this.allAssets.filter(asset => !this.temporaryAssets.includes(asset));
+		this.allAssets = this.allAssets.filter(asset => asset.mutability != Mutability.Temporary);
 		this.temporaryAssets = [];
 		console.log(this.allAssets);
 
@@ -106,6 +105,7 @@ export class AssetHandler
 			downloadAssets = downloadAssets.filter(asset => ![this.graphViewJS, this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS].includes(asset));
 		}
 
+		// remove assets that are always inlined
 		downloadAssets = downloadAssets.filter(asset => asset.inlinePolicy != InlinePolicy.AlwaysInline);
 
 		// remove duplicates
@@ -126,6 +126,9 @@ export class AssetHandler
 
 		// remove duplicates
 		urls = urls.filter((url, index, self) => self.findIndex((t) => t[0] === url[0]) === index);
+
+		// use this mutability for child assets
+		let mut = asset.mutability == Mutability.Static ? Mutability.Static : Mutability.Temporary;
             
 		for (let urlObj of urls)
 		{
@@ -161,7 +164,8 @@ export class AssetHandler
 					let dataHash = hash(data);
 					let filename = `${dataHash}.${extension}`;
 					let type = Asset.extentionToType(extension);
-					let childAsset = new Asset(filename, buffer, type, InlinePolicy.None, false, Mutability.Temporary, 0);
+
+					let childAsset = new Asset(filename, buffer, type, InlinePolicy.None, false, mut, 0);
 					await childAsset.load();
 
 					if (childAsset.content == undefined || childAsset.content == null || childAsset.content.length == 0)
@@ -179,7 +183,7 @@ export class AssetHandler
 
 			let path = new Path(url);
 			let type = Asset.extentionToType(path.extension);
-			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.None, false, Mutability.Temporary, 0);
+			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.None, false, mut, 0);
 			await childAsset.load();
 			
 			if (childAsset.content == undefined || childAsset.content == null || childAsset.content.length == 0)
@@ -197,8 +201,8 @@ export class AssetHandler
 			{
 				let newPath = childAsset.getAssetPath(asset.getAssetPath());
 				content = content.replaceAll(url, newPath.asString);
+				console.log("replace " + url + " with " + newPath.asString);
 			}
-
 		}
 
 		return content;
