@@ -8,69 +8,83 @@ const mime = require('mime');
 
 export enum AssetType
 {
-    Style,
-    Script,
-    Media,
-    HTML,
-    Font,
-    Other
+    Style, // css
+    Script, // js
+    Media, // images, videos, audio, etc
+    HTML, // reusable html
+    Font, // fonts
+    Other // anything else
 }
 
 export enum InlinePolicy
 {
-    AlwaysInline,
-    NeverInline,
-    Auto,
-    None
+    AlwaysInline, // this asset will always be inlined into the html file
+    NeverInline, // this asset will never be inlined into the html file, and will always be saved as a separate file 
+    Auto, // this asset will be inlined if the user has enabled inline assets, otherwise it will be saved as a separate file
+    None // this asset is only used during export and is not saved automatically
 }
 
 export enum Mutability
 {
-	Static,
-	Dynamic,
-	Temporary
+	Static, // this asset never changes
+	Dynamic, // this asset can change
+	Temporary // this asset is created only for the current export and is deleted afterwards
 }
 
 export class Asset extends Downloadable 
 {
 	// this path is used to generate the relative path to the images folder, likewise for the other paths
-    private static readonly libraryFolder: Path = new Path("lib").makeUnixStyle();
-	private static readonly mediaFolder: Path = this.libraryFolder.joinString("media").makeUnixStyle();
-	private static readonly jsFolder: Path = this.libraryFolder.joinString("scripts").makeUnixStyle(); 
-	private static readonly cssFolder: Path = this.libraryFolder.joinString("styles").makeUnixStyle();
-	private static readonly htmlFolder: Path = this.libraryFolder.joinString("html").makeUnixStyle();
+    private static libraryFolder: Path;
+	private static mediaFolder: Path;
+	private static jsFolder: Path;
+	private static cssFolder: Path;
+	private static htmlFolder: Path;
+
+	public static initialize() 
+	{
+		this.libraryFolder = new Path("lib").makeUnixStyle();
+		this.mediaFolder = this.libraryFolder.joinString("media").makeUnixStyle();
+		this.jsFolder = this.libraryFolder.joinString("scripts").makeUnixStyle(); 
+		this.cssFolder = this.libraryFolder.joinString("styles").makeUnixStyle();
+		this.htmlFolder = this.libraryFolder.joinString("html").makeUnixStyle();
+	}
 
     public static get libraryPath(): Path
     {
+		if (!this.libraryFolder) this.initialize();
         if (MainSettings.settings.makeNamesWebStyle) return Asset.libraryFolder.copy.makeWebStyle();
         return Asset.libraryFolder.copy;
     }
     public static get mediaPath(): Path
     {
+		if (!this.mediaFolder) this.initialize();
         if (MainSettings.settings.makeNamesWebStyle) return Asset.mediaFolder.copy.makeWebStyle();
         return Asset.mediaFolder.copy;
     }
     public static get jsPath(): Path
     {
+		if (!this.jsFolder) this.initialize();
         if (MainSettings.settings.makeNamesWebStyle) return Asset.jsFolder.copy.makeWebStyle();
         return Asset.jsFolder.copy;
     }
     public static get cssPath(): Path
     {
+		if (!this.cssFolder) this.initialize();
         if (MainSettings.settings.makeNamesWebStyle) return Asset.cssFolder.copy.makeWebStyle();
         return Asset.cssFolder.copy;
     }
     public static get htmlPath(): Path
     {
+		if (!this.htmlFolder) this.initialize();
         if (MainSettings.settings.makeNamesWebStyle) return Asset.htmlFolder.copy.makeWebStyle();
         return Asset.htmlFolder.copy;
     }
 
-    public type: AssetType;
-    public inlinePolicy: InlinePolicy;
-	public mutability: Mutability;
-    public minify: boolean;
-    public loadPriority: number = 1;
+    public type: AssetType; // what type of asset is this
+    public inlinePolicy: InlinePolicy; // should this asset be inlined into the html file
+	public mutability: Mutability; // can this asset change
+    public minify: boolean; // should the asset be minified
+    public loadPriority: number = 1; // which order should the assets be loaded in, lower numbers are loaded first
 
 	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadPriority: number = 1)
     {

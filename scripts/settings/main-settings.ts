@@ -73,7 +73,7 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	inlineAssets: false,
 	includePluginCSS: '',
 	includeSvelteCSS: true,
-	titleProperty: 'webpage-title',
+	titleProperty: 'title',
 	customHeadContentPath: '',
 	faviconPath: '',
 
