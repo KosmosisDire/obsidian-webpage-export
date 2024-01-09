@@ -126,6 +126,7 @@ async function initializePage()
 		initializeDocumentTypes();
 		setupSidebars();
 		setupThemeToggle();
+		setupSearch();
 		setupRootPath(document);
 
 		sidebarTargetWidth = await getComputedPixelValue("--sidebar-width");
@@ -619,12 +620,68 @@ var slideToggleAll = (targets, duration = 500) => {
 	}
 }
 
+function getURLExtention(url)
+{
+	return url.split(".").pop().split("?")[0].split("#")[0].toLowerCase().trim();
+}
 
 //#endregion
 
 //#region -----------------   Loading & Paths   ----------------- 
 
 let transferDocument = document.implementation.createHTMLDocument();
+let pageloadEvent = new Event("pageload");
+
+function showLoading(loading)
+{
+	if(loading)
+	{
+		// show loading icon
+		loadingIcon.classList.toggle("shown", true);
+		let viewBounds = getViewBounds();
+		loadingIcon.style.left = (viewBounds.centerX - loadingIcon.offsetWidth / 2) + "px";
+		loadingIcon.style.top = (viewBounds.centerY - loadingIcon.offsetHeight / 2) + "px";
+
+		// hide document container
+		documentContainer.classList.toggle("hide", true);
+		documentContainer.classList.toggle("show", false);
+
+		// hide the left sidebar if on phone
+		if (deviceSize == "phone") leftSidebar.collapse(true);
+	}
+	else
+	{
+		// hide loading icon
+		loadingIcon.classList.toggle("shown", false);
+
+		// show document container
+		documentContainer.style.transitionDuration = "";
+		documentContainer.classList.toggle("hide", false);
+		documentContainer.classList.toggle("show", true);
+	}
+}
+
+function pageNotFound(viewContent)
+{
+	viewContent.innerHTML = 
+	`
+	<div>
+		<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
+			<h1 style>Page Not Found</h1>
+		</center>
+	</div>
+	`;
+
+	if (document.querySelector(".outline-tree"))
+		document.querySelector(".outline-tree").innerHTML = "";
+
+	console.log("Page not found: " + absoluteBasePath + url);
+	let newRootPath = getURLRootPath(absoluteBasePath + url);
+	relativeBasePath = newRootPath;
+	document.querySelector("base").href = newRootPath;
+
+	document.title = "Page Not Found";
+}
 
 async function loadDocument(url, pushHistory = true, scrollTo = true)
 {
@@ -632,49 +689,16 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 	let pathnameTarget = splitURL[0] ?? url;
 	console.log("Loading document: " + pathnameTarget);
 
-	// display loading icon
-	loadingIcon.classList.toggle("shown", true);
-	let viewBounds = getViewBounds();
-	loadingIcon.style.left = (viewBounds.centerX - loadingIcon.offsetWidth / 2) + "px";
-	loadingIcon.style.top = (viewBounds.centerY - loadingIcon.offsetHeight / 2) + "px";
-
-	// hide document container
-	documentContainer.classList.toggle("hide", true);
-	documentContainer.classList.toggle("show", false);
-
-	// hide the left sidebar if on phone
-	if (deviceSize == "phone") leftSidebar.collapse(true);
-
-	if(isOffline)
+	if (pathnameTarget.startsWith(window.location.pathname))
 	{
-		setTimeout(function()
-		{
-			// if the page is offline instead add a header saying so
-			viewContent.innerHTML = `
-<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
-	<h1>You appear to be offline. Check your internet connection and then try reloading the page.</h1>
-</center>`;
-
-			if (document.querySelector(".outline-tree")) document.querySelector(".outline-tree").innerHTML = "";
-
-			console.log("Page offline: " + absoluteBasePath + url);
-			let newRootPath = getURLRootPath(absoluteBasePath + url);
-			relativeBasePath = newRootPath;
-			document.querySelector("base").href = newRootPath;
-
-			document.title = "Page Offline";
-
-			// hide document container
-			documentContainer.classList.toggle("hide", false);
-			documentContainer.classList.toggle("show", true);
-			loadingIcon.classList.toggle("shown", false);
-		}, 1000);
-
+		console.log("Document is already loaded...");
+		window.dispatchEvent(pageloadEvent);
 		return;
 	}
 
-	let response;
+	showLoading(true);
 
+	let response;
 	try
 	{
 		response = await fetch(pathnameTarget);
@@ -688,10 +712,9 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 
 	if (response.ok)
 	{
-		// change the active file
 		setActiveDocument(pathnameTarget, scrollTo, pushHistory);
 
-		let extention = url.split(".").pop().split("?")[0].split("#")[0].toLowerCase().trim();
+		let extention = getURLExtention(url);
 
 		documentType = "none";
 		embedType = "none";
@@ -776,42 +799,18 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 		}
 
 		await initializePage();
+
+		// page load event
+		window.dispatchEvent(pageloadEvent);
 	}
 	else
 	{
-		setTimeout(function()
-		{
-			// if the page is not able to load instead add a header saying the page doesn't exist
-			viewContent.innerHTML = 
-			`
-			<div>
-				<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
-					<h1 style>Page Not Found</h1>
-				</center>
-			</div>
-			`;
-
-			if (document.querySelector(".outline-tree"))
-				document.querySelector(".outline-tree").innerHTML = "";
-
-			console.log("Page not found: " + absoluteBasePath + url);
-			let newRootPath = getURLRootPath(absoluteBasePath + url);
-			relativeBasePath = newRootPath;
-			document.querySelector("base").href = newRootPath;
-
-			document.title = "Page Not Found";
-		}, 1000);
+		pageNotFound();
 	}
 
-	// hide loading icon
-	loadingIcon.classList.toggle("shown", false);
+	showLoading(false);
 
-	// show document container
-	documentContainer.style.transitionDuration = "";
-	documentContainer.classList.toggle("hide", false);
-	documentContainer.classList.toggle("show", true);
-
-	return transferDocument;
+	return;
 }
 
 function setActiveDocument(url, scrollTo = true, pushHistory = true)
@@ -2168,64 +2167,129 @@ function setupExcalidraw(setupOnNode)
 
 //#region -----------------        Search      -----------------
 
-(async () => {
-            await import('https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js');
-            
-            const searchIndex = await fetch('lib/searchIndex.json').then(response => response.text());
-            const index = MiniSearch.loadJSON(searchIndex, { fields: ['title', 'content'] });
+// search box
+async function setupSearch() 
+{
+	await import('https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js');
 
-            const input_parent = document.querySelector('.search-input-container');
-            const input = document.querySelector('input[type="search"]');
-			const inputClear = document.querySelector('.search-input-clear-button');
-			
-            inputClear.addEventListener('click', (event) => {
-				input.value = '';
-				search("");
+	const searchIndex = await fetch('lib/searchIndex.json').then(response => response.text());
+	const index = MiniSearch.loadJSON(searchIndex, { fields: ['title', 'content'] });
+
+	const input_parent = document.querySelector('.search-input-container');
+	const input = document.querySelector('input[type="search"]');
+	const inputClear = document.querySelector('.search-input-clear-button');
+
+	inputClear.addEventListener('click', (event) => {
+		input.value = '';
+		search("");
+	});
+
+	input.addEventListener('input', (event) => {
+		const query = event.target.value ?? "";
+		search(query);
+	});
+
+	const container = document.createElement('div');
+	container.setAttribute('id', 'search-results');
+
+	const search = query => {
+		if (query.length >= 1) {
+			const results = index.search(query, { prefix: true, fuzzy: 0.3 });
+			const list = document.createElement('div');
+			results.slice(0, 10).forEach(result => {
+
+				const item = document.createElement('div');
+				item.classList.add('search-result');
+
+				const link = document.createElement('a');
+				link.classList.add('webpage-link');
+
+				const icon = document.createElement('span');
+				icon.classList.add('icon');
+				icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>`
+				link.appendChild(icon);
+
+				// highlight and scroll to result
+				const searchURL = result.path + '?h=' + encodeURIComponent(query);
+				link.setAttribute('href', searchURL);
+				link.appendChild(document.createTextNode(result.title));
+				item.appendChild(link);
+				list.append(item);
 			});
 
-			input.addEventListener('input', (event) => {
-				const query = event.target.value ?? "";
-				search(query);
-			});
+			container.replaceChildren(list);
+			input_parent.after(container);
 
-            const container = document.createElement('div');
-			container.setAttribute('id', 'search-results');
+			initializePageEvents(container);
+		}
+		else {
+			if (container && container.parentElement) container.parentNode.removeChild(container);
+		}
+	};
+}
 
-			const search = query => {
-				if (query.length >= 1) 
-                {
-					const results = index.search(query, { prefix: true, fuzzy: 0.3 });
-					const list = document.createElement('div');
-					results.slice(0, 10).forEach(result => {
+window.addEventListener('pageload', parseSearchParams);
+function parseSearchParams()
+{
+	const urlParams = new URLSearchParams(window.location.search);
 
-						const item = document.createElement('div');
-						item.classList.add('search-result');
-                        
-						const link = document.createElement('a');
-						link.classList.add('webpage-link');
+	const highlightParam = urlParams.get('h');
+	const searchParam = urlParams.get('s');
+	
+	if (highlightParam) 
+	{
+		const documentContainer = document.querySelector('.document-container');
+		const textNodes = getTextNodes(documentContainer);
 
-                        const icon = document.createElement('span');
-						icon.classList.add('icon');
-						icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>`
-						link.appendChild(icon);
+		firstOccurance = true;
+		textNodes.forEach(node => 
+		{
+			const content = node.nodeValue;
+			const newContent = content.replace(new RegExp(highlightParam, 'gi'), match => `<mark>${match}</mark>`);
 
-						link.setAttribute('href', result.path);
-						link.appendChild(document.createTextNode(result.title));
-						item.appendChild(link);
-						list.append(item);
-					});
-					
-					container.replaceChildren(list);
-					input_parent.after(container);
-				
-					setupLinks(container);
-				} 
-                else
-                {
-					if (container && container.parentElement) container.parentNode.removeChild(container);
-				}
-			};
+			if (newContent !== content) 
+			{
+				const tempDiv = document.createElement('div');
+				tempDiv.innerHTML = newContent;
+		
+				const newNodes = Array.from(tempDiv.childNodes);
+		
+				newNodes.forEach(newNode => 
+				{
+					if (newNode.nodeType != Node.TEXT_NODE) newNode.setAttribute('class', 'search-mark');
+					node.parentNode.insertBefore(newNode, node);
+				});
+		
+				node.parentNode.removeChild(node);
+			}
 
-            })();
+			if (firstOccurance) 
+			{
+				scrollIntoView(node.parentElement, { behavior: "smooth", block: "center"});
+				firstOccurance = false;
+			}
+		});
+	}
+
+	if (searchParam) 
+	{
+		const input = document.querySelector('input[type="search"]');
+		input.value = searchParam;
+	}
+}
+  
+function getTextNodes(element) 
+{
+	const textNodes = [];
+	const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+
+	let node;
+	while (node = walker.nextNode()) {
+		textNodes.push(node);
+	}
+
+	return textNodes;
+}
+
 
 //#endregion

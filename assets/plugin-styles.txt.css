@@ -1275,6 +1275,12 @@ body.resizing *:not(body:not(.file-protocol) :is(.sidebar-sizer, .sidebar-gutter
 
 /*#region Search */
 
+.search-mark
+{
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
 #search-results
 {
   --search-spacing: calc(var(--tree-vertical-spacing)/ 2);
