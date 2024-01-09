@@ -477,8 +477,11 @@ export class Webpage
 		if (!this.document) return;
 
 		let rootPath = MainSettings.settings.makeNamesWebStyle ? this.pathToRoot.copy.makeWebStyle().asString : this.pathToRoot.asString;
+
 		let titleInfo = Website.getTitle(this.source);
-		let domtitle =`${titleInfo.icon} ${titleInfo.title}`
+		let domtitle = titleInfo.title;
+		if (titleInfo.icon.length <= 14) domtitle = titleInfo.icon + " " + domtitle;
+
 		let head =
 		`
 		<title>${domtitle}</title>

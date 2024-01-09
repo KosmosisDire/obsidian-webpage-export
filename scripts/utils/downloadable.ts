@@ -23,11 +23,12 @@ export class Downloadable
 
 	async download(downloadDirectory: Path)
 	{
-		// if file already exists and the file size and modified time are the same, skip download
-		if (this.getAbsoluteDownloadPath(downloadDirectory).exists)
+		let downloadPath = this.getAbsoluteDownloadPath(downloadDirectory);
+		// if file already exists and the file size and modified time are the same, or content is the same, skip download
+		if (downloadPath.exists)
 		{
-			// first check filesize the same (faster)
-			let existingStat = await this.getAbsoluteDownloadPath(downloadDirectory).stat;
+			// first check filesize and modified time
+			let existingStat = await downloadPath.stat;
 		
 			if (existingStat)
 			{
@@ -39,6 +40,17 @@ export class Downloadable
 				{
 					RenderLog.warning("File size and modified time are the same, skipping download of " + this.filename);
 					return;
+				}
+				else if (existingSize == this.content.length)
+				{
+					// if file size is the same, check content
+					let existingContent = await downloadPath.readFileBuffer();
+					let contentBuffer = Buffer.from(this.content);
+					if (existingContent && existingContent.equals(contentBuffer))
+					{
+						RenderLog.warning("File content is the same, skipping download of " + this.filename);
+						return;
+					}
 				}
 			}
 		}

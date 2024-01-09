@@ -60,9 +60,11 @@ export namespace HTMLGeneration
 		html.querySelectorAll("div:has(> :is(h1, h2, h3, h4, h5, h6)):not(.markdown-preview-sizer)").forEach(function (header: HTMLDivElement)
 		{
 			header.classList.add("heading-wrapper");
-			header.createEl("div", { cls: "heading-wrapper-span" }); 
+
+			// header.createEl("div", { cls: "heading-wrapper-span" }); 
 			// the heading wrapper span is as wide as the whole screen, but has the same height and position as the heading wrapper
 			// this is used for vertical hover effects
+			// disabled because it is not being used
 
 			let hEl = getHeaderEl(header) as HTMLHeadingElement;
 

@@ -232,6 +232,7 @@ body:not(.loading) .document-container.show
     justify-content: center;
     overflow-x: hidden;
     overflow-y: scroll;
+	z-index: 0;
 }
 
 .document-container > .markdown-preview-view > .markdown-preview-sizer 
@@ -245,6 +246,7 @@ body:not(.loading) .document-container.show
     max-width: var(--line-width);
     flex-basis: var(--line-width);
     transition: background-color var(--color-fade-speed) ease-in-out;
+	z-index: 0;
 }
 
 .view-content img:not([width]), .markdown-rendered img:not([width]) 
@@ -345,8 +347,9 @@ body:not(.loading) .document-container.show
 {
 	padding: 0;
 	margin: 0;
-	overflow: visible;
-	display: inline-block;
+	overflow: hidden;
+	display: inline;
+	text-overflow: ellipsis;
 }
 
 .tree-container .tree-item-icon > *
@@ -540,13 +543,28 @@ body:not(.loading) .document-container.show
 	position: relative;
 }
 
+/* make hover apply to margins of heading */
+.heading::after, .heading:before
+{
+  content:'';
+  width: 100%;
+  height: var(--p-spacing);
+  position: absolute;
+  left: calc(0px - var(--p-spacing));
+  top: 100%;
+  z-index: 1;
+}
+.heading:before
+{
+  top: calc(0px - var(--p-spacing));
+}
+
 .heading-wrapper 
 {
     transition: height ease-in-out, margin-bottom ease-in-out;
     transition-duration: 0.2s;
     display: block;
 	position: relative;
-    /* margin-block-end: var(--p-spacing) !important; */
 }
 
 /* high specificity in order to override other style */
@@ -570,7 +588,6 @@ html > body > .webpage-container > .document-container > .markdown-preview-view 
 	transition-duration: 0.2s;
 	display: flow;
 	position: relative;
-	/* z-index: 1; */
 }
 
 .heading-children.is-collapsed
@@ -632,11 +649,12 @@ div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
 	z-index: 1;
 	padding: 0 !important;
 	padding-left: 40px !important;
+	padding-right: 40px !important;
 	left: -40px !important;
 }
 
 .heading:hover > .heading-collapse-indicator,
-.heading-wrapper:hover .heading-collapse-indicator
+.heading-wrapper .heading-collapse-indicator:hover
 {
 	opacity: 1;
 }
