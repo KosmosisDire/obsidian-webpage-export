@@ -4,7 +4,7 @@ import { FileSystemAdapter, Notice } from 'obsidian';
 import { Utils } from './utils';
 import { promises as fs } from 'fs';
 import { statSync } from 'fs';
-import internal from 'stream';
+import internal from 'stream'; 
 import { RenderLog } from 'scripts/html-generation/render-log';
 
 export class Path
@@ -43,6 +43,11 @@ export class Path
 		this.reparse(path);
 
 		if (this.isAbsolute) this._workingDirectory = "";
+	}
+
+	public static fromString(path: string): Path
+	{
+		return new Path(path);
 	}
 
 	reparse(path: string): Path

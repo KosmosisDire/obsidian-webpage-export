@@ -1,5 +1,5 @@
-import { Downloadable } from "scripts/utils/downloadable";
 import { Path } from "scripts/utils/path";
+import { Downloadable } from "scripts/utils/downloadable";
 import { RenderLog } from "../render-log";
 import { MainSettings } from "scripts/settings/main-settings";
 import { AssetHandler } from "../asset-handler";
@@ -36,7 +36,7 @@ export class Asset extends Downloadable
 	// this path is used to generate the relative path to the images folder, likewise for the other paths
     private static readonly libraryFolder: Path = new Path("lib").makeUnixStyle();
 	private static readonly mediaFolder: Path = this.libraryFolder.joinString("media").makeUnixStyle();
-	private static readonly jsFolder: Path = this.libraryFolder.joinString("scripts").makeUnixStyle();
+	private static readonly jsFolder: Path = this.libraryFolder.joinString("scripts").makeUnixStyle(); 
 	private static readonly cssFolder: Path = this.libraryFolder.joinString("styles").makeUnixStyle();
 	private static readonly htmlFolder: Path = this.libraryFolder.joinString("html").makeUnixStyle();
 
