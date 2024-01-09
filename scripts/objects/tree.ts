@@ -233,7 +233,7 @@ export class TreeItem
 
 		if (this.isCollapsible())
 		{
-			this.createItemIcon(itemLinkEl);
+			this.createItemCollapseIcon(itemLinkEl);
 			if (this.isCollapsed) 
 			{
 				this.itemEl?.classList.add("is-collapsed");
