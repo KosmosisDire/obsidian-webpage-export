@@ -669,7 +669,7 @@ export namespace MarkdownRenderer
 		}
 
 		logContainer.appendChild(logEl);
-		logEl.scrollIntoView({ behavior: "smooth", block: "end", inline: "end" });	
+		logEl.scrollIntoView({ behavior: "instant", block: "end", inline: "end" });	
 	}
 
 	export async function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
