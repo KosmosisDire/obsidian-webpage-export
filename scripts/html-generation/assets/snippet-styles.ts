@@ -42,8 +42,10 @@ export class SnippetStyles extends Asset
         {
             snippets += snippetsList[i] + "\n";
         }
+		
         this.content = snippets;
         this.lastEnabledSnippets = enabledSnippets;
+		this.modifiedTime = Date.now();
 
         super.load();
     }

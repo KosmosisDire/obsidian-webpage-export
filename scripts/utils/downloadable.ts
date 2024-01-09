@@ -1,12 +1,14 @@
+import { RenderLog } from "scripts/html-generation/render-log";
 import { Path } from "./path";
 
 export class Downloadable
 {
-	filename: string;
-	content: string | Buffer;
-	relativeDownloadDirectory: Path;
-	relativeDownloadPath: Path;
-	encoding: BufferEncoding | undefined;
+	public filename: string;
+	public content: string | Buffer;
+	public relativeDownloadDirectory: Path;
+	public relativeDownloadPath: Path;
+	public encoding: BufferEncoding | undefined;
+	public modifiedTime: number = 0; // when was the source file last modified
 
 	constructor(filename: string, content: string | Buffer, vaultRelativeDestination: Path, encoding: BufferEncoding | undefined = "utf8")
 	{
@@ -21,6 +23,26 @@ export class Downloadable
 
 	async download(downloadDirectory: Path)
 	{
+		// if file already exists and the file size and modified time are the same, skip download
+		if (this.getAbsoluteDownloadPath(downloadDirectory).exists)
+		{
+			// first check filesize the same (faster)
+			let existingStat = await this.getAbsoluteDownloadPath(downloadDirectory).stat;
+		
+			if (existingStat)
+			{
+				let existingSize = existingStat?.size;
+				let existingTime = Math.max(existingStat?.mtimeMs ?? 0, existingStat?.ctimeMs ?? 0);
+				console.log("existingSize: " + existingSize + ", contentLength: " + this.content.length + ", existingTime: " + existingTime + ", modifiedTime: " + this.modifiedTime + ", filename: " + this.filename);
+				
+				if (existingSize == this.content.length && this.modifiedTime <= existingTime)
+				{
+					RenderLog.warning("File size and modified time are the same, skipping download of " + this.filename);
+					return;
+				}
+			}
+		}
+		
 		let data = this.content instanceof Buffer ? this.content : Buffer.from(this.content.toString(), this.encoding);
 		let writePath = this.getAbsoluteDownloadDirectory(downloadDirectory).joinString(this.filename);
 		await writePath.writeFile(data, this.encoding);

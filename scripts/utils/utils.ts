@@ -170,6 +170,8 @@ export class Utils
 	//async function that awaits until a condition is met
 	static async waitUntil(condition: () => boolean, timeout: number = 1000, interval: number = 100): Promise<boolean>
 	{
+		if (condition()) return true;
+		
 		return new Promise((resolve, reject) => {
 			let timer = 0;
 			let intervalId = setInterval(() => {

@@ -104,8 +104,9 @@ export class ObsidianStyles extends Asset
             }
         }
 
-        this.content = Asset.filterBodyClasses(this.content);
+		this.modifiedTime = Date.now();
 
+        this.content = Asset.filterBodyClasses(this.content);
         this.content = await Asset.minify(this.content, false);
         super.load();
     }

@@ -28,6 +28,8 @@ export class CustomHeadContent extends Asset
             RenderLog.error(validation.error + customHeadPath.asString);
             return;
         }
+
+		this.modifiedTime = customHeadPath.stat?.mtimeMs ?? this.modifiedTime;
         this.content = await customHeadPath.readFileString() ?? "";
         await super.load();
     }

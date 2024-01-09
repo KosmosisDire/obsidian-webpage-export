@@ -164,7 +164,9 @@ export class Webpage
 	public async getSelfDownloadable(): Promise<Downloadable>
 	{
 		let content = (this.isConvertable ? await this.getHTML() : await new Path(this.source.path).readFileBuffer()) ?? "";
-		return new Downloadable(this.name, content, this.exportPath.directory.makeForceFolder());
+		let downloadable = new Downloadable(this.name, content, this.exportPath.directory.makeForceFolder());
+		downloadable.modifiedTime = this.source.stat.mtime;
+		return downloadable;
 	}
 
 	public async create(): Promise<Webpage | undefined>
@@ -404,7 +406,8 @@ export class Webpage
 		return {container: pageContainer, left: leftContent, right: rightContent, center: documentContainer};
 	}
 
-	private addTitle() {
+	private addTitle() 
+	{
 		if (!this.document) return;
 	
 		let inlineTitle = this.document.querySelector(".inline-title");
@@ -419,16 +422,23 @@ export class Webpage
 		{
 			let headerChildren = Array.from(firstHeader.childNodes);
 			let firstHeaderTextNode = headerChildren.find((el) => el.nodeType == Node.TEXT_NODE);
-			let firstHeaderTitle = (firstHeaderTextNode?.textContent ?? "").toLowerCase();
-			let lowerTitle = title.toLowerCase();
-			let titleDiff = Utils.levenshteinDistance(firstHeaderTitle, lowerTitle) / lowerTitle.length;
-			let basenameDiff = Utils.levenshteinDistance(firstHeaderTitle, this.source.basename.toLowerCase()) / this.source.basename.length;
-			let difference = Math.min(titleDiff, basenameDiff);
-
-			if (difference < 0.15)
+			if (firstHeaderTextNode)
 			{
-				firstHeader.remove();
-				RenderLog.log("Removed first header because it was the same as the title", firstHeaderTitle);
+				let firstHeaderTitle = firstHeaderTextNode.textContent?.toLowerCase() ?? "";
+				let lowerTitle = title.toLowerCase();
+				let titleDiff = Utils.levenshteinDistance(firstHeaderTitle, lowerTitle) / lowerTitle.length;
+				let basenameDiff = Utils.levenshteinDistance(firstHeaderTitle, this.source.basename.toLowerCase()) / this.source.basename.length;
+				let difference = Math.min(titleDiff, basenameDiff);
+
+				if (difference < 0.15)
+				{
+					firstHeader.remove();
+					RenderLog.warning(`"${firstHeaderTextNode.textContent ?? ""}" header replaced because it was very similar to the file's title.`);
+				}
+			}
+			else
+			{
+				RenderLog.warning(`First header in ${this.source.basename} has no text node.`);
 			}
 		}
 	
@@ -440,8 +450,8 @@ export class Webpage
 		// Create h1 with title
 		let titleEl = this.document.createElement("h1");
 		titleEl.id = "inline-title";
-		titleEl.appendChild(pageIcon); // Add the icon div as the first child of the title element
 		MarkdownRenderer.renderSingleLineMarkdown(title, titleEl);
+		titleEl.appendChild(pageIcon); // Add the icon div as the second child of the title element
 	
 		// Find the document container
 		let documentContainer = this.document.querySelector(".markdown-preview-section");
@@ -594,6 +604,8 @@ export class Webpage
 
 			let data = await filePath.readFileBuffer() ?? Buffer.from([]);
 			let imageDownload = new Downloadable(exportLocation.fullName, data, exportLocation.directory.makeForceFolder());
+			let imageStat = await filePath.stat;
+			if (imageStat) imageDownload.modifiedTime = imageStat.mtimeMs;
 			if (data.length == 0) RenderLog.log(filePath, "No data for file: ");
 			downloads.push(imageDownload);
 		};

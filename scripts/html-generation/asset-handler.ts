@@ -54,19 +54,25 @@ export class AssetHandler
 	public static favicon: Favicon = new Favicon();
 	public static externalLinkIcon: Asset;
 	public static customHeadContent: CustomHeadContent;
+	public static mainJsModTime: number = 0;
 
 	public static async initialize()
 	{
 		this.vaultPluginsPath = Path.vaultPath.joinString(app.vault.configDir, "plugins/").makeAbsolute();
-
+		
 		this.customHeadContent = new CustomHeadContent();
-
+		
 		this.allAssets.sort((a, b) => a.loadPriority - b.loadPriority);
-
+		
 		this.allAssets.forEach(async (asset) => await asset.load());
-
+		
 		let graphViewPath = this.graphViewJS.getAssetPath();
 		this.graphViewJS.getHTMLInclude = () => `<script type="module" src="${graphViewPath}"></script>`;
+		
+		this.mainJsModTime = this.vaultPluginsPath.joinString("webpage-html-export/main.js").stat?.mtimeMs ?? 0;
+
+		// by deafult all static assets have a modified time the same as main.js
+		this.staticAssets.forEach(asset => asset.modifiedTime = this.mainJsModTime);
 	}
 
 	public static async reloadAssets()

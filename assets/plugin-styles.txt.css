@@ -1003,9 +1003,9 @@ body.is-phone .sidebar
 
 body.is-phone
 {
-	--collapse-arrow-size: 0.5em;
+	--collapse-arrow-size: 13em;
 	--tree-vertical-spacing: 0.8em;
-	--tree-horizontal-spacing: 0.45em;
+	--tree-horizontal-spacing: 0.5em;
 }
 
 /*#endregion */
@@ -1223,6 +1223,7 @@ body.resizing *:not(body:not(.file-protocol) :is(.sidebar-sizer, .sidebar-gutter
   border-radius: var(--radius-s);
   position: relative;
   transition: background-color 0.2s;
+  text-decoration: none;
 }
 
 .search-result > a:hover

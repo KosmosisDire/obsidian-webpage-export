@@ -32,8 +32,8 @@ export class OtherPluginStyles extends Asset
             }
         }
 
+		this.modifiedTime = Date.now();
         this.lastEnabledPluginStyles = MainSettings.settings.includePluginCSS;
-
         this.content = Asset.filterBodyClasses(this.content);
         super.load();
     }

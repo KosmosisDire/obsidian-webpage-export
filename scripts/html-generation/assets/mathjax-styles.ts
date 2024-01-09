@@ -35,6 +35,8 @@ export class MathjaxStyles extends Asset
         }
 
         this.lastMathjaxChanged = changed;
+		this.modifiedTime = Date.now();
+
         super.load();
     }
 }

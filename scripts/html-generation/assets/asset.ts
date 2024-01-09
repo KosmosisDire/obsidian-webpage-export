@@ -95,9 +95,21 @@ export class Asset extends Downloadable
         this.minify = minify;
         this.loadPriority = loadPriority;
 
-        if(mutability == Mutability.Static) AssetHandler.staticAssets.push(this);
-        else if(mutability == Mutability.Dynamic) AssetHandler.dynamicAssets.push(this);
-		else if(mutability == Mutability.Temporary) AssetHandler.temporaryAssets.push(this);
+        if(mutability == Mutability.Static) 
+		{
+			AssetHandler.staticAssets.push(this);
+			this.modifiedTime = AssetHandler.mainJsModTime; // by default all static assets have a modified time the same as main.js
+		}
+        else if(mutability == Mutability.Dynamic) 
+		{
+			AssetHandler.dynamicAssets.push(this);
+			this.modifiedTime = Date.now();
+		}
+		else if(mutability == Mutability.Temporary) 
+		{
+			AssetHandler.temporaryAssets.push(this);
+			this.modifiedTime = Date.now();
+		}
         AssetHandler.allAssets.push(this);
     }
 
@@ -117,23 +129,6 @@ export class Asset extends Downloadable
     override async download(downloadDirectory: Path): Promise<void> 
     {
         if (this.inlinePolicy == InlinePolicy.AlwaysInline) return;
-
-		// if file already exists and the content is the same, don't download it again
-		if (this.getAbsoluteDownloadPath(downloadDirectory).exists)
-		{
-			let existingContent: string | Buffer | undefined = undefined;
-			if (this.content instanceof Buffer)
-				existingContent = await this.getAbsoluteDownloadPath(downloadDirectory).readFileBuffer();
-			else if (typeof this.content == "string")
-				existingContent = await this.getAbsoluteDownloadPath(downloadDirectory).readFileString();
-
-			if (existingContent != undefined && existingContent.toString() == this.content.toString())
-			{
-				RenderLog.warning("Skipping download of " + this.filename + " because it already exists and the content is the same.");
-				return;
-			}
-		}
-
         await super.download(downloadDirectory);
     }
 

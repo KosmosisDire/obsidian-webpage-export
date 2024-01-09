@@ -37,6 +37,7 @@ export class FetchBuffer extends Asset
 
         let data = await res.arrayBuffer();
         this.content = Buffer.from(data);
+		this.modifiedTime = Date.now();
 
         await super.load();
     }

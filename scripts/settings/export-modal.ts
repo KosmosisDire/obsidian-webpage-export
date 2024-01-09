@@ -308,7 +308,7 @@ export class ExportModal extends Modal
 
 		this.filePickerModalEl.style.height = this.modalEl.clientHeight * 2 + "px";
 
-		await Utils.waitUntil(() => this.isClosed, 60 * 60 * 1000, 10);
+		await Utils.waitUntil(() => this.isClosed, 60 * 60 * 1000, 1);
 		
 		this.pickedFiles = this.filePicker.getSelectedFiles();
 		this.filePickerModalEl.remove();

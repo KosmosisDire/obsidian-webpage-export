@@ -22,6 +22,7 @@ export class Favicon extends Asset
         {
             this.content = icon;
             this.setFilename("favicon" + iconPath.extension);
+			this.modifiedTime = iconPath.stat?.mtimeMs ?? this.modifiedTime;
         }
 		
         await super.load();

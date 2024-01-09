@@ -55,7 +55,7 @@ export namespace MarkdownRenderer
 			await MarkdownRenderer.beginBatch();
 		}
 
-		let success = await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 10);
+		let success = await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 1);
 		if (!success || !renderLeaf) return failRender(file, "Failed to get leaf for rendering!");
 		
 		try
@@ -148,7 +148,7 @@ export namespace MarkdownRenderer
 			await section.render();
 
 			// @ts-ignore
-			let success = await Utils.waitUntil(() => (section.el && section.rendered == true) || checkCancelled(), 2000, 5);
+			let success = await Utils.waitUntil(() => (section.el && section.rendered == true) || checkCancelled(), 2000, 1);
 			if (!success) return failRender(preview.file, "Failed to render section!");
 
 			section.el.querySelectorAll(".language-mermaid").forEach(async (element: HTMLElement) =>
@@ -167,7 +167,7 @@ export namespace MarkdownRenderer
 
 			await renderer.measureSection(section);
 
-			success = await Utils.waitUntil(() => section.computed == true || checkCancelled(), 2000, 5);
+			success = await Utils.waitUntil(() => section.computed == true || checkCancelled(), 2000, 1);
 			if (!success) return failRender(preview.file, "Failed to compute section!");
 
 			// @ts-ignore
@@ -487,7 +487,7 @@ export namespace MarkdownRenderer
 
 		renderLeaf = TabManager.openNewTab("window", "vertical");
 		// @ts-ignore
-		let parentFound = await Utils.waitUntil(() => (renderLeaf && renderLeaf.parent) || checkCancelled(), 2000, 10);
+		let parentFound = await Utils.waitUntil(() => (renderLeaf && renderLeaf.parent) || checkCancelled(), 2000, 1);
 		if (!parentFound) 
 		{
 			try
@@ -714,7 +714,7 @@ export namespace MarkdownRenderer
 		errorInBatch = true;
 
 		// @ts-ignore
-		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 1);
 		if (!found) return;
 
 		appendLogEl(generateLogEl(messageTitle, message, errorColor, errorBoxColor));
@@ -732,7 +732,7 @@ export namespace MarkdownRenderer
 		if (!batchStarted) return;
 
 		// @ts-ignore
-		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 1);
 		if (!found) return;
 
 		appendLogEl(generateLogEl(messageTitle, message, warningColor, warningBoxColor));
@@ -743,7 +743,7 @@ export namespace MarkdownRenderer
 		if (!batchStarted) return;
 
 		// @ts-ignore
-		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
+		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 1);
 		if (!found) return;
 
 		appendLogEl(generateLogEl(messageTitle, message, infoColor, infoBoxColor));

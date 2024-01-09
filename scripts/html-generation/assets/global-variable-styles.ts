@@ -28,7 +28,7 @@ export class GlobalVariableStyles extends Asset
 			--file-line-width: ${lineWidth};
 			--content-width: ${contentWidth};
 			--sidebar-width: calc(min(${sidebarWidth}, 80vw));
-			--collapse-arrow-size: 0.35em;
+			--collapse-arrow-size: 11px;
 			--tree-horizontal-spacing: 0.6em;
 			--tree-vertical-spacing: 0.6em;
 			--sidebar-margin: 24px;
@@ -39,6 +39,9 @@ export class GlobalVariableStyles extends Asset
             ${bodyStyle}
         }
         `
+
+		this.modifiedTime = Date.now();
+
         super.load();
     }
 }
