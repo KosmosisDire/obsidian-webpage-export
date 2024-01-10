@@ -2282,7 +2282,7 @@ function startsWithAny(string, prefixes)
 async function searchCurrentDocument(query)
 {
 	clearCurrentDocumentSearch();
-	const textNodes = getTextNodes(documentContainer);
+	const textNodes = getTextNodes(document.querySelector(".markdwn-preview-sizer") ?? documentContainer);
 
 	textNodes.forEach(async node =>
 	{
