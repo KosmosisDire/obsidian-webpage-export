@@ -22,6 +22,7 @@ export class ExportModal extends Modal
 	private filePicker: FilePickerTree;
 	private pickedFiles: TFile[] | undefined = undefined;
 	private validPath: boolean = true;
+	public static title: string = "Export to HTML";
 
 	public exportInfo: ExportInfo;
 
@@ -105,7 +106,7 @@ export class ExportModal extends Modal
 
 		contentEl.empty();
 
-		this.titleEl.setText('Export to HTML');
+		this.titleEl.setText(ExportModal.title);
 
 		if (HTMLExportPlugin.updateInfo.updateAvailable) 
 		{
@@ -157,7 +158,7 @@ export class ExportModal extends Modal
 				.addOption('documents', 'HTML Documents')
 				.addOption('raw-documents', 'Raw HTML Documents')
 				.setValue(["website", "local", "documents", "raw-documents"].contains(MainSettings.settings.exportPreset) ? MainSettings.settings.exportPreset : 'website')
-				.onChange(async (value) => 
+				.onChange(async (value) =>
 				{
 					MainSettings.settings.exportPreset = value;
 
@@ -166,6 +167,7 @@ export class ExportModal extends Modal
 							MainSettings.settings.inlineAssets = true;
 							MainSettings.settings.makeNamesWebStyle = false;
 							MainSettings.settings.includeGraphView = false;
+							MainSettings.settings.includeSearchBar = false;
 							await MainSettings.saveSettings();
 
 							break;
@@ -173,6 +175,7 @@ export class ExportModal extends Modal
 								MainSettings.settings.inlineAssets = true;
 								MainSettings.settings.makeNamesWebStyle = false;
 								MainSettings.settings.includeGraphView = false;
+								MainSettings.settings.includeSearchBar = false;
 								await MainSettings.saveSettings();
 	
 								break;
@@ -181,6 +184,7 @@ export class ExportModal extends Modal
 							MainSettings.settings.makeNamesWebStyle = true;
 							MainSettings.settings.includeGraphView = true;
 							MainSettings.settings.includeFileTree = true;
+							MainSettings.settings.includeSearchBar = true;
 							await MainSettings.saveSettings();
 
 							break;
@@ -189,6 +193,7 @@ export class ExportModal extends Modal
 							MainSettings.settings.makeNamesWebStyle = true;
 							MainSettings.settings.includeGraphView = true;
 							MainSettings.settings.includeFileTree = true;
+							MainSettings.settings.includeSearchBar = true;
 							await MainSettings.saveSettings();
 
 							break;
@@ -322,5 +327,6 @@ export class ExportModal extends Modal
 		const { contentEl } = this;
 		contentEl.empty();
 		this.isClosed = true;
+		ExportModal.title = "Export to HTML";
 	}
 }

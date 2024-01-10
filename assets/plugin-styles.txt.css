@@ -231,6 +231,7 @@ body:not(.loading) .document-container.show
     align-items: flex-start;
     justify-content: center;
 	background-color: var(--background-primary);
+	transition: background-color var(--color-fade-speed) ease-in-out;
     border-top-right-radius: var(--window-radius);
 	border-top-left-radius: var(--window-radius);
     overflow-x: hidden;

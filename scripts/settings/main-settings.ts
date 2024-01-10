@@ -60,6 +60,7 @@ export interface MainSettingsData
 	graphMaxNodeSize: number;
 
 	// icons
+	showDefaultIcons: boolean,
 	defaultFileIcon: string,
 	defaultFolderIcon: string,
 	defaultMediaIcon: string,
@@ -119,6 +120,7 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	graphMaxNodeSize: 7,
 
 	// icons
+	showDefaultIcons: false,
 	defaultFileIcon: "lucide//file",
 	defaultFolderIcon: "lucide//folder",
 	defaultMediaIcon: "lucide//file-image",
@@ -278,13 +280,14 @@ export class MainSettings extends PluginSettingTab
 		hr.style.borderColor = "var(--color-accent)";
 		hr.style.opacity = "0.5";
 
-		new Setting(contentEl)
+		if (MainSettings.settings.exportPreset != "raw-documents")
+		{
+			new Setting(contentEl)
 				.setName('Page Features:')
 				.setDesc("Special features to embed onto the page.")
 				.setHeading()
 
-		if (MainSettings.settings.exportPreset != "raw-documents")
-		{
+		
 			new Setting(contentEl)
 				.setName('Include theme toggle')
 				.setDesc('Adds a theme toggle to the left sidebar.')
@@ -329,9 +332,41 @@ export class MainSettings extends PluginSettingTab
 					));
 		}
 
+		//#endregion
+
+		//#region Custom Features
+
+		hr = contentEl.createEl("hr");
+		hr.style.marginTop = "20px";
+		hr.style.marginBottom = "20px";
+		hr.style.borderColor = "var(--color-accent)";
+		hr.style.opacity = "0.5";
+
 		new Setting(contentEl)
-			.setName('Property name for title')
-			.setDesc('Use this property to specify the page title. This also affects how the page is displayed in the file tree.')
+				.setName('Custom Features:')
+				.setDesc("Customizable features to change various aspects of the website.")
+				.setHeading()
+
+		new Setting(contentEl)
+			.setName('Show default icons')
+			.setDesc('Adds decorative file and folder icons to the file tree by default.')
+			.addToggle((toggle) => toggle
+				.setValue(MainSettings.settings.showDefaultIcons)
+				.onChange(async (value) => {
+					MainSettings.settings.showDefaultIcons = value;
+					await MainSettings.saveSettings();
+				}));
+
+		let iconTutorial = new Setting(contentEl)
+			.setName('Custom icons')
+			.setDesc('The properies "icon" and "sticker" give a file a custom icon.\n\n- The property can be set to an emoji or a lucide icon.\n- To set a lucide icon use the format: "lucide//icon-name".\n- You do not have to enable default icons to use this feature.')
+		iconTutorial.infoEl.style.marginBottom = "2em";
+		iconTutorial.infoEl.style.whiteSpace = "pre-wrap";	
+
+
+		new Setting(contentEl)
+			.setName('Page title property')
+			.setDesc('Override a specific file\'s title / name by defining this property in the frontmatter.')
 			.addText((text) => text
 				.setValue(MainSettings.settings.titleProperty)
 				.onChange(async (value) => {
@@ -354,6 +389,7 @@ export class MainSettings extends PluginSettingTab
 
 		new Setting(contentEl)
 			.setName('Custom head content path')
+			.setDesc('Custom scripts, styles, or anything else (.html file)')
 			.addText((text) => 
 			{
 				headContentInput = text;
@@ -412,6 +448,7 @@ export class MainSettings extends PluginSettingTab
 
 		new Setting(contentEl)
 			.setName('Favicon path')
+			.setDesc('Add a custom favicon image to the website')
 			.addText((text) => 
 			{
 				faviconInput = text;
@@ -455,6 +492,9 @@ export class MainSettings extends PluginSettingTab
 
 		contentEl.appendChild(faviconErrorMessage);
 
+		//#endregion
+
+		//#region Page Behaviors
 
 		if (MainSettings.settings.exportPreset != "raw-documents")
 		{

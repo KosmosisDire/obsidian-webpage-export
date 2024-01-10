@@ -33,6 +33,7 @@ let collapseIconUp = ["m7 15 5 5 5-5", "m7 9 5-5 5 5"]; // path 1, path 2 - svg 
 let collapseIconDown = ["m7 20 5-5 5 5", "m7 4 5 5 5-5"]; // path 1, path 2 - svg paths
 
 let isTouchDevice = isTouchCapable();
+let isFileProtocol = window.location.protocol == "file:";
 
 let documentType; // "markdown" | "canvas" | "embed" | "custom" | "none"
 let embedType; // "img" | "video" | "audio" | "embed" | "none" 
@@ -2172,6 +2173,8 @@ let searchResults;
 
 async function setupSearch() 
 {
+	if (isFileProtocol) return;
+	
 	await import('https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js');
 
 	const indexJSON = await fetch('lib/searchIndex.json').then(response => response.text());

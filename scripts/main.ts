@@ -7,6 +7,7 @@ import { MainSettings } from './settings/main-settings';
 import { HTMLExporter } from './exporter';
 import { Path } from './utils/path';
 import { RenderLog } from './html-generation/render-log';
+import { ExportModal } from './settings/export-modal';
 
 export default class HTMLExportPlugin extends Plugin
 {
@@ -73,26 +74,28 @@ export default class HTMLExportPlugin extends Plugin
 			{
 				menu.addItem((item) =>
 				{
-					item.setTitle("Export as HTML")
-						.setIcon("download")
-						.setSection("export")
-						.onClick(() =>
+					item
+					.setTitle("Export as HTML")
+					.setIcon("download")
+					.setSection("export")
+					.onClick(() =>
+					{
+						ExportModal.title = file.name + " to HTML";
+						if(file instanceof TFile)
 						{
-							if(file instanceof TFile)
-							{
-								HTMLExporter.export(false, [file]);
-							}
-							else if(file instanceof TFolder)
-							{
-								let filesInFolder = this.app.vault.getFiles().filter((f) => new Path(f.path).directory.asString.startsWith(file.path));
-								HTMLExporter.export(false, filesInFolder);
-							}
-							else
-							{
-								RenderLog.error("File is not a TFile or TFolder! Invalid type: " + typeof file + "");
-								new Notice("File is not a File or Folder! Invalid type: " + typeof file + "", 5000);
-							}
-						});
+							HTMLExporter.export(false, [file]);
+						}
+						else if(file instanceof TFolder)
+						{
+							let filesInFolder = this.app.vault.getFiles().filter((f) => new Path(f.path).directory.asString.startsWith(file.path));
+							HTMLExporter.export(false, filesInFolder);
+						}
+						else
+						{
+							RenderLog.error("File is not a TFile or TFolder! Invalid type: " + typeof file + "");
+							new Notice("File is not a File or Folder! Invalid type: " + typeof file + "", 5000);
+						}
+					});
 				});
 			})
 		);

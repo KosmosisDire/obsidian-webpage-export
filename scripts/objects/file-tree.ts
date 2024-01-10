@@ -49,7 +49,7 @@ export class FileTree extends Tree
 					if(child.isFolder) 
 					{
 						child.itemClass = "mod-tree-folder nav-folder"
-						child.icon = Website.getIcon(MainSettings.settings.defaultFolderIcon);
+						if (MainSettings.settings.showDefaultIcons) child.icon = Website.getIcon(MainSettings.settings.defaultFolderIcon);
 					}
 					else child.itemClass = "mod-tree-file nav-file"
 
