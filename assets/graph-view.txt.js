@@ -589,7 +589,7 @@ async function initializeGraphView()
     pixiApp.ticker.maxFPS = targetFPS;
     pixiApp.ticker.add(updateGraph);
 
-    setActiveDocument(getURLPath());
+    setActiveDocument(new URL(window.location.href));
 
     setInterval(() =>
     {

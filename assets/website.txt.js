@@ -1,7 +1,9 @@
 //#region -----------------   Initializations   ----------------- 
 
+let loadedURL = new URL(window.location.href);
 let absoluteBasePath = undefined;
 let relativeBasePath = undefined;
+let relativePathname = undefined;
 
 let webpageContainer;
 let documentContainer;
@@ -126,7 +128,7 @@ async function initializePage()
 		initializeDocumentTypes();
 		setupSidebars();
 		setupThemeToggle();
-		setupSearch();
+		await setupSearch();
 		setupRootPath(document);
 
 		sidebarTargetWidth = await getComputedPixelValue("--sidebar-width");
@@ -164,6 +166,8 @@ async function initializePage()
 			rightSidebar.temporarilyCollapsed = false;
 		}
 	}
+
+	parseURLParams();
 }
 
 function initializePageEvents(setupOnNode)
@@ -202,30 +206,12 @@ function initializeForFileProtocol()
 	}
 }
 
-function onOffline(event)
-{
-	event.preventDefault();
-	event.stopPropagation();
-	console.log("Offline");
-	isOffline = true;
-}
-
-function onOnline(event)
-{
-	event.preventDefault();
-	event.stopPropagation();
-	console.log("Online");
-	isOffline = false;
-}
-
 window.onload = async function()
 {
 	await initializePage();
 	initializePageEvents(document);
+	loadDocument(getURLPath(), false);
 }
-
-window.addEventListener('offline', onOffline);
-window.addEventListener('online', onOnline);
 
 window.onpopstate = function(event)
 {
@@ -633,35 +619,35 @@ let transferDocument = document.implementation.createHTMLDocument();
 
 async function loadDocument(url, pushHistory = true, scrollTo = true)
 {
-	url.replaceAll("\\", "/");
-	let splitURL = url.split("#");
-	let pathnameTarget = splitURL[0] ?? url;
-	let stripSearchParam = pathnameTarget.split("?")[0] ?? pathnameTarget;
-	console.log("Loading document: ", stripSearchParam);
+	let newLoadedURL = new URL(url, absoluteBasePath);
+	relativePathname = getVaultRelativePath(newLoadedURL.href);
+	console.log("Loading document: ", newLoadedURL);
 
-	if (window.location.pathname.endsWith(stripSearchParam))
+	if (newLoadedURL.pathname == loadedURL?.pathname ?? "")
 	{
-		console.log("Document is already loaded...");
+		console.log("Document is already loaded, reinitializing page without reloading.");
+		loadedURL = newLoadedURL;
+		await setActiveDocument(loadedURL, false, true);
+		initializePage();
 		return;
 	}
+
+	loadedURL = newLoadedURL;
+	let pathname = loadedURL.pathname;
 
 	showLoading(true);
 
 	let response;
-	try
-	{
-		response = await fetch(pathnameTarget);
-	}
+	try {response = await fetch(pathname); }
 	catch (error)
 	{
-		console.log("Cannot use fetch API (likely due to CORS), just loading the page normally.");
-		window.location.assign(pathnameTarget);
+		window.location.assign(pathname);
 		return;
 	}
 
 	if (response.ok)
 	{
-		setActiveDocument(pathnameTarget, scrollTo, pushHistory);
+		setActiveDocument(loadedURL, scrollTo, pushHistory);
 
 		let extention = getURLExtention(url);
 
@@ -684,14 +670,6 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 			
 			if (document.querySelector(".outline-tree") && transferDocument.querySelector(".outline-tree"))
 				document.querySelector(".outline-tree").innerHTML = transferDocument.querySelector(".outline-tree").innerHTML;
-		
-			// if the url has a heading, scroll to it
-			let headingTarget = splitURL.length > 1 ? splitURL[1] : null;
-			if (headingTarget) 
-			{
-				scrollIntoView(document.getElementById(headingTarget));
-				console.log("Scrolling to heading: " + headingTarget);
-			}
 
 			// Change the root path to match the match from the new page
 			setupRootPath(transferDocument);
@@ -761,37 +739,22 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 
 function setActiveDocument(url, scrollTo = true, pushHistory = true)
 {
-	let pathnameTarget = url.split("#")[0] ?? url; // path with no header
+	let relativePath = getVaultRelativePath(url.href);
+	let decodedRelativePath = decodeURI(relativePath);
 
 	// switch active file in file tree
 	document.querySelector(".tree-item.mod-active")?.classList.remove("mod-active");
-	let treeItems = Array.from(document.querySelectorAll(".tree-item > .tree-item-contents > .tree-item-link"));
-	let treeItem = undefined;
-	for (let item of treeItems) 
+	let newActiveTreeItem = document.querySelector(".tree-item:has(>.tree-item-contents>.tree-item-link[href='" + decodeURI(decodedRelativePath) + "'])");
+	if(newActiveTreeItem) 
 	{
-		if (item.getAttribute("href") == decodeURI(url))
-		{
-			let parent = item.parentElement.parentElement;
-
-			parent.classList.add("mod-active");
-			treeItem = parent;
-			
-			while (parent.hasAttribute("data-depth"))
-			{
-				setTreeCollapsed(parent, false, false);
-				parent = parent.parentElement.parentElement;
-			}
-
-			break;
-		}
+		newActiveTreeItem.classList.add("mod-active");
+		if(scrollTo) scrollIntoView(newActiveTreeItem, {block: "center", inline: "nearest"});
 	}
 
-	if(scrollTo && treeItem) scrollIntoView(treeItem, {block: "center", inline: "nearest"});
-
-	// set the active file in th graph view
+	// set the active file in the graph view
 	if(typeof nodes != 'undefined' && window.renderWorker)
 	{
-		let activeNode = nodes?.paths.findIndex(function(item) { return item.endsWith(pathnameTarget); }) ?? -1;
+		let activeNode = nodes?.paths.findIndex(function(item) { return item.endsWith(decodedRelativePath); }) ?? -1;
 		
 		if(activeNode >= 0) 
 		{
@@ -799,7 +762,35 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 		}
 	}
 
-	if(pushHistory && window.location.protocol != "file:") window.history.pushState({ path: pathnameTarget }, '', pathnameTarget);
+	if(pushHistory && window.location.protocol != "file:") window.history.pushState({ path: relativePath }, '', relativePath);
+}
+
+function parseURLParams()
+{
+	const highlightParam = loadedURL.searchParams.get('h');
+	const searchParam = loadedURL.searchParams.get('s');
+	const hashParam = loadedURL.hash;
+	
+	if (highlightParam) 
+	{
+		searchCurrentDocument(highlightParam);
+	}
+
+	if (searchParam) 
+	{
+		search(searchParam);
+	}
+
+	if (hashParam)
+	{
+		console.log("Hash param: " + hashParam);
+		const headingTarget = document.getElementById(hashParam.substring(1));
+		if (headingTarget)
+		{
+			scrollIntoView(headingTarget, { behavior: "smooth", block: "start"});
+			console.log("Scrolling to heading: " + headingTarget);
+		}
+	}
 }
 
 function showLoading(loading)
@@ -865,10 +856,8 @@ function setupRootPath(fromDocument)
 
 function getURLPath(url = window.location.pathname)
 {
-	console.log("Getting URL path: " + url);
 	if (absoluteBasePath == undefined) setupRootPath(document);
 	let pathname = url.replace(absoluteBasePath, "");
-	console.log("Pathname: " + pathname);
 	return pathname;
 }
 
@@ -882,6 +871,11 @@ function getURLRootPath(url = window.location.pathname)
 		rootPath += "../";
 	}
 	return rootPath;
+}
+
+function getVaultRelativePath(absolutePath)
+{
+	return absolutePath.replace(absoluteBasePath, "")
 }
 
 //#endregion
@@ -1785,34 +1779,38 @@ function setupLinks(setupOnNode)
 
 			if(!target) return;
 
-			// this is linking to a different page
-			if (!target.startsWith("#") && !link.classList.contains("heading-link"))
-			{
-				// load doc, if it is a tree link then don't scroll to the active doc in the file tree
-				loadDocument(target, true, !link.classList.contains("tree-item-link"));
-				return;
-			}
-			else
-			{
-				let headingName = link.getAttribute("heading-name") || target.split("#")[1];
-				let targetEl = document.getElementById(headingName);
-				
-				if (targetEl)
-				{
-					targetEl.headingWrapper?.collapse(false, true, true);
-					setTimeout(function()
-					{
-						if(targetEl.classList.contains(".heading") && targetEl.headingWrapper) scrollIntoView(targetEl.headingWrapper, { behavior: "smooth", block: "start"});
-						else scrollIntoView(targetEl, { behavior: "smooth", block: "start"});
+			if(target.startsWith("#")) target = (relativePathname.split("#")[0] ?? relativePathname) + target;
 
-						if (deviceSize == "phone") rightSidebar.collapse(true);
-					}, 0);
-				}
-				else
-				{
-					console.log("No element found with id: " + target.substring(1));
-				}
-			}
+			loadDocument(target, true, !link.classList.contains("tree-item-link"));
+
+			// this is linking to a different page
+			// if (!target.startsWith("#") && !link.classList.contains("heading-link"))
+			// {
+			// 	// load doc, if it is a tree link then don't scroll to the active doc in the file tree
+			// 	loadDocument(target, true, !link.classList.contains("tree-item-link"));
+			// 	return;
+			// }
+			// else
+			// {
+			// 	let headingName = link.getAttribute("heading-name") || target.split("#")[1];
+			// 	let targetEl = document.getElementById(headingName);
+				
+			// 	if (targetEl)
+			// 	{
+			// 		targetEl.headingWrapper?.collapse(false, true, true);
+			// 		setTimeout(function()
+			// 		{
+			// 			if(targetEl.classList.contains(".heading") && targetEl.headingWrapper) scrollIntoView(targetEl.headingWrapper, { behavior: "smooth", block: "start"});
+			// 			else scrollIntoView(targetEl, { behavior: "smooth", block: "start"});
+
+			// 			if (deviceSize == "phone") rightSidebar.collapse(true);
+			// 		}, 0);
+			// 	}
+			// 	else
+			// 	{
+			// 		console.log("No element found with id: " + target.substring(1));
+			// 	}
+			// }
 		});
 	});
 }
@@ -2205,10 +2203,9 @@ async function setupSearch()
 	searchResults.setAttribute('id', 'search-results');
 }
 
-function search(query)
+async function search(query)
 {
 	searchInput.value = query;
-	query = query.trim();
 
 	let searchFields = ['title', 'content', 'tags'];
 	if (query.startsWith("#")) searchFields = ['tags'];
@@ -2216,7 +2213,6 @@ function search(query)
 	if (query.length >= 1)
 	{
 		const results = index.search(query, { prefix: true, fuzzy: 0.3, boost: { title: 2, tags: 1 }, fields: searchFields });
-
 
 		const list = document.createElement('div');
 		results.slice(0, 10).forEach(result => {
@@ -2248,56 +2244,57 @@ function search(query)
 	else
 	{
 		if (searchResults && searchResults.parentElement) searchResults.parentNode.removeChild(searchResults);
+		clearCurrentDocumentSearch();
 	}
+
 }
 
-function parseSearchParams()
+async function searchCurrentDocument(query)
 {
-	const urlParams = new URLSearchParams(window.location.search);
+	clearCurrentDocumentSearch();
+	const textNodes = getTextNodes(documentContainer);
 
-	const highlightParam = urlParams.get('h');
-	const searchParam = urlParams.get('s');
-	
-	if (highlightParam) 
+	textNodes.forEach(async node =>
 	{
-		const documentContainer = document.querySelector('.document-container');
-		const textNodes = getTextNodes(documentContainer);
+		const content = node.nodeValue;
+		const newContent = content.replace(new RegExp(query, 'gi'), match => `<mark>${match}</mark>`);
 
-		firstOccurance = true;
-		textNodes.forEach(node => 
+		if (newContent !== content) 
 		{
-			const content = node.nodeValue;
-			const newContent = content.replace(new RegExp(highlightParam, 'gi'), match => `<mark>${match}</mark>`);
-
-			if (newContent !== content) 
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = newContent;
+	
+			const newNodes = Array.from(tempDiv.childNodes);
+	
+			newNodes.forEach(newNode => 
 			{
-				const tempDiv = document.createElement('div');
-				tempDiv.innerHTML = newContent;
-		
-				const newNodes = Array.from(tempDiv.childNodes);
-		
-				newNodes.forEach(newNode => 
+				if (newNode.nodeType != Node.TEXT_NODE)
 				{
-					if (newNode.nodeType != Node.TEXT_NODE) newNode.setAttribute('class', 'search-mark');
-					node.parentNode.insertBefore(newNode, node);
-				});
-		
-				node.parentNode.removeChild(node);
-			}
+					newNode.setAttribute('class', 'search-mark');
+					
+				}
+				node.parentNode.insertBefore(newNode, node);
+			});
+	
+			node.parentNode.removeChild(node);
+		}
+	});
 
-			if (firstOccurance) 
-			{
-				scrollIntoView(node.parentElement, { behavior: "smooth", block: "start"});
-				firstOccurance = false;
-			}
-		});
-	}
+	let firstMark = document.querySelector(".search-mark");
 
-	if (searchParam) 
+	// wait for page to fade in
+	setTimeout(() => 
 	{
-		const input = document.querySelector('input[type="search"]');
-		input.value = searchParam;
-	}
+		if(firstMark) scrollIntoView(firstMark, { behavior: "smooth", block: "start" });
+	}, 500);
+}
+
+function clearCurrentDocumentSearch()
+{
+	document.querySelectorAll(".search-mark").forEach(node => 
+	{
+		node.outerHTML = node.innerHTML;
+	});
 }
   
 function getTextNodes(element) 

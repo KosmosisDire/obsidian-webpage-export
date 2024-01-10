@@ -345,7 +345,7 @@ body .webpage-container .tree-container .tree-scroll-area
     width: 100%;
 }
 
-.tree-item-title *
+.tree-item-title > *
 {
 	padding: 0;
 	margin: 0;
@@ -1279,6 +1279,7 @@ body.resizing *:not(body:not(.file-protocol) :is(.sidebar-sizer, .sidebar-gutter
 {
 	margin: 0 !important;
 	padding: 0 !important;
+	scroll-margin: 2em !important;
 }
 
 #search-results
