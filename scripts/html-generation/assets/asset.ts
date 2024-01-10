@@ -231,7 +231,7 @@ export class Asset extends Downloadable
 		}
 		catch (e)
 		{
-			RenderLog.error(e.stack, "Error while minifying " + (asJavascript ? "JS" : "CSS") + " file.");
+			RenderLog.warning("Unable to minify " + (asJavascript ? "JS" : "CSS") + " file.");
 			content = tempContent;
 		}
 

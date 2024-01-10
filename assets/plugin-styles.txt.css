@@ -535,7 +535,7 @@ body .webpage-container .tree-container .tree-scroll-area
 /* Special */
 
 /* AnuPpuccin rainbow indent support */
-.anp-simple-rainbow-color-toggle.anp-simple-rainbow-indentation-toggle .tree-container .tree-item
+.anp-simple-rainbow-color-toggle.anp-simple-rainbow-indentation-toggle .tree-container.file-tree .tree-item
 {
 	border-color: rgba(var(--rainbow-folder-color), 0.5);
 }

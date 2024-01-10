@@ -24,11 +24,19 @@ export class FetchBuffer extends Asset
 
 			this.url = this.url.makeUnixStyle().asString;
 		}
-        
+		
+		let res: Response;
+		try
+		{
+        	res = await fetch(this.url);
+		}
+		catch (e)
+		{
+			RenderLog.error(`Failed to fetch ${this.url}`);
+			return;
+		}
 
-        let res = await fetch(this.url);
-
-        if (!res.ok)
+        if (!res || !res.ok)
         {
             RenderLog.error(`Failed to fetch ${this.url} with status ${res.status}`);
             return;

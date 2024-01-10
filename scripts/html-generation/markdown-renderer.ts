@@ -407,10 +407,19 @@ export namespace MarkdownRenderer
 			element.value = "";
 		});
 
+		// encode all text area values into text content
 		html.querySelectorAll("textarea").forEach((element: HTMLElement) =>
 		{
 			// @ts-ignore
 			element.textContent = element.value;
+		});
+		
+		// convert tag href to search query
+		html.querySelectorAll("a.tag").forEach((element: HTMLAnchorElement) =>
+		{
+			let split = element.href.split("#");
+			let tag = split[1] ?? element.href.substring(1); // remove the #
+			element.setAttribute("href", `?query=tag:${tag}`);
 		});
 
 		// convert all hard coded image / media widths into max widths

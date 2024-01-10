@@ -11,7 +11,7 @@ export class IndexM
 			storeFields: ['title', 'path', 'tags', 'headers'],
 		});
 
-		const htmlWebpages = website.webpages.filter(webpage => webpage.document);
+		const htmlWebpages = website.webpages.filter(webpage => webpage.document && webpage.contentElement);
 
 		for (const webpage of htmlWebpages) 
 		{

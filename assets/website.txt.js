@@ -767,8 +767,8 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 
 function parseURLParams()
 {
-	const highlightParam = loadedURL.searchParams.get('h');
-	const searchParam = loadedURL.searchParams.get('s');
+	const highlightParam = loadedURL.searchParams.get('mark');
+	const searchParam = loadedURL.searchParams.get('query');
 	const hashParam = loadedURL.hash;
 	
 	if (highlightParam) 
@@ -1770,7 +1770,7 @@ function setupCodeblocks(setupOnNode)
 
 function setupLinks(setupOnNode)
 {
-	setupOnNode.querySelectorAll(".internal-link, .webpage-link, .footnote-link, .tree-item:not(.mod-tree-folder) > .tree-item-contents > .tree-item-link").forEach(function(link)
+	setupOnNode.querySelectorAll(".internal-link, a.tag, .webpage-link, .footnote-link, .tree-item:not(.mod-tree-folder) > .tree-item-contents > .tree-item-link").forEach(function(link)
 	{
 		link.addEventListener("click", function(event)
 		{
@@ -1778,8 +1778,10 @@ function setupLinks(setupOnNode)
 			event.preventDefault();
 
 			if(!target) return;
+			
+			let relativePathnameStrip = relativePathname.split("#")[0].split("?")[0];
 
-			if(target.startsWith("#")) target = (relativePathname.split("#")[0] ?? relativePathname) + target;
+			if(target.startsWith("#") || target.startsWith("?")) target = relativePathnameStrip + target;
 
 			loadDocument(target, true, !link.classList.contains("tree-item-link"));
 
@@ -2239,13 +2241,12 @@ async function search(query)
 			const link = document.createElement('a');
 			link.classList.add('webpage-link');
 
-			const icon = document.createElement('span');
-			icon.classList.add('icon');
-			icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>`
-			link.appendChild(icon);
+			// const icon = document.createElement('span');
+			// icon.classList.add('icon');
+			// icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>`
+			// link.appendChild(icon);
 
-			// highlight and scroll to result
-			const searchURL = result.path + '?h=' + encodeURIComponent(query);
+			const searchURL = result.path + '?mark=' + encodeURIComponent(query);
 			link.setAttribute('href', searchURL);
 			link.appendChild(document.createTextNode(result.title));
 			item.appendChild(link);
