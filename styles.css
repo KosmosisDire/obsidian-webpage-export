@@ -84,10 +84,10 @@ input[type=checkbox].file-checkbox
 .tree-item.mod-tree-control
 {
 	background-color: var(--color-base-00);
-    border-radius: 6px;
+    border-radius: var(--radius-s);
 	box-shadow: 0px 0px 10px 0px rgba(0,0,0,0.2);
 	width: fit-content;
-    padding-right: 1.3em !important;
+	margin-bottom: 1em;
 }
 
 .tree-item:has(.file-checkbox.checked).mod-tree-folder.is-collapsed
@@ -188,6 +188,7 @@ input[type=checkbox].file-checkbox
     flex-direction: column;
     align-items: flex-start;
     padding: 0;
+	border: none !important;
 }
 
 .tree-container .tree-item-children
@@ -280,6 +281,18 @@ input[type=checkbox].file-checkbox
     cursor: default;
     /* color: var(--nav-item-color-hover); */
     text-decoration: none;
+}
+
+.tree-container .tree-item-contents:hover
+{
+	background-color: var(--nav-item-background-hover);
+	border-radius: var(--radius-s);
+}
+
+.tree-container .tree-item-title
+{
+	background-color: transparent !important;
+	color: var(--nav-item-color) !important;
 }
 
 
