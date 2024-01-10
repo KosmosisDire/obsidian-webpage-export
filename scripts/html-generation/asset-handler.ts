@@ -20,6 +20,7 @@ import { GlobalVariableStyles } from "./assets/global-variable-styles.js";
 import { Favicon } from "./assets/favicon.js";
 import { FetchBuffer } from "./assets/local-fetch-buffer.js";
 import { RenderLog } from "./render-log.js";
+import { SupportedPluginStyles } from "./assets/supported-plugin-styles.js";
 const mime = require('mime');
 
 
@@ -39,7 +40,8 @@ export class AssetHandler
 	public static snippetStyles: SnippetStyles = new SnippetStyles();
 	public static mathjaxStyles: MathjaxStyles = new MathjaxStyles();
 	public static globalDataStyles: GlobalVariableStyles = new GlobalVariableStyles();
-	public static websiteStyles: Asset = new Asset("plugin-styles.css", webpageStyles, AssetType.Style, InlinePolicy.Auto, true, Mutability.Static, 14);
+	public static supportedPluginStyles: SupportedPluginStyles = new SupportedPluginStyles();
+	public static websiteStyles: Asset = new Asset("main-styles.css", webpageStyles, AssetType.Style, InlinePolicy.Auto, true, Mutability.Static, 14);
 
 	// scripts
 	public static websiteJS: Asset = new Asset("webpage.js", websiteJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, 28);

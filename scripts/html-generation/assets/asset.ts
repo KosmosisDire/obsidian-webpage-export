@@ -38,6 +38,7 @@ export class Asset extends Downloadable
 	private static mediaFolder: Path;
 	private static jsFolder: Path;
 	private static cssFolder: Path;
+	private static fontFolder: Path;
 	private static htmlFolder: Path;
 
 	public static initialize() 
@@ -46,6 +47,7 @@ export class Asset extends Downloadable
 		this.mediaFolder = this.libraryFolder.joinString("media").makeUnixStyle();
 		this.jsFolder = this.libraryFolder.joinString("scripts").makeUnixStyle(); 
 		this.cssFolder = this.libraryFolder.joinString("styles").makeUnixStyle();
+		this.fontFolder = this.libraryFolder.joinString("fonts").makeUnixStyle();
 		this.htmlFolder = this.libraryFolder.joinString("html").makeUnixStyle();
 	}
 
@@ -73,6 +75,12 @@ export class Asset extends Downloadable
         if (MainSettings.settings.makeNamesWebStyle) return Asset.cssFolder.copy.makeWebStyle();
         return Asset.cssFolder.copy;
     }
+	public static get fontPath(): Path
+	{
+		if (!this.fontFolder) this.initialize();
+		if (MainSettings.settings.makeNamesWebStyle) return Asset.fontFolder.copy.makeWebStyle();
+		return Asset.fontFolder.copy;
+	}
     public static get htmlPath(): Path
     {
 		if (!this.htmlFolder) this.initialize();
@@ -145,7 +153,7 @@ export class Asset extends Downloadable
             case AssetType.HTML:
                 return this.htmlPath;
             case AssetType.Font:
-                return this.cssPath;
+                return this.fontPath;
             case AssetType.Other:
                 return this.libraryPath;
         }
@@ -185,7 +193,6 @@ export class Asset extends Downloadable
                 if (selector && classes && document.body.classList.contains(classes))
                 {
                     inputCSS = inputCSS.replace(match[0].toString(), "body:is(.theme-dark, .theme-light)");
-                    RenderLog.log(classes);
                     matchCount++;
                 }
             });

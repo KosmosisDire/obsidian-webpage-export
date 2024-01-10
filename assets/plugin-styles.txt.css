@@ -418,6 +418,7 @@ body .webpage-container .tree-container .tree-scroll-area
     overflow: hidden;
     text-overflow: ellipsis;
     text-wrap: nowrap;
+	white-space: nowrap;
 
 	width: 100%;
 	width: -webkit-fill-available;
@@ -566,7 +567,7 @@ body .webpage-container .tree-container .tree-scroll-area
 
 .webpage-container .nav-file-tag
 {
-	margin-inline-end: 1em;
+	margin-right: 1em;
 }
 
 .nav-file-title, .nav-folder-title 
@@ -671,7 +672,7 @@ html > body > .webpage-container > .document-container > .markdown-preview-view 
 
 .heading-wrapper.is-collapsed > .heading-children, .heading-wrapper.is-animating > .heading-children
 {
-    overflow: clip;
+    overflow: hidden; overflow: clip;
 }
 
 .heading-wrapper > .heading > .heading-after
@@ -1321,6 +1322,7 @@ body.resizing *:not(body:not(.file-protocol) :is(.sidebar-sizer, .sidebar-gutter
 {
   text-overflow: ellipsis;
   text-wrap: nowrap;
+  white-space: nowrap;
   overflow: hidden;
   color: var(--text-normal);
   padding: var(--search-spacing);

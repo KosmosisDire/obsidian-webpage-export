@@ -84,26 +84,6 @@ export class ObsidianStyles extends Asset
             }
         }
 
-        for(let i = 1; i < stylesheets.length; i++) 
-        {
-            // @ts-ignore
-            let styleID = stylesheets[i].ownerNode?.id;
-            if ((styleID.startsWith("svelte") && MainSettings.settings.includeSvelteCSS) || styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET" || styleID == "css-settings-manager")
-            {
-                RenderLog.log("Including stylesheet: " + styleID);
-                let style = stylesheets[i].cssRules;
-
-                for(let item in style) 
-                {
-                    if(style[item].cssText != undefined)
-                    {
-                        
-                        this.content += "\n" + style[item].cssText;
-                    }
-                }
-            }
-        }
-
 		this.modifiedTime = Date.now();
 
         this.content = Asset.filterBodyClasses(this.content);

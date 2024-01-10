@@ -74,7 +74,6 @@ export class FileTree extends Tree
 				parent.href = path.asString;	
 				parent.title = path.basename == "." ? "" : titleInfo.title;
 				parent.icon = titleInfo.icon || "";
-				console.log(parent.icon);
 			}
 		}
 

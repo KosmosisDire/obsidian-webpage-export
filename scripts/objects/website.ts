@@ -60,7 +60,7 @@ export class Website
 		// convert to array and remove duplicates\
 		this._validBodyClasses = this._validBodyClasses.split(" ").filter((value, index, self) => self.indexOf(value) === index).join(" ");
 
-		RenderLog.log("Valid body classes: " + this._validBodyClasses);
+		RenderLog.log("Body classes: " + this._validBodyClasses);
 		
 		return this._validBodyClasses;
 	}

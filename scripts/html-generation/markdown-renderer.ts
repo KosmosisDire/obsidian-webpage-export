@@ -51,7 +51,7 @@ export namespace MarkdownRenderer
 		let loneFile = !batchStarted;
 		if (loneFile) 
 		{
-			RenderLog.log("beginning lone batch");
+			RenderLog.log("Exporting single file, starting batch");
 			await MarkdownRenderer.beginBatch();
 		}
 
@@ -440,8 +440,6 @@ export namespace MarkdownRenderer
 			container?.querySelectorAll("*").forEach((el) => el.remove());
 
 			if (container) container.appendChild(embed);
-
-			RenderLog.log(container?.innerHTML);
 		});
 
 		// remove all MAKE.md elements
@@ -455,7 +453,6 @@ export namespace MarkdownRenderer
 		{
 			let image = document.createElement("img");
 			let data = canvas.toDataURL();
-			RenderLog.log(canvas, data);
 			image.src = data;
 			image.style.width = canvas.style.width || "100%";
 			image.style.maxWidth = "100%";
@@ -583,12 +580,12 @@ export namespace MarkdownRenderer
 		{
             if (!errorInBatch)
 			{
-				RenderLog.log("detaching");
+				RenderLog.log("Closing render window");
 			    renderLeaf.detach();
 			}
 			else
 			{
-				RenderLog.log("error in batch, not detaching");
+				RenderLog.warning("Error in batch, leaving render window open");
 				_reportProgress(1, 1, "Completed with errors", "Please see the log for more details.", errorColor);
 			}
 		}

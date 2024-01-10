@@ -18,12 +18,12 @@ export namespace TabManager
 		{
 			await leaf.openFile(file, undefined).catch((reason) =>
 			{
-				RenderLog.log(reason);
+				RenderLog.error(reason);
 			});
 		}
 		catch (error)
 		{
-			RenderLog.log(error);
+			RenderLog.error(error);
 		}
 
 		return leaf;

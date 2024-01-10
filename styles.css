@@ -370,7 +370,7 @@ input[type=checkbox].file-checkbox
 
 .tree-container  .nav-file-tag
 {
-	margin-inline-end: 1em;
+	margin-right: 1em;
 }
 
 .tree-container .nav-file-title, .tree-container .nav-folder-title 
