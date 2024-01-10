@@ -3,6 +3,7 @@ import { Tree, TreeItem } from "./tree";
 import { Path } from "scripts/utils/path";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { Website } from "./website";
+import { MainSettings } from "scripts/settings/main-settings";
 
 export class FileTree extends Tree
 {
@@ -45,7 +46,11 @@ export class FileTree extends Tree
 					child.title = section.name;
 					child.isFolder = isFolder;
 
-					if(child.isFolder) child.itemClass = "mod-tree-folder nav-folder"
+					if(child.isFolder) 
+					{
+						child.itemClass = "mod-tree-folder nav-folder"
+						child.icon = Website.getIcon(MainSettings.settings.defaultFolderIcon);
+					}
 					else child.itemClass = "mod-tree-file nav-file"
 
 					parent.children.push(child);
@@ -69,6 +74,7 @@ export class FileTree extends Tree
 				parent.href = path.asString;	
 				parent.title = path.basename == "." ? "" : titleInfo.title;
 				parent.icon = titleInfo.icon || "";
+				console.log(parent.icon);
 			}
 		}
 

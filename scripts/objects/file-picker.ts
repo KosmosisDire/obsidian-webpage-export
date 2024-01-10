@@ -2,8 +2,8 @@ import { TAbstractFile, TFile, TFolder } from "obsidian";
 import { FileTree, FileTreeItem } from "./file-tree";
 import { Path } from "scripts/utils/path";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
-import { RenderLog } from "scripts/html-generation/render-log";
 import { Website } from "./website";
+import { MainSettings } from "scripts/settings/main-settings";
 
 export class FilePickerTree extends FileTree
 {
@@ -47,6 +47,7 @@ export class FilePickerTree extends FileTree
 					if(child.isFolder) 
 					{
 						child.href = section.path;
+						child.icon = Website.getIcon(MainSettings.settings.defaultFolderIcon);
 						child.itemClass = "mod-tree-folder"
 					}
 					else 

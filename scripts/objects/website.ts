@@ -216,44 +216,63 @@ export class Website
 		const title = titleFromFrontmatter ?? file.basename;
 
 		let iconProperty = frontmatter?.icon ?? frontmatter?.sticker;
-		let iconOutput = '';
 		let isDefaultIcon = false;
 		if (!iconProperty) 
 		{
-			iconProperty = MainSettings.settings.defaultFileIcon;
+			let isMedia = Asset.extentionToType(file.extension) == AssetType.Media;
+			iconProperty = isMedia ? MainSettings.settings.defaultMediaIcon : MainSettings.settings.defaultFileIcon;
+			if (file.extension == "canvas") iconProperty = "lucide//layout-dashboard";
 			isDefaultIcon = true;
 		}
 
-		if (iconProperty.startsWith('emoji//'))
-		{
-			const stickerNumber = parseInt(iconProperty.replace(/^emoji\/\//, ''), 16);
-			if (!isNaN(stickerNumber)) 
-			{
-				iconOutput = String.fromCodePoint(stickerNumber);
-			} 
-			else 
-			{
-				console.error(`Invalid sticker number in frontmatter: ${iconProperty}`);
-				iconOutput = '�';
-			}
-		}
-		else if (iconProperty.startsWith('lucide//'))
-		{
-			const lucideIconName = iconProperty.replace(/^lucide\/\//, '');
-			const iconEl = getIcon(lucideIconName);
-			if (iconEl)
-			{
-				iconOutput = iconEl.outerHTML;
-				iconEl.remove();
-			}
-			else 
-			{
-				console.error(`Invalid lucide icon name in frontmatter: ${iconProperty}`);
-				iconOutput = '�';
-			}
-		}
-		
+		let iconOutput = Website.getIcon(iconProperty);
 		return { title: title, icon: iconOutput, isDefaultIcon: isDefaultIcon };
+	}
+
+	public static getLucideIcon(iconName: string): string
+	{
+		const iconEl = getIcon(iconName);
+		if (iconEl)
+		{
+			let svg = iconEl.outerHTML;
+			iconEl.remove();
+			return svg;
+		}
+		else 
+		{
+			console.error(`Invalid lucide icon name: ${iconName}`);
+			return "�";
+		}
+	}
+
+	public static getEmojiIcon(iconCode: string): string
+	{
+		let iconCodeInt = parseInt(iconCode, 16);
+		if (!isNaN(iconCodeInt)) 
+		{
+			return String.fromCodePoint(iconCodeInt);
+		} 
+		else 
+		{
+			console.error(`Invalid sticker number in frontmatter: ${iconCode}`);
+			return '�';
+		}
+	}
+
+	public static getIcon(iconName: string): string
+	{
+		if (iconName.startsWith('emoji//'))
+		{
+			const iconCode = iconName.replace(/^emoji\/\//, '');
+			return Website.getEmojiIcon(iconCode);
+		}
+		else if (iconName.startsWith('lucide//'))
+		{
+			const lucideIconName = iconName.replace(/^lucide\/\//, '');
+			return Website.getLucideIcon(lucideIconName);
+		}
+
+		return iconName;
 	}
 	
 }
