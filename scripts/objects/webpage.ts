@@ -249,7 +249,19 @@ export class Webpage
 			let tags = Array.from(tagCaches).map((tag) => tag.tag);
 			return tags;
 		}
-		
+
+		return [];
+	}
+
+	public getHeaders(): string[]
+	{
+		let headerCaches = app.metadataCache.getFileCache(this.source)?.headings?.values();
+		if (headerCaches)
+		{
+			let headers = Array.from(headerCaches).map((header) => header.heading);
+			return headers;
+		}
+
 		return [];
 	}
 

@@ -621,11 +621,11 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 {
 	let newLoadedURL = new URL(url, absoluteBasePath);
 	relativePathname = getVaultRelativePath(newLoadedURL.href);
-	console.log("Loading document: ", newLoadedURL);
+	console.log("Loading document: ", relativePathname);
 
 	if (newLoadedURL.pathname == loadedURL?.pathname ?? "")
 	{
-		console.log("Document is already loaded, reinitializing page without reloading.");
+		console.log("Document already loaded.");
 		loadedURL = newLoadedURL;
 		await setActiveDocument(loadedURL, false, true);
 		initializePage();
@@ -2187,7 +2187,7 @@ async function setupSearch()
 	{
 		const query = event.target.value ?? "";
 
-		if (query.startsWith("#"))
+		if (startsWithAny(query, ["#", "tag:", "title:", "name:", "header:", "H:"]))
 		{
 			searchInput.style.color = "var(--text-accent)";
 		}
@@ -2207,12 +2207,28 @@ async function search(query)
 {
 	searchInput.value = query;
 
-	let searchFields = ['title', 'content', 'tags'];
-	if (query.startsWith("#")) searchFields = ['tags'];
+	// parse special query filters
+	let searchFields = ['title', 'content', 'tags', 'headers'];
+	if (query.startsWith("#")) searchFields = ['tags', 'headers'];
+	if (query.startsWith("tag:"))
+	{
+		query = query.substring(query.indexOf(":") + 1);
+		searchFields = ['tags'];
+	}
+	if (startsWithAny(query, ["title:", "name:"])) 
+	{
+		query = query.substring(query.indexOf(":") + 1);
+		searchFields = ['title'];
+	}
+	if (startsWithAny(query, ["header:", "H:"]))
+	{
+		query = query.substring(query.indexOf(":") + 1);
+		searchFields = ['headers'];
+	}
 
 	if (query.length >= 1)
 	{
-		const results = index.search(query, { prefix: true, fuzzy: 0.3, boost: { title: 2, tags: 1 }, fields: searchFields });
+		const results = index.search(query, { prefix: true, fuzzy: 0.3, boost: { title: 3, headers: 2, tags: 1 }, fields: searchFields });
 
 		const list = document.createElement('div');
 		results.slice(0, 10).forEach(result => {
@@ -2247,6 +2263,16 @@ async function search(query)
 		clearCurrentDocumentSearch();
 	}
 
+}
+
+function startsWithAny(string, prefixes)
+{
+	for (let i = 0; i < prefixes.length; i++)
+	{
+		if (string.startsWith(prefixes[i])) return true;
+	}
+
+	return false;
 }
 
 async function searchCurrentDocument(query)

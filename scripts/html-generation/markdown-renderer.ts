@@ -468,6 +468,9 @@ export namespace MarkdownRenderer
 			element.style.marginRight = "0.5em";
 		});
 
+		// remove frontmatter
+		html.querySelector(".frontmatter")?.remove();
+
 		// if the dynamic table of contents plugin is included on this page
 		// then parse each list item and render markdown for it
 		let tocEls = Array.from(html.querySelectorAll(".block-language-toc.dynamic-toc li > a"));
