@@ -2166,71 +2166,89 @@ function setupExcalidraw(setupOnNode)
 //#region -----------------        Search      -----------------
 
 // search box
+let index;
+let searchInput;
+let searchResults;
+
 async function setupSearch() 
 {
 	await import('https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js');
 
-	const searchIndex = await fetch('lib/searchIndex.json').then(response => response.text());
-	const index = MiniSearch.loadJSON(searchIndex, { fields: ['title', 'content', 'tags'] });
+	const indexJSON = await fetch('lib/searchIndex.json').then(response => response.text());
+	index = MiniSearch.loadJSON(indexJSON, { fields: ['title', 'content', 'tags'] });
 
-	const input_parent = document.querySelector('.search-input-container');
-	const input = document.querySelector('input[type="search"]');
+	searchInput = document.querySelector('input[type="search"]');
 	const inputClear = document.querySelector('.search-input-clear-button');
 
-	inputClear.addEventListener('click', (event) => {
-		input.value = '';
+	inputClear.addEventListener('click', (event) => 
+	{
 		search("");
 	});
 
-	input.addEventListener('input', (event) => {
-		const query = event.target.value ?? "";
-		if (query.startsWith("#") || query.startsWith("tag:"))
-		{
-			input.style.color = "var(--accent-color)";
-		}
-		search(query);
-	});
-
-	const container = document.createElement('div');
-	container.setAttribute('id', 'search-results');
-
-	const search = query => 
+	searchInput.addEventListener('input', (event) => 
 	{
-		if (query.length >= 1)
+		const query = event.target.value ?? "";
+
+		if (query.startsWith("#"))
 		{
-			const results = index.search(query, { prefix: true, fuzzy: 0.3 });
-			const list = document.createElement('div');
-			results.slice(0, 10).forEach(result => {
-
-				const item = document.createElement('div');
-				item.classList.add('search-result');
-
-				const link = document.createElement('a');
-				link.classList.add('webpage-link');
-
-				const icon = document.createElement('span');
-				icon.classList.add('icon');
-				icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>`
-				link.appendChild(icon);
-
-				// highlight and scroll to result
-				const searchURL = result.path + '?h=' + encodeURIComponent(query);
-				link.setAttribute('href', searchURL);
-				link.appendChild(document.createTextNode(result.title));
-				item.appendChild(link);
-				list.append(item);
-			});
-
-			container.replaceChildren(list);
-			input_parent.after(container);
-
-			initializePageEvents(container);
+			searchInput.style.color = "var(--text-accent)";
 		}
 		else
 		{
-			if (container && container.parentElement) container.parentNode.removeChild(container);
+			searchInput.style.color = "";
 		}
-	};
+		
+		search(query);
+	});
+
+	searchResults = document.createElement('div');
+	searchResults.setAttribute('id', 'search-results');
+}
+
+function search(query)
+{
+	searchInput.value = query;
+	query = query.trim();
+
+	let searchFields = ['title', 'content', 'tags'];
+	if (query.startsWith("#")) searchFields = ['tags'];
+
+	if (query.length >= 1)
+	{
+		const results = index.search(query, { prefix: true, fuzzy: 0.3, boost: { title: 2, tags: 1 }, fields: searchFields });
+
+
+		const list = document.createElement('div');
+		results.slice(0, 10).forEach(result => {
+
+			const item = document.createElement('div');
+			item.classList.add('search-result');
+
+			const link = document.createElement('a');
+			link.classList.add('webpage-link');
+
+			const icon = document.createElement('span');
+			icon.classList.add('icon');
+			icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>`
+			link.appendChild(icon);
+
+			// highlight and scroll to result
+			const searchURL = result.path + '?h=' + encodeURIComponent(query);
+			link.setAttribute('href', searchURL);
+			link.appendChild(document.createTextNode(result.title));
+			item.appendChild(link);
+			list.append(item);
+		});
+
+		searchResults.replaceChildren(list);
+		searchInput.parentElement.after(searchResults);
+
+		initializePageEvents(searchResults);
+	}
+	else
+	{
+		if (searchResults && searchResults.parentElement) searchResults.parentNode.removeChild(searchResults);
+	}
 }
 
 function parseSearchParams()
