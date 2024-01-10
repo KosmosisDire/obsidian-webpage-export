@@ -241,6 +241,18 @@ export class Webpage
 		return this;
 	}
 
+	public getTags(): string[]
+	{
+		let tagCaches = app.metadataCache.getFileCache(this.source)?.tags?.values();
+		if (tagCaches)
+		{
+			let tags = Array.from(tagCaches).map((tag) => tag.tag);
+			return tags;
+		}
+		
+		return [];
+	}
+
 	private async getDocumentHTML(): Promise<Webpage | undefined>
 	{
 		if (!this.isConvertable || !this.document) return this;
@@ -294,7 +306,6 @@ export class Webpage
 		await AssetHandler.mathjaxStyles.load();
 		mathStyleEl.innerHTML = AssetHandler.mathjaxStyles.content;
 		this.contentElement.prepend(mathStyleEl);
-		console.log(AssetHandler.mathjaxStyles.content);
 
 		let dependencies_temp: Downloadable[] = AssetHandler.getAssetDownloads();
 		dependencies_temp.push(...outlinedImages);

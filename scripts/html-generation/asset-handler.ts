@@ -79,7 +79,6 @@ export class AssetHandler
 		// remove all temporary assets from allAssets
 		this.allAssets = this.allAssets.filter(asset => asset.mutability != Mutability.Temporary);
 		this.temporaryAssets = [];
-		console.log(this.allAssets);
 
 		let loadPromises = []
 		for (let i = 0; i < this.dynamicAssets.length; i++)
@@ -201,7 +200,6 @@ export class AssetHandler
 			{
 				let newPath = childAsset.getAssetPath(asset.getAssetPath());
 				content = content.replaceAll(url, newPath.asString);
-				console.log("replace " + url + " with " + newPath.asString);
 			}
 		}
 

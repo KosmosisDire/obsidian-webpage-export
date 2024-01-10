@@ -23,12 +23,11 @@ export class HTMLExporter
 		let exportPath = info?.exportPath ?? new Path(MainSettings.settings.exportPath);
 
 		let website = await HTMLExporter.exportFiles(files, exportPath, true, MainSettings.settings.deleteOldExportedFiles);
-		let IndexPath = exportPath.toString()
 
-		if (MainSettings.settings.includeSearchBar) await IndexM.indexHTMLFiles(IndexPath); // only index if search bar is enabled
 
 		if (website)
 		{
+			if (MainSettings.settings.includeSearchBar) await IndexM.indexHTMLFiles(website); // only index if search bar is enabled
 			if (MainSettings.settings.openAfterExport) Utils.openPath(exportPath);
 			new Notice("✅ Finished HTML Export:\n\n" + exportPath, 5000);
 		}

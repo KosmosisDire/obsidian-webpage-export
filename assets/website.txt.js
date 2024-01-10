@@ -630,69 +630,18 @@ function getURLExtention(url)
 //#region -----------------   Loading & Paths   ----------------- 
 
 let transferDocument = document.implementation.createHTMLDocument();
-let pageloadEvent = new Event("pageload");
-
-function showLoading(loading)
-{
-	if(loading)
-	{
-		// show loading icon
-		loadingIcon.classList.toggle("shown", true);
-		let viewBounds = getViewBounds();
-		loadingIcon.style.left = (viewBounds.centerX - loadingIcon.offsetWidth / 2) + "px";
-		loadingIcon.style.top = (viewBounds.centerY - loadingIcon.offsetHeight / 2) + "px";
-
-		// hide document container
-		documentContainer.classList.toggle("hide", true);
-		documentContainer.classList.toggle("show", false);
-
-		// hide the left sidebar if on phone
-		if (deviceSize == "phone") leftSidebar.collapse(true);
-	}
-	else
-	{
-		// hide loading icon
-		loadingIcon.classList.toggle("shown", false);
-
-		// show document container
-		documentContainer.style.transitionDuration = "";
-		documentContainer.classList.toggle("hide", false);
-		documentContainer.classList.toggle("show", true);
-	}
-}
-
-function pageNotFound(viewContent)
-{
-	viewContent.innerHTML = 
-	`
-	<div>
-		<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
-			<h1 style>Page Not Found</h1>
-		</center>
-	</div>
-	`;
-
-	if (document.querySelector(".outline-tree"))
-		document.querySelector(".outline-tree").innerHTML = "";
-
-	console.log("Page not found: " + absoluteBasePath + url);
-	let newRootPath = getURLRootPath(absoluteBasePath + url);
-	relativeBasePath = newRootPath;
-	document.querySelector("base").href = newRootPath;
-
-	document.title = "Page Not Found";
-}
 
 async function loadDocument(url, pushHistory = true, scrollTo = true)
 {
+	url.replaceAll("\\", "/");
 	let splitURL = url.split("#");
 	let pathnameTarget = splitURL[0] ?? url;
-	console.log("Loading document: " + pathnameTarget);
+	let stripSearchParam = pathnameTarget.split("?")[0] ?? pathnameTarget;
+	console.log("Loading document: ", stripSearchParam);
 
-	if (pathnameTarget.startsWith(window.location.pathname))
+	if (window.location.pathname.endsWith(stripSearchParam))
 	{
 		console.log("Document is already loaded...");
-		window.dispatchEvent(pageloadEvent);
 		return;
 	}
 
@@ -799,9 +748,6 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 		}
 
 		await initializePage();
-
-		// page load event
-		window.dispatchEvent(pageloadEvent);
 	}
 	else
 	{
@@ -855,6 +801,58 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 
 	if(pushHistory && window.location.protocol != "file:") window.history.pushState({ path: pathnameTarget }, '', pathnameTarget);
 }
+
+function showLoading(loading)
+{
+	if(loading)
+	{
+		// show loading icon
+		loadingIcon.classList.toggle("shown", true);
+		let viewBounds = getViewBounds();
+		loadingIcon.style.left = (viewBounds.centerX - loadingIcon.offsetWidth / 2) + "px";
+		loadingIcon.style.top = (viewBounds.centerY - loadingIcon.offsetHeight / 2) + "px";
+
+		// hide document container
+		documentContainer.classList.toggle("hide", true);
+		documentContainer.classList.toggle("show", false);
+
+		// hide the left sidebar if on phone
+		if (deviceSize == "phone") leftSidebar.collapse(true);
+	}
+	else
+	{
+		// hide loading icon
+		loadingIcon.classList.toggle("shown", false);
+
+		// show document container
+		documentContainer.style.transitionDuration = "";
+		documentContainer.classList.toggle("hide", false);
+		documentContainer.classList.toggle("show", true);
+	}
+}
+
+function pageNotFound(viewContent)
+{
+	viewContent.innerHTML = 
+	`
+	<div>
+		<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
+			<h1 style>Page Not Found</h1>
+		</center>
+	</div>
+	`;
+
+	if (document.querySelector(".outline-tree"))
+		document.querySelector(".outline-tree").innerHTML = "";
+
+	console.log("Page not found: " + absoluteBasePath + url);
+	let newRootPath = getURLRootPath(absoluteBasePath + url);
+	relativeBasePath = newRootPath;
+	document.querySelector("base").href = newRootPath;
+
+	document.title = "Page Not Found";
+}
+
 
 function setupRootPath(fromDocument)
 {
@@ -2173,7 +2171,7 @@ async function setupSearch()
 	await import('https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js');
 
 	const searchIndex = await fetch('lib/searchIndex.json').then(response => response.text());
-	const index = MiniSearch.loadJSON(searchIndex, { fields: ['title', 'content'] });
+	const index = MiniSearch.loadJSON(searchIndex, { fields: ['title', 'content', 'tags'] });
 
 	const input_parent = document.querySelector('.search-input-container');
 	const input = document.querySelector('input[type="search"]');
@@ -2186,14 +2184,20 @@ async function setupSearch()
 
 	input.addEventListener('input', (event) => {
 		const query = event.target.value ?? "";
+		if (query.startsWith("#") || query.startsWith("tag:"))
+		{
+			input.style.color = "var(--accent-color)";
+		}
 		search(query);
 	});
 
 	const container = document.createElement('div');
 	container.setAttribute('id', 'search-results');
 
-	const search = query => {
-		if (query.length >= 1) {
+	const search = query => 
+	{
+		if (query.length >= 1)
+		{
 			const results = index.search(query, { prefix: true, fuzzy: 0.3 });
 			const list = document.createElement('div');
 			results.slice(0, 10).forEach(result => {
@@ -2222,13 +2226,13 @@ async function setupSearch()
 
 			initializePageEvents(container);
 		}
-		else {
+		else
+		{
 			if (container && container.parentElement) container.parentNode.removeChild(container);
 		}
 	};
 }
 
-window.addEventListener('pageload', parseSearchParams);
 function parseSearchParams()
 {
 	const urlParams = new URLSearchParams(window.location.search);
@@ -2265,7 +2269,7 @@ function parseSearchParams()
 
 			if (firstOccurance) 
 			{
-				scrollIntoView(node.parentElement, { behavior: "smooth", block: "center"});
+				scrollIntoView(node.parentElement, { behavior: "smooth", block: "start"});
 				firstOccurance = false;
 			}
 		});
