@@ -2476,7 +2476,7 @@ async function search(query)
 	{
 		if (searchResults && searchResults.parentElement) searchResults.parentNode.removeChild(searchResults);
 		clearCurrentDocumentSearch();
-		clearFileTreeFilter().then(() => sortFileTreeAlphabetically());
+		if (fileTree) clearFileTreeFilter().then(() => sortFileTreeAlphabetically());
 	}
 
 }
