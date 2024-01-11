@@ -140,8 +140,8 @@ export class TreeItem
 
 		/*
 		- div.tree-item-wrapper
-			- div.tree-item-contents
-				- a.webpage-link.tree-item-link
+			- div.a.tree-link
+				- .tree-item-contents
 					- div.tree-item-icon
 						- svg
 					- span.tree-item-title
@@ -150,7 +150,7 @@ export class TreeItem
 
 		if(startClosed) this.isCollapsed = true;
 		this.itemEl = this.createItemWrapper(container);
-		await this.createItemContents(this.itemEl);
+		await this.createItemLink(this.itemEl);
 		this.createItemChildren(this.itemEl);
 
 		return this.itemEl;
@@ -220,33 +220,34 @@ export class TreeItem
 		return itemEl;
 	}
 
-	protected async createItemContents(container: HTMLElement): Promise<{ contentsEl: HTMLDivElement; linkEl: HTMLAnchorElement;}>
+	protected async createItemContents(container: HTMLElement): Promise<HTMLDivElement>
 	{
 		let itemContentsEl = container.createDiv("tree-item-contents");
-		let linkEl = await this.createItemLink(itemContentsEl);
-
-		return {contentsEl: itemContentsEl, linkEl: linkEl};
-	}
-
-	protected async createItemLink(container: HTMLElement): Promise<HTMLAnchorElement>
-	{
-		if (this.tree.makeLinksWebStyle && this.href) this.href = Path.toWebStyle(this.href);
-		let itemLinkEl = container.createEl("a", { cls: "webpage-link tree-item-link" });
-		if (this.href) itemLinkEl.setAttribute("href", this.href);
 
 		if (this.isCollapsible())
 		{
-			this.createItemCollapseIcon(itemLinkEl);
+			this.createItemCollapseIcon(itemContentsEl);
 			if (this.isCollapsed) 
 			{
 				this.itemEl?.classList.add("is-collapsed");
 			}
 		}
 
-		this.createItemIcon(itemLinkEl);
-		await this.createItemTitle(itemLinkEl);
+		this.createItemIcon(itemContentsEl);
+		await this.createItemTitle(itemContentsEl);
 
-		return itemLinkEl;
+		return itemContentsEl;
+	}
+
+	protected async createItemLink(container: HTMLElement): Promise<{ linkEl: HTMLAnchorElement, contentEl: HTMLSpanElement }>
+	{
+		if (this.tree.makeLinksWebStyle && this.href) this.href = Path.toWebStyle(this.href);
+		let itemLinkEl = container.createEl("a", { cls: "tree-link" });
+		if (this.href) itemLinkEl.setAttribute("href", this.href);
+
+		let itemContentEl = await this.createItemContents(itemLinkEl);
+
+		return { linkEl: itemLinkEl, contentEl: itemContentEl };
 	}
 
 	protected createItemCollapseIcon(container: HTMLElement): HTMLElement

@@ -125,9 +125,9 @@ export class FileTreeItem extends TreeItem
 		}
 	}
 
-	protected override async createItemLink(container: HTMLElement): Promise<HTMLAnchorElement> 
+	protected override async createItemContents(container: HTMLElement): Promise<HTMLDivElement> 
 	{
-		let linkEl = await super.createItemLink(container);
+		let linkEl = await super.createItemContents(container);
 
 		if (!this.isFolder && this.tree.showFileExtentionTags && !this.tree.hideFileExtentionTags.contains(this.originalExtension))
 		{

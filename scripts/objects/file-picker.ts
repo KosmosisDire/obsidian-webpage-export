@@ -224,9 +224,9 @@ export class FilePickerTreeItem extends FileTreeItem
 	public tree: FilePickerTree;
 	public checked: boolean = false;
 
-	protected async createItemLink(container: HTMLElement): Promise<HTMLAnchorElement>
+	protected async createItemContents(container: HTMLElement): Promise<HTMLDivElement>
 	{
-		let linkEl = await super.createItemLink(container);
+		let linkEl = await super.createItemContents(container);
 
 		this.checkbox = linkEl.createEl("input");
 		linkEl.prepend(this.checkbox);

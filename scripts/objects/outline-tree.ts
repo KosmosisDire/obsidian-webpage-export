@@ -94,9 +94,9 @@ export class OutlineTreeItem extends TreeItem
 		return super.isCollapsible() && this.depth > 1;
 	}
 
-	protected override async createItemLink(container: HTMLElement): Promise<HTMLAnchorElement> 
+	protected override async createItemContents(container: HTMLElement): Promise<HTMLDivElement> 
 	{
-		let linkEl = await super.createItemLink(container);
+		let linkEl = await super.createItemContents(container);
 		linkEl?.setAttribute("heading-name", this.heading.replaceAll(" ", "_"));
 		linkEl.classList.add("heading-link");
 

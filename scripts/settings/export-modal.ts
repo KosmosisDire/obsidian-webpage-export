@@ -59,7 +59,7 @@ export class ExportModal extends Modal
 			this.filePickerModalEl.style.maxHeight = "80%";
 			this.filePickerModalEl.style.boxShadow = "0 0 7px 1px inset #00000060";
 
-			let container = this.filePickerModalEl.createDiv({ cls: 'modal-content tree-container file-tree mod-nav-indicator' });
+			let container = this.filePickerModalEl.createDiv({ cls: 'modal-content tree-container mod-root file-picker-tree file-tree mod-nav-indicator' });
 			container.style.height = "100%";
 			container.style.width = "100%";
 			container.style.padding = "0";

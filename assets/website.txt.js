@@ -745,7 +745,7 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 
 	// switch active file in file tree
 	document.querySelector(".tree-item.mod-active")?.classList.remove("mod-active");
-	let newActiveTreeItem = document.querySelector(".tree-item:has(>.tree-item-contents>.tree-item-link[href='" + decodeURI(decodedRelativePath) + "'])");
+	let newActiveTreeItem = document.querySelector(".tree-item:has(>.tree-link>.tree-item-contents[href='" + decodeURI(decodedRelativePath) + "'])");
 	if(newActiveTreeItem) 
 	{
 		newActiveTreeItem.classList.add("mod-active");
@@ -1086,13 +1086,15 @@ function showHeader(headingWrapper, showParents = true, showChildren = false, fo
 //#endregion
 
 //#region -----------------        Trees        ----------------- 
+let fileTreeItems;
+let outlineTreeItems;
 
 function setupTrees(setupOnNode) 
 {
-	const fileTreeItems = Array.from(setupOnNode.querySelectorAll(".tree-container.file-tree .tree-item"));
-	const outlineTreeItems = Array.from(setupOnNode.querySelectorAll(".tree-container.outline-tree .tree-item"));
+	fileTreeItems = Array.from(setupOnNode.querySelectorAll(".tree-container.file-tree .tree-item"));
+	outlineTreeItems = Array.from(setupOnNode.querySelectorAll(".tree-container.outline-tree .tree-item"));
 
-	setupOnNode.querySelectorAll(".tree-item-link > .collapse-icon").forEach(function(item)
+	setupOnNode.querySelectorAll(".tree-item-contents > .collapse-icon").forEach(function(item)
 	{
 		item.addEventListener("click", function(event)
 		{
@@ -1138,7 +1140,7 @@ function setupTrees(setupOnNode)
 
 	fileTreeItems.forEach(function(treeItem)
 	{
-		let link = treeItem.querySelector(".tree-item-link");
+		let link = treeItem.querySelector(".tree-item-contents");
 		let icon = treeItem.querySelector(".collapse-icon");
 
 		if(icon)
@@ -1202,12 +1204,18 @@ async function setTreeCollapsedAll(elements, collapsed, animate = true)
 	if (collapsed)
 	{
 		if(animate) slideUpAll(childrenList, 100);
-		else childrenList.forEach(async children => children.style.display = "none");
+		else childrenList.forEach(async (children) => 
+		{
+			if(children) children.style.display = "none";
+		});
 	}
 	else
 	{
 		if(animate) slideDownAll(childrenList, 100);
-		else childrenList.forEach(async children => children.style.removeProperty("display"));
+		else childrenList.forEach(async (children) => 
+		{
+			if(children) children.style.display = "";
+		});
 	}
 }
 
@@ -1221,6 +1229,76 @@ function toggleTreeCollapsedAll(elements)
 {
 	if (!elements) return;
 	setTreeCollapsedAll(elements, !elements[0].classList.contains("is-collapsed"));
+}
+
+function getFileTreeItemFromPath(path)
+{
+	return document.querySelector(`.tree-item:has(> .tree-link[href="${path}"])`);
+}
+
+// hide all files and folder except the ones in the list (show parents of shown files)
+async function filterFileTree(showPathList, hintLabels, openFileTree = true)
+{
+	if (openFileTree) await setTreeCollapsedAll(fileTreeItems, false, false);
+	// hide all files and folders
+	let allItems = Array.from(document.querySelectorAll(".file-tree .tree-item:not(.filtered-out)"));
+	for await (let item of allItems)
+	{
+		item.classList.add("filtered-out");
+	}
+
+	await removeTreeHintLabels();
+
+	for (let i = 0; i < showPathList.length; i++)
+	{
+		let path = showPathList[i];
+		let hintLabel = hintLabels[i];
+
+		let treeItem = getFileTreeItemFromPath(path);
+		if (treeItem)
+		{
+			// show the file and it's parent tree items
+			treeItem.classList.remove("filtered-out");
+			let parent = treeItem.parentElement.closest(".tree-item");
+
+			while (parent)
+			{
+				parent.classList.remove("filtered-out");
+				parent = parent.parentElement.closest(".tree-item");
+			}
+
+			// create the hint label
+			if (hintLabel.trim() != "")
+			{
+				let hintLabelEl = document.createElement("div");
+				hintLabelEl.classList.add("tree-hint-label");
+				hintLabelEl.textContent = hintLabel;
+				treeItem.querySelector(".tree-link").appendChild(hintLabelEl);
+			}
+		}
+	}
+}
+
+async function clearFileTreeFilter(closeFileTree = true)
+{
+	if (closeFileTree) await setTreeCollapsedAll(fileTreeItems, true, false);
+
+	let filteredItems = document.querySelectorAll(".file-tree .filtered-out");
+	for await (let item of filteredItems)
+	{
+		item.classList.remove("filtered-out");
+	}
+
+	await removeTreeHintLabels();
+}
+
+async function removeTreeHintLabels()
+{
+	let hintLabels = document.querySelectorAll(".tree-hint-label");
+	for await (let item of hintLabels)
+	{
+		item.remove();
+	}
 }
 
 //#endregion
@@ -1771,26 +1849,31 @@ function setupCodeblocks(setupOnNode)
 
 function setupLinks(setupOnNode)
 {
-	setupOnNode.querySelectorAll(".internal-link, a.tag, .webpage-link, .footnote-link, .tree-item:not(.mod-tree-folder) > .tree-item-contents > .tree-item-link").forEach(function(link)
+	setupOnNode.querySelectorAll(".internal-link, a.tag, .tree-link, .footnote-link").forEach(function(link)
 	{
 		link.addEventListener("click", function(event)
 		{
 			let target = link.getAttribute("href");
+
 			event.preventDefault();
 
-			if(!target) return;
+			if(!target)
+			{
+				console.log("No target found for link");
+				return;
+			}
 			
 			let relativePathnameStrip = relativePathname.split("#")[0].split("?")[0];
 
 			if(target.startsWith("#") || target.startsWith("?")) target = relativePathnameStrip + target;
 
-			loadDocument(target, true, !link.classList.contains("tree-item-link"));
+			loadDocument(target, true, !link.classList.contains("tree-link"));
 
 			// this is linking to a different page
 			// if (!target.startsWith("#") && !link.classList.contains("heading-link"))
 			// {
 			// 	// load doc, if it is a tree link then don't scroll to the active doc in the file tree
-			// 	loadDocument(target, true, !link.classList.contains("tree-item-link"));
+			// 	loadDocument(target, true, !link.classList.contains("tree-link"));
 			// 	return;
 			// }
 			// else
@@ -2213,7 +2296,7 @@ async function search(query)
 	searchInput.value = query;
 
 	// parse special query filters
-	let searchFields = ['title', 'content', 'tags', 'headers'];
+	let searchFields = ['title', 'content', 'tags', 'headers', 'path'];
 	if (query.startsWith("#")) searchFields = ['tags', 'headers'];
 	if (query.startsWith("tag:"))
 	{
@@ -2233,38 +2316,70 @@ async function search(query)
 
 	if (query.length >= 1)
 	{
-		const results = index.search(query, { prefix: true, fuzzy: 0.3, boost: { title: 3, headers: 2, tags: 1 }, fields: searchFields });
+		const results = index.search(query, { prefix: true, fuzzy: 0.3, boost: { title: 4, headers: 3, tags: 2, path: 1 }, fields: searchFields });
+		console.log(results);
+		// search through the file tree and hide documents that don't match the search
+		let showPaths = [];
+		let hintLabels = [];
+		for (let result of results)
+		{
+			// only show the most relevant results
+			if (((result.score < results[0].score * 0.33 || showPaths.length > 12) && showPaths.length > 3) || result.score < results[0].score * 0.1) break;
+			showPaths.push(result.path);
 
-		const list = document.createElement('div');
-		results.slice(0, 10).forEach(result => {
+			let hint = "";
+			for (match in result.match)
+			{
+				// if (query.toLowerCase() != match.toLowerCase()) continue;
+				if (result.match[match].includes("headers"))
+				{
+					for (let header of result.headers)
+					{
+						if (header.toLowerCase().includes(match.toLowerCase()))
+						{
+							hint = header;
+							break;
+						}
+					}
+				}
+			}
 
-			const item = document.createElement('div');
-			item.classList.add('search-result');
+			hintLabels.push(hint);
+		}
 
-			const link = document.createElement('a');
-			link.classList.add('webpage-link');
+		filterFileTree(showPaths, hintLabels);
 
-			// const icon = document.createElement('span');
-			// icon.classList.add('icon');
-			// icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>`
-			// link.appendChild(icon);
+		// const list = document.createElement('div');
+		// results.slice(0, 10).forEach(result => {
 
-			const searchURL = result.path + '?mark=' + encodeURIComponent(query);
-			link.setAttribute('href', searchURL);
-			link.appendChild(document.createTextNode(result.title));
-			item.appendChild(link);
-			list.append(item);
-		});
+		// 	const item = document.createElement('div');
+		// 	item.classList.add('search-result');
 
-		searchResults.replaceChildren(list);
-		searchInput.parentElement.after(searchResults);
+		// 	const link = document.createElement('a');
+		// 	link.classList.add('tree-link');
+
+		// 	// const icon = document.createElement('span');
+		// 	// icon.classList.add('icon');
+		// 	// icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>`
+		// 	// link.appendChild(icon);
+
+		// 	const searchURL = result.path + '?mark=' + encodeURIComponent(query);
+		// 	link.setAttribute('href', searchURL);
+		// 	link.appendChild(document.createTextNode(result.title));
+		// 	item.appendChild(link);
+		// 	list.append(item);
+		// });
+
+		// searchResults.replaceChildren(list);
+		// searchInput.parentElement.after(searchResults);
 
 		initializePageEvents(searchResults);
 	}
 	else
 	{
-		if (searchResults && searchResults.parentElement) searchResults.parentNode.removeChild(searchResults);
+		// if (searchResults && searchResults.parentElement) searchResults.parentNode.removeChild(searchResults);
 		clearCurrentDocumentSearch();
+		clearFileTreeFilter();
 	}
 
 }
@@ -2339,6 +2454,5 @@ function getTextNodes(element)
 
 	return textNodes;
 }
-
 
 //#endregion
