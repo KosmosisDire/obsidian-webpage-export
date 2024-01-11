@@ -18,6 +18,9 @@ let sidebarTargetWidth;
 let contentTargetWidth;
 
 let themeToggle;
+let fileTree;
+let outlineTree;
+let searchInput;
 
 let canvasWrapper;
 let canvas;
@@ -288,7 +291,7 @@ function onResize(isInitial = false)
 		else sidebarGutters.forEach(function (gutter) { gutter.collapse(true) });
 
 	}
-	else if (widthNowInRange(contentTargetWidth + sidebarTargetWidth, contentTargetWidth + sidebarTargetWidth * 2))
+	else if (widthNowInRange((contentTargetWidth + sidebarTargetWidth) * 0.8, contentTargetWidth + sidebarTargetWidth * 2))
 	{
 		deviceSize = "small screen";
 		document.body.classList.toggle("floating-sidebars", false);
@@ -303,7 +306,7 @@ function onResize(isInitial = false)
 			rightSidebar.collapse(true);
 		}
 	}
-	else if (widthNowInRange(sidebarTargetWidth * 1.5, contentTargetWidth + sidebarTargetWidth))
+	else if (widthNowInRange(sidebarTargetWidth * 1.4, (contentTargetWidth + sidebarTargetWidth) * 0.8))
 	{
 		deviceSize = "tablet";
 		document.body.classList.toggle("floating-sidebars", true);
@@ -320,7 +323,7 @@ function onResize(isInitial = false)
 
 		if(leftSidebar && !fullyInitialized) leftSidebar.collapse(true);
 	}
-	else if (widthNowLessThan(sidebarTargetWidth * 1.5))
+	else if (widthNowLessThan(sidebarTargetWidth * 1.4))
 	{
 		deviceSize = "phone";
 		document.body.classList.toggle("floating-sidebars", true);
@@ -498,6 +501,7 @@ let slideUp = (target, duration=500) => {
 let slideUpAll = (targets, duration=500) => {
 
 	targets.forEach(async target => {
+		if (!target) return;
 		target.style.transitionProperty = 'height, margin, padding';
 		target.style.transitionDuration = duration + 'ms';
 		target.style.boxSizing = 'border-box';
@@ -513,6 +517,7 @@ let slideUpAll = (targets, duration=500) => {
 
 	window.setTimeout(async () => {
 		targets.forEach(async target => {
+			if (!target) return;
 			target.style.display = 'none';
 			target.style.removeProperty('height');
 			target.style.removeProperty('padding-top');
@@ -527,7 +532,6 @@ let slideUpAll = (targets, duration=500) => {
 }
 
 let slideDown = (target, duration=500) => {
-
 	target.style.removeProperty('display');
 	let display = window.getComputedStyle(target).display;
 	if (display === 'none') display = 'block';
@@ -559,6 +563,7 @@ let slideDown = (target, duration=500) => {
 let slideDownAll = (targets, duration=500) => {
 
 	targets.forEach(async target => {
+		if (!target) return;
 		target.style.removeProperty('display');
 		let display = window.getComputedStyle(target).display;
 		if (display === 'none') display = 'block';
@@ -583,6 +588,7 @@ let slideDownAll = (targets, duration=500) => {
 
 	window.setTimeout( async () => {
 		targets.forEach(async target => {
+			if (!target) return;
 			target.style.removeProperty('height');
 			target.style.removeProperty('overflow');
 			target.style.removeProperty('transition-duration');
@@ -745,7 +751,7 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 
 	// switch active file in file tree
 	document.querySelector(".tree-item.mod-active")?.classList.remove("mod-active");
-	let newActiveTreeItem = document.querySelector(".tree-item:has(>.tree-link>.tree-item-contents[href='" + decodeURI(decodedRelativePath) + "'])");
+	let newActiveTreeItem = document.querySelector(".tree-item:has(>.tree-link[href='" + decodeURI(decodedRelativePath) + "'])");
 	if(newActiveTreeItem) 
 	{
 		newActiveTreeItem.classList.add("mod-active");
@@ -1091,8 +1097,10 @@ let outlineTreeItems;
 
 function setupTrees(setupOnNode) 
 {
-	fileTreeItems = Array.from(setupOnNode.querySelectorAll(".tree-container.file-tree .tree-item"));
-	outlineTreeItems = Array.from(setupOnNode.querySelectorAll(".tree-container.outline-tree .tree-item"));
+	fileTree = document.querySelector(".file-tree");
+	outlineTree = document.querySelector(".outline-tree");
+	fileTreeItems = Array.from(document.querySelectorAll(".tree-container.file-tree .tree-item"));
+	outlineTreeItems = Array.from(document.querySelectorAll(".tree-container.outline-tree .tree-item"));
 
 	setupOnNode.querySelectorAll(".tree-item-contents > .collapse-icon").forEach(function(item)
 	{
@@ -1300,6 +1308,89 @@ async function removeTreeHintLabels()
 		item.remove();
 	}
 }
+
+function sortFileTreeDocuments(sortByFunction)
+{
+	let treeItems = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-file:not(.filtered-out)"));
+	treeItems.sort(sortByFunction);
+
+	// sort the files within their parent folders
+	for (let i = 1; i < treeItems.length; i++)
+	{
+		let item = treeItems[i];
+		let lastItem = treeItems[i - 1];
+		if (item.parentElement == lastItem.parentElement)
+		{
+			lastItem.after(item);
+		}
+	}
+
+	// sort the folders using their contents
+	let folders = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-folder:not(.filtered-out)"));
+	folders.sort(function (a, b)
+	{
+		let aFirst = a.querySelectorAll(".tree-item.mod-tree-file:not(.filtered-out)").item(0);
+		let bFirst = b.querySelectorAll(".tree-item.mod-tree-file:not(.filtered-out)").item(0);
+		return treeItems.indexOf(aFirst) - treeItems.indexOf(bFirst);
+	});
+
+	// sort the folders within their parent folders
+	for (let i = 1; i < folders.length; i++)
+	{
+		let item = folders[i];
+		let lastItem = folders[i - 1];
+		if (item.parentElement == lastItem.parentElement)
+		{
+			lastItem.after(item);
+		}
+	}
+}
+
+function sortFileTree(sortByFunction)
+{
+	let treeItems = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-file:not(.filtered-out)"));
+	treeItems.sort(sortByFunction);
+
+	// sort the files within their parent folders
+	for (let i = 1; i < treeItems.length; i++)
+	{
+		let item = treeItems[i];
+		let lastItem = treeItems[i - 1];
+		if (item.parentElement == lastItem.parentElement)
+		{
+			lastItem.after(item);
+		}
+	}
+
+	// sort the folders using their contents
+	let folders = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-folder:not(.filtered-out)"));
+	folders.sort(sortByFunction);
+
+	// sort the folders within their parent folders
+	for (let i = 1; i < folders.length; i++)
+	{
+		let item = folders[i];
+		let lastItem = folders[i - 1];
+		if (item.parentElement == lastItem.parentElement)
+		{
+			lastItem.after(item);
+		}
+	}
+}
+
+function sortFileTreeAlphabetically(reverse = false)
+{
+	sortFileTree(function (a, b)
+	{
+		const aTitle = a.querySelector(".tree-item-title");
+		const bTitle = b.querySelector(".tree-item-title");
+		if (!aTitle || !bTitle) return 0;
+		const aName = aTitle.textContent.toLowerCase();
+		const bName = bTitle.textContent.toLowerCase();
+		return aName.localeCompare(bName, undefined, { numeric: true }) * (reverse ? -1 : 1);
+	});
+}
+
 
 //#endregion
 
@@ -2251,7 +2342,6 @@ function setupExcalidraw(setupOnNode)
 
 // search box
 let index;
-let searchInput;
 let searchResults;
 
 async function setupSearch() 
@@ -2317,7 +2407,6 @@ async function search(query)
 	if (query.length >= 1)
 	{
 		const results = index.search(query, { prefix: true, fuzzy: 0.3, boost: { title: 4, headers: 3, tags: 2, path: 1 }, fields: searchFields });
-		console.log(results);
 		// search through the file tree and hide documents that don't match the search
 		let showPaths = [];
 		let hintLabels = [];
@@ -2347,39 +2436,47 @@ async function search(query)
 			hintLabels.push(hint);
 		}
 
-		filterFileTree(showPaths, hintLabels);
+		if (fileTree)
+		{
+			// filter the file tree and sort it by the order of the search results
+			filterFileTree(showPaths, hintLabels).then(() =>
+			sortFileTreeDocuments((a, b) => 
+			{
+				if (!a || !b) return 0;
+				let aPath = getVaultRelativePath(a.firstChild.href);
+				let bPath = getVaultRelativePath(b.firstChild.href);
+				return showPaths.indexOf(aPath) - showPaths.indexOf(bPath);
+			}));
+		}
+		else
+		{
+			const list = document.createElement('div');
+			results.slice(0, 10).forEach(result => {
 
-		// const list = document.createElement('div');
-		// results.slice(0, 10).forEach(result => {
+				const item = document.createElement('div');
+				item.classList.add('search-result');
 
-		// 	const item = document.createElement('div');
-		// 	item.classList.add('search-result');
+				const link = document.createElement('a');
+				link.classList.add('tree-link');
 
-		// 	const link = document.createElement('a');
-		// 	link.classList.add('tree-link');
+				const searchURL = result.path + '?mark=' + encodeURIComponent(query);
+				link.setAttribute('href', searchURL);
+				link.appendChild(document.createTextNode(result.title));
+				item.appendChild(link);
+				list.append(item);
+			});
 
-		// 	// const icon = document.createElement('span');
-		// 	// icon.classList.add('icon');
-		// 	// icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>`
-		// 	// link.appendChild(icon);
-
-		// 	const searchURL = result.path + '?mark=' + encodeURIComponent(query);
-		// 	link.setAttribute('href', searchURL);
-		// 	link.appendChild(document.createTextNode(result.title));
-		// 	item.appendChild(link);
-		// 	list.append(item);
-		// });
-
-		// searchResults.replaceChildren(list);
-		// searchInput.parentElement.after(searchResults);
+			searchResults.replaceChildren(list);
+			searchInput.parentElement.after(searchResults);
+		}
 
 		initializePageEvents(searchResults);
 	}
 	else
 	{
-		// if (searchResults && searchResults.parentElement) searchResults.parentNode.removeChild(searchResults);
+		if (searchResults && searchResults.parentElement) searchResults.parentNode.removeChild(searchResults);
 		clearCurrentDocumentSearch();
-		clearFileTreeFilter();
+		clearFileTreeFilter().then(() => sortFileTreeAlphabetically());
 	}
 
 }
