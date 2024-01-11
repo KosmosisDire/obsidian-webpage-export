@@ -1328,8 +1328,8 @@ function sortFileTreeDocuments(sortByFunction)
 	let folders = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-folder:not(.filtered-out)"));
 	folders.sort(function (a, b)
 	{
-		let aFirst = a.querySelectorAll(".tree-item.mod-tree-file:not(.filtered-out)").item(0);
-		let bFirst = b.querySelectorAll(".tree-item.mod-tree-file:not(.filtered-out)").item(0);
+		let aFirst = a.querySelector(".tree-item.mod-tree-file:not(.filtered-out)");
+		let bFirst = b.querySelector(".tree-item.mod-tree-file:not(.filtered-out)");
 		return treeItems.indexOf(aFirst) - treeItems.indexOf(bFirst);
 	});
 
@@ -1337,10 +1337,24 @@ function sortFileTreeDocuments(sortByFunction)
 	for (let i = 1; i < folders.length; i++)
 	{
 		let item = folders[i];
-		let lastItem = folders[i - 1];
-		if (item.parentElement == lastItem.parentElement)
+
+		let foundPlace = false;
+		// iterate backwards until we find an item with the same parent
+		for (let j = i - 1; j >= 0; j--)
 		{
-			lastItem.after(item);
+			let lastItem = folders[j];
+			if (item.parentElement == lastItem.parentElement)
+			{
+				lastItem.after(item);
+				foundPlace = true;
+				break;
+			}
+		}
+
+		// if we didn't find an item with the same parent, move it to the top
+		if (!foundPlace)
+		{
+			item.parentElement.prepend(item);
 		}
 	}
 }
