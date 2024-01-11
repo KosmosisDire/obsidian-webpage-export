@@ -1108,7 +1108,7 @@ function setupTrees(setupOnNode)
 		{
 			event.preventDefault();
 			event.stopPropagation();
-			toggleTreeCollapsed(item.parentElement.parentElement.parentElement);
+			toggleTreeCollapsed(item);
 			return false;
 		});
 	});
@@ -1157,11 +1157,7 @@ function setupTrees(setupOnNode)
 			{
 				event.preventDefault();
 				event.stopPropagation();
-				let parent = this.parentElement?.parentElement;
-				if (parent) 
-				{
-					toggleTreeCollapsed(parent);
-				}
+				toggleTreeCollapsed(link);
 			});
 		}
 	});
@@ -1170,6 +1166,8 @@ function setupTrees(setupOnNode)
 
 async function setTreeCollapsed(element, collapsed, animate = true)
 {
+	element = element.closest(".tree-item");
+
 	if (!element || !element.classList.contains("mod-collapsible")) return;
 
 	let children = element.querySelector(".tree-item-children");
@@ -1229,6 +1227,7 @@ async function setTreeCollapsedAll(elements, collapsed, animate = true)
 
 function toggleTreeCollapsed(element)
 {
+	element = element.closest(".tree-item");
 	if (!element) return;
 	setTreeCollapsed(element, !element.classList.contains("is-collapsed"));
 }
