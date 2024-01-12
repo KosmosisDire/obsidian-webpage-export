@@ -1244,59 +1244,64 @@ function getFileTreeItemFromPath(path)
 }
 
 // hide all files and folder except the ones in the list (show parents of shown files)
-async function filterFileTree(showPathList, hintLabels, openFileTree = true)
-{
-	if (openFileTree) await setTreeCollapsedAll(fileTreeItems, false, false);
-	// hide all files and folders
-	let allItems = Array.from(document.querySelectorAll(".file-tree .tree-item:not(.filtered-out)"));
-	for await (let item of allItems)
-	{
-		item.classList.add("filtered-out");
-	}
+async function filterFileTree(showPathList, hintLabels, query, openFileTree = true) {
+    if (openFileTree) await setTreeCollapsedAll(fileTreeItems, false, false);
 
-	await removeTreeHintLabels();
+    // hide all files and folders
+    let allItems = Array.from(document.querySelectorAll(".file-tree .tree-item:not(.filtered-out)"));
+    for await (let item of allItems) {
+        item.classList.add("filtered-out");
+    }
 
-	for (let i = 0; i < showPathList.length; i++)
-	{
-		let path = showPathList[i];
-		let hintLabel = hintLabels[i];
+    await removeTreeHintLabels();
 
-		let treeItem = getFileTreeItemFromPath(path);
-		if (treeItem)
-		{
-			// show the file and it's parent tree items
-			treeItem.classList.remove("filtered-out");
-			let parent = treeItem.parentElement.closest(".tree-item");
+    for (let i = 0; i < showPathList.length; i++) {
+        let path = showPathList[i];
+        let hintLabel = hintLabels[i];
 
-			while (parent)
-			{
-				parent.classList.remove("filtered-out");
-				parent = parent.parentElement.closest(".tree-item");
-			}
+        let treeItem = getFileTreeItemFromPath(path);
+        if (treeItem) {
+            // show the file and its parent tree items
+            treeItem.classList.remove("filtered-out");
 
-			// create the hint label
-			if (hintLabel.trim() != "")
-			{
-				let hintLabelEl = document.createElement("div");
-				hintLabelEl.classList.add("tree-hint-label");
-				hintLabelEl.textContent = hintLabel;
-				treeItem.querySelector(".tree-link").appendChild(hintLabelEl);
-			}
-		}
-	}
+            // update href with the query
+            let treeLink = treeItem.querySelector(".tree-link");
+            let oldHref = treeLink.getAttribute("href");
+            let newHref = `${oldHref}?mark=${encodeURIComponent(query)}`;
+            treeLink.setAttribute("href", newHref);
+
+            let parent = treeItem.parentElement.closest(".tree-item");
+            while (parent) {
+                parent.classList.remove("filtered-out");
+                parent = parent.parentElement.closest(".tree-item");
+            }
+
+            // create the hint label
+            if (hintLabel.trim() !== "") {
+                let hintLabelEl = document.createElement("div");
+                hintLabelEl.classList.add("tree-hint-label");
+                hintLabelEl.textContent = hintLabel;
+                treeLink.appendChild(hintLabelEl);
+            }
+        }
+    }
 }
 
-async function clearFileTreeFilter(closeFileTree = true)
-{
-	if (closeFileTree) await setTreeCollapsedAll(fileTreeItems, true, false);
+async function clearFileTreeFilter(closeFileTree = true) {
+    if (closeFileTree) await setTreeCollapsedAll(fileTreeItems, true, false);
 
-	let filteredItems = document.querySelectorAll(".file-tree .filtered-out");
-	for await (let item of filteredItems)
-	{
-		item.classList.remove("filtered-out");
-	}
+    let filteredItems = document.querySelectorAll(".file-tree .filtered-out");
+    for await (let item of filteredItems) {
+        item.classList.remove("filtered-out");
 
-	await removeTreeHintLabels();
+        // remove search words from the query
+        let treeLink = item.querySelector(".tree-link");
+        let oldHref = treeLink.getAttribute("href");
+        let newHref = oldHref.split("?")[0]; // Remove the query string
+        treeLink.setAttribute("href", newHref);
+    }
+
+    await removeTreeHintLabels();
 }
 
 async function removeTreeHintLabels()
@@ -2452,7 +2457,7 @@ async function search(query)
 		if (fileTree)
 		{
 			// filter the file tree and sort it by the order of the search results
-			filterFileTree(showPaths, hintLabels).then(() =>
+			filterFileTree(showPaths, hintLabels, query).then(() =>
 			sortFileTreeDocuments((a, b) => 
 			{
 				if (!a || !b) return 0;
