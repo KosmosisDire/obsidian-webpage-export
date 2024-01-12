@@ -1238,12 +1238,10 @@ function toggleTreeCollapsedAll(elements)
 	setTreeCollapsedAll(elements, !elements[0].classList.contains("is-collapsed"));
 }
 
-function getFileTreeItemFromPath(path)
-{
-	return document.querySelector(`.tree-item:has(> .tree-link[href="${path}"])`);
+function getFileTreeItemFromPath(path) {
+    return document.querySelector(`.tree-item:has(> .tree-link[href^="${path}"])`);
 }
 
-// hide all files and folder except the ones in the list (show parents of shown files)
 async function filterFileTree(showPathList, hintLabels, query, openFileTree = true) {
     if (openFileTree) await setTreeCollapsedAll(fileTreeItems, false, false);
 
@@ -1265,10 +1263,19 @@ async function filterFileTree(showPathList, hintLabels, query, openFileTree = tr
             treeItem.classList.remove("filtered-out");
 
             // update href with the query
-            let treeLink = treeItem.querySelector(".tree-link");
-            let oldHref = treeLink.getAttribute("href");
-            let newHref = `${oldHref}?mark=${encodeURIComponent(query)}`;
-            treeLink.setAttribute("href", newHref);
+			let treeLink = treeItem.querySelector(".tree-link");
+			let oldHref = treeLink.getAttribute("href");
+
+			if (oldHref.includes('?mark=')) {
+				// If ?mark= is already present, update only the value after it
+				let newHref = oldHref.replace(/(\?mark=)[^&]+/, `$1${encodeURIComponent(query)}`);
+				treeLink.setAttribute("href", newHref);
+			} else {
+				// If ?mark= is not present, add it
+				let newHref = `${oldHref}${oldHref.includes('?') ? '&' : '?'}mark=${encodeURIComponent(query)}`;
+				treeLink.setAttribute("href", newHref);
+			}
+
 
             let parent = treeItem.parentElement.closest(".tree-item");
             while (parent) {
