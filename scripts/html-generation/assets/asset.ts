@@ -209,21 +209,9 @@ export class Asset extends Downloadable
 		try
 		{
 			// add script or style tags so that minifier can minify it as html
-			if (asJavascript)
-			{
-				content = `
-				<script>
-				${content}
-				</script>`;
-			}
-			else
-			{
-				content = `
-				<style>
-				${content}
-				</style>`;
-			}
-
+			if (asJavascript) content = `<script>${content}</script>`;
+			else content = `<style>${content}</style>`;
+			
 			content = await runMinify(content, { collapseBooleanAttributes: true, minifyCSS: true, minifyJS: true, removeComments: true, removeEmptyAttributes: true, removeRedundantAttributes: true, removeScriptTypeAttributes: true, removeStyleLinkTypeAttributes: true, useShortDoctype: true});
 
 			// remove the <script> or <style> tags

@@ -32,6 +32,7 @@ export interface MainSettingsData
 	customLineWidth: string;
 	contentWidth: string;
 	sidebarWidth: string;
+	minOutlineCollapse: number;
 	startOutlineCollapsed: boolean;
 
 	// Export Options
@@ -92,6 +93,7 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	customLineWidth: "",
 	contentWidth: "",
 	sidebarWidth: "",
+	minOutlineCollapse: 2,
 	startOutlineCollapsed: false,
 
 	// Export Options
@@ -511,12 +513,19 @@ export class MainSettings extends PluginSettingTab
 				.setHeading()
 
 			new Setting(contentEl)
-				.setName('Start Outline Collapsed')
-				.setDesc('Start the document\'s table of contents with all items collapsed')
-				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.startOutlineCollapsed)
+				.setName('Min Outline Collapse Depth')
+				.setDesc('Only allow outline items to be collapsed if they are at least this many levels deep in the tree.')
+				.addDropdown((dropdown) => dropdown
+					.addOption('1', '1')
+					.addOption('2', '2')
+					.addOption('3', '3')
+					.addOption('4', '4')
+					.addOption('5', '5')
+					.addOption('6', '6')
+					.addOption('7', 'No Collapse')
+					.setValue(MainSettings.settings.minOutlineCollapse.toString())
 					.onChange(async (value) => {
-						MainSettings.settings.startOutlineCollapsed = value;
+						MainSettings.settings.minOutlineCollapse = parseInt(value);
 						await MainSettings.saveSettings();
 					}));
 

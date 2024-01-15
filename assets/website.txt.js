@@ -18,9 +18,12 @@ let sidebarTargetWidth;
 let contentTargetWidth;
 
 let themeToggle;
+let searchInput;
+
 let fileTree;
 let outlineTree;
-let searchInput;
+let fileTreeItems;
+let outlineTreeItems;
 
 let canvasWrapper;
 let canvas;
@@ -56,6 +59,11 @@ function initGlobalObjects()
 	documentContainer = document.querySelector(".document-container");
 	leftSidebar = document.querySelector(".sidebar-left");
 	rightSidebar = document.querySelector(".sidebar-right");
+
+	fileTree = document.querySelector(".file-tree");
+	outlineTree = document.querySelector(".outline-tree");
+	fileTreeItems = Array.from(document.querySelectorAll(".tree-container.file-tree .tree-item"));
+	outlineTreeItems = Array.from(document.querySelectorAll(".tree-container.outline-tree .tree-item"));
 
 	sidebars = []
 	sidebarGutters = []
@@ -110,7 +118,7 @@ async function loadIncludes()
     }
 }
 
-async function initializePage()
+async function initializePage(showInTree = true, changeURL = true)
 {
 	await loadIncludes();
 
@@ -129,7 +137,7 @@ async function initializePage()
 	{	
 		if (window.location.protocol == "file:") initializeForFileProtocol();
 		initGlobalObjects();
-		initializeDocumentTypes();
+		initializeDocumentTypes(document);
 		setupSidebars();
 		setupThemeToggle();
 		await setupSearch();
@@ -172,10 +180,13 @@ async function initializePage()
 	}
 
 	parseURLParams();
+	setActiveDocument(loadedURL, showInTree, changeURL);
+	relativePathname = getVaultRelativePath(loadedURL.href);
 }
 
 function initializePageEvents(setupOnNode)
 {
+	if (!setupOnNode) return;
     setupHeaders(setupOnNode);
     setupTrees(setupOnNode);
 	setupCallouts(setupOnNode);
@@ -186,15 +197,15 @@ function initializePageEvents(setupOnNode)
 	setupScroll(setupOnNode);
 }
 
-function initializeDocumentTypes()
+function initializeDocumentTypes(fromDocument)
 {
-	if (document.querySelector(".document-container > .markdown-preview-view")) documentType = "markdown";
-	else if (document.querySelector(".canvas-wrapper")) documentType = "canvas";
+	if (fromDocument.querySelector(".document-container > .markdown-preview-view")) documentType = "markdown";
+	else if (fromDocument.querySelector(".canvas-wrapper")) documentType = "canvas";
 	else 
 	{
 		documentType = "custom";
-		if (document.querySelector(".kanban-plugin")) customType = "kanban";
-		else if (document.querySelector(".excalidraw-plugin")) customType = "excalidraw";
+		if (fromDocument.querySelector(".kanban-plugin")) customType = "kanban";
+		else if (fromDocument.querySelector(".excalidraw-plugin")) customType = "excalidraw";
 	}
 }
 
@@ -214,7 +225,6 @@ window.onload = async function()
 {
 	await initializePage();
 	initializePageEvents(document);
-	loadDocument(getURLPath(), false);
 }
 
 window.onpopstate = function(event)
@@ -471,7 +481,6 @@ function extentionToTag(extention)
 	return;
 }
 
-
 let slideUp = (target, duration=500) => {
 
 	target.style.transitionProperty = 'height, margin, padding';
@@ -623,19 +632,27 @@ function getURLExtention(url)
 //#region -----------------   Loading & Paths   ----------------- 
 
 let transferDocument = document.implementation.createHTMLDocument();
-
-async function loadDocument(url, pushHistory = true, scrollTo = true)
+let loading = false;
+async function loadDocument(url, changeURL = true, showInTree = true)
 {
+	if (loading)
+	{
+		console.log("Already loading document.");
+		return;
+	}
+
+	loading = true;
 	let newLoadedURL = new URL(url, absoluteBasePath);
 	relativePathname = getVaultRelativePath(newLoadedURL.href);
-	console.log("Loading document: ", relativePathname);
+	console.log("Loading document: ", newLoadedURL.pathname);
 
 	if (newLoadedURL.pathname == loadedURL?.pathname ?? "")
 	{
 		console.log("Document already loaded.");
 		loadedURL = newLoadedURL;
 		await setActiveDocument(loadedURL, false, true);
-		initializePage();
+		await initializePage();
+		loading = false;
 		return;
 	}
 
@@ -645,17 +662,17 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 	showLoading(true);
 
 	let response;
-	try {response = await fetch(pathname); }
+	try { response = await fetch(pathname); }
 	catch (error)
 	{
 		window.location.assign(pathname);
+		loading = false;
 		return;
 	}
 
 	if (response.ok)
 	{
-		setActiveDocument(loadedURL, scrollTo, pushHistory);
-
+		setActiveDocument(loadedURL, showInTree, changeURL);
 		let extention = getURLExtention(url);
 
 		documentType = "none";
@@ -667,31 +684,24 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 			let html = (await response.text()).replaceAll("<!DOCTYPE html>", "").replaceAll("<html>", "").replaceAll("</html>", "");
 			transferDocument.write(html);
 
-			// copy document content and outline tree
-			let newDocContainer = document.importNode(transferDocument.querySelector(".document-container"), true);
-			documentContainer.remove();
-			documentContainer = newDocContainer;
-
-			// insert document as the second item under the webpage container
-			webpageContainer.insertBefore(documentContainer, webpageContainer.children[1]);
-			
-			if (document.querySelector(".outline-tree") && transferDocument.querySelector(".outline-tree"))
-				document.querySelector(".outline-tree").innerHTML = transferDocument.querySelector(".outline-tree").innerHTML;
-
-			// Change the root path to match the match from the new page
 			setupRootPath(transferDocument);
+			initializeDocumentTypes(transferDocument);
 
-			// set document types
-			initializeDocumentTypes();
+			// copy document content into DOM
+			let newDocumentEl = transferDocument.querySelector(".document-container");
+			documentContainer.innerHTML = newDocumentEl.innerHTML;
+			
+			// copy the outline tree into the DOM
+			let newOutline = transferDocument.querySelector(".outline-tree");
+			if (outlineTree && newOutline) outlineTree.innerHTML = newOutline.innerHTML;
 
-			// initialize events on the new page, but wait for the page to finish loading
+			// initialize page event after a delay to allow the DOM to update
 			setTimeout(function() 
 			{
 				initializePageEvents(documentContainer);
-				if (document.querySelector(".outline-tree")) 
-					initializePageEvents(document.querySelector(".outline-tree"));
+				initializePageEvents(newOutline);
 			}, 0);
-
+		
 			document.title = transferDocument.title;
 			transferDocument.close();
 		}
@@ -732,36 +742,39 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 			}
 		}
 
-		await initializePage();
+		await initializePage(showInTree, changeURL);
 	}
 	else
 	{
-		pageNotFound();
+		pageNotFound(viewContent);
 	}
 
 	showLoading(false);
+	console.log("Finished loading document: ", newLoadedURL.pathname);
+	loading = false;
 
 	return;
 }
 
-function setActiveDocument(url, scrollTo = true, pushHistory = true)
+function setActiveDocument(url, showInTree = true, changeURL = true)
 {
 	let relativePath = getVaultRelativePath(url.href);
 	let decodedRelativePath = decodeURI(relativePath);
+	let searchlessHeaderlessPath = decodedRelativePath.split("#")[0].split("?")[0];
 
 	// switch active file in file tree
 	document.querySelector(".tree-item.mod-active")?.classList.remove("mod-active");
-	let newActiveTreeItem = document.querySelector(".tree-item:has(>.tree-link[href='" + decodeURI(decodedRelativePath) + "'])");
+	let newActiveTreeItem = document.querySelector(".tree-item:has(>.tree-link[href^='" + searchlessHeaderlessPath + "'])");
 	if(newActiveTreeItem) 
 	{
 		newActiveTreeItem.classList.add("mod-active");
-		if(scrollTo) scrollIntoView(newActiveTreeItem, {block: "center", inline: "nearest"});
+		if(showInTree) scrollIntoView(newActiveTreeItem, {block: "center", inline: "nearest"});
 	}
 
 	// set the active file in the graph view
 	if(typeof nodes != 'undefined' && window.renderWorker)
 	{
-		let activeNode = nodes?.paths.findIndex(function(item) { return item.endsWith(decodedRelativePath); }) ?? -1;
+		let activeNode = nodes?.paths.findIndex(function(item) { return item.endsWith(searchlessHeaderlessPath); }) ?? -1;
 		
 		if(activeNode >= 0) 
 		{
@@ -769,7 +782,7 @@ function setActiveDocument(url, scrollTo = true, pushHistory = true)
 		}
 	}
 
-	if(pushHistory && window.location.protocol != "file:") window.history.pushState({ path: relativePath }, '', relativePath);
+	if(changeURL && window.location.protocol != "file:") window.history.pushState({ path: relativePath }, '', relativePath);
 }
 
 function parseURLParams()
@@ -802,30 +815,19 @@ function parseURLParams()
 
 function showLoading(loading)
 {
+	documentContainer.style.transitionDuration = "";
+	loadingIcon.classList.toggle("shown", loading);
+	documentContainer.classList.toggle("hide", loading);
+	documentContainer.classList.toggle("show", !loading);
 	if(loading)
 	{
-		// show loading icon
-		loadingIcon.classList.toggle("shown", true);
+		// position loading icon in the center of the screen
 		let viewBounds = getViewBounds();
 		loadingIcon.style.left = (viewBounds.centerX - loadingIcon.offsetWidth / 2) + "px";
 		loadingIcon.style.top = (viewBounds.centerY - loadingIcon.offsetHeight / 2) + "px";
 
-		// hide document container
-		documentContainer.classList.toggle("hide", true);
-		documentContainer.classList.toggle("show", false);
-
 		// hide the left sidebar if on phone
 		if (deviceSize == "phone") leftSidebar.collapse(true);
-	}
-	else
-	{
-		// hide loading icon
-		loadingIcon.classList.toggle("shown", false);
-
-		// show document container
-		documentContainer.style.transitionDuration = "";
-		documentContainer.classList.toggle("hide", false);
-		documentContainer.classList.toggle("show", true);
 	}
 }
 
@@ -843,19 +845,23 @@ function pageNotFound(viewContent)
 	if (document.querySelector(".outline-tree"))
 		document.querySelector(".outline-tree").innerHTML = "";
 
-	console.log("Page not found: " + absoluteBasePath + url);
-	let newRootPath = getURLRootPath(absoluteBasePath + url);
+	console.log("Page not found: " + absoluteBasePath + loadedURL.pathname);
+	let newRootPath = getURLRootPath(absoluteBasePath + loadedURL.pathname);
 	relativeBasePath = newRootPath;
 	document.querySelector("base").href = newRootPath;
 
 	document.title = "Page Not Found";
 }
 
-
 function setupRootPath(fromDocument)
 {
-	let basePath = fromDocument.querySelector("#root-path").getAttribute("root-path");
-	document.querySelector("base").href = basePath;
+	let rootEl = fromDocument.getElementById("root-path");
+	if (!rootEl) return;
+	let basePath = rootEl.getAttribute("root-path");
+	let newBase = document.createElement("base");
+	newBase.href = basePath;
+	console.log("Setting root path: " + basePath);
+	document.querySelector("base").replaceWith(newBase);
 	document.querySelector("#root-path").setAttribute("root-path", basePath);
 	relativeBasePath = basePath;
 	absoluteBasePath = new URL(basePath, window.location.href).href;
@@ -1092,33 +1098,17 @@ function showHeader(headingWrapper, showParents = true, showChildren = false, fo
 //#endregion
 
 //#region -----------------        Trees        ----------------- 
-let fileTreeItems;
-let outlineTreeItems;
 
 function setupTrees(setupOnNode) 
 {
-	fileTree = document.querySelector(".file-tree");
-	outlineTree = document.querySelector(".outline-tree");
-	fileTreeItems = Array.from(document.querySelectorAll(".tree-container.file-tree .tree-item"));
-	outlineTreeItems = Array.from(document.querySelectorAll(".tree-container.outline-tree .tree-item"));
-
-	setupOnNode.querySelectorAll(".tree-item-contents > .collapse-icon").forEach(function(item)
-	{
-		item.addEventListener("click", function(event)
-		{
-			event.preventDefault();
-			event.stopPropagation();
-			toggleTreeCollapsed(item);
-			return false;
-		});
-	});
+	let collapsableItems = Array.from(setupOnNode.querySelectorAll(".tree-container .tree-item:has(.collapse-icon) > .tree-link"));
 
 	setupOnNode.querySelectorAll(".collapse-tree-button").forEach(function(button)
 	{
 		button.treeRoot = button.parentElement.parentElement;
 		button.icon = button.firstChild;
 		button.icon.innerHTML = "<path d></path><path d></path>";
-
+		
 		let treeItems = button.treeRoot.classList.contains("file-tree") ? fileTreeItems : outlineTreeItems;
 
 		button.setIcon = function(collapse)
@@ -1146,29 +1136,40 @@ function setupTrees(setupOnNode)
 		});
 	});
 
-	fileTreeItems.forEach(function(treeItem)
+	collapsableItems.forEach(function(link)
 	{
-		let link = treeItem.querySelector(".tree-item-contents");
-		let icon = treeItem.querySelector(".collapse-icon");
-
-		if(icon)
+		link?.addEventListener("click", function(event)
 		{
-			link?.addEventListener("click", function(event)
-			{
-				event.preventDefault();
-				event.stopPropagation();
-				toggleTreeCollapsed(link);
-			});
-		}
+			event.preventDefault();
+			event.stopPropagation();
+			toggleTreeCollapsed(link);
+		});
 	});
 	
 }
 
-async function setTreeCollapsed(element, collapsed, animate = true)
+async function setTreeCollapsed(element, collapsed, animate = true, openParents = true)
 {
-	element = element.closest(".tree-item");
+	if (!element.classList.contains("mod-collapsible"))
+		element = element.closest(".mod-collapsible");
 
-	if (!element || !element.classList.contains("mod-collapsible")) return;
+	if (!element || !element.classList.contains("mod-collapsible"))
+	{
+		console.log("Element is not collapsible", element);
+		return;
+	}
+
+	if (element.classList.contains("is-collapsed") == collapsed)
+	{
+		console.log("Element is already collapsed", element);
+		return;
+	}
+
+	if (openParents)
+	{
+		let parent = element.parentElement.closest(".mod-collapsible");
+		if (parent) await setTreeCollapsed(parent, false, animate, openParents);
+	}
 
 	let children = element.querySelector(".tree-item-children");
 
@@ -1182,8 +1183,9 @@ async function setTreeCollapsed(element, collapsed, animate = true)
 	{
 		element.classList.remove("is-collapsed");
 		if(animate) slideDown(children, 100);
-		else children.style.removeProperty("display");
+		else children.style.display = "";
 	}
+
 }
 
 async function setTreeCollapsedAll(elements, collapsed, animate = true)
@@ -1240,11 +1242,11 @@ function toggleTreeCollapsedAll(elements)
 
 function getFileTreeItemFromPath(path)
 {
-	return document.querySelector(`.tree-item:has(> .tree-link[href="${path}"])`);
+	return document.querySelector(`.tree-item:has(> .tree-link[href^="${path}"])`);
 }
 
 // hide all files and folder except the ones in the list (show parents of shown files)
-async function filterFileTree(showPathList, hintLabels, openFileTree = true)
+async function filterFileTree(showPathList, hintLabelLists, query, openFileTree = true)
 {
 	if (openFileTree) await setTreeCollapsedAll(fileTreeItems, false, false);
 	// hide all files and folders
@@ -1259,13 +1261,15 @@ async function filterFileTree(showPathList, hintLabels, openFileTree = true)
 	for (let i = 0; i < showPathList.length; i++)
 	{
 		let path = showPathList[i];
-		let hintLabel = hintLabels[i];
+		let hintLabels = hintLabelLists[i];
 
 		let treeItem = getFileTreeItemFromPath(path);
 		if (treeItem)
 		{
 			// show the file and it's parent tree items
 			treeItem.classList.remove("filtered-out");
+			let itemLink = treeItem.querySelector(".tree-link");
+			if(itemLink) itemLink.href = path + "?mark=" + query;
 			let parent = treeItem.parentElement.closest(".tree-item");
 
 			while (parent)
@@ -1274,13 +1278,33 @@ async function filterFileTree(showPathList, hintLabels, openFileTree = true)
 				parent = parent.parentElement.closest(".tree-item");
 			}
 
-			// create the hint label
-			if (hintLabel.trim() != "")
+			if (hintLabels.length > 0)
 			{
-				let hintLabelEl = document.createElement("div");
-				hintLabelEl.classList.add("tree-hint-label");
-				hintLabelEl.textContent = hintLabel;
-				treeItem.querySelector(".tree-link").appendChild(hintLabelEl);
+				let treeLink = treeItem.querySelector(".tree-link");
+				let hintContainer = treeLink.appendChild(document.createElement("div"));
+				hintContainer.classList.add("tree-hint-container");
+
+				function createHintLabel(text, link)
+				{
+					text = text.trim();
+					if (text == "") return;
+
+					let hintLabelEl = document.createElement("a");
+					hintLabelEl.classList.add("tree-hint-label");
+					hintLabelEl.classList.add("internal-link");
+					hintLabelEl.textContent = text;
+					hintLabelEl.href = link;
+					hintContainer.appendChild(hintLabelEl);
+				}
+
+				// create the hint labels
+				for (let label of hintLabels)
+				{
+					console.log(label);
+					createHintLabel(label, path + "#" + label);
+				}
+
+				setupLinks(hintContainer);
 			}
 		}
 	}
@@ -1288,7 +1312,7 @@ async function filterFileTree(showPathList, hintLabels, openFileTree = true)
 
 async function clearFileTreeFilter(closeFileTree = true)
 {
-	if (closeFileTree) await setTreeCollapsedAll(fileTreeItems, true, false);
+	await removeTreeHintLabels();
 
 	let filteredItems = document.querySelectorAll(".file-tree .filtered-out");
 	for await (let item of filteredItems)
@@ -1296,12 +1320,20 @@ async function clearFileTreeFilter(closeFileTree = true)
 		item.classList.remove("filtered-out");
 	}
 
-	await removeTreeHintLabels();
+	let markItems = document.querySelectorAll(".file-tree .tree-link[href*='?mark=']");
+	for await (let item of markItems)
+	{
+		let href = item.href.split("?")[0];
+		href = getVaultRelativePath(href);
+		item.href = href;
+	}
+
+	if (closeFileTree) await setTreeCollapsedAll(fileTreeItems, true, false);
 }
 
 async function removeTreeHintLabels()
 {
-	let hintLabels = document.querySelectorAll(".tree-hint-label");
+	let hintLabels = document.querySelectorAll(".tree-hint-container");
 	for await (let item of hintLabels)
 	{
 		item.remove();
@@ -1383,10 +1415,24 @@ function sortFileTree(sortByFunction)
 	for (let i = 1; i < folders.length; i++)
 	{
 		let item = folders[i];
-		let lastItem = folders[i - 1];
-		if (item.parentElement == lastItem.parentElement)
+
+		let foundPlace = false;
+		// iterate backwards until we find an item with the same parent
+		for (let j = i - 1; j >= 0; j--)
 		{
-			lastItem.after(item);
+			let lastItem = folders[j];
+			if (item.parentElement == lastItem.parentElement)
+			{
+				lastItem.after(item);
+				foundPlace = true;
+				break;
+			}
+		}
+
+		// if we didn't find an item with the same parent, move it to the top
+		if (!foundPlace)
+		{
+			item.parentElement.prepend(item);
 		}
 	}
 }
@@ -1403,7 +1449,6 @@ function sortFileTreeAlphabetically(reverse = false)
 		return aName.localeCompare(bName, undefined, { numeric: true }) * (reverse ? -1 : 1);
 	});
 }
-
 
 //#endregion
 
@@ -1960,6 +2005,7 @@ function setupLinks(setupOnNode)
 			let target = link.getAttribute("href");
 
 			event.preventDefault();
+			event.stopPropagation();
 
 			if(!target)
 			{
@@ -2221,22 +2267,23 @@ let flashElement = null;
 let flashAnimation = null;
 function scrollIntoView(element, options)
 {
-	element.style.marginTop = "-1.2em";
 	if(options) element.scrollIntoView(options);
 	else element.scrollIntoView();
-	element.style.marginTop = "";
 
+	setTreeCollapsed(element, false);
     
 	const flashTiming = 
 	{
-		duration: 500,
-		iterations: 2,
+		duration: 1000,
+		iterations: 1,
 		delay: 500,
 	};
 
 	const flashAnimationData =
 	[
 		{ opacity: 0 },
+		{ opacity: 0.8 },
+		{ opacity: 0.8 },
 		{ opacity: 0.8 },
 		{ opacity: 0 },
 	];
@@ -2249,6 +2296,7 @@ function scrollIntoView(element, options)
 	flashElement = document.createElement("div");
 	flashElement.classList.add("scroll-highlight");
 	element.appendChild(flashElement);
+
 
 	var savePos = element.style.position;
 	element.style.position = "relative";
@@ -2429,36 +2477,42 @@ async function search(query)
 			if (((result.score < results[0].score * 0.33 || showPaths.length > 12) && showPaths.length > 3) || result.score < results[0].score * 0.1) break;
 			showPaths.push(result.path);
 
-			let hint = "";
+			let hints = [];
+			let breakEarly = false;
 			for (match in result.match)
 			{
-				// if (query.toLowerCase() != match.toLowerCase()) continue;
 				if (result.match[match].includes("headers"))
 				{
 					for (let header of result.headers)
 					{
 						if (header.toLowerCase().includes(match.toLowerCase()))
 						{
-							hint = header;
-							break;
+							hints.push(header);
+							if (query.toLowerCase() != match.toLowerCase()) 
+							{
+								breakEarly = true;
+								break;
+							}
 						}
 					}
 				}
+
+				if (breakEarly) break;
 			}
 
-			hintLabels.push(hint);
+			hintLabels.push(hints);
 		}
 
 		if (fileTree)
 		{
 			// filter the file tree and sort it by the order of the search results
-			filterFileTree(showPaths, hintLabels).then(() =>
+			filterFileTree(showPaths, hintLabels, query).then(() =>
 			sortFileTreeDocuments((a, b) => 
 			{
 				if (!a || !b) return 0;
 				let aPath = getVaultRelativePath(a.firstChild.href);
 				let bPath = getVaultRelativePath(b.firstChild.href);
-				return showPaths.indexOf(aPath) - showPaths.indexOf(bPath);
+				return showPaths.findIndex((path) => aPath.startsWith(path)) - showPaths.findIndex((path) => bPath.startsWith(path));
 			}));
 		}
 		else
@@ -2481,9 +2535,9 @@ async function search(query)
 
 			searchResults.replaceChildren(list);
 			searchInput.parentElement.after(searchResults);
+			initializePageEvents(searchResults);
 		}
 
-		initializePageEvents(searchResults);
 	}
 	else
 	{
@@ -2507,7 +2561,7 @@ function startsWithAny(string, prefixes)
 async function searchCurrentDocument(query)
 {
 	clearCurrentDocumentSearch();
-	const textNodes = getTextNodes(document.querySelector(".markdwn-preview-sizer") ?? documentContainer);
+	const textNodes = getTextNodes(document.querySelector(".markdown-preview-sizer") ?? documentContainer);
 
 	textNodes.forEach(async node =>
 	{

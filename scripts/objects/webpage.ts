@@ -200,6 +200,7 @@ export class Webpage
 				headerTree.title = "Table Of Contents";
 				headerTree.showNestingIndicator = false;
 				headerTree.generateWithItemsClosed = MainSettings.settings.startOutlineCollapsed;
+				headerTree.minCollapsableDepth = MainSettings.settings.minOutlineCollapse;
 				await headerTree.generateTreeWithContainer(rightSidebar);
 			}
 
@@ -255,14 +256,16 @@ export class Webpage
 
 	public getHeaders(): string[]
 	{
-		let headerCaches = app.metadataCache.getFileCache(this.source)?.headings?.values();
-		if (headerCaches)
+		let headers: string[] = [];
+		if (this.document)
 		{
-			let headers = Array.from(headerCaches).map((header) => header.heading);
-			return headers;
+			this.document.querySelectorAll(".heading").forEach((headerEl: HTMLElement) =>
+			{
+				headers.push(headerEl.innerText ?? "");
+			});
 		}
 
-		return [];
+		return headers;
 	}
 
 	private async getDocumentHTML(): Promise<Webpage | undefined>
@@ -476,8 +479,7 @@ export class Webpage
 		// Create h1 with title
 		let titleEl = this.document.createElement("h1");
 		titleEl.id = "inline-title";
-		MarkdownRenderer.renderSingleLineMarkdown(title, titleEl);
-	
+
 		// Create a div with icon
 		if (icon != "" && !titleInfo.isDefaultIcon)
 		{
@@ -486,6 +488,10 @@ export class Webpage
 			pageIcon.innerHTML = icon;
 			titleEl.appendChild(pageIcon); // Add the icon div as the second child of the title element
 		}
+		
+		// Inser title into the title element
+		MarkdownRenderer.renderSingleLineMarkdown(title, titleEl);
+	
 	
 		if (this.contentElement)
 		{

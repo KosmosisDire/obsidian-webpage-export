@@ -46,8 +46,9 @@ export class Website
 		for (var style of AssetHandler.getAssetsOfType(AssetType.Style))
 		{
 			if (typeof(style.content) != "string") continue;
-
-			let matches = style.content.matchAll(/\.[^\s1234567890\.]{1,}/gm);
+			
+			// this matches every class name with the dot
+			let matches = style.content.matchAll(/(?![0-9].*$)\.(?!cm.*$)(?![0-9].*$)[^ ͼ\>\+\{\(\,\.\[\)\:\;\/]{1,}/gm);
 			for (var match of matches)
 			{
 				let className = match[0].replace(".", "").trim();
