@@ -469,7 +469,7 @@ export namespace MarkdownRenderer
 		});
 
 		// add space after inline math
-		html.querySelectorAll("math-inline").forEach((element: HTMLElement) =>
+		html.querySelectorAll(".math-inline").forEach((element: HTMLElement) =>
 		{
 			element.style.marginRight = "0.5em";
 		});
