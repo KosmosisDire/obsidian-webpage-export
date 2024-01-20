@@ -1471,22 +1471,6 @@ function setupLists(setupOnNode)
 			}
 		});
 	}
-
-	// setupOnNode.addEventListener('click', function(event) 
-	// {
-	// 	var collapseIndicator = event.target;
-	
-	// 	if (collapseIndicator.classList.contains('list-collapse-indicator')) 
-	// 	{
-	// 		var listItem = collapseIndicator.closest('li');
-		
-	// 		if (listItem) 
-	// 		{
-	// 			collapseIndicator.classList.toggle('is-collapsed');
-	// 			listItem.classList.toggle('is-collapsed');
-	// 		}
-	// 	}
-	// });
 }
 
 //#endregion
