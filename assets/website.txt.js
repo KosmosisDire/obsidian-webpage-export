@@ -811,6 +811,10 @@ function parseURLParams()
 			scrollIntoView(headingTarget, { behavior: "smooth", block: "start"});
 			console.log("Scrolling to heading: " + headingTarget);
 		}
+		else
+		{
+			console.log("Heading not found: " + hashParam);
+		}
 	}
 }
 
@@ -1294,7 +1298,7 @@ async function filterFileTree(showPathList, hintLabelLists, query, openFileTree 
 					hintLabelEl.classList.add("tree-hint-label");
 					hintLabelEl.classList.add("internal-link");
 					hintLabelEl.textContent = text;
-					hintLabelEl.href = link;
+					hintLabelEl.href = decodeURI(link).replaceAll(" ", "_");
 					hintContainer.appendChild(hintLabelEl);
 				}
 
