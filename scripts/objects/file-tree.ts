@@ -127,22 +127,24 @@ export class FileTreeItem extends TreeItem
 
 	protected override async createItemContents(container: HTMLElement): Promise<HTMLDivElement> 
 	{
-		let linkEl = await super.createItemContents(container);
+		let containerEl = await super.createItemContents(container);
+		if (this.isFolder) containerEl.addClass("nav-folder-title");
+		else containerEl.addClass("nav-file-title");
 
 		if (!this.isFolder && this.tree.showFileExtentionTags && !this.tree.hideFileExtentionTags.contains(this.originalExtension))
 		{
-			let tag = linkEl.createDiv({ cls: "nav-file-tag" });
+			let tag = containerEl.createDiv({ cls: "nav-file-tag" });
 			tag.textContent = this.originalExtension.toUpperCase();
 		}
 
-		return linkEl;
+		return containerEl;
 	}
 
 	protected override async createItemTitle(container: HTMLElement): Promise<HTMLSpanElement>
 	{
 		let titleEl = await super.createItemTitle(container);
-		if (this.isFolder) titleEl.addClass("nav-folder-title");
-		else titleEl.addClass("nav-file-title");
+		if (this.isFolder) titleEl.addClass("nav-folder-title-content", "tree-item-inner");
+		else titleEl.addClass("nav-file-title-content", "tree-item-inner");
 		return titleEl; 
 	}
 }

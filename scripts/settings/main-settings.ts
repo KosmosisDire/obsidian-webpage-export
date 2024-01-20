@@ -26,6 +26,7 @@ export interface MainSettingsData
 	// Formatting Options
 	makeNamesWebStyle: boolean;
 	allowFoldingHeadings: boolean;
+	allowFoldingLists: boolean;
 	sidebarsAlwaysCollapsible: boolean;
 	addFilenameTitle: boolean;
 	minifyHTML: boolean;
@@ -87,6 +88,7 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	// Formatting Options
 	makeNamesWebStyle: true,
 	allowFoldingHeadings: true,
+	allowFoldingLists: true,
 	sidebarsAlwaysCollapsible: false,
 	addFilenameTitle: true,
 	minifyHTML: true,
@@ -536,6 +538,16 @@ export class MainSettings extends PluginSettingTab
 					.setValue(MainSettings.settings.allowFoldingHeadings)
 					.onChange(async (value) => {
 						MainSettings.settings.allowFoldingHeadings = value;
+						await MainSettings.saveSettings();
+					}));
+
+			new Setting(contentEl)
+				.setName('Allow folding lists')
+				.setDesc('Allow lists to be folded with an arrow icon beside each list item, just as in Obsidian.')
+				.addToggle((toggle) => toggle
+					.setValue(MainSettings.settings.allowFoldingLists)
+					.onChange(async (value) => {
+						MainSettings.settings.allowFoldingLists = value;
 						await MainSettings.saveSettings();
 					}));
 

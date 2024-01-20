@@ -287,7 +287,7 @@ export class Webpage
 		if (this.viewType == "markdown")
 		{ 
 			contentEl.classList.toggle("allow-fold-headings", MainSettings.settings.allowFoldingHeadings);
-
+			contentEl.classList.toggle("allow-fold-lists", MainSettings.settings.allowFoldingLists);
 		}
 
 		if(this.sizerElement) this.sizerElement.style.paddingBottom = "";

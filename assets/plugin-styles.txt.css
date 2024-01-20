@@ -229,13 +229,13 @@ body:not(.loading) .document-container.show
     padding-bottom: 30em;
     align-items: flex-start;
     justify-content: center;
-	background-color: var(--background-primary);
-	transition: background-color var(--color-fade-speed) ease-in-out;
-    border-top-right-radius: var(--window-radius);
-	border-top-left-radius: var(--window-radius);
+    background-color: var(--background-primary);
+    transition: background-color var(--color-fade-speed) ease-in-out;
+    border-top-right-radius: var(--window-radius, var(--radius-m));
+    border-top-left-radius: var(--window-radius, var(--radius-m));
     overflow-x: hidden;
     overflow-y: scroll;
-	z-index: 0;
+    z-index: 0;
 }
 
 .document-container > .markdown-preview-view > .markdown-preview-sizer 
@@ -325,8 +325,10 @@ body .webpage-container .tree-container .tree-scroll-area
 	max-height: 100%;
 	overflow-y: scroll;
 	padding-right: calc(var(--collapse-arrow-size) / 2);
-	border-radius: var(--radius-s);
+	border-radius: min(var(--radius-s), 1.5em);
 	position: absolute;
+	margin: 0;
+	background-color: transparent;
 }
 
 .tree-container .tree-item 
@@ -406,30 +408,40 @@ body .webpage-container .tree-container .tree-scroll-area
 {
     width: 100%;
     height: 100%;
-    transition: background-color 0.1s;
-    border-radius: var(--radius-s);
+	margin: 0;
+	padding: 0;
     padding-left: calc(var(--tree-horizontal-spacing) * 2 + var(--collapse-arrow-size));
-    padding-bottom: calc(var(--tree-vertical-spacing) / 2);
-    padding-top: calc(var(--tree-vertical-spacing) / 2);
-    color: var(--nav-item-color);
-    display: flex;
+    border-radius: var(--radius-s);
+    
+	display: flex;
     flex-direction: row;
     align-items: center;
+	
+    color: var(--nav-item-color);
+    transition: background-color .1s;
 }
 
-.tree-container .tree-item-title
-{
+.tree-container .tree-item-title {
     overflow: hidden;
     text-overflow: ellipsis;
     text-wrap: nowrap;
-	white-space: nowrap;
+    white-space: nowrap;
+    position: relative;
+    border: none !important;
 
-	width: 100%;
-	width: -webkit-fill-available;
-	width: -moz-available;
-	width: fill-available;
+    width: 100%;
+    width: -webkit-fill-available;
+    width: -moz-available;
+    width: fill-available;
 
-	position: relative;
+    background-color: transparent !important;
+    padding-top: calc(var(--tree-vertical-spacing)/ 2) !important;
+    padding-bottom: calc(var(--tree-vertical-spacing)/ 2) !important;
+	margin: 0 !important;
+	left: 0 !important;
+	right: 0 !important;
+	top: 0 !important;
+	bottom: 0 !important;
 }
 
 .tree-container .tree-item-title::after
@@ -452,10 +464,6 @@ body .webpage-container .tree-container .tree-scroll-area
 .tree-container .tree-item.mod-tree-folder > .tree-link > .collapse-icon
 {
     width: 100%;
-}
-
-.collapse-icon > svg {
-    color: unset !important;
 }
 
 .collapse-icon:hover 
@@ -534,12 +542,6 @@ body .webpage-container .tree-container .tree-scroll-area
 
 /* Special */
 
-/* AnuPpuccin rainbow indent support */
-.anp-simple-rainbow-color-toggle.anp-simple-rainbow-indentation-toggle .tree-container.file-tree .tree-item
-{
-	border-color: rgba(var(--rainbow-folder-color), 0.5);
-}
-
 .tree-container.outline-tree .tree-item[data-depth='1'] > .tree-link > .tree-item-contents
 {
     font-weight: 900;
@@ -570,7 +572,7 @@ body .webpage-container .tree-container .tree-scroll-area
 	margin-right: 1em;
 }
 
-.nav-file-title, .nav-folder-title 
+.nav-file-title-content, .nav-folder-title-content
 {
     margin-bottom: unset !important;
     display: unset !important;
@@ -619,7 +621,7 @@ body .webpage-container .tree-container .tree-scroll-area
 }
 
 /* make hover apply to margins of heading */
-.heading::after, .heading:before
+/* .heading::after, .heading:before
 {
   content:'';
   width: 100%;
@@ -629,10 +631,11 @@ body .webpage-container .tree-container .tree-scroll-area
   top: 100%;
   z-index: 1;
 }
+
 .heading:before
 {
   top: calc(0px - var(--p-spacing));
-}
+} */
 
 .heading-wrapper 
 {
@@ -700,12 +703,12 @@ html > body > .webpage-container > .document-container > .markdown-preview-view 
 	visibility: hidden;
 }
 
-.collapse-icon svg.svg-icon {
+.collapse-icon:not(.list-collapse-indicator) svg.svg-icon {
     color: var(--nav-collapse-icon-color);
-    stroke-width: 4px;
     width: var(--collapse-arrow-size);
     height: var(--collapse-arrow-size);
     transition: transform 100ms ease-in-out 0s;
+    stroke-width: 4px;
     min-width: 10px;
     min-height: 10px;
 }
@@ -719,7 +722,7 @@ div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
 .heading-wrapper .heading-collapse-indicator
 {
 	opacity: 0;
-    transition: opacity 0.3s ease-in-out;
+    transition: opacity 0.15s ease-in-out;
 	position: absolute;
 	z-index: 1;
 	padding: 0 !important;
@@ -1388,6 +1391,80 @@ a.tree-hint-label:hover
 input[type="search"]
 {
   box-shadow: none !important;
+}
+
+/*#endregion */
+
+/* Themes */
+
+/*#region General */
+
+.nav-folder-children .nav-folder-title-content::before
+{
+	margin-right: 0.5em;
+}
+
+.nav-file-title:has(.tree-item-icon) .nav-file-title-content::before
+{
+	display: none !important;
+}
+
+/*#endregion */
+
+/*#region AnuPpuccin */
+
+/* AnuPpuccin rainbow indent support */
+.anp-simple-rainbow-color-toggle.anp-simple-rainbow-indentation-toggle .tree-container.file-tree .tree-item
+{
+	border-color: rgba(var(--rainbow-folder-color), 0.5);
+}
+
+/* AnuPpuccin folder icon support */
+.anp-collapse-folders .tree-container .tree-item .collapse-icon 
+{
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 27 24' fill='none' stroke='currentColor' stroke-linejoin='round' stroke-linecap='round' stroke-width='2'%3E%3Cpath d='M6 14l1.45-2.9A2 2 0 0 1 9.24 10H22a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H20a2 2 0 0 1 2 2v2'/%3E%3C/svg%3E%0A");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 27 24' fill='none' stroke='currentColor' stroke-linejoin='round' stroke-linecap='round' stroke-width='2'%3E%3Cpath d='M6 14l1.45-2.9A2 2 0 0 1 9.24 10H22a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H20a2 2 0 0 1 2 2v2'/%3E%3C/svg%3E%0A");
+    -webkit-mask-repeat: no-repeat;
+	mask-repeat: no-repeat;
+
+    background-color: currentColor;
+    display: flex;
+    flex-basis: 100%;
+    height: 16px;
+    width: 17px;
+}
+
+.anp-collapse-folders .tree-container .tree-item.is-collapsed .collapse-icon
+{
+	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 27 24' fill='none' stroke='currentColor' stroke-linejoin='round' stroke-linecap='round' stroke-width='2'%3E%3Cpath d='M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z'/%3E%3Cpath d='M2 10h20' /%3E%3C/svg%3E%0A");
+	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 27 24' fill='none' stroke='currentColor' stroke-linejoin='round' stroke-linecap='round' stroke-width='2'%3E%3Cpath d='M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z'/%3E%3Cpath d='M2 10h20' /%3E%3C/svg%3E%0A");
+}
+
+.anp-file-icons .nav-file .nav-file-title::before
+{
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z'/%3E%3Cpath d='M14 2v6h6'/%3E%3C/svg%3E%0A");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z'/%3E%3Cpath d='M14 2v6h6'/%3E%3C/svg%3E%0A");
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    background-color: currentColor;
+    content: "";
+    display: flex;
+    flex-shrink: 0;
+    height: var(--size-4-4);
+    margin-left: calc(-1 * var(--size-4-5));
+    opacity: var(--icon-opacity);
+    position: absolute;
+    width: var(--size-4-4);
+}
+
+.anp-collapse-folders .tree-container .tree-item .collapse-icon:hover
+{
+	color: currentColor;
+}
+
+.anp-collapse-folders .tree-container .tree-item .collapse-icon svg
+{
+	display: none;
 }
 
 /*#endregion */

@@ -17,6 +17,16 @@ hr
     border-color: var(--hr-color);
 }
 
+h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-indicator, h4:hover .collapse-indicator, h5:hover .collapse-indicator, h6:hover .collapse-indicator, .collapse-indicator:hover, .is-collapsed .collapse-indicator, .cm-fold-indicator.is-collapsed .collapse-indicator, .cm-gutterElement:hover .collapse-indicator, .cm-gutterElement .is-collapsed .collapse-indicator, .cm-line:hover .cm-fold-indicator .collapse-indicator, .fold-gutter.is-collapsed, .fold-gutter:hover, .metadata-properties-heading:hover .collapse-indicator {
+    opacity: 1;
+	transition: opacity 0.15s ease-in-out;
+}
+
+.cm-fold-indicator .collapse-indicator, .cm-gutterElement .collapse-indicator, .collapse-indicator, .fold-gutter
+{
+	opacity: 0;
+	transition: opacity 0.15s ease-in-out;
+}
 
 @media print 
 {
@@ -37,11 +47,6 @@ hr
 }
 
 /*#region Misc Hiding */
-
-.list-collapse-indicator
-{
-    display: none !important;
-}
 
 .collapse-icon::before 
 { 
@@ -186,6 +191,16 @@ hr
 	background-color: var(--interactive-hover);
 	box-shadow: var(--input-shadow);
 	transition: none;
+}
+
+/*#endregion */
+
+/*#region Lists */
+
+.webpage-container .is-collapsed .list-collapse-indicator svg.svg-icon, 
+.webpage-container .is-collapsed .collapse-indicator svg.svg-icon
+{
+	color: var(--collapse-icon-color-collapsed);
 }
 
 /*#endregion */

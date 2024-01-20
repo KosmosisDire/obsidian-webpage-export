@@ -3,6 +3,7 @@ import { Utils } from "scripts/utils/utils";
 import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
 import { RenderLog } from "./render-log";
+import { HTMLGeneration } from "./html-generator";
 
 export namespace MarkdownRenderer
 {
@@ -485,6 +486,19 @@ export namespace MarkdownRenderer
 			}
 		}
 
+		// add collapse icons to lists if they don't already have them
+		var collapsableListItems = Array.from(html.querySelectorAll("li:has(ul), li:has(ol)"));
+		for (const item of collapsableListItems)
+		{
+			let collapseIcon = item.querySelector(".collapse-icon");
+			if (!collapseIcon)
+			{
+				collapseIcon = item.createDiv({ cls: "list-collapse-indicator collapse-indicator collapse-icon" });
+				collapseIcon.innerHTML = HTMLGeneration.arrowHTML;
+				item.prepend(collapseIcon);
+			}
+		}
+		
 
 		// if the dynamic table of contents plugin is included on this page
 		// then parse each list item and render markdown for it
@@ -497,10 +511,6 @@ export namespace MarkdownRenderer
 			renderEl.remove();
 		}
 	}
-
-
-
-
 
 
     export async function beginBatch()

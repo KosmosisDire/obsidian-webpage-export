@@ -189,6 +189,7 @@ function initializePageEvents(setupOnNode)
 	if (!setupOnNode) return;
     setupHeaders(setupOnNode);
     setupTrees(setupOnNode);
+	setupLists(setupOnNode);
 	setupCallouts(setupOnNode);
 	setupCheckboxes(setupOnNode);
 	setupCanvas(setupOnNode);
@@ -1448,6 +1449,44 @@ function sortFileTreeAlphabetically(reverse = false)
 		const bName = bTitle.textContent.toLowerCase();
 		return aName.localeCompare(bName, undefined, { numeric: true }) * (reverse ? -1 : 1);
 	});
+}
+
+//#endregion
+
+//#region ----------------- 	   Lists        -----------------
+
+function setupLists(setupOnNode)
+{
+	let listCollpaseIcons = Array.from(setupOnNode.querySelectorAll(".list-collapse-indicator"));
+	for (let i = 0; i < listCollpaseIcons.length; i++)
+	{
+		let icon = listCollpaseIcons[i];
+		icon.addEventListener("click", function (event)
+		{
+			let listItem = icon.closest("li");
+			if (listItem) 
+			{
+				listItem.classList.toggle("is-collapsed");
+				icon.classList.toggle("is-collapsed");
+			}
+		});
+	}
+
+	// setupOnNode.addEventListener('click', function(event) 
+	// {
+	// 	var collapseIndicator = event.target;
+	
+	// 	if (collapseIndicator.classList.contains('list-collapse-indicator')) 
+	// 	{
+	// 		var listItem = collapseIndicator.closest('li');
+		
+	// 		if (listItem) 
+	// 		{
+	// 			collapseIndicator.classList.toggle('is-collapsed');
+	// 			listItem.classList.toggle('is-collapsed');
+	// 		}
+	// 	}
+	// });
 }
 
 //#endregion

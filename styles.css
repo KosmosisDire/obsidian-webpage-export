@@ -379,7 +379,7 @@ input[type=checkbox].file-checkbox
 	margin-right: 1em;
 }
 
-.tree-container .nav-file-title, .tree-container .nav-folder-title 
+.tree-container .nav-file-title-content, .tree-container .nav-folder-title-content
 {
     margin-bottom: unset !important;
     display: unset !important;
