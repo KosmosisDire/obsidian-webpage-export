@@ -10,7 +10,6 @@ import { MarkdownRenderer } from "./html-generation/markdown-renderer";
 import { promises as fs } from 'fs';
 import { Website } from "./objects/website";
 import { Asset } from "./html-generation/assets/asset";
-import { IndexM } from "./objects/indexm";
 
 export class HTMLExporter
 {
@@ -24,13 +23,9 @@ export class HTMLExporter
 
 		let website = await HTMLExporter.exportFiles(files, exportPath, true, MainSettings.settings.deleteOldExportedFiles);
 
-
-		if (website)
-		{
-			if (MainSettings.settings.includeSearchBar) await IndexM.indexHTMLFiles(website); // only index if search bar is enabled
-			if (MainSettings.settings.openAfterExport) Utils.openPath(exportPath);
-			new Notice("✅ Finished HTML Export:\n\n" + exportPath, 5000);
-		}
+		if (!website) return;
+		if (MainSettings.settings.openAfterExport) Utils.openPath(exportPath);
+		new Notice("✅ Finished HTML Export:\n\n" + exportPath, 5000);
 	}
 
 	public static async exportFiles(files: TFile[], destination: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website | undefined>
@@ -46,13 +41,7 @@ export class HTMLExporter
 		if (clearDirectory && MainSettings.settings.exportPreset != "local") await this.deleteNonExports(website.webpages, destination);
 		if (saveFiles) 
 		{
-			if (MainSettings.settings.exportPreset == "local") 
-			{
-				website.saveAsDatabase();
-				return website;
-			}
-
-			await this.saveExports(website.webpages, destination);
+			await Utils.downloadFiles(website.downloads, destination);
 		}
 
 		MarkdownRenderer.endBatch();
@@ -73,29 +62,6 @@ export class HTMLExporter
 	{
 		let files = HTMLExportPlugin.plugin.app.vault.getFiles();
 		return await this.exportFiles(files, rootExportPath, saveFiles, clearDirectory);
-	}
-
-	public static async saveExports(webpages: Webpage[], rootPath: Path)
-	{
-		let downloads: Downloadable[] = [];
-
-		for (let i = 0; i < webpages.length; i++)
-		{
-			downloads.push(...webpages[i].downloads);
-		}
-
-		downloads.forEach((file) =>
-		{
-			if(MainSettings.settings.makeNamesWebStyle) 
-			{
-				file.filename = Path.toWebStyle(file.filename);
-				file.relativeDownloadDirectory.makeWebStyle();
-			}
-		});
-
-		downloads = downloads.filter((file, index) => downloads.findIndex((f) => f.relativeDownloadDirectory == file.relativeDownloadDirectory && f.filename === file.filename) == index);
-
-		await Utils.downloadFiles(downloads, rootPath);
 	}
 
 	private static async getAllFilesInFolderRecursive(folder: Path): Promise<Path[]>

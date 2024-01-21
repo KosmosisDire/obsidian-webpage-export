@@ -147,7 +147,7 @@ export class Utils
 	{
 		if (!rootPath.isAbsolute) throw new Error("folderPath must be absolute: " + rootPath.asString);
 
-		RenderLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)")
+		RenderLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)");
 		
 		for (let i = 0; i < files.length; i++)
 		{
@@ -164,7 +164,6 @@ export class Utils
 				continue;
 			}
 		}
-		
 	}
 
 	//async function that awaits until a condition is met

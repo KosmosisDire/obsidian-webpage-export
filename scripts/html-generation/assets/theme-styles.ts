@@ -1,6 +1,7 @@
 import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
 import { Path } from "scripts/utils/path";
 import { RenderLog } from "../render-log";
+import { AssetHandler } from "../asset-handler";
 
 export class ThemeStyles extends Asset
 {
@@ -15,8 +16,8 @@ export class ThemeStyles extends Asset
     private static async getThemeContent(themeName: string): Promise<string>
     {
         if (themeName == "Default") return "/* Using default theme. */";
-        // MIGHT NEED TO FORCE A RELATIVE PATH HERE IDKK
-        let themePath = new Path(`.obsidian/themes/${themeName}/theme.css`).absolute();
+		
+        let themePath = AssetHandler.vaultPluginsPath.joinString(`../themes/${themeName}/theme.css`).absolute();
         if (!themePath.exists)
         {
             RenderLog.warning("Cannot find theme at path: \n\n" + themePath);
@@ -39,10 +40,14 @@ export class ThemeStyles extends Asset
     override async load()
     {
         let themeName = ThemeStyles.getCurrentThemeName();
-        if (themeName == this.lastThemeName) return;
+        if (themeName == this.lastThemeName) 
+		{
+			this.modifiedTime = 0;
+			return;
+		}
         this.content = await ThemeStyles.getThemeContent(themeName);
-        this.lastThemeName = themeName;
 		this.modifiedTime = Date.now();
+        this.lastThemeName = themeName;
         await super.load();
     }
 }

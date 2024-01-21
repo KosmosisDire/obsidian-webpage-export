@@ -153,11 +153,6 @@ export class Webpage
 		return Path.getRelativePath(this.exportPath, new Path(this.exportPath.workingDirectory), true).makeUnixStyle();
 	}
 
-	get isFileModified(): boolean
-	{
-		return this.source.stat.mtime > (this.exportPathAbsolute.stat?.mtime.getTime() ?? Number.NEGATIVE_INFINITY);
-	}
-
 	/**
 	 * Returns a downloadable object to download the .html file to the current path with the current html contents.
 	 */
@@ -467,7 +462,7 @@ export class Webpage
 				if (difference < 0.15)
 				{
 					firstHeader.remove();
-					RenderLog.warning(`"${firstHeaderTextNode.textContent ?? ""}" header replaced because it was very similar to the file's title.`);
+					RenderLog.log(`"${firstHeaderTextNode.textContent ?? ""}" header replaced because it was very similar to the file's title.`);
 				}
 			}
 			else

@@ -142,7 +142,6 @@ export class ExportModal extends Modal
 		let modeDescriptions = 
 		{
 			"website": "This will export a file structure suitable for uploading to your own web server.",
-			"local": "This will export an executable file along with a database file. This makes it easy to share the whole vault with others by only sharing 2 files.",
 			"documents": "This will export self-contained, but slow loading and large, html documents.",
 			"raw-documents": "This will export raw, self-contained documents without the website layout. This is useful for sharing individual notes, or printing."
 		}
@@ -154,15 +153,23 @@ export class ExportModal extends Modal
 			.setHeading()
 			.addDropdown((dropdown) => dropdown
 				.addOption('website', 'Online Web Server')
-				// .addOption('local', 'Local Shareable Web Server') This feature is not ready yet, so it is disabled for now
 				.addOption('documents', 'HTML Documents')
 				.addOption('raw-documents', 'Raw HTML Documents')
-				.setValue(["website", "local", "documents", "raw-documents"].contains(MainSettings.settings.exportPreset) ? MainSettings.settings.exportPreset : 'website')
+				.setValue(["website", "documents", "raw-documents"].contains(MainSettings.settings.exportPreset) ? MainSettings.settings.exportPreset : 'website')
 				.onChange(async (value) =>
 				{
 					MainSettings.settings.exportPreset = value;
 
 					switch (value) {
+						case 'website':
+							MainSettings.settings.inlineAssets = false;
+							MainSettings.settings.makeNamesWebStyle = true;
+							MainSettings.settings.includeGraphView = true;
+							MainSettings.settings.includeFileTree = true;
+							MainSettings.settings.includeSearchBar = true;
+							await MainSettings.saveSettings();
+
+							break;
 						case 'documents':
 							MainSettings.settings.inlineAssets = true;
 							MainSettings.settings.makeNamesWebStyle = false;
@@ -172,28 +179,11 @@ export class ExportModal extends Modal
 
 							break;
 						case 'raw-documents':
-								MainSettings.settings.inlineAssets = true;
-								MainSettings.settings.makeNamesWebStyle = false;
-								MainSettings.settings.includeGraphView = false;
-								MainSettings.settings.includeSearchBar = false;
-								await MainSettings.saveSettings();
-	
-								break;
-						case 'local':
-							MainSettings.settings.inlineAssets = false;
-							MainSettings.settings.makeNamesWebStyle = true;
-							MainSettings.settings.includeGraphView = true;
-							MainSettings.settings.includeFileTree = true;
-							MainSettings.settings.includeSearchBar = true;
-							await MainSettings.saveSettings();
-
-							break;
-						case 'website':
-							MainSettings.settings.inlineAssets = false;
-							MainSettings.settings.makeNamesWebStyle = true;
-							MainSettings.settings.includeGraphView = true;
-							MainSettings.settings.includeFileTree = true;
-							MainSettings.settings.includeSearchBar = true;
+							MainSettings.settings.inlineAssets = true;
+							MainSettings.settings.makeNamesWebStyle = false;
+							MainSettings.settings.includeGraphView = false;
+							MainSettings.settings.includeFileTree = false;
+							MainSettings.settings.includeSearchBar = false;
 							await MainSettings.saveSettings();
 
 							break;

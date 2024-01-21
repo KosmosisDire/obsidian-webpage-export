@@ -2438,8 +2438,8 @@ async function setupSearch()
 	
 	await import('https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js');
 
-	const indexJSON = await fetch('lib/searchIndex.json').then(response => response.text());
-	index = MiniSearch.loadJSON(indexJSON, { fields: ['title', 'content', 'tags'] });
+	const indexJSON = await fetch('lib/search-index.json').then(response => response.text());
+	index = MiniSearch.loadJSON(indexJSON, { fields: ['title', 'path', 'tags', 'headers'] });
 
 	searchInput = document.querySelector('input[type="search"]');
 	const inputClear = document.querySelector('.search-input-clear-button');
@@ -2490,6 +2490,11 @@ async function search(query)
 	{
 		query = query.substring(query.indexOf(":") + 1);
 		searchFields = ['headers'];
+	}
+	if (startsWithAny(query, ["path:"]))
+	{
+		query = query.substring(query.indexOf(":") + 1);
+		searchFields = ['path'];
 	}
 
 	if (query.length >= 1)

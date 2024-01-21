@@ -23,37 +23,6 @@ export class Downloadable
 
 	async download(downloadDirectory: Path)
 	{
-		let downloadPath = this.getAbsoluteDownloadPath(downloadDirectory);
-		// if file already exists and the file size and modified time are the same, or content is the same, skip download
-		if (downloadPath.exists)
-		{
-			// first check filesize and modified time
-			let existingStat = await downloadPath.stat;
-		
-			if (existingStat)
-			{
-				let existingSize = existingStat?.size;
-				let existingTime = Math.max(existingStat?.mtimeMs ?? 0, existingStat?.ctimeMs ?? 0);
-				
-				if (existingSize == this.content.length && this.modifiedTime <= existingTime)
-				{
-					// RenderLog.warning("File size and modified time are the same, skipping download of " + this.filename);
-					return;
-				}
-				else if (existingSize == this.content.length)
-				{
-					// if file size is the same, check content
-					let existingContent = await downloadPath.readFileBuffer();
-					let contentBuffer = Buffer.from(this.content);
-					if (existingContent && existingContent.equals(contentBuffer))
-					{
-						// RenderLog.warning("File content is the same, skipping download of " + this.filename);
-						return;
-					}
-				}
-			}
-		}
-		
 		let data = this.content instanceof Buffer ? this.content : Buffer.from(this.content.toString(), this.encoding);
 		let writePath = this.getAbsoluteDownloadDirectory(downloadDirectory).joinString(this.filename);
 		await writePath.writeFile(data, this.encoding);
