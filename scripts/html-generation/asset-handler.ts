@@ -69,7 +69,6 @@ export class AssetHandler
 		// by default all static assets have a modified time the same as main.js
 		this.mainJsModTime = this.vaultPluginsPath.joinString("webpage-html-export/main.js").stat?.mtimeMs ?? 0;
 		this.staticAssets.forEach(asset => asset.modifiedTime = this.mainJsModTime);
-		console.log("main.js mod time: " + this.mainJsModTime);
 		
 		this.allAssets.forEach(async (asset) => await asset.load());
 		
@@ -177,7 +176,6 @@ export class AssetHandler
 					}
 
 					let newPath = childAsset.getAssetPath(asset.getAssetPath());
-					console.log(newPath.asString);
 					content = content.replaceAll(url, newPath.asString);
 				}
 				continue;

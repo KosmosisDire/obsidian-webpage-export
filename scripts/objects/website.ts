@@ -73,19 +73,23 @@ export class Website
 	private checkIncrementalExport(webpage: Webpage): boolean
 	{		
 		if (!this.previousExportMetadata || !MainSettings.settings.incrementalExport || MainSettings.settings.exportPreset != ExportPreset.Website) 
+		{
 			return true;
+		}
 
 		if (this.previousExportMetadata.pluginVersion != HTMLExportPlugin.plugin.manifest.version)
 		{
 			return true;
 		}
 
-		let webpagePath = webpage.exportPath.copy.makeUnixStyle().asString;
+		let webpagePath = webpage.source.path;
 		let previousMetadata: {modifiedTime: number, sourceSize: number} 
 							= this.previousExportMetadata.files[webpagePath];
 
-		if (!previousMetadata) 
+		if (!previousMetadata)
+		{
 			return true;
+		}
 
 		let currentMetadata = {modifiedTime: webpage.source.stat.mtime, sourceSize: webpage.source.stat.size};
 		
@@ -217,26 +221,24 @@ export class Website
 			let assetDownloads = AssetHandler.getAssetDownloads();
 			this.dependencies.push(...assetDownloads);
 			this.downloads.push(...assetDownloads);
-			console.log(this.downloads);
 		}
 
 		// create website metadata and index
 		let metadataAsset = await this.createMetadata();
+		if (!metadataAsset) return undefined;
 		this.dependencies.push(metadataAsset);
 		this.downloads.push(metadataAsset);
 
 		if (MainSettings.settings.includeSearchBar) // only create index if search bar is enabled
 		{
 			let index = await this.createIndex();
+			if (!index) return undefined;
 			this.dependencies.push(index);
 			this.downloads.push(index);
 		}
 
 		this.filterDownloads();
 
-		console.log(this.downloads);
-
-		
 		return this;
 	}
 
@@ -281,7 +283,7 @@ export class Website
 		}
 	}
 
-	public async createIndex(): Promise<Asset>
+	public async createIndex(): Promise<Asset | undefined>
 	{
 		const stopWords = ["a", "about", "actually", "almost", "also", "although", "always", "am", "an", "and", "any", "are", "as", "at", "be", "became", "become", "but", "by", "can", "could", "did", "do", "does", "each", "either", "else", "for", "from", "had", "has", "have", "hence", "how", "i", "if", "in", "is", "it", "its", "just", "may", "maybe", "me", "might", "mine", "must", "my", "mine", "must", "my", "neither", "nor", "not", "of", "oh", "ok", "when", "where", "whereas", "wherever", "whenever", "whether", "which", "while", "who", "whom", "whoever", "whose", "why", "will", "with", "within", "without", "would", "yes", "yet", "you", "your"];
 		const indexOptions = 
@@ -345,6 +347,7 @@ export class Website
 
 		for (const webpage of htmlWebpages) 
 		{
+			if(MarkdownRenderer.checkCancelled()) return undefined;
 			RenderLog.progress(progressCount, totalCount, "Indexing", "Adding: " + webpage.exportPath.asString, "var(--color-blue)");
 
 			const content = preprocessContent(webpage.contentElement);
@@ -375,6 +378,7 @@ export class Website
 		// add other files to search
 		for (const file of this.batchFiles)
 		{
+			if(MarkdownRenderer.checkCancelled()) return undefined;
 			RenderLog.progress(progressCount, totalCount, "Indexing", "Adding: " + file.path, "var(--color-blue)");
 			if (MarkdownRenderer.isConvertable(file.extension)) continue;
 
@@ -397,6 +401,7 @@ export class Website
 		// remove old files
 		for (const oldFile of this.oldFilesWeb)
 		{
+			if(MarkdownRenderer.checkCancelled()) return undefined;
 			RenderLog.progress(progressCount, totalCount, "Indexing", "Removing: " + oldFile, "var(--color-blue)");
 
 			if (index.has(oldFile))
@@ -410,7 +415,7 @@ export class Website
 		return new Asset("search-index.json", JSON.stringify(index), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary, 0);
 	}
 
-	public async createMetadata(): Promise<Asset>
+	public async createMetadata(): Promise<Asset | undefined>
 	{
 		// metadata stores a list of files in the export, their relative paths, and modification times. 
 		// is also stores the vault name, the export time, and the plugin version
@@ -427,6 +432,7 @@ export class Website
 		
 		for (const page of this.webpages)
 		{
+			if(MarkdownRenderer.checkCancelled()) return undefined;
 			RenderLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + page.exportPath.asString, "var(--color-cyan)");
 
 			let fileInfo: any = {};
@@ -440,6 +446,7 @@ export class Website
 
 		for (const file of this.dependencies)
 		{
+			if(MarkdownRenderer.checkCancelled()) return undefined;
 			RenderLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + file.relativeDownloadPath.asString, "var(--color-cyan)");
 			
 			let fileInfo: any = {};
@@ -454,6 +461,7 @@ export class Website
 		// remove old files
 		for (const oldFile of this.oldFilesSource)
 		{
+			if(MarkdownRenderer.checkCancelled()) return undefined;
 			RenderLog.progress(progressCount, totalCount, "Creating Metadata", "Removing: " + oldFile, "var(--color-cyan)");
 			delete metadata.files[oldFile];
 			progressCount++;
@@ -466,6 +474,7 @@ export class Website
 	{
 		for (let i = 0; i < this.oldFilesWeb.length; i++)
 		{
+			if(MarkdownRenderer.checkCancelled()) return;
 			let file = this.oldFilesWeb[i];
 			let path = this.destination.joinString(file);
 			if (path.exists) 
@@ -476,10 +485,13 @@ export class Website
 		}
 
 		let folders = (await Path.getAllEmptyFoldersRecursive(this.destination));
+		if(MarkdownRenderer.checkCancelled()) return;
+
 		// sort by depth so that the deepest folders are deleted first
 		folders.sort((a, b) => a.depth - b.depth);
 		for	(let i = 0; i < folders.length; i++)
 		{
+			if(MarkdownRenderer.checkCancelled()) return;
 			let folder = folders[i];
 			RenderLog.progress(i, folders.length, "Deleting Empty Folders", "Deleting: " + folder.asString, "var(--color-orange)");
 			await folder.directory.delete(true);

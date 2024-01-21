@@ -28,11 +28,9 @@ export async function migrateSettings()
 		MainSettings.settings = DEFAULT_SETTINGS;
 		for (var i = 0; i < settingsToSave.length; i++)
 		{
-			var settingName = settingsToSave[i];
+			var settingName = settingsToSave[i]; 
 			// @ts-ignore
 			MainSettings.settings[settingName] = savedSettings[settingName];
-			// @ts-ignore
-			console.log(settingName, MainSettings.settings[settingName]);
 		}
 
 		MainSettings.settings.settingsVersion = HTMLExportPlugin.pluginVersion;
