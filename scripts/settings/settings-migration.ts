@@ -22,18 +22,26 @@ export async function migrateSettings()
 		"graphAttractionForce",
 	]
 
-	var savedSettings = JSON.parse(JSON.stringify(MainSettings.settings));
-	MainSettings.settings = DEFAULT_SETTINGS;
-	for (var i = 0; i < settingsToSave.length; i++)
+	try
 	{
-		var settingName = settingsToSave[i];
-		// @ts-ignore
-		MainSettings.settings[settingName] = savedSettings[settingName];
-		// @ts-ignore
-		console.log(settingName, MainSettings.settings[settingName]);
-	}
+		var savedSettings = JSON.parse(JSON.stringify(MainSettings.settings));
+		MainSettings.settings = DEFAULT_SETTINGS;
+		for (var i = 0; i < settingsToSave.length; i++)
+		{
+			var settingName = settingsToSave[i];
+			// @ts-ignore
+			MainSettings.settings[settingName] = savedSettings[settingName];
+			// @ts-ignore
+			console.log(settingName, MainSettings.settings[settingName]);
+		}
 
-	MainSettings.settings.settingsVersion = HTMLExportPlugin.pluginVersion;
+		MainSettings.settings.settingsVersion = HTMLExportPlugin.pluginVersion;
+	}
+	catch (e)
+	{
+		RenderLog.error(e, "Failed to migrate settings, resetting to default settings.");
+		MainSettings.settings = DEFAULT_SETTINGS;
+	}
 
 	await MainSettings.saveSettings();
 
