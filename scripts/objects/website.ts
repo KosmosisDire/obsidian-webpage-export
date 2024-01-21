@@ -159,7 +159,7 @@ export class Website
 		var filesToRemove = this.previousExportMetadata?.files ? Object.keys(this.previousExportMetadata.files) : [];
 		this.oldFilesSource = filesToRemove.filter((path) => !filePaths.includes(path) && !path.startsWith("lib/"));
 		this.oldFilesWeb = this.oldFilesSource;
-		this.oldFilesWeb = this.oldFilesSource.map((path) => new Path(path).makeWebStyle(MainSettings.settings.makeNamesWebStyle).replaceExtension(".md", ".html").makeUnixStyle().asString);
+		this.oldFilesWeb = this.oldFilesSource.map((path) => new Path(path).makeWebStyle(MainSettings.settings.makeNamesWebStyle).replaceExtension(".md", ".html").replaceExtension(".canvas", ".html").makeUnixStyle().asString);
 		
 		console.log(filePaths);
 		console.log(this.oldFilesSource);
@@ -362,6 +362,26 @@ export class Website
 			{
 				console.warn(`No indexable content found for ${webpage.source.basename}`);
 			}
+		}
+
+		// add other files to search
+		for (const file of this.batchFiles)
+		{
+			if (MarkdownRenderer.isConvertable(file.extension)) continue;
+
+			const filePath = new Path(file.path).makeUnixStyle().makeWebStyle(MainSettings.settings.makeNamesWebStyle).asString;
+			if (index.has(filePath)) 
+			{
+				index.discard(filePath);
+			}
+
+			index.add({
+				path: filePath,
+				title: file.name,
+				content: "",
+				tags: [],
+				headers: [],
+			});
 		}
 
 		// remove old files
