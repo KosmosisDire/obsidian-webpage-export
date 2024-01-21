@@ -10,6 +10,13 @@ import { RenderLog } from 'scripts/html-generation/render-log';
 
 // #region Settings Definition
 
+export enum ExportPreset
+{
+	Website = "website",
+	Documents = "documents",
+	RawDocuments = "raw-documents",
+}
+
 export interface MainSettingsData 
 {
 	settingsVersion: string;
@@ -48,7 +55,7 @@ export interface MainSettingsData
 	includeGraphView: boolean;
 
 	// Main Export Options
-	exportPreset: string;
+	exportPreset: ExportPreset;
 	openAfterExport: boolean;
 
 	// Graph View Settings
@@ -109,7 +116,7 @@ export const DEFAULT_SETTINGS: MainSettingsData =
 	includeGraphView: true,
 
 	// Main Export Options
-	exportPreset: 'website',
+	exportPreset: ExportPreset.Website,
 	openAfterExport: false,
 
 	// Graph View Settings
@@ -283,7 +290,7 @@ export class MainSettings extends PluginSettingTab
 		hr.style.borderColor = "var(--color-accent)";
 		hr.style.opacity = "0.5";
 
-		if (MainSettings.settings.exportPreset != "raw-documents")
+		if (MainSettings.settings.exportPreset != ExportPreset.RawDocuments)
 		{
 			new Setting(contentEl)
 				.setName('Page Features:')
@@ -323,42 +330,44 @@ export class MainSettings extends PluginSettingTab
 					}
 					));
 
-			new Setting(contentEl)
-				.setName('Include search bar')
-				.setDesc('Adds a full text search of the website to the left sidebar.')
-				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.includeSearchBar)
-					.onChange(async (value) => {
-						MainSettings.settings.includeSearchBar = value;
-						await MainSettings.saveSettings();
-					}
-					));
+			if (MainSettings.settings.exportPreset == ExportPreset.Website)
+				new Setting(contentEl)
+					.setName('Include search bar')
+					.setDesc('Adds a full text search of the website to the left sidebar.')
+					.addToggle((toggle) => toggle
+						.setValue(MainSettings.settings.includeSearchBar)
+						.onChange(async (value) => {
+							MainSettings.settings.includeSearchBar = value;
+							await MainSettings.saveSettings();
+						}
+						));
+
+			hr = contentEl.createEl("hr");
+			hr.style.marginTop = "20px";
+			hr.style.marginBottom = "20px";
+			hr.style.borderColor = "var(--color-accent)";
+			hr.style.opacity = "0.5";
 		}
 
 		//#endregion
 
 		//#region Custom Features
 
-		hr = contentEl.createEl("hr");
-		hr.style.marginTop = "20px";
-		hr.style.marginBottom = "20px";
-		hr.style.borderColor = "var(--color-accent)";
-		hr.style.opacity = "0.5";
-
 		new Setting(contentEl)
 				.setName('Custom Features:')
 				.setDesc("Customizable features to change various aspects of the website.")
 				.setHeading();
 
-		new Setting(contentEl)
-			.setName('Show tree icons')
-			.setDesc('Adds decorative file and folder icons to the file tree. This does not have to be enabled to use custom icons.')
-			.addToggle((toggle) => toggle
-				.setValue(MainSettings.settings.showDefaultTreeIcons)
-				.onChange(async (value) => {
-					MainSettings.settings.showDefaultTreeIcons = value;
-					await MainSettings.saveSettings();
-				}));
+		if (MainSettings.settings.exportPreset != ExportPreset.RawDocuments)
+			new Setting(contentEl)
+				.setName('Show tree icons')
+				.setDesc('Adds decorative file and folder icons to the file tree. This does not have to be enabled to use custom icons.')
+				.addToggle((toggle) => toggle
+					.setValue(MainSettings.settings.showDefaultTreeIcons)
+					.onChange(async (value) => {
+						MainSettings.settings.showDefaultTreeIcons = value;
+						await MainSettings.saveSettings();
+					}));
 
 		let iconTutorial = new Setting(contentEl)
 			.setName('Custom icons')
@@ -499,7 +508,7 @@ export class MainSettings extends PluginSettingTab
 
 		//#region Page Behaviors
 
-		if (MainSettings.settings.exportPreset != "raw-documents")
+		if (MainSettings.settings.exportPreset != ExportPreset.RawDocuments)
 		{
 			
 			hr = contentEl.createEl("hr");
@@ -727,48 +736,47 @@ export class MainSettings extends PluginSettingTab
 
 		//#region Experimental
 
+		if (MainSettings.settings.exportPreset == ExportPreset.Website)
+		{
+			let experimentalContainer = contentEl.createDiv();
+			let experimentalHR1 = experimentalContainer.createEl('hr');
+			let experimentalHeader = experimentalContainer.createEl('span', { text: 'Experimental' });
+			let experimentalHR2 = experimentalContainer.createEl('hr');
 
-		let experimentalContainer = contentEl.createDiv();
-		let experimentalHR1 = experimentalContainer.createEl('hr');
-		let experimentalHeader = experimentalContainer.createEl('span', { text: 'Experimental' });
-		let experimentalHR2 = experimentalContainer.createEl('hr');
+			experimentalContainer.style.display = 'flex';
+			experimentalContainer.style.marginTop = '5em';
+			experimentalContainer.style.alignItems = 'center';
 
-		experimentalContainer.style.display = 'flex';
-		experimentalContainer.style.marginTop = '5em';
-		experimentalContainer.style.alignItems = 'center';
+			experimentalHR1.style.borderColor = "var(--color-red)";
+			experimentalHR2.style.borderColor = "var(--color-red)";
+			experimentalHeader.style.color = "var(--color-red)";
 
-		experimentalHR1.style.borderColor = "var(--color-red)";
-		experimentalHR2.style.borderColor = "var(--color-red)";
-		experimentalHeader.style.color = "var(--color-red)";
+			experimentalHR1.style.flexGrow = "1";
+			experimentalHR2.style.flexGrow = "1";
+			experimentalHeader.style.flexGrow = "0.1";
+			experimentalHeader.style.textAlign = "center";
 
-		experimentalHR1.style.flexGrow = "1";
-		experimentalHR2.style.flexGrow = "1";
-		experimentalHeader.style.flexGrow = "0.1";
-		experimentalHeader.style.textAlign = "center";
+			new Setting(contentEl)
+				.setName('Only Export Modified')
+				.setDesc('Disable this to do a full re-export. If you have an existing vault since before this feature was introduced, please do a full re-export before turning this on!')
+				.addToggle((toggle) => toggle
+					.setValue(MainSettings.settings.incrementalExport)
+					.onChange(async (value) => {
+						MainSettings.settings.incrementalExport = value;
+						await MainSettings.saveSettings();
+			}));
 
-		new Setting(contentEl)
-			.setName('Only Export Modified')
-			.setDesc('Disable this to do a full re-export. If you have an existing vault since before this feature was introduced, please do a full re-export before turning this on!')
-			.addToggle((toggle) => toggle
-				.setValue(MainSettings.settings.incrementalExport)
-				.onChange(async (value) => {
-					MainSettings.settings.incrementalExport = value;
-					await MainSettings.saveSettings();
-		}));
-
-		new Setting(contentEl)
-			.setName('Delete Old Files')
-			.setDesc('Delete *ALL* files in the export directory that are not included in this export.')
-			.addToggle((toggle) => toggle
-				.setValue(MainSettings.settings.deleteOldExportedFiles)
-				.onChange(async (value) => {
-					MainSettings.settings.deleteOldExportedFiles = value;
-					await MainSettings.saveSettings();
-		}));
+			new Setting(contentEl)
+				.setName('Delete Old Files')
+				.setDesc('Delete *ALL* files in the export directory that are not included in this export.')
+				.addToggle((toggle) => toggle
+					.setValue(MainSettings.settings.deleteOldExportedFiles)
+					.onChange(async (value) => {
+						MainSettings.settings.deleteOldExportedFiles = value;
+						await MainSettings.saveSettings();
+			}));
 
 		
-		if (MainSettings.settings.exportPreset != "raw-documents")
-		{
 			new Setting(contentEl)
 				.setName('Graph View (PLEASE READ DESCRIPTION)')
 				.setDesc('This CANNOT be used with the file:// protocol, the assets for this also will not be inlined into the HTML file at this point.')
@@ -890,10 +898,10 @@ export class MainSettings extends PluginSettingTab
 					})
 					.showTooltip()
 				);
+				
+				let experimentalHREnd = contentEl.createEl('hr');
+				experimentalHREnd.style.borderColor = "var(--color-red)";
 		}
-
-		let experimentalHREnd = contentEl.createEl('hr');
-		experimentalHREnd.style.borderColor = "var(--color-red)";
 
 		//#endregion
 

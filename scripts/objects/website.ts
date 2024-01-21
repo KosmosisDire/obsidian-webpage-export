@@ -4,7 +4,7 @@ import { FileTree } from "./file-tree";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { TFile, getIcon } from "obsidian";
-import { MainSettings } from "scripts/settings/main-settings";
+import { ExportPreset, MainSettings } from "scripts/settings/main-settings";
 import { GraphView } from "./graph-view";
 import { Path } from "scripts/utils/path";
 import { RenderLog } from "scripts/html-generation/render-log";
@@ -72,7 +72,7 @@ export class Website
 
 	private checkIncrementalExport(webpage: Webpage): boolean
 	{		
-		if (!this.previousExportMetadata || !MainSettings.settings.incrementalExport) 
+		if (!this.previousExportMetadata || !MainSettings.settings.incrementalExport || MainSettings.settings.exportPreset != ExportPreset.Website) 
 			return true;
 
 		if (this.previousExportMetadata.pluginVersion != HTMLExportPlugin.plugin.manifest.version)
@@ -171,7 +171,7 @@ export class Website
 		// if the plugin version changed notify the user that all files will be exported
 		if (!this.previousExportMetadata || this.previousExportMetadata.pluginVersion != HTMLExportPlugin.plugin.manifest.version)
 		{
-			RenderLog.warning("Plugin version changed, exporting all files");
+			RenderLog.warning("New export or plugin version changed, exporting all files");
 		}
 
 		for (let file of files)
@@ -338,8 +338,15 @@ export class Website
 
 		const htmlWebpages = this.webpages.filter(webpage => webpage.document && webpage.contentElement);
 
+		// progress counters
+		let progressCount = 0;
+		let totalCount = htmlWebpages.length + this.batchFiles.length + this.oldFilesWeb.length;
+
+
 		for (const webpage of htmlWebpages) 
 		{
+			RenderLog.progress(progressCount, totalCount, "Indexing", "Adding: " + webpage.exportPath.asString, "var(--color-blue)");
+
 			const content = preprocessContent(webpage.contentElement);
 
 			if (content) 
@@ -362,11 +369,13 @@ export class Website
 			{
 				console.warn(`No indexable content found for ${webpage.source.basename}`);
 			}
+			progressCount++;
 		}
 
 		// add other files to search
 		for (const file of this.batchFiles)
 		{
+			RenderLog.progress(progressCount, totalCount, "Indexing", "Adding: " + file.path, "var(--color-blue)");
 			if (MarkdownRenderer.isConvertable(file.extension)) continue;
 
 			const filePath = new Path(file.path).makeUnixStyle().makeWebStyle(MainSettings.settings.makeNamesWebStyle).asString;
@@ -382,13 +391,18 @@ export class Website
 				tags: [],
 				headers: [],
 			});
+			progressCount++;
 		}
 
 		// remove old files
 		for (const oldFile of this.oldFilesWeb)
 		{
+			RenderLog.progress(progressCount, totalCount, "Indexing", "Removing: " + oldFile, "var(--color-blue)");
+
 			if (index.has(oldFile))
 				index.discard(oldFile);
+
+			progressCount++;
 		}
 
 		index.vacuum();
@@ -405,31 +419,44 @@ export class Website
 		metadata.lastExport = this.exportTime;
 		metadata.pluginVersion = HTMLExportPlugin.plugin.manifest.version;
 		metadata.files = this.previousExportMetadata?.files ?? {};
+
+		// progress counters
+		let progressCount = 0;
+		let totalCount = this.webpages.length + this.dependencies.length + this.oldFilesWeb.length;
+
 		
 		for (const page of this.webpages)
 		{
+			RenderLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + page.exportPath.asString, "var(--color-cyan)");
+
 			let fileInfo: any = {};
 			fileInfo.modifiedTime = this.exportTime;
 			fileInfo.sourceSize = page.source.stat.size;
 			
 			let exportPath = new Path(page.source.path).makeUnixStyle().asString;
 			metadata.files[exportPath] = fileInfo;
+			progressCount++;
 		}
 
 		for (const file of this.dependencies)
 		{
+			RenderLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + file.relativeDownloadPath.asString, "var(--color-cyan)");
+			
 			let fileInfo: any = {};
 			fileInfo.modifiedTime = this.exportTime;
 			fileInfo.sourceSize = file.content.length;
 			
 			let exportPath = file.relativeDownloadPath.copy.makeUnixStyle().asString;
 			metadata.files[exportPath] = fileInfo;
+			progressCount++;
 		}
 
 		// remove old files
 		for (const oldFile of this.oldFilesSource)
 		{
+			RenderLog.progress(progressCount, totalCount, "Creating Metadata", "Removing: " + oldFile, "var(--color-cyan)");
 			delete metadata.files[oldFile];
+			progressCount++;
 		}
 
 		return new Asset("metadata.json", JSON.stringify(metadata, null, 2), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary, 0);
@@ -437,22 +464,25 @@ export class Website
 
 	public async deleteOldFiles()
 	{
-		for (let file of this.oldFilesWeb)
+		for (let i = 0; i < this.oldFilesWeb.length; i++)
 		{
+			let file = this.oldFilesWeb[i];
 			let path = this.destination.joinString(file);
 			if (path.exists) 
 			{
-				await path.delete();
-				RenderLog.progress(1, 1, "Deleting Old Files", "Deleting: " + path.asString, "var(--color-red)");
+				await path.delete(true);
+				RenderLog.progress(i, this.oldFilesWeb.length, "Deleting Old Files", "Deleting: " + path.asString, "var(--color-orange)");
 			}
 		}
 
 		let folders = (await Path.getAllEmptyFoldersRecursive(this.destination));
+		// sort by depth so that the deepest folders are deleted first
+		folders.sort((a, b) => a.depth - b.depth);
 		for	(let i = 0; i < folders.length; i++)
 		{
 			let folder = folders[i];
-			RenderLog.progress(i, folders.length, "Deleting Empty Folders", "Deleting: " + folder.asString, "var(--color-purple)");
-			await folder.directory.delete();
+			RenderLog.progress(i, folders.length, "Deleting Empty Folders", "Deleting: " + folder.asString, "var(--color-orange)");
+			await folder.directory.delete(true);
 		}
 	}
 

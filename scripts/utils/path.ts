@@ -317,6 +317,18 @@ export class Path
 	}
 
 	/**
+	 * The depth of the path.
+	 * @example
+	 * "C:/Users/JohnDoe/Documents/file.txt" = 4
+	 * "/home/johndoe/Documents/file.txt" = 4
+	 * "JohnDoe/Documents/Documents" = 2
+	 */
+	get depth(): number
+	{
+		return this.asString.replaceAll("\\", "/").replaceAll("//", "/").split("/").length - 1;
+	}
+
+	/**
 	 * The original unparsed uncleaned string that was used to create this path.
 	 * @example
 	 * Can be any string: "C:/Users//John Doe/../Documents\file.txt " or ""
@@ -581,13 +593,13 @@ export class Path
 		}
 	}
 
-	async delete(): Promise<boolean>
+	async delete(recursive: boolean = false): Promise<boolean>
 	{
 		if (!this.exists) return false;
 
 		try
 		{
-			await fs.rm(this.absolute().asString, { recursive: true });
+			await fs.rm(this.absolute().asString, { recursive: recursive });
 			return true;
 		}
 		catch (error)

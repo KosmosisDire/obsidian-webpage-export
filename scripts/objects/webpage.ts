@@ -1,7 +1,7 @@
 import { TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
 import { Downloadable } from "scripts/utils/downloadable";
-import { MainSettings } from "scripts/settings/main-settings";
+import { ExportPreset, MainSettings } from "scripts/settings/main-settings";
 import { OutlineTree } from "./outline-tree";
 import { GraphView } from "./graph-view";
 import { Website } from "./website";
@@ -176,7 +176,7 @@ export class Webpage
 		layout.center.classList.add("show");
 
 
-		if (MainSettings.settings.exportPreset != "raw-documents")
+		if (MainSettings.settings.exportPreset != ExportPreset.RawDocuments)
 		{
 			let rightSidebar = layout.right;
 			let leftSidebar = layout.left;

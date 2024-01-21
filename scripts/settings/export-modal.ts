@@ -1,10 +1,9 @@
 import { ButtonComponent, Modal, Setting, TFile, TextComponent } from 'obsidian';
 import { Utils } from '../utils/utils';
 import HTMLExportPlugin from '../main';
-import { MainSettings } from './main-settings';
+import { ExportPreset, MainSettings } from './main-settings';
 import { FilePickerTree } from '../objects/file-picker';
 import { Path } from 'scripts/utils/path';
-import { RenderLog } from 'scripts/html-generation/render-log';
 
 export interface ExportInfo
 {
@@ -149,7 +148,7 @@ export class ExportModal extends Modal
 		let exportModeSetting = new Setting(contentEl)
 			.setName('Export Mode')
 			// @ts-ignore
-			.setDesc(modeDescriptions[MainSettings.settings.exportPreset ?? 'website'])
+			.setDesc(modeDescriptions[MainSettings.settings.exportPreset] + "\n\nSome options are only available in certain modes.")
 			.setHeading()
 			.addDropdown((dropdown) => dropdown
 				.addOption('website', 'Online Web Server')
@@ -158,7 +157,7 @@ export class ExportModal extends Modal
 				.setValue(["website", "documents", "raw-documents"].contains(MainSettings.settings.exportPreset) ? MainSettings.settings.exportPreset : 'website')
 				.onChange(async (value) =>
 				{
-					MainSettings.settings.exportPreset = value;
+					MainSettings.settings.exportPreset = value as ExportPreset;
 
 					switch (value) {
 						case 'website':
@@ -173,6 +172,7 @@ export class ExportModal extends Modal
 						case 'documents':
 							MainSettings.settings.inlineAssets = true;
 							MainSettings.settings.makeNamesWebStyle = false;
+							MainSettings.settings.includeFileTree = true;
 							MainSettings.settings.includeGraphView = false;
 							MainSettings.settings.includeSearchBar = false;
 							await MainSettings.saveSettings();
@@ -192,6 +192,7 @@ export class ExportModal extends Modal
 					this.open();
 				}
 				));
+		exportModeSetting.descEl.style.whiteSpace = "pre-wrap";
 
 		new Setting(contentEl)
 			.setName('Open after export')
