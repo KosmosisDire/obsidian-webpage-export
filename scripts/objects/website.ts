@@ -218,7 +218,7 @@ export class Website
 
 		let iconProperty = frontmatter?.icon ?? frontmatter?.sticker;
 		let isDefaultIcon = false;
-		if (!iconProperty && MainSettings.settings.showDefaultIcons) 
+		if (!iconProperty && MainSettings.settings.showDefaultTreeIcons) 
 		{
 			let isMedia = Asset.extentionToType(file.extension) == AssetType.Media;
 			iconProperty = isMedia ? MainSettings.settings.defaultMediaIcon : MainSettings.settings.defaultFileIcon;

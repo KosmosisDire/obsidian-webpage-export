@@ -61,7 +61,7 @@ export interface MainSettingsData
 	graphMaxNodeSize: number;
 
 	// icons
-	showDefaultIcons: boolean,
+	showDefaultTreeIcons: boolean,
 	defaultFileIcon: string,
 	defaultFolderIcon: string,
 	defaultMediaIcon: string,
@@ -122,7 +122,7 @@ export const DEFAULT_SETTINGS: MainSettingsData =
 	graphMaxNodeSize: 7,
 
 	// icons
-	showDefaultIcons: false,
+	showDefaultTreeIcons: false,
 	defaultFileIcon: "lucide//file",
 	defaultFolderIcon: "lucide//folder",
 	defaultMediaIcon: "lucide//file-image",
@@ -348,23 +348,23 @@ export class MainSettings extends PluginSettingTab
 		new Setting(contentEl)
 				.setName('Custom Features:')
 				.setDesc("Customizable features to change various aspects of the website.")
-				.setHeading()
+				.setHeading();
 
 		new Setting(contentEl)
-			.setName('Show default icons')
-			.setDesc('Adds decorative file and folder icons to the file tree by default.')
+			.setName('Show tree icons')
+			.setDesc('Adds decorative file and folder icons to the file tree. This does not have to be enabled to use custom icons.')
 			.addToggle((toggle) => toggle
-				.setValue(MainSettings.settings.showDefaultIcons)
+				.setValue(MainSettings.settings.showDefaultTreeIcons)
 				.onChange(async (value) => {
-					MainSettings.settings.showDefaultIcons = value;
+					MainSettings.settings.showDefaultTreeIcons = value;
 					await MainSettings.saveSettings();
 				}));
 
 		let iconTutorial = new Setting(contentEl)
 			.setName('Custom icons')
-			.setDesc('The properies "icon" and "sticker" give a file a custom icon.\n\n- The property can be set to an emoji or a lucide icon.\n- To set a lucide icon use the format: "lucide//icon-name".\n- You do not have to enable default icons to use this feature.')
+			.setDesc('The frontmatter property "icon" or "sticker" gives a file a custom icon.\n\n- The property can be set to an emoji or a lucide icon.\n- To set a lucide icon use the format: "lucide//icon-name".')
 		iconTutorial.infoEl.style.marginBottom = "2em";
-		iconTutorial.infoEl.style.whiteSpace = "pre-wrap";	
+		iconTutorial.infoEl.style.whiteSpace = "pre-wrap";
 
 
 		new Setting(contentEl)

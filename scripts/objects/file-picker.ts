@@ -47,7 +47,7 @@ export class FilePickerTree extends FileTree
 					if(child.isFolder) 
 					{
 						child.href = section.path;
-						if (MainSettings.settings.showDefaultIcons) child.icon = Website.getIcon(MainSettings.settings.defaultFolderIcon);
+						if (MainSettings.settings.showDefaultTreeIcons) child.icon = Website.getIcon(MainSettings.settings.defaultFolderIcon);
 						child.itemClass = "mod-tree-folder"
 					}
 					else 
