@@ -205,7 +205,7 @@ export class Webpage
 			}
 
 			// inject darkmode toggle
-			if (MainSettings.settings.addDarkModeToggle)
+			if (MainSettings.settings.includeThemeToggle)
 			{
 				HTMLGeneration.createThemeToggle(leftSidebar);
 			}

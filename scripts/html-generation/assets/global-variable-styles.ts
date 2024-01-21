@@ -13,7 +13,7 @@ export class GlobalVariableStyles extends Asset
     override async load()
     {
         let bodyStyle = (document.body.getAttribute("style") ?? "").replaceAll("\"", "'").replaceAll("; ", " !important;\n\t");
-		let lineWidth = MainSettings.settings.customLineWidth || "50em";
+		let lineWidth = MainSettings.settings.documentWidth || "50em";
 		let contentWidth = MainSettings.settings.contentWidth || "500em";
 		let sidebarWidth = MainSettings.settings.sidebarWidth || "25em";
 		if (!isNaN(Number(lineWidth))) lineWidth += "px";

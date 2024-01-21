@@ -13,7 +13,6 @@ import { RenderLog } from 'scripts/html-generation/render-log';
 export interface MainSettingsData 
 {
 	settingsVersion: string;
-	upgradedFrom: string;
 
 	// Asset Options
 	inlineAssets: boolean;
@@ -30,7 +29,7 @@ export interface MainSettingsData
 	sidebarsAlwaysCollapsible: boolean;
 	addFilenameTitle: boolean;
 	minifyHTML: boolean;
-	customLineWidth: string;
+	documentWidth: string;
 	contentWidth: string;
 	sidebarWidth: string;
 	minOutlineCollapse: number;
@@ -42,7 +41,7 @@ export interface MainSettingsData
 	deleteOldExportedFiles: boolean;
 
 	// Page Features
-	addDarkModeToggle: boolean;
+	includeThemeToggle: boolean;
 	includeOutline: boolean;
 	includeFileTree: boolean;
 	includeSearchBar: boolean;
@@ -72,10 +71,9 @@ export interface MainSettingsData
 	filesToExport: string[][];
 }
 
-const DEFAULT_SETTINGS: MainSettingsData =
+export const DEFAULT_SETTINGS: MainSettingsData =
 {
 	settingsVersion: "0.0.0",
-	upgradedFrom: "0.0.0",
 
 	// Asset Options
 	inlineAssets: false,
@@ -92,9 +90,9 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	sidebarsAlwaysCollapsible: false,
 	addFilenameTitle: true,
 	minifyHTML: true,
-	customLineWidth: "",
-	contentWidth: "",
-	sidebarWidth: "",
+	documentWidth: "50em",
+	contentWidth: "500em",
+	sidebarWidth: "25em",
 	minOutlineCollapse: 2,
 	startOutlineCollapsed: false,
 
@@ -104,7 +102,7 @@ const DEFAULT_SETTINGS: MainSettingsData =
 	deleteOldExportedFiles: false,
 
 	// Page Features
-	addDarkModeToggle: true,
+	includeThemeToggle: true,
 	includeOutline: true,
 	includeFileTree: true,
 	includeSearchBar: true,
@@ -163,11 +161,12 @@ export class MainSettings extends PluginSettingTab
 	static async loadSettings() 
 	{
 		let loadedSettings = await MainSettings.plugin.loadData();
-		await migrateSettings(loadedSettings);
-
 		MainSettings.settings = Object.assign({}, DEFAULT_SETTINGS, loadedSettings);
-		MainSettings.settings.customLineWidth = MainSettings.settings.customLineWidth.toString();
-		if (MainSettings.settings.customLineWidth === "0") MainSettings.settings.customLineWidth = "";
+		MainSettings.settings.documentWidth = MainSettings.settings.documentWidth.toString();
+		if (MainSettings.settings.documentWidth === "0") MainSettings.settings.documentWidth = "";
+
+		await migrateSettings();
+
 		MainSettings.loaded = true;
 	}
 
@@ -296,9 +295,9 @@ export class MainSettings extends PluginSettingTab
 				.setName('Include theme toggle')
 				.setDesc('Adds a theme toggle to the left sidebar.')
 				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.addDarkModeToggle)
+					.setValue(MainSettings.settings.includeThemeToggle)
 					.onChange(async (value) => {
-						MainSettings.settings.addDarkModeToggle = value;
+						MainSettings.settings.includeThemeToggle = value;
 						await MainSettings.saveSettings();
 					}));
 
@@ -578,27 +577,27 @@ export class MainSettings extends PluginSettingTab
 
 		new Setting(contentEl)
 			.setName('Document Width')
-			.setDesc('Sets the line width of the exported document. Use any css units.\nDefault units: px')
+			.setDesc('Sets the line width of the exported document in css units. (ex. 600px, 50em)')
 			.addText((text) => text
-				.setValue(MainSettings.settings.customLineWidth)
-				.setPlaceholder('Leave blank for default')
+				.setValue(MainSettings.settings.documentWidth)
+				.setPlaceholder('50em')
 				.onChange(async (value) => {
-					MainSettings.settings.customLineWidth = value;
+					MainSettings.settings.documentWidth = value;
 					await MainSettings.saveSettings();
 				}
 				))
 			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
-				MainSettings.settings.customLineWidth = "";
+				MainSettings.settings.documentWidth = "";
 				MainSettings.saveSettings();
 				this.display();
 			}));
 
 		new Setting(contentEl)
 			.setName('Content Width')
-			.setDesc('Sets the width of the central content section of the document. This will push the sidebars towards the edges of the screen the larger it is leaving margins on either side of the document. Use any css units.\nDefault units: px')
+			.setDesc('Sets the width of the empty area that contains the document in css units. (ex. 1000px, 70em)')
 			.addText((text) => text
 				.setValue(MainSettings.settings.contentWidth)
-				.setPlaceholder('Leave blank for default')
+				.setPlaceholder('100em')
 				.onChange(async (value) => {
 					MainSettings.settings.contentWidth = value;
 					await MainSettings.saveSettings();
@@ -612,10 +611,10 @@ export class MainSettings extends PluginSettingTab
 
 		new Setting(contentEl)
 			.setName('Sidebar Width')
-			.setDesc('Sets the width of the sidebar\'s content. Use any css units.\nDefault units: px')
+			.setDesc('Sets the width of the sidebar in css units. (ex. 20em, 200px)')
 			.addText((text) => text
 				.setValue(MainSettings.settings.sidebarWidth)
-				.setPlaceholder('Leave blank for default')
+				.setPlaceholder('20em')
 				.onChange(async (value) => {
 					MainSettings.settings.sidebarWidth = value;
 					await MainSettings.saveSettings();
