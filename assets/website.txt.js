@@ -804,12 +804,10 @@ function parseURLParams()
 
 	if (hashParam)
 	{
-		console.log("Hash param: " + hashParam);
 		const headingTarget = document.getElementById(hashParam.substring(1));
 		if (headingTarget)
 		{
 			scrollIntoView(headingTarget, { behavior: "smooth", block: "start"});
-			console.log("Scrolling to heading: " + headingTarget);
 		}
 		else
 		{
@@ -1016,7 +1014,6 @@ async function collapseHeader(headingWrapper, collapse, openParents = true, inst
 
 	if (instant)
 	{
-		console.log("instant");
 		collapseContainer.style.transitionDuration = "0s";
 		headingWrapper.classList.toggle("is-collapsed", collapse);
 		collapseContainer.style.height = "";
@@ -1305,7 +1302,6 @@ async function filterFileTree(showPathList, hintLabelLists, query, openFileTree 
 				// create the hint labels
 				for (let label of hintLabels)
 				{
-					console.log(label);
 					createHintLabel(label, path + "#" + label);
 				}
 
@@ -2045,35 +2041,6 @@ function setupLinks(setupOnNode)
 			if(target.startsWith("#") || target.startsWith("?")) target = relativePathnameStrip + target;
 
 			loadDocument(target, true, !link.classList.contains("tree-link"));
-
-			// this is linking to a different page
-			// if (!target.startsWith("#") && !link.classList.contains("heading-link"))
-			// {
-			// 	// load doc, if it is a tree link then don't scroll to the active doc in the file tree
-			// 	loadDocument(target, true, !link.classList.contains("tree-link"));
-			// 	return;
-			// }
-			// else
-			// {
-			// 	let headingName = link.getAttribute("heading-name") || target.split("#")[1];
-			// 	let targetEl = document.getElementById(headingName);
-				
-			// 	if (targetEl)
-			// 	{
-			// 		targetEl.headingWrapper?.collapse(false, true, true);
-			// 		setTimeout(function()
-			// 		{
-			// 			if(targetEl.classList.contains(".heading") && targetEl.headingWrapper) scrollIntoView(targetEl.headingWrapper, { behavior: "smooth", block: "start"});
-			// 			else scrollIntoView(targetEl, { behavior: "smooth", block: "start"});
-
-			// 			if (deviceSize == "phone") rightSidebar.collapse(true);
-			// 		}, 0);
-			// 	}
-			// 	else
-			// 	{
-			// 		console.log("No element found with id: " + target.substring(1));
-			// 	}
-			// }
 		});
 	});
 }

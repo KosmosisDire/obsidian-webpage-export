@@ -578,9 +578,6 @@ export class Path
 	{
 		if (this.isDirectory) return false;
 
-		let dirExists = await this.createDirectory();
-		if (!dirExists) return false;
-
 		try
 		{
 			await fs.writeFile(this.absolute().asString, data, { encoding: encoding });
@@ -588,8 +585,19 @@ export class Path
 		}
 		catch (error)
 		{
-			Path.log("Error writing file: " + this.asString, error, "error");
-			return false;
+			let dirExists = await this.createDirectory();
+			if (!dirExists) return false;
+
+			try
+			{
+				await fs.writeFile(this.absolute().asString, data, { encoding: encoding });
+				return true;
+			}
+			catch (error)
+			{
+				Path.log("Error writing file: " + this.asString, error, "error");
+				return false;
+			}
 		}
 	}
 

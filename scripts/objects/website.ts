@@ -222,6 +222,8 @@ export class Website
 			this.dependencies.push(...assetDownloads);
 			this.downloads.push(...assetDownloads);
 		}
+		
+		this.filterDownloads();
 
 		// create website metadata and index
 		let metadataAsset = await this.createMetadata();
@@ -237,7 +239,6 @@ export class Website
 			this.downloads.push(index);
 		}
 
-		this.filterDownloads();
 
 		return this;
 	}
@@ -274,7 +275,7 @@ export class Website
 					return true;
 				}
 				
-				console.log("Skipping file: " + file.filename);
+				console.log("Skipping file: " + file.filename + " metadata: " + fileMetadata.modifiedTime + " file: " + file.modifiedTime);
 				return false;
 			}
 
@@ -339,10 +340,12 @@ export class Website
 		}
 
 		const htmlWebpages = this.webpages.filter(webpage => webpage.document && webpage.contentElement);
+		// filter batchfiles to exclude convertable files
+		let nonHTMLFiles = this.batchFiles.filter((file) => !MarkdownRenderer.isConvertable(file.extension));
 
 		// progress counters
 		let progressCount = 0;
-		let totalCount = htmlWebpages.length + this.batchFiles.length + this.oldFilesWeb.length;
+		let totalCount = htmlWebpages.length + nonHTMLFiles.length + this.oldFilesWeb.length;
 
 
 		for (const webpage of htmlWebpages) 
@@ -376,18 +379,18 @@ export class Website
 		}
 
 		// add other files to search
-		for (const file of this.batchFiles)
+		for (const file of nonHTMLFiles)
 		{
 			if(MarkdownRenderer.checkCancelled()) return undefined;
-			RenderLog.progress(progressCount, totalCount, "Indexing", "Adding: " + file.path, "var(--color-blue)");
-			if (MarkdownRenderer.isConvertable(file.extension)) continue;
-
+			
 			const filePath = new Path(file.path).makeUnixStyle().makeWebStyle(MainSettings.settings.makeNamesWebStyle).asString;
 			if (index.has(filePath)) 
 			{
-				index.discard(filePath);
+				continue;
 			}
 
+			RenderLog.progress(progressCount, totalCount, "Indexing", "Adding: " + file.name, "var(--color-blue)");
+			
 			index.add({
 				path: filePath,
 				title: file.name,
@@ -395,6 +398,7 @@ export class Website
 				tags: [],
 				headers: [],
 			});
+
 			progressCount++;
 		}
 
@@ -410,6 +414,7 @@ export class Website
 			progressCount++;
 		}
 
+		RenderLog.progress(totalCount, totalCount, "Indexing", "Cleanup index", "var(--color-blue)");
 		index.vacuum();
 
 		return new Asset("search-index.json", JSON.stringify(index), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary, 0);
