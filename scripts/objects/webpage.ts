@@ -510,7 +510,7 @@ export class Webpage
 	{
 		if (!this.document) return;
 
-		let rootPath = MainSettings.settings.makeNamesWebStyle ? this.pathToRoot.copy.makeWebStyle().asString : this.pathToRoot.asString;
+		let rootPath = this.pathToRoot.copy.makeWebStyle(MainSettings.settings.makeNamesWebStyle).asString;
 
 		let titleInfo = Website.getTitle(this.source);
 		let domtitle = titleInfo.title;
@@ -562,7 +562,7 @@ export class Webpage
 
 				let targetPath = new Path(targetFile.path);
 				if (MarkdownRenderer.isConvertable(targetPath.extensionName)) targetPath.setExtension("html");
-				if (MainSettings.settings.makeNamesWebStyle) targetPath.makeWebStyle();
+				targetPath.makeWebStyle(MainSettings.settings.makeNamesWebStyle);
 
 				let finalHref = targetPath.makeUnixStyle() + targetHeader.replaceAll(" ", "_");
 				linkEl.setAttribute("href", finalHref);
@@ -629,14 +629,8 @@ export class Webpage
 				exportLocation = Asset.mediaPath.joinString(filePath.fullName);
 			}
 
-			// let relativeImagePath = Path.getRelativePath(this.exportPath, exportLocation)
-
-			if(MainSettings.settings.makeNamesWebStyle)
-			{
-				// relativeImagePath.makeWebStyle();
-				exportLocation.makeWebStyle();
-			}
-
+			exportLocation.makeWebStyle(MainSettings.settings.makeNamesWebStyle);
+			
 			mediaEl.setAttribute("src", exportLocation.asString);
 
 			let data = await filePath.readFileBuffer() ?? Buffer.from([]);

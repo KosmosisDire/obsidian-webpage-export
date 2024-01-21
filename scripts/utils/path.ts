@@ -45,11 +45,6 @@ export class Path
 		if (this.isAbsolute) this._workingDirectory = "";
 	}
 
-	public static fromString(path: string): Path
-	{
-		return new Path(path);
-	}
-
 	reparse(path: string): Path
 	{
 		let parsed = Path.parsePath(path);
@@ -83,163 +78,6 @@ export class Path
 
 		this._exists; // force a re-evaluation of the exists property which will also throw an error if the path does not exist
 		return this;
-	}
-
-	private static parsePath(path: string): { root: string, dir: string, parent: string, base: string, ext: string, name: string, fullPath: string }
-	{
-		let args = path.split("?")[1] ?? "";
-		path = path.split("?")[0];
-
-		try
-		{
-			path = decodeURI(path);
-		}
-		catch (trash)
-		{
-			try
-			{
-				path = decodeURI(path.replaceAll("%", ""));
-			}
-			catch (e)
-			{
-				this.log("Could not decode path:" + path, e, "error");
-			}
-		}
-
-		let parsed = pathTools.parse(path) as { root: string, dir: string, base: string, ext: string, name: string };
-		
-		if (parsed.ext.contains(" "))
-		{
-			parsed.ext = "";
-		}
-
-		if(parsed.name.endsWith(" "))
-		{
-			parsed.name += parsed.ext;
-			parsed.ext = "";
-		}
-
-		let parent = parsed.dir;
-		let fullPath = "";
-
-		if(path.endsWith("/") || path.endsWith("\\") || parsed.ext == "")
-		{
-			if (path.endsWith("/") || path.endsWith("\\")) path = path.substring(0, path.length - 1);
-
-			parsed.dir = pathTools.normalizeSafe(path);
-			let items = parsed.dir.split("/");
-			parsed.name = items[items.length - 1];
-			parsed.base = parsed.name;
-			parsed.ext = "";
-			fullPath = parsed.dir;
-		}
-		else
-		{
-			fullPath = pathTools.join(parent, parsed.base);
-		}
-
-
-		if (args && args.trim() != "") fullPath += "?" + args; 
-
-		if(fullPath.startsWith("http:")) parsed.root = "http://";
-		else if(fullPath.startsWith("https:")) parsed.root = "https://"; 
-
-		// make sure that protocols and windows drives use two slashes
-		parsed.dir = parsed.dir.replace(/[:][\\](?![\\])/g, "://");
-		parent = parsed.dir;
-		fullPath = fullPath.replace(/[:][\\](?![\\])/g, "://");
-
-		return { root: parsed.root, dir: parsed.dir, parent: parent, base: parsed.base, ext: parsed.ext, name: parsed.name, fullPath: fullPath };
-	}
-
-	private static pathExists(path: string): boolean
-	{
-		return existsSync(path);
-	}
-
-	private static joinStringPaths(...paths: string[]): string
-	{
-		let joined = pathTools.join(...paths);
-		try
-		{
-			return decodeURI(joined);
-		}
-		catch (e)
-		{
-			this.log("Could not decode joined paths: " + joined, e, "error");
-			return joined;
-		}
-	}
-
-	public static joinPath(...paths: Path[]): Path
-	{
-		return new Path(Path.joinStringPaths(...paths.map(p => p.asString)), paths[0]._workingDirectory);
-	}
-
-	public static joinStrings(...paths: string[]): Path
-	{
-		return new Path(Path.joinStringPaths(...paths));
-	}
-	
-	/**
-	 * @param from The source path / working directory
-	 * @param to The destination path
-	 * @returns The relative path to the destination from the source
-	 */
-	public static getRelativePath(from: Path, to: Path, useAbsolute: boolean = false): Path
-	{
-		let fromUse = useAbsolute ? from.absolute() : from;
-		let toUse = useAbsolute ? to.absolute() : to;
-		let relative = pathTools.relative(fromUse.directory.asString, toUse.asString);
-		let workingDir = from.absolute().directory.asString;
-		return new Path(relative, workingDir);
-	}
-
-	public static getRelativePathFromVault(path: Path, useAbsolute: boolean = false): Path
-	{
-		return Path.getRelativePath(Path.vaultPath, path, useAbsolute);
-	}
-
-	private static vaultPathCache: Path | undefined = undefined;
-	static get vaultPath(): Path
-	{
-		if (this.vaultPathCache != undefined) return this.vaultPathCache;
-
-		let adapter = app.vault.adapter;
-		if (adapter instanceof FileSystemAdapter) 
-		{
-			let basePath = adapter.getBasePath() ?? "";
-			this.vaultPathCache = new Path(basePath, "");
-			return this.vaultPathCache;
-		}
-		
-		throw new Error("Vault path could not be determined");
-	}
-
-	private static vaultConfigDirCache: Path | undefined = undefined;
-	static get vaultConfigDir(): Path
-	{
-		if (this.vaultConfigDirCache == undefined) 
-		{
-			this.vaultConfigDirCache = new Path(app.vault.configDir, "");
-		}
-
-		return this.vaultConfigDirCache;
-	}
-
-	static get emptyPath(): Path
-	{
-		return new Path("", "");
-	}
-
-	static get rootPath(): Path
-	{
-		return new Path("/", "");
-	}
-	
-	static toWebStyle(path: string): string
-	{
-		return path.replaceAll(" ", "-").replaceAll(/-{2,}/g, "-").toLowerCase();
 	}
 
 	joinString(...paths: string[]): Path
@@ -360,8 +198,9 @@ export class Path
 		return this;
 	}
 
-	makeWebStyle(): Path
+	makeWebStyle(makeWebStyle: boolean = true): Path
 	{
+		if (!makeWebStyle) return this;
 		this._fullPath = Path.toWebStyle(this.asString);
 		this.reparse(this.asString);
 		return this;
@@ -388,6 +227,19 @@ export class Path
 		if (!extension.contains(".")) extension = "." + extension;
 
 		this._ext = extension;
+		this._base = this._name + this._ext;
+		this._fullPath = Path.joinStringPaths(this._dir, this._base);
+
+		this.reparse(this._fullPath);
+		return this;
+	}
+
+	replaceExtension(searchExt: string, replaceExt: string): Path
+	{
+		if (!searchExt.contains(".")) searchExt = "." + searchExt;
+		if (!replaceExt.contains(".")) replaceExt = "." + replaceExt;
+
+		this._ext = this._ext.replace(searchExt, replaceExt);
 		this._base = this._name + this._ext;
 		this._fullPath = Path.joinStringPaths(this._dir, this._base);
 
@@ -727,6 +579,241 @@ export class Path
 			Path.log("Error writing file: " + this.asString, error, "error");
 			return false;
 		}
+	}
+
+	async delete(): Promise<boolean>
+	{
+		if (!this.exists) return false;
+
+		try
+		{
+			await fs.rm(this.absolute().asString, { recursive: true });
+			return true;
+		}
+		catch (error)
+		{
+			Path.log("Error deleting file: " + this.asString, error, "error");
+			return false;
+		}
+	}
+
+	public static fromString(path: string): Path
+	{
+		return new Path(path);
+	}
+
+	private static parsePath(path: string): { root: string, dir: string, parent: string, base: string, ext: string, name: string, fullPath: string }
+	{
+		let args = path.split("?")[1] ?? "";
+		path = path.split("?")[0];
+
+		try
+		{
+			path = decodeURI(path);
+		}
+		catch (trash)
+		{
+			try
+			{
+				path = decodeURI(path.replaceAll("%", ""));
+			}
+			catch (e)
+			{
+				this.log("Could not decode path:" + path, e, "error");
+			}
+		}
+
+		let parsed = pathTools.parse(path) as { root: string, dir: string, base: string, ext: string, name: string };
+		
+		if (parsed.ext.contains(" "))
+		{
+			parsed.ext = "";
+		}
+
+		if(parsed.name.endsWith(" "))
+		{
+			parsed.name += parsed.ext;
+			parsed.ext = "";
+		}
+
+		let parent = parsed.dir;
+		let fullPath = "";
+
+		if(path.endsWith("/") || path.endsWith("\\") || parsed.ext == "")
+		{
+			if (path.endsWith("/") || path.endsWith("\\")) path = path.substring(0, path.length - 1);
+
+			parsed.dir = pathTools.normalizeSafe(path);
+			let items = parsed.dir.split("/");
+			parsed.name = items[items.length - 1];
+			parsed.base = parsed.name;
+			parsed.ext = "";
+			fullPath = parsed.dir;
+		}
+		else
+		{
+			fullPath = pathTools.join(parent, parsed.base);
+		}
+
+
+		if (args && args.trim() != "") fullPath += "?" + args; 
+
+		if(fullPath.startsWith("http:")) parsed.root = "http://";
+		else if(fullPath.startsWith("https:")) parsed.root = "https://"; 
+
+		// make sure that protocols and windows drives use two slashes
+		parsed.dir = parsed.dir.replace(/[:][\\](?![\\])/g, "://");
+		parent = parsed.dir;
+		fullPath = fullPath.replace(/[:][\\](?![\\])/g, "://");
+
+		return { root: parsed.root, dir: parsed.dir, parent: parent, base: parsed.base, ext: parsed.ext, name: parsed.name, fullPath: fullPath };
+	}
+
+	private static pathExists(path: string): boolean
+	{
+		return existsSync(path);
+	}
+
+	private static joinStringPaths(...paths: string[]): string
+	{
+		let joined = pathTools.join(...paths);
+		try
+		{
+			return decodeURI(joined);
+		}
+		catch (e)
+		{
+			this.log("Could not decode joined paths: " + joined, e, "error");
+			return joined;
+		}
+	}
+
+	public static joinPath(...paths: Path[]): Path
+	{
+		return new Path(Path.joinStringPaths(...paths.map(p => p.asString)), paths[0]._workingDirectory);
+	}
+
+	public static joinStrings(...paths: string[]): Path
+	{
+		return new Path(Path.joinStringPaths(...paths));
+	}
+	
+	/**
+	 * @param from The source path / working directory
+	 * @param to The destination path
+	 * @returns The relative path to the destination from the source
+	 */
+	public static getRelativePath(from: Path, to: Path, useAbsolute: boolean = false): Path
+	{
+		let fromUse = useAbsolute ? from.absolute() : from;
+		let toUse = useAbsolute ? to.absolute() : to;
+		let relative = pathTools.relative(fromUse.directory.asString, toUse.asString);
+		let workingDir = from.absolute().directory.asString;
+		return new Path(relative, workingDir);
+	}
+
+	public static getRelativePathFromVault(path: Path, useAbsolute: boolean = false): Path
+	{
+		return Path.getRelativePath(Path.vaultPath, path, useAbsolute);
+	}
+
+	private static vaultPathCache: Path | undefined = undefined;
+	static get vaultPath(): Path
+	{
+		if (this.vaultPathCache != undefined) return this.vaultPathCache;
+
+		let adapter = app.vault.adapter;
+		if (adapter instanceof FileSystemAdapter) 
+		{
+			let basePath = adapter.getBasePath() ?? "";
+			this.vaultPathCache = new Path(basePath, "");
+			return this.vaultPathCache;
+		}
+		
+		throw new Error("Vault path could not be determined");
+	}
+
+	private static vaultConfigDirCache: Path | undefined = undefined;
+	static get vaultConfigDir(): Path
+	{
+		if (this.vaultConfigDirCache == undefined) 
+		{
+			this.vaultConfigDirCache = new Path(app.vault.configDir, "");
+		}
+
+		return this.vaultConfigDirCache;
+	}
+
+	static get emptyPath(): Path
+	{
+		return new Path("", "");
+	}
+
+	static get rootPath(): Path
+	{
+		return new Path("/", "");
+	}
+	
+	static toWebStyle(path: string): string
+	{
+		return path.replaceAll(" ", "-").replaceAll(/-{2,}/g, "-").toLowerCase();
+	}
+
+	public static async getAllEmptyFoldersRecursive(folder: Path): Promise<Path[]>
+	{
+		if (!folder.isDirectory) throw new Error("folder must be a directory: " + folder.asString);
+
+		let folders: Path[] = [];
+
+		let folderFiles = await fs.readdir(folder.asString);
+		for (let i = 0; i < folderFiles.length; i++)
+		{
+			let file = folderFiles[i];
+			let path = folder.joinString(file);
+
+			if ((await fs.stat(path.asString)).isDirectory())
+			{
+				let subFolders = await this.getAllEmptyFoldersRecursive(path);
+				if (subFolders.length == 0)
+				{
+					let subFiles = await fs.readdir(path.asString);
+					if (subFiles.length == 0) folders.push(path);
+				}
+				else
+				{
+					folders.push(...subFolders);
+				}
+			}
+		}
+
+		return folders;
+	}
+
+	public static async getAllFilesInFolderRecursive(folder: Path): Promise<Path[]>
+	{
+		if (!folder.isDirectory) throw new Error("folder must be a directory: " + folder.asString);
+
+		let files: Path[] = [];
+
+		let folderFiles = await fs.readdir(folder.asString);
+		for (let i = 0; i < folderFiles.length; i++)
+		{
+			let file = folderFiles[i];
+			let path = folder.joinString(file);
+
+			RenderLog.progress(i, folderFiles.length, "Finding Old Files", "Searching: " + folder.asString, "var(--color-yellow)");
+
+			if ((await fs.stat(path.asString)).isDirectory())
+			{
+				files.push(...await this.getAllFilesInFolderRecursive(path));
+			}
+			else
+			{
+				files.push(path);
+			}
+		}
+
+		return files;
 	}
 
 }

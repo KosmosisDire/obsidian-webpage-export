@@ -54,38 +54,32 @@ export class Asset extends Downloadable
     public static get libraryPath(): Path
     {
 		if (!this.libraryFolder) this.initialize();
-        if (MainSettings.settings.makeNamesWebStyle) return Asset.libraryFolder.copy.makeWebStyle();
-        return Asset.libraryFolder.copy;
+        return Asset.libraryFolder.copy.makeWebStyle(MainSettings.settings.makeNamesWebStyle);
     }
     public static get mediaPath(): Path
     {
 		if (!this.mediaFolder) this.initialize();
-        if (MainSettings.settings.makeNamesWebStyle) return Asset.mediaFolder.copy.makeWebStyle();
-        return Asset.mediaFolder.copy;
+		return Asset.mediaFolder.copy.makeWebStyle(MainSettings.settings.makeNamesWebStyle);
     }
     public static get jsPath(): Path
     {
 		if (!this.jsFolder) this.initialize();
-        if (MainSettings.settings.makeNamesWebStyle) return Asset.jsFolder.copy.makeWebStyle();
-        return Asset.jsFolder.copy;
+        return Asset.jsFolder.copy.makeWebStyle(MainSettings.settings.makeNamesWebStyle);
     }
     public static get cssPath(): Path
     {
 		if (!this.cssFolder) this.initialize();
-        if (MainSettings.settings.makeNamesWebStyle) return Asset.cssFolder.copy.makeWebStyle();
-        return Asset.cssFolder.copy;
+		return Asset.cssFolder.copy.makeWebStyle(MainSettings.settings.makeNamesWebStyle);
     }
 	public static get fontPath(): Path
 	{
 		if (!this.fontFolder) this.initialize();
-		if (MainSettings.settings.makeNamesWebStyle) return Asset.fontFolder.copy.makeWebStyle();
-		return Asset.fontFolder.copy;
+		return Asset.fontFolder.copy.makeWebStyle(MainSettings.settings.makeNamesWebStyle);
 	}
     public static get htmlPath(): Path
     {
 		if (!this.htmlFolder) this.initialize();
-        if (MainSettings.settings.makeNamesWebStyle) return Asset.htmlFolder.copy.makeWebStyle();
-        return Asset.htmlFolder.copy;
+		return Asset.htmlFolder.copy.makeWebStyle(MainSettings.settings.makeNamesWebStyle);
     }
 
     public type: AssetType; // what type of asset is this
@@ -235,7 +229,7 @@ export class Asset extends Downloadable
 		if (relativeFrom == undefined) relativeFrom = Path.rootPath;
 		let toRoot = Path.getRelativePath(relativeFrom, Path.rootPath);
 		let newPath = toRoot.join(this.relativeDownloadPath).makeUnixStyle();
-		if (MainSettings.settings.makeNamesWebStyle) newPath.makeWebStyle();
+		newPath.makeWebStyle(MainSettings.settings.makeNamesWebStyle);
 		
 		return newPath;
 	}

@@ -655,15 +655,15 @@ export class MainSettings extends PluginSettingTab
 					await MainSettings.saveSettings();
 				}));
 		
-		new Setting(contentEl)
-			.setName('Make names web style')
-			.setDesc('Make the names of files and folders lowercase and replace spaces with dashes.')
-			.addToggle((toggle) => toggle
-				.setValue(MainSettings.settings.makeNamesWebStyle)
-				.onChange(async (value) => {
-					MainSettings.settings.makeNamesWebStyle = value;
-					await MainSettings.saveSettings();
-				}));
+		// new Setting(contentEl)
+		// 	.setName('Make names web style')
+		// 	.setDesc('Make the names of files and folders lowercase and replace spaces with dashes.')
+		// 	.addToggle((toggle) => toggle
+		// 		.setValue(MainSettings.settings.makeNamesWebStyle)
+		// 		.onChange(async (value) => {
+		// 			MainSettings.settings.makeNamesWebStyle = value;
+		// 			await MainSettings.saveSettings();
+		// 		}));
 
 		new Setting(contentEl)
 			.setName('Minify HTML')

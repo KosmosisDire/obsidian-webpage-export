@@ -30,6 +30,9 @@ export class Website
 
 	public exportTime: number = Date.now();
 	public previousExportMetadata: any = undefined;
+	
+	public oldFilesSource: string[] = []; // old files that are no longer being exported. These have the format of the source in obsidian
+	public oldFilesWeb: string[] = []; // old files that are no longer being exported. These have the format of the export in the website
 
 	private static _validBodyClasses: string | undefined = undefined;
 	public static getValidBodyClasses(): string
@@ -150,6 +153,16 @@ export class Website
 			this.fileTreeAsset = new Asset("file-tree.html", this.fileTreeHtml, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary, 0);
 			this.fileTreeAsset.load();
 		}
+
+		// find files to remove
+		var filePaths = files.map((file) => new Path(file.path).makeUnixStyle().asString);
+		var filesToRemove = this.previousExportMetadata?.files ? Object.keys(this.previousExportMetadata.files) : [];
+		this.oldFilesSource = filesToRemove.filter((path) => !filePaths.includes(path) && !path.startsWith("lib/"));
+		this.oldFilesWeb = this.oldFilesSource;
+		this.oldFilesWeb = this.oldFilesSource.map((path) => new Path(path).makeWebStyle(MainSettings.settings.makeNamesWebStyle).replaceExtension(".md", ".html").makeUnixStyle().asString);
+		
+		console.log(filePaths);
+		console.log(this.oldFilesSource);
 
 		RenderLog.progress(0, files.length, "Generating HTML", "...", "var(--color-accent)");
 
@@ -351,9 +364,16 @@ export class Website
 			}
 		}
 
+		// remove old files
+		for (const oldFile of this.oldFilesWeb)
+		{
+			if (index.has(oldFile))
+				index.discard(oldFile);
+		}
+
 		index.vacuum();
 
-		return new Asset("search-index.json", JSON.stringify(index, null, 2), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary, 0);
+		return new Asset("search-index.json", JSON.stringify(index), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary, 0);
 	}
 
 	public async createMetadata(): Promise<Asset>
@@ -372,7 +392,7 @@ export class Website
 			fileInfo.modifiedTime = this.exportTime;
 			fileInfo.sourceSize = page.source.stat.size;
 			
-			let exportPath = page.exportPath.copy.makeUnixStyle().asString;
+			let exportPath = new Path(page.source.path).makeUnixStyle().asString;
 			metadata.files[exportPath] = fileInfo;
 		}
 
@@ -386,7 +406,34 @@ export class Website
 			metadata.files[exportPath] = fileInfo;
 		}
 
+		// remove old files
+		for (const oldFile of this.oldFilesSource)
+		{
+			delete metadata.files[oldFile];
+		}
+
 		return new Asset("metadata.json", JSON.stringify(metadata, null, 2), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary, 0);
+	}
+
+	public async deleteOldFiles()
+	{
+		for (let file of this.oldFilesWeb)
+		{
+			let path = this.destination.joinString(file);
+			if (path.exists) 
+			{
+				await path.delete();
+				RenderLog.progress(1, 1, "Deleting Old Files", "Deleting: " + path.asString, "var(--color-red)");
+			}
+		}
+
+		let folders = (await Path.getAllEmptyFoldersRecursive(this.destination));
+		for	(let i = 0; i < folders.length; i++)
+		{
+			let folder = folders[i];
+			RenderLog.progress(i, folders.length, "Deleting Empty Folders", "Deleting: " + folder.asString, "var(--color-purple)");
+			await folder.directory.delete();
+		}
 	}
 
 	public static getTitle(file: TFile): { title: string, icon: string, isDefaultIcon: boolean }
