@@ -373,6 +373,11 @@ function clamp(value, min, max)
 	return Math.min(Math.max(value, min), max);
 }
 
+async function delay(ms)
+{
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 /**Gets the bounding rect of a given element*/
 function getElBounds(El)
 {
@@ -652,7 +657,7 @@ async function loadDocument(url, changeURL = true, showInTree = true)
 	{
 		console.log("Document already loaded.");
 		loadedURL = newLoadedURL;
-		await setActiveDocument(loadedURL, false, true);
+		setActiveDocument(loadedURL, false, true);
 		await initializePage();
 		loading = false;
 		return;
@@ -661,7 +666,7 @@ async function loadDocument(url, changeURL = true, showInTree = true)
 	loadedURL = newLoadedURL;
 	let pathname = loadedURL.pathname;
 
-	showLoading(true);
+	await showLoading(true);
 
 	let response;
 	try { response = await fetch(pathname); }
@@ -696,13 +701,6 @@ async function loadDocument(url, changeURL = true, showInTree = true)
 			// copy the outline tree into the DOM
 			let newOutline = transferDocument.querySelector(".outline-tree");
 			if (outlineTree && newOutline) outlineTree.innerHTML = newOutline.innerHTML;
-
-			// initialize page event after a delay to allow the DOM to update
-			setTimeout(function() 
-			{
-				initializePageEvents(documentContainer);
-				initializePageEvents(newOutline);
-			}, 0);
 		
 			document.title = transferDocument.title;
 			transferDocument.close();
@@ -745,13 +743,16 @@ async function loadDocument(url, changeURL = true, showInTree = true)
 		}
 
 		await initializePage(showInTree, changeURL);
+		initializePageEvents(documentContainer);
+		initializePageEvents(outlineTree);
+	
 	}
 	else
 	{
 		pageNotFound(viewContent);
 	}
 
-	showLoading(false);
+	await showLoading(false);
 	console.log("Finished loading document: ", newLoadedURL.pathname);
 	loading = false;
 
@@ -818,7 +819,7 @@ function parseURLParams()
 	}
 }
 
-function showLoading(loading)
+async function showLoading(loading)
 {
 	documentContainer.style.transitionDuration = "";
 	loadingIcon.classList.toggle("shown", loading);
@@ -834,6 +835,8 @@ function showLoading(loading)
 		// hide the left sidebar if on phone
 		if (deviceSize == "phone") leftSidebar.collapse(true);
 	}
+
+	await delay(200);
 }
 
 function pageNotFound(viewContent)
