@@ -1,7 +1,7 @@
 import { ButtonComponent, Modal, Setting, TFile, TextComponent } from 'obsidian';
 import { Utils } from '../utils/utils';
 import HTMLExportPlugin from '../main';
-import { ExportPreset, MainSettings } from './main-settings';
+import { ExportPreset, Settings } from './settings';
 import { FilePickerTree } from '../objects/file-picker';
 import { Path } from 'scripts/utils/path';
 
@@ -81,9 +81,9 @@ export class ExportModal extends Modal
 			this.filePicker.hideFileExtentionTags = ["md"];
 			await this.filePicker.generateTree(scrollArea);
 			
-			if((this.pickedFiles?.length ?? 0 > 0) || MainSettings.settings.filesToExport[0].length > 0) 
+			if((this.pickedFiles?.length ?? 0 > 0) || Settings.settings.filesToExport[0].length > 0) 
 			{
-				let filesToPick = this.pickedFiles?.map(file => file.path) ?? MainSettings.settings.filesToExport[0];
+				let filesToPick = this.pickedFiles?.map(file => file.path) ?? Settings.settings.filesToExport[0];
 				this.filePicker.setSelectedFiles(filesToPick);
 			}
 
@@ -91,8 +91,8 @@ export class ExportModal extends Modal
 			{
 				button.setButtonText("Save").onClick(async () =>
 				{
-					MainSettings.settings.filesToExport[0] = this.filePicker.getSelectedFilesSavePaths();
-					await MainSettings.saveSettings();
+					Settings.settings.filesToExport[0] = this.filePicker.getSelectedFilesSavePaths();
+					await Settings.saveSettings();
 				});
 			});
 
@@ -148,43 +148,43 @@ export class ExportModal extends Modal
 		let exportModeSetting = new Setting(contentEl)
 			.setName('Export Mode')
 			// @ts-ignore
-			.setDesc(modeDescriptions[MainSettings.settings.exportPreset] + "\n\nSome options are only available in certain modes.")
+			.setDesc(modeDescriptions[Settings.settings.exportPreset] + "\n\nSome options are only available in certain modes.")
 			.setHeading()
 			.addDropdown((dropdown) => dropdown
 				.addOption('website', 'Online Web Server')
 				.addOption('documents', 'HTML Documents')
 				.addOption('raw-documents', 'Raw HTML Documents')
-				.setValue(["website", "documents", "raw-documents"].contains(MainSettings.settings.exportPreset) ? MainSettings.settings.exportPreset : 'website')
+				.setValue(["website", "documents", "raw-documents"].contains(Settings.settings.exportPreset) ? Settings.settings.exportPreset : 'website')
 				.onChange(async (value) =>
 				{
-					MainSettings.settings.exportPreset = value as ExportPreset;
+					Settings.settings.exportPreset = value as ExportPreset;
 
 					switch (value) {
 						case 'website':
-							MainSettings.settings.inlineAssets = false;
-							MainSettings.settings.makeNamesWebStyle = true;
-							MainSettings.settings.includeGraphView = true;
-							MainSettings.settings.includeFileTree = true;
-							MainSettings.settings.includeSearchBar = true;
-							await MainSettings.saveSettings();
+							Settings.settings.inlineAssets = false;
+							Settings.settings.makeNamesWebStyle = true;
+							Settings.settings.includeGraphView = true;
+							Settings.settings.includeFileTree = true;
+							Settings.settings.includeSearchBar = true;
+							await Settings.saveSettings();
 
 							break;
 						case 'documents':
-							MainSettings.settings.inlineAssets = true;
-							MainSettings.settings.makeNamesWebStyle = false;
-							MainSettings.settings.includeFileTree = true;
-							MainSettings.settings.includeGraphView = false;
-							MainSettings.settings.includeSearchBar = false;
-							await MainSettings.saveSettings();
+							Settings.settings.inlineAssets = true;
+							Settings.settings.makeNamesWebStyle = false;
+							Settings.settings.includeFileTree = true;
+							Settings.settings.includeGraphView = false;
+							Settings.settings.includeSearchBar = false;
+							await Settings.saveSettings();
 
 							break;
 						case 'raw-documents':
-							MainSettings.settings.inlineAssets = true;
-							MainSettings.settings.makeNamesWebStyle = false;
-							MainSettings.settings.includeGraphView = false;
-							MainSettings.settings.includeFileTree = false;
-							MainSettings.settings.includeSearchBar = false;
-							await MainSettings.saveSettings();
+							Settings.settings.inlineAssets = true;
+							Settings.settings.makeNamesWebStyle = false;
+							Settings.settings.includeGraphView = false;
+							Settings.settings.includeFileTree = false;
+							Settings.settings.includeSearchBar = false;
+							await Settings.saveSettings();
 
 							break;
 					}
@@ -198,17 +198,17 @@ export class ExportModal extends Modal
 			.setName('Open after export')
 			.addToggle((toggle) => toggle
 				.setTooltip('Open the exported file after exporting.')
-				.setValue(MainSettings.settings.openAfterExport)
+				.setValue(Settings.settings.openAfterExport)
 				.onChange(async (value) => {
-					MainSettings.settings.openAfterExport = value;
-					await MainSettings.saveSettings();
+					Settings.settings.openAfterExport = value;
+					await Settings.saveSettings();
 		}));
 
 		let errorMessage = contentEl.createDiv({ cls: 'setting-item-description' });
 		errorMessage.style.color = "var(--color-red)";
 		errorMessage.style.marginBottom = "0.75rem";
 
-		let tempPath = new Path(MainSettings.settings.exportPath);
+		let tempPath = new Path(Settings.settings.exportPath);
 		if(!tempPath.isDirectory) errorMessage.setText("Path must be a directory!");
 		else if(!tempPath.isAbsolute) errorMessage.setText("Path must be absolute!");
 		else if(!tempPath.exists) errorMessage.setText("Path does not exist!");
@@ -239,7 +239,7 @@ export class ExportModal extends Modal
 				pathInput = text;
 				text.inputEl.style.width = '100%';
 				text.setPlaceholder('Enter an absolute export directory path')
-					.setValue(MainSettings.settings.exportPath)
+					.setValue(Settings.settings.exportPath)
 					.onChange(async (value) => 
 					{
 						let path = new Path(value);
@@ -249,10 +249,10 @@ export class ExportModal extends Modal
 						else
 						{
 							errorMessage.setText("");
-							MainSettings.settings.exportPath = value.replaceAll("\"", "");
-							text.setValue(MainSettings.settings.exportPath);
+							Settings.settings.exportPath = value.replaceAll("\"", "");
+							text.setValue(Settings.settings.exportPath);
 							this.validPath = true;
-							await MainSettings.saveSettings();
+							await Settings.saveSettings();
 						}
 
 						setExportDisabled(!path.isDirectory || !path.isAbsolute || !path.exists);
@@ -266,8 +266,8 @@ export class ExportModal extends Modal
 					let path = (await Utils.showSelectFolderDialog(ideal))?.directory;
 					if (path) 
 					{
-						MainSettings.settings.exportPath = path.directory.asString;
-						await MainSettings.saveSettings();
+						Settings.settings.exportPath = path.directory.asString;
+						await Settings.saveSettings();
 
 						setExportDisabled(!path.isDirectory || !path.isAbsolute || !path.exists);
 
@@ -276,7 +276,7 @@ export class ExportModal extends Modal
 						else if(!path.exists) errorMessage.setText("Path does not exist!");
 						else errorMessage.setText("");
 
-						pathInput?.setValue(MainSettings.settings.exportPath);
+						pathInput?.setValue(Settings.settings.exportPath);
 					}
 				});
 			})
@@ -308,7 +308,7 @@ export class ExportModal extends Modal
 		
 		this.pickedFiles = this.filePicker.getSelectedFiles();
 		this.filePickerModalEl.remove();
-		this.exportInfo = { canceled: this.canceled, pickedFiles: this.pickedFiles, exportPath: new Path(MainSettings.settings.exportPath), validPath: this.validPath};
+		this.exportInfo = { canceled: this.canceled, pickedFiles: this.pickedFiles, exportPath: new Path(Settings.settings.exportPath), validPath: this.validPath};
 
 		return this.exportInfo;
 	}

@@ -3,7 +3,8 @@ import { Tree, TreeItem } from "./tree";
 import { Path } from "scripts/utils/path";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { Website } from "./website";
-import { MainSettings } from "scripts/settings/main-settings";
+import { Settings } from "scripts/settings/settings";
+import { HTMLGeneration } from "scripts/html-generation/html-generation-helpers";
 
 export class FileTree extends Tree
 {
@@ -49,7 +50,7 @@ export class FileTree extends Tree
 					if(child.isFolder) 
 					{
 						child.itemClass = "mod-tree-folder nav-folder"
-						if (MainSettings.settings.showDefaultTreeIcons) child.icon = Website.getIcon(MainSettings.settings.defaultFolderIcon);
+						if (Settings.settings.showDefaultTreeIcons) child.icon = HTMLGeneration.getIcon(Settings.settings.defaultFolderIcon);
 					}
 					else child.itemClass = "mod-tree-file nav-file"
 

@@ -15,7 +15,7 @@ import { ThemeStyles } from "./assets/theme-styles.js";
 import { SnippetStyles } from "./assets/snippet-styles.js";
 import { MathjaxStyles } from "./assets/mathjax-styles.js";
 import { CustomHeadContent } from "./assets/custom-head-content.js";
-import { MainSettings } from "scripts/settings/main-settings.js";
+import { Settings } from "scripts/settings/settings.js";
 import { GlobalVariableStyles } from "./assets/global-variable-styles.js";
 import { Favicon } from "./assets/favicon.js";
 import { FetchBuffer } from "./assets/local-fetch-buffer.js";
@@ -97,11 +97,11 @@ export class AssetHandler
 
 	public static getAssetDownloads(bypassInlineCheck: boolean = false): Asset[]
 	{
-		if(!bypassInlineCheck && MainSettings.settings.inlineAssets) return [];
+		if(!bypassInlineCheck && Settings.settings.inlineAssets) return [];
 
 		let downloadAssets = this.allAssets;
 
-		if (!MainSettings.settings.includeGraphView)
+		if (!Settings.settings.includeGraphView)
 		{
 			downloadAssets = downloadAssets.filter(asset => ![this.graphViewJS, this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS].includes(asset));
 		}
@@ -137,7 +137,7 @@ export class AssetHandler
 
 			if (url.startsWith("data:"))
 			{
-				if (!MainSettings.settings.inlineAssets && makeBase64External)
+				if (!Settings.settings.inlineAssets && makeBase64External)
 				{
 					// decode the base64 data and create an Asset from it
 					// then replace the url with the relative path to the asset
@@ -192,7 +192,7 @@ export class AssetHandler
 				continue;
 			}
 
-			if (MainSettings.settings.inlineAssets)
+			if (Settings.settings.inlineAssets)
 			{
 				let base64 = childAsset.content.toString("base64");
 				content = content.replaceAll(url, `data:${mime.getType(url)};base64,${base64}`);

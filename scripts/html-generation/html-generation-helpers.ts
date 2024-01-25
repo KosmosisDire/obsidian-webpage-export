@@ -1,3 +1,8 @@
+import { Settings } from "scripts/settings/settings";
+import { AssetHandler } from "./asset-handler";
+import { AssetType } from "./assets/asset";
+import { RenderLog } from "./render-log";
+import { getIcon as getObsidianIcon } from "obsidian";
 
 export namespace HTMLGeneration
 {
@@ -128,6 +133,89 @@ export namespace HTMLGeneration
 		div.classList.add("toggle-background");
 
 		return toggle;
+	}
+
+	let _validBodyClasses: string | undefined = undefined;
+	export function getValidBodyClasses(cleanCache: boolean): string
+	{
+		if (cleanCache) _validBodyClasses = undefined;
+		if (_validBodyClasses) return _validBodyClasses;
+
+		let bodyClasses = document.body.classList;
+		let validClasses = "";
+
+		if (Settings.settings.sidebarsAlwaysCollapsible) validClasses += " sidebars-always-collapsible ";
+		if (Settings.settings.inlineAssets) validClasses += " inlined-assets ";
+		validClasses += " loading ";
+		
+		// keep body classes that are referenced in the styles
+		for (var style of AssetHandler.getAssetsOfType(AssetType.Style))
+		{
+			if (typeof(style.content) != "string") continue;
+			
+			// this matches every class name with the dot
+			let matches = style.content.matchAll(/(?![0-9].*$)\.(?!cm.*$)(?![0-9].*$)[^ ͼ\>\+\{\(\,\.\[\)\:\;\/]{1,}/gm);
+			for (var match of matches)
+			{
+				let className = match[0].replace(".", "").trim();
+				if (bodyClasses.contains(className)) validClasses += " " + className + " ";
+			}
+		}
+
+		_validBodyClasses = validClasses.replace(/\s\s+/g, ' ');
+
+		// convert to array and remove duplicates
+		_validBodyClasses = _validBodyClasses.split(" ").filter((value, index, self) => self.indexOf(value) === index).join(" ").trim();
+
+		RenderLog.log("Body classes: " + _validBodyClasses);
+		
+		return _validBodyClasses;
+	}
+
+	export function getLucideIcon(iconName: string): string
+	{
+		const iconEl = getObsidianIcon(iconName);
+		if (iconEl)
+		{
+			let svg = iconEl.outerHTML;
+			iconEl.remove();
+			return svg;
+		}
+		else 
+		{
+			console.error(`Invalid lucide icon name: ${iconName}`);
+			return "�";
+		}
+	}
+
+	export function getEmojiIcon(iconCode: string): string
+	{
+		let iconCodeInt = parseInt(iconCode, 16);
+		if (!isNaN(iconCodeInt)) 
+		{
+			return String.fromCodePoint(iconCodeInt);
+		} 
+		else 
+		{
+			console.error(`Invalid sticker number in frontmatter: ${iconCode}`);
+			return '�';
+		}
+	}
+
+	export function getIcon(iconName: string): string
+	{
+		if (iconName.startsWith('emoji//'))
+		{
+			const iconCode = iconName.replace(/^emoji\/\//, '');
+			return getEmojiIcon(iconCode);
+		}
+		else if (iconName.startsWith('lucide//'))
+		{
+			const lucideIconName = iconName.replace(/^lucide\/\//, '');
+			return getLucideIcon(lucideIconName);
+		}
+
+		return iconName;
 	}
 	
 }

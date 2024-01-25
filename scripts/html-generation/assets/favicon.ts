@@ -1,5 +1,5 @@
 import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
-import { MainSettings } from "scripts/settings/main-settings";
+import { Settings } from "scripts/settings/settings";
 import { Path } from "scripts/utils/path";
 import defaultIcon from "assets/icon.png";
 
@@ -14,9 +14,9 @@ export class Favicon extends Asset
     
     override async load()
     {
-        if (MainSettings.settings.faviconPath == "") this.content = Buffer.from(defaultIcon);
+        if (Settings.settings.faviconPath == "") this.content = Buffer.from(defaultIcon);
 
-        let iconPath = new Path(MainSettings.settings.faviconPath);
+        let iconPath = new Path(Settings.settings.faviconPath);
         let icon = await iconPath.readFileBuffer();
         if (icon) 
         {
@@ -32,7 +32,7 @@ export class Favicon extends Asset
     {
 		if (checkInlinePolicy && !this.shouldBeInlined()) return "";
 		
-        if (MainSettings.settings.inlineAssets)
+        if (Settings.settings.inlineAssets)
         {
             return `<link rel="icon" href="data:image/png;base64,${this.content.toString("base64")}">`;
         }

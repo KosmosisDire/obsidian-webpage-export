@@ -4,7 +4,6 @@ import { Path } from '../utils/path';
 import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
 import { FlowList } from './flow-list';
 import { ExportInfo, ExportModal } from './export-modal';
-import HTMLExportPlugin from 'scripts/main';
 import { migrateSettings } from './settings-migration';
 import { RenderLog } from 'scripts/html-generation/render-log';
 
@@ -17,7 +16,7 @@ export enum ExportPreset
 	RawDocuments = "raw-documents",
 }
 
-export interface MainSettingsData 
+export interface SettingsData
 {
 	settingsVersion: string;
 
@@ -78,7 +77,7 @@ export interface MainSettingsData
 	filesToExport: string[][];
 }
 
-export const DEFAULT_SETTINGS: MainSettingsData =
+export const DEFAULT_SETTINGS: SettingsData =
 {
 	settingsVersion: "0.0.0",
 
@@ -140,13 +139,12 @@ export const DEFAULT_SETTINGS: MainSettingsData =
 }
 
 // #endregion
-
-export class MainSettings extends PluginSettingTab 
+export class Settings extends PluginSettingTab
 {
 
 	// #region Class Functions and Variables
 
-	static settings: MainSettingsData = DEFAULT_SETTINGS;
+	static settings: SettingsData = DEFAULT_SETTINGS;
 	static plugin: Plugin;
 	static loaded = false;
 
@@ -162,29 +160,29 @@ export class MainSettings extends PluginSettingTab
 
 	constructor(plugin: Plugin) {
 		super(app, plugin);
-		MainSettings.plugin = plugin;
+		Settings.plugin = plugin;
 	}
 
 	static async loadSettings() 
 	{
-		let loadedSettings = await MainSettings.plugin.loadData();
-		MainSettings.settings = Object.assign({}, DEFAULT_SETTINGS, loadedSettings);
-		MainSettings.settings.documentWidth = MainSettings.settings.documentWidth.toString();
-		if (MainSettings.settings.documentWidth === "0") MainSettings.settings.documentWidth = "";
+		let loadedSettings = await Settings.plugin.loadData();
+		Settings.settings = Object.assign({}, DEFAULT_SETTINGS, loadedSettings);
+		Settings.settings.documentWidth = Settings.settings.documentWidth.toString();
+		if (Settings.settings.documentWidth === "0") Settings.settings.documentWidth = "";
 
 		await migrateSettings();
 
-		MainSettings.loaded = true;
+		Settings.loaded = true;
 	}
 
 	static async saveSettings() {
-		await MainSettings.plugin.saveData(MainSettings.settings);
+		await Settings.plugin.saveData(Settings.settings);
 	}
 
 	static renameFile(file: TFile, oldPath: string)
 	{
 		let oldPathParsed = new Path(oldPath).asString;
-		MainSettings.settings.filesToExport.forEach((fileList) =>
+		Settings.settings.filesToExport.forEach((fileList) =>
 		{
 			let index = fileList.indexOf(oldPathParsed);
 			if (index >= 0)
@@ -192,6 +190,8 @@ export class MainSettings extends PluginSettingTab
 				fileList[index] = file.path;
 			}
 		});
+
+		Settings.saveSettings();
 	}
 
 	static async updateSettings(usePreviousSettings: boolean = false, overrideFiles: TFile[] | undefined = undefined): Promise<ExportInfo | undefined>
@@ -203,8 +203,8 @@ export class MainSettings extends PluginSettingTab
 			return await modal.open();
 		}
 		
-		let files = MainSettings.settings.filesToExport[0];
-		let path = new Path(MainSettings.settings.exportPath);
+		let files = Settings.settings.filesToExport[0];
+		let path = new Path(Settings.settings.exportPath);
 		if ((files.length == 0 && overrideFiles == undefined) || !path.exists || !path.isAbsolute || !path.isDirectory)
 		{
 			new Notice("Please set the export path and files to export in the settings first.", 5000);
@@ -219,7 +219,7 @@ export class MainSettings extends PluginSettingTab
 	static getFilesToExport(): TFile[]
 	{
 		let files: TFile[] = [];
-		MainSettings.settings.filesToExport.forEach((fileList) =>
+		Settings.settings.filesToExport.forEach((fileList) =>
 		{
 			fileList.forEach((filePath) =>
 			{
@@ -290,7 +290,7 @@ export class MainSettings extends PluginSettingTab
 		hr.style.borderColor = "var(--color-accent)";
 		hr.style.opacity = "0.5";
 
-		if (MainSettings.settings.exportPreset != ExportPreset.RawDocuments)
+		if (Settings.settings.exportPreset != ExportPreset.RawDocuments)
 		{
 			new Setting(contentEl)
 				.setName('Page Features:')
@@ -302,20 +302,20 @@ export class MainSettings extends PluginSettingTab
 				.setName('Include theme toggle')
 				.setDesc('Adds a theme toggle to the left sidebar.')
 				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.includeThemeToggle)
+					.setValue(Settings.settings.includeThemeToggle)
 					.onChange(async (value) => {
-						MainSettings.settings.includeThemeToggle = value;
-						await MainSettings.saveSettings();
+						Settings.settings.includeThemeToggle = value;
+						await Settings.saveSettings();
 					}));
 
 			new Setting(contentEl)
 				.setName('Include document outline')
 				.setDesc('Adds the document\'s table of contents to the right sidebar.')
 				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.includeOutline)
+					.setValue(Settings.settings.includeOutline)
 					.onChange(async (value) => {
-						MainSettings.settings.includeOutline = value;
-						await MainSettings.saveSettings();
+						Settings.settings.includeOutline = value;
+						await Settings.saveSettings();
 					}
 					));
 
@@ -323,22 +323,22 @@ export class MainSettings extends PluginSettingTab
 				.setName('Include file tree')
 				.setDesc('Adds an interactive file tree to the left sidebar.')
 				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.includeFileTree)
+					.setValue(Settings.settings.includeFileTree)
 					.onChange(async (value) => {
-						MainSettings.settings.includeFileTree = value;
-						await MainSettings.saveSettings();
+						Settings.settings.includeFileTree = value;
+						await Settings.saveSettings();
 					}
 					));
 
-			if (MainSettings.settings.exportPreset == ExportPreset.Website)
+			if (Settings.settings.exportPreset == ExportPreset.Website)
 				new Setting(contentEl)
 					.setName('Include search bar')
 					.setDesc('Adds a full text search of the website to the left sidebar.')
 					.addToggle((toggle) => toggle
-						.setValue(MainSettings.settings.includeSearchBar)
+						.setValue(Settings.settings.includeSearchBar)
 						.onChange(async (value) => {
-							MainSettings.settings.includeSearchBar = value;
-							await MainSettings.saveSettings();
+							Settings.settings.includeSearchBar = value;
+							await Settings.saveSettings();
 						}
 						));
 
@@ -358,15 +358,15 @@ export class MainSettings extends PluginSettingTab
 				.setDesc("Customizable features to change various aspects of the website.")
 				.setHeading();
 
-		if (MainSettings.settings.exportPreset != ExportPreset.RawDocuments)
+		if (Settings.settings.exportPreset != ExportPreset.RawDocuments)
 			new Setting(contentEl)
 				.setName('Show tree icons')
 				.setDesc('Adds decorative file and folder icons to the file tree. This does not have to be enabled to use custom icons.')
 				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.showDefaultTreeIcons)
+					.setValue(Settings.settings.showDefaultTreeIcons)
 					.onChange(async (value) => {
-						MainSettings.settings.showDefaultTreeIcons = value;
-						await MainSettings.saveSettings();
+						Settings.settings.showDefaultTreeIcons = value;
+						await Settings.saveSettings();
 					}));
 
 		let iconTutorial = new Setting(contentEl)
@@ -380,10 +380,10 @@ export class MainSettings extends PluginSettingTab
 			.setName('Page title property')
 			.setDesc('Override a specific file\'s title / name by defining this property in the frontmatter.')
 			.addText((text) => text
-				.setValue(MainSettings.settings.titleProperty)
+				.setValue(Settings.settings.titleProperty)
 				.onChange(async (value) => {
-					MainSettings.settings.titleProperty = value;
-					await MainSettings.saveSettings();
+					Settings.settings.titleProperty = value;
+					await Settings.saveSettings();
 				})
 			);
 
@@ -391,9 +391,9 @@ export class MainSettings extends PluginSettingTab
 		headContentErrorMessage.style.color = "var(--color-red)";
 		headContentErrorMessage.style.marginBottom = "0.75rem";
 
-		if (!(MainSettings.settings.customHeadContentPath.trim() == ""))
+		if (!(Settings.settings.customHeadContentPath.trim() == ""))
 		{
-			let tempPath = new Path(MainSettings.settings.customHeadContentPath);
+			let tempPath = new Path(Settings.settings.customHeadContentPath);
 			headContentErrorMessage.setText(tempPath.validate(true, true, true, false, true, false, ["html"]).error);
 		}
 
@@ -407,7 +407,7 @@ export class MainSettings extends PluginSettingTab
 				headContentInput = text;
 				text.inputEl.style.width = '100%';
 				text.setPlaceholder('Enter the absolute path to any .html file')
-					.setValue(MainSettings.settings.customHeadContentPath)
+					.setValue(Settings.settings.customHeadContentPath)
 					.onChange(async (value) => 
 					{
 						let path = new Path(value);
@@ -416,9 +416,9 @@ export class MainSettings extends PluginSettingTab
 						if (validation.vaild) 
 						{
 							headContentErrorMessage.setText("");
-							MainSettings.settings.customHeadContentPath = value.replaceAll("\"", "");
-							text.setValue(MainSettings.settings.customHeadContentPath);
-							await MainSettings.saveSettings();
+							Settings.settings.customHeadContentPath = value.replaceAll("\"", "");
+							text.setValue(Settings.settings.customHeadContentPath);
+							await Settings.saveSettings();
 						}
 					});
 			})
@@ -430,15 +430,15 @@ export class MainSettings extends PluginSettingTab
 					let path = (await Utils.showSelectFileDialog(ideal));
 					if (path) 
 					{
-						MainSettings.settings.customHeadContentPath = path.asString;
+						Settings.settings.customHeadContentPath = path.asString;
 						let validation = path.validate(true, true, true, false, true, false, ["html"]);
 						headContentErrorMessage.setText(validation.error);
 						if (validation.vaild)
 						{
-							await MainSettings.saveSettings();
+							await Settings.saveSettings();
 						}
 
-						headContentInput?.setValue(MainSettings.settings.customHeadContentPath);
+						headContentInput?.setValue(Settings.settings.customHeadContentPath);
 					}
 				});
 			});
@@ -450,9 +450,9 @@ export class MainSettings extends PluginSettingTab
 		faviconErrorMessage.style.color = "var(--color-red)";
 		faviconErrorMessage.style.marginBottom = "0.75rem";
 
-		if (!(MainSettings.settings.faviconPath.trim() == ""))
+		if (!(Settings.settings.faviconPath.trim() == ""))
 		{
-			let tempPath = new Path(MainSettings.settings.faviconPath);
+			let tempPath = new Path(Settings.settings.faviconPath);
 			faviconErrorMessage.setText(tempPath.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]).error);
 		}
 
@@ -466,7 +466,7 @@ export class MainSettings extends PluginSettingTab
 				faviconInput = text;
 				text.inputEl.style.width = '100%';
 				text.setPlaceholder('Enter an absolute path to any text file')
-					.setValue(MainSettings.settings.faviconPath)
+					.setValue(Settings.settings.faviconPath)
 					.onChange(async (value) => 
 					{
 						let path = new Path(value);
@@ -475,9 +475,9 @@ export class MainSettings extends PluginSettingTab
 						if (validation.vaild) 
 						{
 							faviconErrorMessage.setText("");
-							MainSettings.settings.faviconPath = value.replaceAll("\"", "");
-							text.setValue(MainSettings.settings.faviconPath);
-							await MainSettings.saveSettings();
+							Settings.settings.faviconPath = value.replaceAll("\"", "");
+							text.setValue(Settings.settings.faviconPath);
+							await Settings.saveSettings();
 						}
 					});
 			})
@@ -489,15 +489,15 @@ export class MainSettings extends PluginSettingTab
 					let path = (await Utils.showSelectFileDialog(ideal));
 					if (path) 
 					{
-						MainSettings.settings.faviconPath = path.asString;
+						Settings.settings.faviconPath = path.asString;
 						let validation = path.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]);
 						faviconErrorMessage.setText(validation.error);
 						if (validation.vaild) 
 						{
-							await MainSettings.saveSettings();
+							await Settings.saveSettings();
 						}
 						
-						faviconInput?.setValue(MainSettings.settings.faviconPath);
+						faviconInput?.setValue(Settings.settings.faviconPath);
 					}
 				});
 			});
@@ -508,7 +508,7 @@ export class MainSettings extends PluginSettingTab
 
 		//#region Page Behaviors
 
-		if (MainSettings.settings.exportPreset != ExportPreset.RawDocuments)
+		if (Settings.settings.exportPreset != ExportPreset.RawDocuments)
 		{
 			
 			hr = contentEl.createEl("hr");
@@ -533,40 +533,40 @@ export class MainSettings extends PluginSettingTab
 					.addOption('5', '5')
 					.addOption('6', '6')
 					.addOption('7', 'No Collapse')
-					.setValue(MainSettings.settings.minOutlineCollapse.toString())
+					.setValue(Settings.settings.minOutlineCollapse.toString())
 					.onChange(async (value) => {
-						MainSettings.settings.minOutlineCollapse = parseInt(value);
-						await MainSettings.saveSettings();
+						Settings.settings.minOutlineCollapse = parseInt(value);
+						await Settings.saveSettings();
 					}));
 
 			new Setting(contentEl)
 				.setName('Allow folding headings')
 				.setDesc('Allow headings to be folded with an arrow icon beside each heading, just as in Obsidian.')
 				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.allowFoldingHeadings)
+					.setValue(Settings.settings.allowFoldingHeadings)
 					.onChange(async (value) => {
-						MainSettings.settings.allowFoldingHeadings = value;
-						await MainSettings.saveSettings();
+						Settings.settings.allowFoldingHeadings = value;
+						await Settings.saveSettings();
 					}));
 
 			new Setting(contentEl)
 				.setName('Allow folding lists')
 				.setDesc('Allow lists to be folded with an arrow icon beside each list item, just as in Obsidian.')
 				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.allowFoldingLists)
+					.setValue(Settings.settings.allowFoldingLists)
 					.onChange(async (value) => {
-						MainSettings.settings.allowFoldingLists = value;
-						await MainSettings.saveSettings();
+						Settings.settings.allowFoldingLists = value;
+						await Settings.saveSettings();
 					}));
 
 			new Setting(contentEl)
 				.setName('Sidebars Always Collapsible')
 				.setDesc('Always allow the sidebars to be collapsed regardless of the space on the screen. By default the sidebars adjust whether they can be collapsed based on the space available.')
 				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.sidebarsAlwaysCollapsible)
+					.setValue(Settings.settings.sidebarsAlwaysCollapsible)
 					.onChange(async (value) => {
-						MainSettings.settings.sidebarsAlwaysCollapsible = value;
-						await MainSettings.saveSettings();
+						Settings.settings.sidebarsAlwaysCollapsible = value;
+						await Settings.saveSettings();
 					}));
 
 		}
@@ -588,16 +588,16 @@ export class MainSettings extends PluginSettingTab
 			.setName('Document Width')
 			.setDesc('Sets the line width of the exported document in css units. (ex. 600px, 50em)')
 			.addText((text) => text
-				.setValue(MainSettings.settings.documentWidth)
+				.setValue(Settings.settings.documentWidth)
 				.setPlaceholder('50em')
 				.onChange(async (value) => {
-					MainSettings.settings.documentWidth = value;
-					await MainSettings.saveSettings();
+					Settings.settings.documentWidth = value;
+					await Settings.saveSettings();
 				}
 				))
 			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
-				MainSettings.settings.documentWidth = "";
-				MainSettings.saveSettings();
+				Settings.settings.documentWidth = "";
+				Settings.saveSettings();
 				this.display();
 			}));
 
@@ -605,16 +605,16 @@ export class MainSettings extends PluginSettingTab
 			.setName('Content Width')
 			.setDesc('Sets the width of the empty area that contains the document in css units. (ex. 1000px, 70em)')
 			.addText((text) => text
-				.setValue(MainSettings.settings.contentWidth)
+				.setValue(Settings.settings.contentWidth)
 				.setPlaceholder('100em')
 				.onChange(async (value) => {
-					MainSettings.settings.contentWidth = value;
-					await MainSettings.saveSettings();
+					Settings.settings.contentWidth = value;
+					await Settings.saveSettings();
 				}
 				))
 			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
-				MainSettings.settings.contentWidth = "";
-				MainSettings.saveSettings();
+				Settings.settings.contentWidth = "";
+				Settings.saveSettings();
 				this.display();
 			}));
 
@@ -622,16 +622,16 @@ export class MainSettings extends PluginSettingTab
 			.setName('Sidebar Width')
 			.setDesc('Sets the width of the sidebar in css units. (ex. 20em, 200px)')
 			.addText((text) => text
-				.setValue(MainSettings.settings.sidebarWidth)
+				.setValue(Settings.settings.sidebarWidth)
 				.setPlaceholder('20em')
 				.onChange(async (value) => {
-					MainSettings.settings.sidebarWidth = value;
-					await MainSettings.saveSettings();
+					Settings.settings.sidebarWidth = value;
+					await Settings.saveSettings();
 				}
 				))
 			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
-				MainSettings.settings.sidebarWidth = "";
-				MainSettings.saveSettings();
+				Settings.settings.sidebarWidth = "";
+				Settings.saveSettings();
 				this.display();
 			}));
 
@@ -657,11 +657,11 @@ export class MainSettings extends PluginSettingTab
 				.addOption('warning', 'Warning')
 				.addOption('error', 'Error')
 				.addOption('fatal', 'Only Fatal Errors')
-				.setValue(MainSettings.settings.logLevel)
+				.setValue(Settings.settings.logLevel)
 				.onChange(async (value: "all" | "warning" | "error" | "fatal" | "none") =>
 				{
-					MainSettings.settings.logLevel = value;
-					await MainSettings.saveSettings();
+					Settings.settings.logLevel = value;
+					await Settings.saveSettings();
 				}));
 		
 		// new Setting(contentEl)
@@ -678,10 +678,10 @@ export class MainSettings extends PluginSettingTab
 			.setName('Minify HTML')
 			.setDesc('Minify the HTML to make it load faster (but it will be less readable to humans).')
 			.addToggle((toggle) => toggle
-				.setValue(MainSettings.settings.minifyHTML)
+				.setValue(Settings.settings.minifyHTML)
 				.onChange(async (value) => {
-					MainSettings.settings.minifyHTML = value;
-					await MainSettings.saveSettings();
+					Settings.settings.minifyHTML = value;
+					await Settings.saveSettings();
 				}));
 
 		//#endregion
@@ -714,11 +714,11 @@ export class MainSettings extends PluginSettingTab
 			let hasCSS = pluginPath.joinString('styles.css').exists;
 			if (!hasCSS) return;
 
-			let isChecked = MainSettings.settings.includePluginCSS.match(new RegExp(`^${plugin}`, 'm')) != null;
+			let isChecked = Settings.settings.includePluginCSS.match(new RegExp(`^${plugin}`, 'm')) != null;
 
 			pluginsList.addItem(pluginManifest.name, plugin, isChecked, (value) => {
-				MainSettings.settings.includePluginCSS = pluginsList.checkedList.join('\n');
-				MainSettings.saveSettings();
+				Settings.settings.includePluginCSS = pluginsList.checkedList.join('\n');
+				Settings.saveSettings();
 			});
 		});
 
@@ -726,17 +726,17 @@ export class MainSettings extends PluginSettingTab
 			.setName('Include Svelte CSS')
 			.setDesc('Include the CSS from any plugins that use the svelte framework.')
 			.addToggle((toggle) => toggle
-				.setValue(MainSettings.settings.includeSvelteCSS)
+				.setValue(Settings.settings.includeSvelteCSS)
 				.onChange(async (value) => {
-					MainSettings.settings.includeSvelteCSS = value;
-					await MainSettings.saveSettings();
+					Settings.settings.includeSvelteCSS = value;
+					await Settings.saveSettings();
 				}));
 
 		//#endregion
 
 		//#region Experimental
 
-		if (MainSettings.settings.exportPreset == ExportPreset.Website)
+		if (Settings.settings.exportPreset == ExportPreset.Website)
 		{
 			let experimentalContainer = contentEl.createDiv();
 			let experimentalHR1 = experimentalContainer.createEl('hr');
@@ -760,20 +760,20 @@ export class MainSettings extends PluginSettingTab
 				.setName('Only Export Modified')
 				.setDesc('Disable this to do a full re-export. If you have an existing vault since before this feature was introduced, please do a full re-export before turning this on!')
 				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.incrementalExport)
+					.setValue(Settings.settings.incrementalExport)
 					.onChange(async (value) => {
-						MainSettings.settings.incrementalExport = value;
-						await MainSettings.saveSettings();
+						Settings.settings.incrementalExport = value;
+						await Settings.saveSettings();
 			}));
 
 			new Setting(contentEl)
 				.setName('Delete Old Files')
 				.setDesc('Delete *ALL* files in the export directory that are not included in this export.')
 				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.deleteOldExportedFiles)
+					.setValue(Settings.settings.deleteOldExportedFiles)
 					.onChange(async (value) => {
-						MainSettings.settings.deleteOldExportedFiles = value;
-						await MainSettings.saveSettings();
+						Settings.settings.deleteOldExportedFiles = value;
+						await Settings.saveSettings();
 			}));
 
 		
@@ -786,10 +786,10 @@ export class MainSettings extends PluginSettingTab
 				.setName('Include global graph view')
 				.setDesc('Include an interactive graph view sim of the WHOLE vault similar to obsidian\'s. ')
 				.addToggle((toggle) => toggle
-					.setValue(MainSettings.settings.includeGraphView)
+					.setValue(Settings.settings.includeGraphView)
 					.onChange(async (value) => {
-						MainSettings.settings.includeGraphView = value;
-						await MainSettings.saveSettings();
+						Settings.settings.includeGraphView = value;
+						await Settings.saveSettings();
 					}));
 
 			new Setting(contentEl)
@@ -802,13 +802,13 @@ export class MainSettings extends PluginSettingTab
 				.setDesc("How much should linked nodes attract each other? This will make the graph appear more clustered.")
 				.addSlider((slider) => slider
 					.setLimits(0, 100, 1)
-					.setValue(MainSettings.settings.graphAttractionForce / (2 / 100))
+					.setValue(Settings.settings.graphAttractionForce / (2 / 100))
 					.setDynamicTooltip()
 					.onChange(async (value) => {
 						// remap to 0 - 2;
 						let remapMultiplier = 2 / 100;
-						MainSettings.settings.graphAttractionForce = value * remapMultiplier;
-						await MainSettings.saveSettings();
+						Settings.settings.graphAttractionForce = value * remapMultiplier;
+						await Settings.saveSettings();
 					})
 					.showTooltip()
 				);
@@ -818,11 +818,11 @@ export class MainSettings extends PluginSettingTab
 				.setDesc("How long should the links between nodes be? The shorter the links the closer connected nodes will cluster together.")
 				.addSlider((slider) => slider
 					.setLimits(0, 100, 1)
-					.setValue(MainSettings.settings.graphLinkLength)
+					.setValue(Settings.settings.graphLinkLength)
 					.setDynamicTooltip()
 					.onChange(async (value) => {
-						MainSettings.settings.graphLinkLength = value;
-						await MainSettings.saveSettings();
+						Settings.settings.graphLinkLength = value;
+						await Settings.saveSettings();
 					})
 					.showTooltip()
 				);
@@ -832,11 +832,11 @@ export class MainSettings extends PluginSettingTab
 				.setDesc("How much should nodes repel each other? This will make the graph appear more spread out.")
 				.addSlider((slider) => slider
 					.setLimits(0, 100, 1)
-					.setValue(MainSettings.settings.graphRepulsionForce / 3)
+					.setValue(Settings.settings.graphRepulsionForce / 3)
 					.setDynamicTooltip()
 					.onChange(async (value) => {
-						MainSettings.settings.graphRepulsionForce = value * 3;
-						await MainSettings.saveSettings();
+						Settings.settings.graphRepulsionForce = value * 3;
+						await Settings.saveSettings();
 					})
 					.showTooltip()
 				);
@@ -846,13 +846,13 @@ export class MainSettings extends PluginSettingTab
 				.setDesc("How much should nodes be attracted to the center? This will make the graph appear more dense and circular.")
 				.addSlider((slider) => slider
 					.setLimits(0, 100, 1)
-					.setValue(MainSettings.settings.graphCentralForce / (5 / 100))
+					.setValue(Settings.settings.graphCentralForce / (5 / 100))
 					.setDynamicTooltip()
 					.onChange(async (value) => {
 						// remap to 0 - 5;
 						let remapMultiplier = 5 / 100;
-						MainSettings.settings.graphCentralForce = value * remapMultiplier;
-						await MainSettings.saveSettings();
+						Settings.settings.graphCentralForce = value * remapMultiplier;
+						await Settings.saveSettings();
 					})
 					.showTooltip()
 				);
@@ -862,11 +862,11 @@ export class MainSettings extends PluginSettingTab
 				.setDesc("How large should the largest nodes be? Nodes are sized by how many links they have. The larger a node is the more it will attract other nodes. This can be used to create a good grouping around the most important nodes.")
 				.addSlider((slider) => slider
 					.setLimits(3, 15, 1)
-					.setValue(MainSettings.settings.graphMaxNodeSize)
+					.setValue(Settings.settings.graphMaxNodeSize)
 					.setDynamicTooltip()
 					.onChange(async (value) => {
-						MainSettings.settings.graphMaxNodeSize = value;
-						await MainSettings.saveSettings();
+						Settings.settings.graphMaxNodeSize = value;
+						await Settings.saveSettings();
 					})
 					.showTooltip()
 				);
@@ -876,11 +876,11 @@ export class MainSettings extends PluginSettingTab
 				.setDesc("How small should the smallest nodes be? The smaller a node is the less it will attract other nodes.")
 				.addSlider((slider) => slider
 					.setLimits(3, 15, 1)
-					.setValue(MainSettings.settings.graphMinNodeSize)
+					.setValue(Settings.settings.graphMinNodeSize)
 					.setDynamicTooltip()
 					.onChange(async (value) => {
-						MainSettings.settings.graphMinNodeSize = value;
-						await MainSettings.saveSettings();
+						Settings.settings.graphMinNodeSize = value;
+						await Settings.saveSettings();
 					})
 					.showTooltip()
 				);
@@ -890,11 +890,11 @@ export class MainSettings extends PluginSettingTab
 				.setDesc("Edges with a length below this threshold will not be rendered, however they will still contribute to the simulation. This can help large tangled graphs look more organised. Hovering over a node will still display these links.")
 				.addSlider((slider) => slider
 					.setLimits(0, 100, 1)
-					.setValue(100 - MainSettings.settings.graphEdgePruning)
+					.setValue(100 - Settings.settings.graphEdgePruning)
 					.setDynamicTooltip()
 					.onChange(async (value) => {
-						MainSettings.settings.graphEdgePruning = 100 - value;
-						await MainSettings.saveSettings();
+						Settings.settings.graphEdgePruning = 100 - value;
+						await Settings.saveSettings();
 					})
 					.showTooltip()
 				);

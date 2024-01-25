@@ -1,4 +1,4 @@
-import { MainSettings } from "scripts/settings/main-settings";
+import { Settings } from "scripts/settings/settings";
 import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
 import { AssetHandler } from "../asset-handler";
 
@@ -14,10 +14,10 @@ export class OtherPluginStyles extends Asset
     
     override async load()
     {
-        if(this.lastEnabledPluginStyles == MainSettings.settings.includePluginCSS) return;
+        if(this.lastEnabledPluginStyles == Settings.settings.includePluginCSS) return;
 
         this.content = "";        
-        let thirdPartyPluginStyleNames = MainSettings.settings.includePluginCSS.split("\n");
+        let thirdPartyPluginStyleNames = Settings.settings.includePluginCSS.split("\n");
         for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
         {
             if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
@@ -33,7 +33,7 @@ export class OtherPluginStyles extends Asset
         }
 
 		this.modifiedTime = Date.now();
-        this.lastEnabledPluginStyles = MainSettings.settings.includePluginCSS;
+        this.lastEnabledPluginStyles = Settings.settings.includePluginCSS;
         this.content = Asset.filterBodyClasses(this.content);
         await super.load();
     }

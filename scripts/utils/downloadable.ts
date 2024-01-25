@@ -1,4 +1,3 @@
-import { RenderLog } from "scripts/html-generation/render-log";
 import { Path } from "./path";
 
 export class Downloadable

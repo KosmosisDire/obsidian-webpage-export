@@ -1,5 +1,5 @@
 import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
-import { MainSettings } from "scripts/settings/main-settings";
+import { Settings } from "scripts/settings/settings";
 import { RenderLog } from "../render-log";
 import obsidianStyleOverrides from "assets/obsidian-styles.txt.css";
 

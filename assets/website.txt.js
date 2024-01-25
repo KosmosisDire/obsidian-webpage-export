@@ -636,6 +636,7 @@ let transferDocument = document.implementation.createHTMLDocument();
 let loading = false;
 async function loadDocument(url, changeURL = true, showInTree = true)
 {
+	url = decodeURI(url);
 	if (loading)
 	{
 		console.log("Already loading document.");
@@ -761,11 +762,12 @@ function setActiveDocument(url, showInTree = true, changeURL = true)
 {
 	let relativePath = getVaultRelativePath(url.href);
 	let decodedRelativePath = decodeURI(relativePath);
-	let searchlessHeaderlessPath = decodedRelativePath.split("#")[0].split("?")[0];
+	let searchlessHeaderlessPath = decodedRelativePath.split("#")[0].split("?")[0].replace("\"", "\\\"").replace("\'", "\\\'");
+	console.log(searchlessHeaderlessPath);
 
 	// switch active file in file tree
 	document.querySelector(".tree-item.mod-active")?.classList.remove("mod-active");
-	let newActiveTreeItem = document.querySelector(".tree-item:has(>.tree-link[href^='" + searchlessHeaderlessPath + "'])");
+	let newActiveTreeItem = document.querySelector(`.tree-item:has(>.tree-link[href^="${searchlessHeaderlessPath}"])`);
 	if(newActiveTreeItem) 
 	{
 		newActiveTreeItem.classList.add("mod-active");

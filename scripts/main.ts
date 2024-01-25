@@ -3,7 +3,7 @@ import { Notice, Plugin, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
 import { AssetHandler } from './html-generation/asset-handler';
-import { MainSettings } from './settings/main-settings';
+import { Settings } from './settings/settings';
 import { HTMLExporter } from './exporter';
 import { Path } from './utils/path';
 import { RenderLog } from './html-generation/render-log';
@@ -22,8 +22,8 @@ export default class HTMLExportPlugin extends Plugin
 		HTMLExportPlugin.plugin = this;
 		this.checkForUpdates();
 		HTMLExportPlugin.pluginVersion = this.manifest.version;
-		this.addSettingTab(new MainSettings(this));
-		await MainSettings.loadSettings();
+		this.addSettingTab(new Settings(this));
+		await Settings.loadSettings();
 		await AssetHandler.initialize();
 
 		this.addRibbonIcon("folder-up", "Export Vault to HTML", () =>
@@ -32,7 +32,7 @@ export default class HTMLExportPlugin extends Plugin
 		});
 
 		// register callback for file rename so we can update the saved files to export
-		this.registerEvent(this.app.vault.on("rename", MainSettings.renameFile));
+		this.registerEvent(this.app.vault.on("rename", Settings.renameFile));
 
 		this.addCommand({
 			id: 'export-html-vault',

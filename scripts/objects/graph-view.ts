@@ -1,6 +1,6 @@
 import { TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
-import { MainSettings } from "scripts/settings/main-settings";
+import { Settings } from "scripts/settings/settings";
 
 export class GraphView
 {
@@ -83,7 +83,7 @@ export class GraphView
 		this.paths = this.paths.map(p => 
 			{
 				let path = new Path(p).setExtension(".html").makeUnixStyle().asString;
-				if (MainSettings.settings.makeNamesWebStyle) path = Path.toWebStyle(path);
+				if (Settings.settings.makeNamesWebStyle) path = Path.toWebStyle(path);
 				return path;
 			});
 
@@ -115,11 +115,11 @@ export class GraphView
 	{
 		return `
 let nodes=\n${JSON.stringify(this)};
-let attractionForce = ${MainSettings.settings.graphAttractionForce};
-let linkLength = ${MainSettings.settings.graphLinkLength};
-let repulsionForce = ${MainSettings.settings.graphRepulsionForce};
-let centralForce = ${MainSettings.settings.graphCentralForce};
-let edgePruning = ${MainSettings.settings.graphEdgePruning};
+let attractionForce = ${Settings.settings.graphAttractionForce};
+let linkLength = ${Settings.settings.graphLinkLength};
+let repulsionForce = ${Settings.settings.graphRepulsionForce};
+let centralForce = ${Settings.settings.graphCentralForce};
+let edgePruning = ${Settings.settings.graphEdgePruning};
 `;
 	}
 }

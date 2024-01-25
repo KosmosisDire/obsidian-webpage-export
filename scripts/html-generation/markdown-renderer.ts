@@ -3,7 +3,7 @@ import { Utils } from "scripts/utils/utils";
 import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
 import { RenderLog } from "./render-log";
-import { HTMLGeneration } from "./html-generator";
+import { HTMLGeneration } from "./html-generation-helpers";
 
 export namespace MarkdownRenderer
 {
@@ -724,6 +724,7 @@ export namespace MarkdownRenderer
 
 		// @ts-ignore
 		let loadingContainer = renderLeaf.parent.parent.containerEl.querySelector(`.html-render-progress-container`);
+		if (!loadingContainer) return;
 		
 
 		let progress = complete / total;

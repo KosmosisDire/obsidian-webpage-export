@@ -2,7 +2,7 @@ import {  MarkdownView, PluginManifest, TextFileView } from 'obsidian';
 import { Path } from './path';
 import { RenderLog } from '../html-generation/render-log';
 import { Downloadable } from './downloadable';
-import { MainSettings } from 'scripts/settings/main-settings';
+import { Settings } from 'scripts/settings/settings';
 
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;
@@ -90,8 +90,8 @@ export class Utils
 		if (picker.canceled) return;
 		
 		let pickedPath = new Path(picker.filePath);
-		MainSettings.settings.exportPath = pickedPath.asString;
-		MainSettings.saveSettings();
+		Settings.settings.exportPath = pickedPath.asString;
+		Settings.saveSettings();
 		
 		return pickedPath;
 	}
@@ -109,8 +109,8 @@ export class Utils
 		if (picker.canceled) return;
 
 		let path = new Path(picker.filePaths[0]);
-		MainSettings.settings.exportPath = path.directory.asString;
-		MainSettings.saveSettings();
+		Settings.settings.exportPath = path.directory.asString;
+		Settings.saveSettings();
 
 		return path;
 	}
@@ -133,7 +133,7 @@ export class Utils
 
 	static idealDefaultPath() : Path
 	{
-		let lastPath = new Path(MainSettings.settings.exportPath);
+		let lastPath = new Path(Settings.settings.exportPath);
 
 		if (lastPath.asString != "" && lastPath.exists)
 		{

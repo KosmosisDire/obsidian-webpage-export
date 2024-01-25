@@ -1,13 +1,13 @@
 import { TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
 import { Downloadable } from "scripts/utils/downloadable";
-import { ExportPreset, MainSettings } from "scripts/settings/main-settings";
+import { ExportPreset, Settings } from "scripts/settings/settings";
 import { OutlineTree } from "./outline-tree";
 import { GraphView } from "./graph-view";
 import { Website } from "./website";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
-import { HTMLGeneration } from "scripts/html-generation/html-generator";
+import { HTMLGeneration } from "scripts/html-generation/html-generation-helpers";
 import { Utils } from "scripts/utils/utils";
 import { RenderLog } from "scripts/html-generation/render-log";
 import { Asset, InlinePolicy } from "scripts/html-generation/assets/asset";
@@ -97,7 +97,7 @@ export class Webpage
 		if (forceExportToRoot) this.exportPath.reparse(this.name);
 		this.exportPath.setWorkingDirectory(this.destinationFolder.asString);
 
-		if (MainSettings.settings.makeNamesWebStyle)
+		if (Settings.settings.makeNamesWebStyle)
 		{
 			this.name = Path.toWebStyle(this.name);
 			this.exportPath.makeWebStyle();
@@ -111,7 +111,7 @@ export class Webpage
 	{
 		let htmlString = "<!DOCTYPE html>\n" + this.document?.documentElement.outerHTML;
 
-		if (MainSettings.settings.minifyHTML) 
+		if (Settings.settings.minifyHTML) 
 			htmlString = await minify(htmlString, { collapseBooleanAttributes: true, collapseWhitespace: true, minifyCSS: true, minifyJS: true, removeComments: true, removeEmptyAttributes: true, removeRedundantAttributes: true, removeScriptTypeAttributes: true, removeStyleLinkTypeAttributes: true, useShortDoctype: true });
 
 		return htmlString;
@@ -176,37 +176,37 @@ export class Webpage
 		layout.center.classList.add("show");
 
 
-		if (MainSettings.settings.exportPreset != ExportPreset.RawDocuments)
+		if (Settings.settings.exportPreset != ExportPreset.RawDocuments)
 		{
 			let rightSidebar = layout.right;
 			let leftSidebar = layout.left;
 
 			// inject graph view
-			if (MainSettings.settings.includeGraphView)
+			if (Settings.settings.includeGraphView)
 			{
 				GraphView.generateGraphEl(rightSidebar);
 			}
 
 			// inject outline
-			if (MainSettings.settings.includeOutline)
+			if (Settings.settings.includeOutline)
 			{
 				let headerTree = new OutlineTree(this, 1);
 				headerTree.class = "outline-tree";
 				headerTree.title = "Table Of Contents";
 				headerTree.showNestingIndicator = false;
-				headerTree.generateWithItemsClosed = MainSettings.settings.startOutlineCollapsed;
-				headerTree.minCollapsableDepth = MainSettings.settings.minOutlineCollapse;
+				headerTree.generateWithItemsClosed = Settings.settings.startOutlineCollapsed;
+				headerTree.minCollapsableDepth = Settings.settings.minOutlineCollapse;
 				await headerTree.generateTreeWithContainer(rightSidebar);
 			}
 
 			// inject darkmode toggle
-			if (MainSettings.settings.includeThemeToggle)
+			if (Settings.settings.includeThemeToggle)
 			{
 				HTMLGeneration.createThemeToggle(leftSidebar);
 			}
 
 			// inject search bar
-			if (MainSettings.settings.includeSearchBar)
+			if (Settings.settings.includeSearchBar)
 			{
 				let searchbarHTML = `<div class="search-input-container">
 <input enterkeyhint="search" type="search" spellcheck="false" placeholder="Search...">
@@ -217,7 +217,7 @@ export class Webpage
 			}
 
 			// inject file tree
-			if (MainSettings.settings.includeFileTree)
+			if (Settings.settings.includeFileTree)
 			{
 				leftSidebar.createDiv().outerHTML = this.website.fileTreeAsset.getHTMLInclude();
 			}
@@ -269,7 +269,7 @@ export class Webpage
 
 		// set custom line width on body
 		let body = this.document.body;
-		body.setAttribute("class", Website.getValidBodyClasses());
+		body.setAttribute("class", Website.validBodyClasses);
 
 		// create obsidian document containers
 		let renderInfo = await MarkdownRenderer.renderFile(this.source, body);
@@ -281,8 +281,8 @@ export class Webpage
 
 		if (this.viewType == "markdown")
 		{ 
-			contentEl.classList.toggle("allow-fold-headings", MainSettings.settings.allowFoldingHeadings);
-			contentEl.classList.toggle("allow-fold-lists", MainSettings.settings.allowFoldingLists);
+			contentEl.classList.toggle("allow-fold-headings", Settings.settings.allowFoldingHeadings);
+			contentEl.classList.toggle("allow-fold-lists", Settings.settings.allowFoldingLists);
 		}
 
 		if(this.sizerElement) this.sizerElement.style.paddingBottom = "";
@@ -306,7 +306,7 @@ export class Webpage
 		
 		// inline / outline images
 		let outlinedImages : Downloadable[] = [];
-		if (MainSettings.settings.inlineAssets) await this.inlineMedia();
+		if (Settings.settings.inlineAssets) await this.inlineMedia();
 		else outlinedImages = await this.exportMedia();
 		
 
@@ -322,7 +322,7 @@ export class Webpage
 
 		this.downloads.push(...dependencies_temp);
 
-		if(MainSettings.settings.makeNamesWebStyle)
+		if(Settings.settings.makeNamesWebStyle)
 		{
 			this.downloads.forEach((file) =>
 			{
@@ -510,7 +510,7 @@ export class Webpage
 	{
 		if (!this.document) return;
 
-		let rootPath = this.pathToRoot.copy.makeWebStyle(MainSettings.settings.makeNamesWebStyle).asString;
+		let rootPath = this.pathToRoot.copy.makeWebStyle(Settings.settings.makeNamesWebStyle).asString;
 
 		let titleInfo = Website.getTitle(this.source);
 		let domtitle = titleInfo.title;
@@ -562,7 +562,7 @@ export class Webpage
 
 				let targetPath = new Path(targetFile.path);
 				if (MarkdownRenderer.isConvertable(targetPath.extensionName)) targetPath.setExtension("html");
-				targetPath.makeWebStyle(MainSettings.settings.makeNamesWebStyle);
+				targetPath.makeWebStyle(Settings.settings.makeNamesWebStyle);
 
 				let finalHref = targetPath.makeUnixStyle() + targetHeader.replaceAll(" ", "_");
 				linkEl.setAttribute("href", finalHref);
@@ -629,7 +629,7 @@ export class Webpage
 				exportLocation = Asset.mediaPath.joinString(filePath.fullName);
 			}
 
-			exportLocation.makeWebStyle(MainSettings.settings.makeNamesWebStyle);
+			exportLocation.makeWebStyle(Settings.settings.makeNamesWebStyle);
 			
 			mediaEl.setAttribute("src", exportLocation.asString);
 

@@ -3,7 +3,8 @@ import { FileTree, FileTreeItem } from "./file-tree";
 import { Path } from "scripts/utils/path";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { Website } from "./website";
-import { MainSettings } from "scripts/settings/main-settings";
+import { Settings } from "scripts/settings/settings";
+import { HTMLGeneration } from "scripts/html-generation/html-generation-helpers";
 
 export class FilePickerTree extends FileTree
 {
@@ -47,7 +48,7 @@ export class FilePickerTree extends FileTree
 					if(child.isFolder) 
 					{
 						child.href = section.path;
-						if (MainSettings.settings.showDefaultTreeIcons) child.icon = Website.getIcon(MainSettings.settings.defaultFolderIcon);
+						if (Settings.settings.showDefaultTreeIcons) child.icon = HTMLGeneration.getIcon(Settings.settings.defaultFolderIcon);
 						child.itemClass = "mod-tree-folder"
 					}
 					else 

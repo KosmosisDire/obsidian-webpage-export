@@ -1,11 +1,11 @@
 import HTMLExportPlugin from "scripts/main"
-import { DEFAULT_SETTINGS, MainSettings } from "./main-settings"
+import { DEFAULT_SETTINGS, Settings } from "./settings"
 import { RenderLog } from "scripts/html-generation/render-log";
 
 
 export async function migrateSettings()
 {
-	if (MainSettings.settings.settingsVersion == HTMLExportPlugin.pluginVersion) return;
+	if (Settings.settings.settingsVersion == HTMLExportPlugin.pluginVersion) return;
 
 	var settingsToSave = 
 	[
@@ -24,24 +24,24 @@ export async function migrateSettings()
 
 	try
 	{
-		var savedSettings = JSON.parse(JSON.stringify(MainSettings.settings));
-		MainSettings.settings = DEFAULT_SETTINGS;
+		var savedSettings = JSON.parse(JSON.stringify(Settings.settings));
+		Settings.settings = DEFAULT_SETTINGS;
 		for (var i = 0; i < settingsToSave.length; i++)
 		{
 			var settingName = settingsToSave[i]; 
 			// @ts-ignore
-			MainSettings.settings[settingName] = savedSettings[settingName];
+			Settings.settings[settingName] = savedSettings[settingName];
 		}
 
-		MainSettings.settings.settingsVersion = HTMLExportPlugin.pluginVersion;
+		Settings.settings.settingsVersion = HTMLExportPlugin.pluginVersion;
 	}
 	catch (e)
 	{
 		RenderLog.error(e, "Failed to migrate settings, resetting to default settings.");
-		MainSettings.settings = DEFAULT_SETTINGS;
+		Settings.settings = DEFAULT_SETTINGS;
 	}
 
-	await MainSettings.saveSettings();
+	await Settings.saveSettings();
 
 	return;
 }
