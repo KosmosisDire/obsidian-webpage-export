@@ -78,50 +78,8 @@ function initGlobalObjects()
 	themeToggle = document.querySelector(".theme-toggle-input");
 }
 
-async function loadIncludes()
-{
-	if (location.protocol != "file:") 
-    {
-		// replace include tags with the contents of the file
-		let includeTags = document.querySelectorAll("include");
-		for (let i = 0; i < includeTags.length; i++)
-		{
-			let includeTag = includeTags[i];
-			let includePath = includeTag.getAttribute("src");
-			let includeResponse = await fetch(includePath);
-			if (!includeResponse.ok) 
-			{
-				console.log("Could not include file: " + includePath);
-				continue;
-			}
-			let includeText = await includeResponse.text();
-			includeTag.outerHTML = includeText;
-		}
-	}
-	else
-    {
-        let e = document.querySelectorAll("include");
-        if (e.length > 0)
-        {
-            var error = document.createElement("div");
-            error.textContent = "Web server exports relay on fetch() to load content, which is unsupported by the file:// protocol. Please use a web server to view this vault.";
-            error.style.position = "fixed";
-            error.style.top = "50%";
-            error.style.left = "50%";
-            error.style.transform = "translate(-50%, -50%)";
-            error.style.fontSize = "1.5em";
-            error.style.fontWeight = "bold";
-            error.style.textAlign = "center";
-            document.body.appendChild(error);
-            return;
-        }
-    }
-}
-
 async function initializePage(showInTree = true, changeURL = true)
 {
-	await loadIncludes();
-
 	focusedCanvasNode = null;
 	canvasWrapper = document.querySelector(".canvas-wrapper") ?? canvasWrapper;
 	canvas = document.querySelector(".canvas") ?? canvas;
@@ -150,6 +108,8 @@ async function initializePage(showInTree = true, changeURL = true)
 		onResize();
 		fullyInitialized = true;
 	}
+
+	setTimeout(() => documentContainer.classList.remove("hide"), 250);
 
 	// hide the right sidebar when viewing specific file types
 	if (rightSidebar && (embedType == "video" || embedType == "embed" || customType == "excalidraw" || customType == "kanban" || documentType == "canvas")) 
@@ -234,7 +194,6 @@ window.onpopstate = function(event)
 	console.log("Popped state: " + getURLPath());
 }
 
-
 //#endregion
 
 //#region -----------------       Resize        -----------------
@@ -287,10 +246,7 @@ function onResize(isInitial = false)
 		document.body.classList.toggle("is-tablet", false);
 		document.body.classList.toggle("is-phone", false);
 		sidebars.forEach(function (sidebar) { sidebar.collapse(false) });
-		
-		if(document.body.classList.contains("sidebars-always-collapsible")) sidebarGutters.forEach(function (gutter) { gutter.collapse(false) });
-		else sidebarGutters.forEach(function (gutter) { gutter.collapse(true) });
-
+		sidebarGutters.forEach(function (gutter) { gutter.collapse(false) });
 	}
 	else if (widthNowInRange((contentTargetWidth + sidebarTargetWidth) * 0.8, contentTargetWidth + sidebarTargetWidth * 2))
 	{
@@ -812,9 +768,8 @@ function parseURLParams()
 async function showLoading(loading)
 {
 	documentContainer.style.transitionDuration = "";
-	loadingIcon.classList.toggle("shown", loading);
+	loadingIcon.classList.toggle("show", loading);
 	documentContainer.classList.toggle("hide", loading);
-	documentContainer.classList.toggle("show", !loading);
 	if(loading)
 	{
 		// position loading icon in the center of the screen
@@ -1098,7 +1053,6 @@ function showHeader(headingWrapper, showParents = true, showChildren = false, fo
 
 function setupTrees(setupOnNode) 
 {
-	let collapsableItems = Array.from(setupOnNode.querySelectorAll(".tree-container .tree-item:has(.collapse-icon) > .tree-link"));
 
 	setupOnNode.querySelectorAll(".collapse-tree-button").forEach(function(button)
 	{
@@ -1133,15 +1087,20 @@ function setupTrees(setupOnNode)
 		});
 	});
 
-	collapsableItems.forEach(function(link)
+	let fileTreeClick = Array.from(setupOnNode.querySelectorAll(".tree-container.file-tree .tree-item:has(.collapse-icon) > .tree-link"));
+	let outlineTreeClick = Array.from(setupOnNode.querySelectorAll(".tree-container.outline-tree .tree-item:has(.collapse-icon) > .tree-link .collapse-icon"));
+	let collapsable = Array.from(fileTreeClick).concat(Array.from(outlineTreeClick));
+	
+	for (let item of collapsable)
 	{
-		link?.addEventListener("click", function(event)
+		let closestItem = item?.closest(".tree-item");
+		if (closestItem && item) item?.addEventListener("click", function(event)
 		{
 			event.preventDefault();
 			event.stopPropagation();
-			toggleTreeCollapsed(link);
+			toggleTreeCollapsed(closestItem);
 		});
-	});
+	}
 	
 }
 
@@ -2077,6 +2036,9 @@ function setupSidebars()
 			{
 				function clickOutsideCollapse(event)
 				{
+					// don't allow bubbling into sidebar
+					if (event.target.closest(".sidebar")) return;
+
 					sidebar.collapse(true);
 					document.body.removeEventListener("click", clickOutsideCollapse);
 				}
@@ -2127,7 +2089,7 @@ function setupSidebars()
 		gutter.collapsed = gutter.classList.contains("is-collapsed");
 		gutter.collapse = function (collapsed, force = false)
 		{
-			if(!force && document.body.classList.contains("sidebars-always-collapsible")) return;
+			if(!force) return;
 
 			this.classList.toggle("is-collapsed", collapsed);
 			this.collapsed = collapsed;
@@ -2146,14 +2108,6 @@ function setupSidebars()
 			icon.sidebar.toggleCollapse();
 		});
 	});
-
-	document.querySelectorAll(".sidebar-container").forEach(function (sidebarContainer)
-	{
-		sidebarContainer.addEventListener("click", function (event)
-		{
-			event.stopPropagation();
-		});
-	});
 }
 
 /**Get the computed target sidebar width in px*/
@@ -2170,9 +2124,9 @@ function setupThemeToggle()
 {
 	if (!themeToggle) return;
 
-	if (localStorage.getItem("theme_toggle") != null)
+	if (localStorage.getItem("theme") != null)
     {
-        setThemeToggle(localStorage.getItem("theme_toggle") == "true");
+        setThemeToggle(localStorage.getItem("theme") == "light");
     }
 
 	// set initial toggle state based on body theme class
@@ -2238,13 +2192,14 @@ function setupThemeToggle()
 			}, 100);
 		}
 
-		localStorage.setItem("theme_toggle", state ? "true" : "false");
+		localStorage.setItem("theme", state ? "light" : "dark");
 	}
 
     document.querySelector(".theme-toggle-input")?.addEventListener("change", event =>
 	{
-		console.log("Theme toggle changed to: " + !(localStorage.getItem("theme_toggle") == "true"));
-		setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
+		let newVal = !(localStorage.getItem("theme") == "light");
+		console.log("Theme toggle changed to: " + newVal);
+		setThemeToggle(newVal);
 	});
 }
 

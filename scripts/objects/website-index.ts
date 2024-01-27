@@ -206,7 +206,7 @@ export class WebsiteIndex
 		RenderLog.progress(totalCount, totalCount, "Indexing", "Cleanup index", "var(--color-blue)");
 		index.vacuum();
 
-		return new Asset("search-index.json", JSON.stringify(index), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary, 0);
+		return new Asset("search-index.json", JSON.stringify(index), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary);
 	}
 
 	public async createMetadata(): Promise<Asset | undefined>
@@ -267,7 +267,7 @@ export class WebsiteIndex
 			progressCount++;
 		}
 
-		return new Asset("metadata.json", JSON.stringify(metadata, null, 2), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary, 0);
+		return new Asset("metadata.json", JSON.stringify(metadata, null, 2), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary);
 	}
 
 	public async deleteOldFiles()

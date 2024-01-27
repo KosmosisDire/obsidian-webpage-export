@@ -1,8 +1,7 @@
 // -------------------------- GRAPH VIEW --------------------------
 var running = false;
-let batchFraction = 1;
-let minBatchFraction = 0.3;
-repulsionForce /= batchFraction;
+let batchFraction = 1; // how much of the graph to update per frame
+let minBatchFraction = 0.3; // batch fraction is updated dynamically, but never goes below this value
 let dt = 1;
 let targetFPS = 40;
 let startingCameraRect = {minX: -1, minY: -1, maxX: 1, maxY: 1};
@@ -11,8 +10,8 @@ let mouseWorldPos = { x: undefined, y: undefined };
 let scrollVelocity = 0;
 let averageFPS = targetFPS;
 
-const pixiApp = new PIXI.Application();
-var renderWorker = undefined;
+let pixiApp = undefined;
+let renderWorker = undefined;
 
 class GraphAssembly
 {
@@ -576,7 +575,10 @@ class GraphRenderWorker
 async function initializeGraphView()
 {
     if(running) return;
-    running = true;
+	running = true;
+
+	repulsionForce /= batchFraction; // compensate for batch fraction
+	pixiApp = new PIXI.Application();
 
     console.log("Module Ready");
     GraphAssembly.init(nodes);
@@ -994,5 +996,11 @@ function initializeGraphEvents()
 	});
 }
 
-Module['onRuntimeInitialized'] = initializeGraphView;
-setTimeout(() => Module['onRuntimeInitialized'](), 300);
+window.addEventListener("load", () => 
+{
+	waitLoadScripts(["pixi", "graph-data", "graph-render-worker", "graph-wasm"],  () =>
+	{
+		Module['onRuntimeInitialized'] = initializeGraphView;
+		setTimeout(() => Module['onRuntimeInitialized'](), 300);
+	});
+});

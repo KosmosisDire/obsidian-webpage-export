@@ -166,8 +166,6 @@ export class Webpage
 		let layout = this.generateWebpageLayout(this.contentElement);
 
 		this.document.body.appendChild(layout.container);
-		layout.center.classList.add("show");
-
 
 		if (Settings.settings.exportPreset != ExportPreset.RawDocuments)
 		{
@@ -325,87 +323,63 @@ export class Webpage
 		- div.webpage-container
 
 			- div.sidebar.sidebar-left
-				- div.sidebar-container
-					- div.sidebar-sizer
-						- div.sidebar-content-positioner
-							- div.sidebar-content
-				- div.sidebar-gutter
+				- div.sidebar-content
+				- div.sidebar-topbar
 					- div.clickable-icon.sidebar-collapse-icon
 						- svg
 
 			- div.document-container
 
 			- div.sidebar.sidebar-right
-				- div.sidebar-gutter
+				- div.sidebar-content
+				- div.sidebar-topbar
 						- div.clickable-icon.sidebar-collapse-icon
 							- svg
-				- div.sidebar-container
-					- div.sidebar-sizer
-						- div.sidebar-content-positioner
-							- div.sidebar-content
+				
 		*/
 
-		let iconSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M21 3H3C1.89543 3 1 3.89543 1 5V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19V5C23 3.89543 22.1046 3 21 3Z"></path><path d="M10 4V20"></path><path d="M4 7H7"></path><path d="M4 10H7"></path><path d="M4 13H7"></path></svg>`
-		
+		let collapseSidebarIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M21 3H3C1.89543 3 1 3.89543 1 5V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19V5C23 3.89543 22.1046 3 21 3Z"></path><path d="M10 4V20"></path><path d="M4 7H7"></path><path d="M4 10H7"></path><path d="M4 13H7"></path></svg>`
+
 		let pageContainer = this.document.createElement("div");
 		let leftSidebar = this.document.createElement("div");
-		let leftSidebarContainer = this.document.createElement("div");
-		let leftSidebarSizer = this.document.createElement("div");
-		let leftSidebarContentPositioner = this.document.createElement("div");
 		let leftContent = this.document.createElement("div");
 		let leftGutter = this.document.createElement("div");
 		let leftGutterIcon = this.document.createElement("div");
 		let documentContainer = this.document.createElement("div");
 		let rightSidebar = this.document.createElement("div");
-		let rightSidebarContainer = this.document.createElement("div");
-		let rightSidebarSizer = this.document.createElement("div");
-		let rightSidebarContentPositioner = this.document.createElement("div");
 		let rightContent = this.document.createElement("div");
 		let rightGutter = this.document.createElement("div");
 		let rightGutterIcon = this.document.createElement("div");
 
 		pageContainer.setAttribute("class", "webpage-container");
 
-		leftSidebar.setAttribute("class", "sidebar-left sidebar");
-		leftSidebarContainer.setAttribute("class", "sidebar-container");
-		leftSidebarSizer.setAttribute("class", "sidebar-sizer");
-		leftSidebarContentPositioner.setAttribute("class", "sidebar-content-positioner");
+		leftSidebar.setAttribute("class", "sidebar-left sidebar is-collapsed");
 		leftContent.setAttribute("class", "sidebar-content");
-		leftGutter.setAttribute("class", "sidebar-gutter");
+		leftGutter.setAttribute("class", "sidebar-topbar");
 		leftGutterIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
 
 		documentContainer.setAttribute("class", "document-container markdown-reading-view");
 
-		rightSidebar.setAttribute("class", "sidebar-right sidebar");
-		rightSidebarContainer.setAttribute("class", "sidebar-container");
-		rightSidebarSizer.setAttribute("class", "sidebar-sizer");
-		rightSidebarContentPositioner.setAttribute("class", "sidebar-content-positioner");
+		rightSidebar.setAttribute("class", "sidebar-right sidebar is-collapsed");
 		rightContent.setAttribute("class", "sidebar-content");
-		rightGutter.setAttribute("class", "sidebar-gutter");
+		rightGutter.setAttribute("class", "sidebar-topbar");
 		rightGutterIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
 
 		pageContainer.appendChild(leftSidebar);
 		pageContainer.appendChild(documentContainer);
 		pageContainer.appendChild(rightSidebar);
 
-		leftSidebar.appendChild(leftSidebarContainer);
-		leftSidebarContainer.appendChild(leftSidebarSizer);
-		leftSidebarSizer.appendChild(leftSidebarContentPositioner);
-		leftSidebarContentPositioner.appendChild(leftContent);
+		leftSidebar.appendChild(leftContent);
 		leftSidebar.appendChild(leftGutter);
 		leftGutter.appendChild(leftGutterIcon);
-		leftGutterIcon.innerHTML = iconSVG;
+		leftGutterIcon.innerHTML = collapseSidebarIcon;
 
 		documentContainer.appendChild(middleContent);
 
+		rightSidebar.appendChild(rightContent);
 		rightSidebar.appendChild(rightGutter);
 		rightGutter.appendChild(rightGutterIcon);
-		rightGutterIcon.innerHTML = iconSVG;
-		rightSidebar.appendChild(rightSidebarContainer);
-		rightSidebarContainer.appendChild(rightSidebarSizer);
-		rightSidebarSizer.appendChild(rightSidebarContentPositioner);
-		rightSidebarContentPositioner.appendChild(rightContent);
-		
+		rightGutterIcon.innerHTML = collapseSidebarIcon;
 
 		return {container: pageContainer, left: leftContent, right: rightContent, center: documentContainer};
 	}
@@ -517,6 +491,9 @@ export class Webpage
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
 		<meta charset="UTF-8">
 		`;
+		
+		head += `\n${AssetHandler.deferredCSS.getHTMLInclude()}\n`;
+		head += `\n${AssetHandler.deferredJS.getHTMLInclude()}\n`;
 
 		let downloads = AssetHandler.getAssetDownloads(true);
 		for (let i = 0; i < downloads.length; i++)
@@ -525,7 +502,7 @@ export class Webpage
 			head += download.getHTMLInclude(true);
 		}
 
-		head += `\n${AssetHandler.customHeadContent.getHTMLInclude()}\n`
+		head += `\n${AssetHandler.customHeadContent.getHTMLInclude()}\n`;
 
 		this.document.head.innerHTML = head;
 	}

@@ -6,256 +6,6 @@ body
 
 /*#endregion */
 
-/*#region Sidebars */
-
-.sidebar {
-    font-size: 14px;
-    display: contents;
-    z-index: 1;
-}
-
-.sidebar-container {
-    background-color: var(--background-secondary);
-    height: 100%;
-    z-index: inherit;
-    transition: width ease-in-out, flex-basis ease-in-out, min-width ease-in-out, background-color var(--color-fade-speed) ease-in-out, box-shadow ease-in-out;
-    transition-duration: 0.2s;
-    overflow: hidden;
-    flex: none;
-}
-
-.floating-sidebars .sidebar:not(.is-collapsed) .sidebar-container {
-    box-shadow: 0 0 50px 3em rgba(0,0,0,0.4);
-}
-
-.sidebar-gutter {
-    height: 100%;
-    width: 3em;
-    padding: 12px;
-    background-color: hsla(var(--color-accent-hsl), 0.25);
-    padding-left: calc(12px / 2);
-    padding-right: calc(12px / 2);
-    transition: width ease-in-out, padding-left ease-in-out, padding-right ease-in-out, background-color var(--color-fade-speed) ease-in-out, border ease-in-out;
-    transition-duration: 0.2s;
-    z-index: 1;
-    flex: none;
-    position: relative;
-	pointer-events: none;
-}
-
-.sidebar.is-collapsed .sidebar-gutter
-{
-	background-color: transparent;
-}
-
-.sidebar-left .sidebar-gutter 
-{
-    box-shadow: var(--divider-width) 0 0 0 var(--divider-color) inset;
-    border-radius: 0 var(--radius-l) var(--radius-l) 0;
-}
-
-.sidebar-right .sidebar-gutter {
-    border-right: solid var(--divider-width) var(--divider-color);
-    margin-left: auto;
-    border-radius: var(--radius-l) 0 0 var(--radius-l);
-}
-
-.sidebar-gutter.is-collapsed {
-    height: 100%;
-    width: 0 !important;
-    padding: var(--sidebar-margin);
-    padding-left: 0;
-    padding-right: 0;
-}
-
-.sidebar-sizer {
-    width: calc(100vw - var(--sidebar-width) - var(--content-width));
-    height: 100%;
-    transition: width 0.2s ease-in-out, min-width 0.2s ease-in-out;
-    min-width: var(--sidebar-width);
-}
-
-.sidebar.is-collapsed .sidebar-sizer {
-    width: 0;
-    min-width: 0;
-}
-
-.sidebar-left .sidebar-sizer {
-    float: left;
-}
-
-.sidebar-right .sidebar-sizer {
-    float: right;
-}
-
-.sidebar-content-positioner {
-    width: var(--sidebar-width);
-    height: 100%;
-}
-
-.sidebar-left .sidebar-content-positioner {
-    float: right;
-}
-
-.sidebar-right .sidebar-content-positioner {
-    float: left;
-}
-
-.sidebar-content {
-    width: var(--sidebar-width);
-    line-height: var(--line-height-tight);
-    display: flex;
-    flex-direction: column;
-    padding: var(--sidebar-margin);
-    height: 100%;
-    transition: width ease-in-out, padding-left ease-in-out, padding-right ease-in-out;
-    transition-duration: 0.2s;
-}
-
-.sidebar-left .sidebar-content {
-    float: left;
-}
-
-.sidebar-right .sidebar-content {
-    float: right;
-}
-
-.sidebar-section-header
-{
-  margin: 0 0 1em 0;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  font-weight: 600;
-}
-
-.clickable-icon.sidebar-collapse-icon {
-    width: 100%;
-    background-color: transparent;
-    height: 75px;
-    border-radius: 12px;
-    padding: 13%;
-    display: block;
-	max-width: 3em;
-	max-height: 3em;
-	color: var(--icon-color-focused);
-	pointer-events: all;
-}
-
-.clickable-icon.sidebar-collapse-icon svg.svg-icon {
-    width: 100%;
-	height: fit-content;
-}
-
-/*#endregion */
-
-/*#region Content / Markdown Preview View */
-
-body
-{
-	transition: background-color var(--color-fade-speed) ease-in-out;
-}
-
-.webpage-container {
-    display: flex;
-    flex-direction: row;
-    height: 100%;
-    width: 100%;
-    position: fixed;
-    align-items: stretch;
-    justify-content: center;
-}
-
-.document-container {
-	opacity: 0;
-    flex-basis: 100%;
-    width: 100%;
-    height: 100%;
-    z-index: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 1em;
-    max-width: 100%;
-	padding-bottom: 0;
-}
-
-.document-container.hide
-{
-	opacity: 0;
-	transition: opacity 0.2s ease-in-out;
-}
-
-.document-container.show
-{
-	opacity: 1;
-	transition: opacity 0.2s ease-in-out;
-}
-
-.floating-sidebars .document-container {
-    position: absolute;
-}
-
-.document-container > .markdown-preview-view {
-    display: flex;
-    padding-bottom: 30em;
-    align-items: flex-start;
-    justify-content: center;
-    background-color: var(--background-primary);
-    transition: background-color var(--color-fade-speed) ease-in-out;
-    border-top-right-radius: var(--window-radius, var(--radius-m));
-    border-top-left-radius: var(--window-radius, var(--radius-m));
-    overflow-x: hidden;
-    overflow-y: scroll;
-    z-index: 0;
-}
-
-.document-container > .markdown-preview-view > .markdown-preview-sizer 
-{
-    padding: 1.5em;
-    padding-bottom: 50vh;
-    width: 100%;
-    position: absolute;
-    max-width: var(--line-width);
-    flex-basis: var(--line-width);
-    transition: background-color var(--color-fade-speed) ease-in-out;
-	z-index: 0;
-}
-
-.view-content img:not([width]), .markdown-rendered img:not([width]) 
-{
-    max-width: 100%;
-    outline: none;
-}
-
-/* If the markdown view is displaying a raw file or embed then increase it's size to make everything as large as possible */
-.document-container > .view-content.embed {
-    display: flex;
-    padding: 1em;
-    height: 100%;
-    width: 100%;
-    align-items: center;
-    justify-content: center;
-}
-
-.document-container > .view-content.embed > *
-{
-	max-width: 100%;
-	max-height: 100%;
-	object-fit: contain;
-}
-
-/* For custom view exports */
-.document-container > .view-content
-{
-	overflow-x: scroll;
-	contain: content;
-	padding: 0;
-	margin: 0;
-	height: 100%;
-}
-
-/*#endregion */
-
 /*#region Tree */
 
 /* Base tree */
@@ -294,8 +44,7 @@ body .webpage-container .tree-container .tree-scroll-area
 	width: 100%;
 	height: 100%;
 	max-height: 100%;
-	overflow-y: scroll;
-	padding-right: calc(var(--collapse-arrow-size) / 2);
+	overflow-y: auto;
 	border-radius: min(var(--radius-s), 1.5em);
 	position: absolute;
 	margin: 0;
@@ -308,13 +57,15 @@ body .webpage-container .tree-container .tree-scroll-area
     flex-direction: column;
     align-items: flex-start;
     padding: 0;
+	padding-block: 1px;
 	overflow: hidden !important;
+	flex: none;
 }
 
 .tree-container .tree-item-children
 {
     padding: 0;
-    margin-left: 0;
+	margin: 0;
     border-left: none;
     width: 100%;
 }
@@ -331,20 +82,23 @@ body .webpage-container .tree-container .tree-scroll-area
 .tree-container .tree-item-icon > *
 {
 	color: var(--text-muted); 
-	padding-right: 0.3em;
 	font-family: emoji;
 }
 
-.tree-container .tree-item-icon :is(svg, img)
+.tree-container .tree-item-icon :is(svg,img) 
 {
-	height: 1em;
-	translate: 0px 1.5px;
+    height: 1em;
+    position: absolute;
+    inset: 50%;
+    translate: -50% -50%;
 }
 
 .tree-container .tree-item-icon
 {
-	width: 1.5em;
+	min-width: 1.6em;
+	max-width: 1.6em;
 	margin-left: 2px;
+	position: relative;
 }
 
 .tree-container .tree-item.mod-active > .tree-link > .tree-item-contents
@@ -379,14 +133,14 @@ body .webpage-container .tree-container .tree-scroll-area
 {
     width: 100%;
     height: 100%;
-	margin: 0;
-	padding: 0;
-    padding-left: calc(var(--tree-horizontal-spacing) * 2 + var(--collapse-arrow-size));
+	margin: 0 !important;
+	padding: 0 !important;
+    padding-left: calc(var(--tree-horizontal-spacing) * 2 + var(--collapse-arrow-size)) !important;
     border-radius: var(--radius-s);
     
-	display: flex;
-    flex-direction: row;
-    align-items: center;
+	display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
 	
     color: var(--nav-item-color);
     transition: background-color .1s;
@@ -428,8 +182,10 @@ body .webpage-container .tree-container .tree-scroll-area
 }
 
 .tree-container .collapse-icon {
-    margin-left: calc(0px - var(--collapse-arrow-size) - var(--tree-horizontal-spacing));
+    translate: calc(0px - var(--collapse-arrow-size) - var(--tree-horizontal-spacing) * 2) 0;
     position: absolute;
+    height: 100%;
+    padding: var(--tree-horizontal-spacing);
 }
 
 .tree-container .tree-item.mod-tree-folder > .tree-link > .collapse-icon
@@ -1102,7 +858,7 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 	pointer-events: none;
 }
 
-.loading-icon.shown
+.loading-icon.show
 {
 	opacity: 1;
 }
@@ -1137,7 +893,7 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 	animation: lds-ellipsis3 0.6s infinite;
 }
 
-.loading-icon:not(.shown) div
+.loading-icon:not(.show) div
 {
 	animation-play-state: paused;
 }
@@ -1204,10 +960,10 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 }
 
 /* Not a media query, but related to resizing */
-body.resizing *:not(body:not(.file-protocol) :is(.sidebar-sizer, .sidebar-gutter))
+/* body.resizing *:not(body:not(.file-protocol) :is(.sidebar-sizer, .sidebar-topbar))
 {
 	transition: none !important;
-}
+} */
 
 /*#endregion  */
 

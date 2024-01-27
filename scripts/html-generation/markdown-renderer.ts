@@ -671,8 +671,7 @@ export namespace MarkdownRenderer
 						<span class="html-render-submessage" style="margin-block-start: 2em;"></span>
 					</div>
 					<div class="html-render-log" style="display:none; flex-direction: column; border-left: 1px solid var(--divider-color); overflow-y: auto; width: 300px; max-width: 300px; min-width: 300px;">
-						<h1 style="color: var(--color-yellow);padding: 0.3em;background-color: rgba(100, 70, 20, 0.1);margin: 0;">Export Problem Log</h1>
-						<button class="html-render-log-copy-button" style="margin: 10px;width: fit-content;align-self: center;">Copy Log to Clipboard</button>
+						<h1 style="color: var(--color-yellow);padding: 0.3em;background-color: rgba(100, 70, 20, 0.1);margin: 0;">Export Log</h1>
 					</div>
 				</div>
 			</div>
@@ -680,16 +679,6 @@ export namespace MarkdownRenderer
 
 			// @ts-ignore
 			renderLeaf.parent.parent.containerEl.appendChild(loadingContainer);
-
-			let copyButton = loadingContainer.querySelector("button.html-render-log-copy-button");
-			if (copyButton)
-			{
-				copyButton.addEventListener("click", () => 
-				{
-					navigator.clipboard.writeText(RenderLog.fullLog);
-					new Notice("Copied to clipboard! Please paste this into your github issue as is.");
-				});
-			}
 		}
 	}
 

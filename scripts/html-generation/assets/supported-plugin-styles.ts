@@ -40,6 +40,8 @@ export class SupportedPluginStyles extends Asset
                     }
                 }
             }
+
+			this.content += "\n\n /* ---- */\n\n";
         }
 
 		this.modifiedTime = Date.now();
@@ -69,6 +71,11 @@ export class SupportedPluginStyles extends Asset
 		// @ts-ignore
 		let styleID = stylesheet.ownerNode.id;
 
-		return styleID.contains("svelte") || this.getStylesheetContent(stylesheet).contains("svelte");
+		if (styleID.contains("svelte")) return true;
+
+		let sheetContent = this.getStylesheetContent(stylesheet);
+		if (sheetContent.length < 5000 && sheetContent.contains(".svelte-")) return true;
+
+		return false;
 	}
 }

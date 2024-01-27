@@ -35,6 +35,7 @@ export enum LoadMethod
 {
 	Default,
 	Async,
+	Defer
 }
 
 export class Asset extends Downloadable 
@@ -96,6 +97,7 @@ export class Asset extends Downloadable
 
 	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async)
     {
+		if(Settings.settings.makeNamesWebStyle) filename = Path.toWebStyle(filename);
         super(filename, content, Asset.typeToPath(type));
         this.type = type;
         this.inlinePolicy = inlinePolicy;
@@ -179,6 +181,7 @@ export class Asset extends Downloadable
 
     public static filterBodyClasses(inputCSS: string): string
     {
+		return inputCSS; // disabled because it breaks some themes
         // replace all selectors that change based on the body's class to always be applied
         let matchCount = 1;
         while (matchCount != 0)
@@ -209,19 +212,21 @@ export class Asset extends Downloadable
 		try
 		{
 			// add script or style tags so that minifier can minify it as html
-			if (asJavascript) content = `<script>${content}</script>`;
-			else content = `<style>${content}</style>`;
+			if (asJavascript) tempContent = `<script>${tempContent}</script>`;
+			else tempContent = `<style>${tempContent}</style>`;
 			
-			content = await runMinify(content, { collapseBooleanAttributes: true, minifyCSS: true, minifyJS: true, removeComments: true, removeEmptyAttributes: true, removeRedundantAttributes: true, removeScriptTypeAttributes: true, removeStyleLinkTypeAttributes: true, useShortDoctype: true});
+			tempContent = await runMinify(tempContent, { minifyCSS: true, minifyJS: true, removeComments: true});
 
 			// remove the <script> or <style> tags
-			content = content.replace("<script>", "").replace("</script>", "").replace("<style>", "").replace("</style>", "");
+			content = tempContent.replace("<script>", "").replace("</script>", "").replace("<style>", "").replace("</style>", "");
 		}
 		catch (e)
 		{
 			RenderLog.warning("Unable to minify " + (asJavascript ? "JS" : "CSS") + " file.");
-			content = tempContent;
-		}
+			// remove whitespace manually
+			content = content.replace(/[\n\r]+/g, "");
+			return content;
+		} 
 
 		if (content == "") content = " ";
 
@@ -256,7 +261,9 @@ export class Asset extends Downloadable
                 case AssetType.Style:
                     return `<style>${this.content}</style>`;
                 case AssetType.Script:
-                    return `<script>${this.content}</script>`;
+					let attr = this.loadMethod == LoadMethod.Defer ? "defer" : "async";
+					if (this.loadMethod == LoadMethod.Default) attr = "";
+                    return `<script ${attr}>${this.content}</script>`;
 				case AssetType.Media:
 					return `<${this.getTag()} src="${this.getContentBase64()}">`;
                 case AssetType.HTML:
@@ -273,6 +280,7 @@ export class Asset extends Downloadable
             let path = this.getAssetPath().asString;
 
 			let include = "";
+			let attr = "";
             switch(this.type)
             {
                 case AssetType.Style:
@@ -284,18 +292,14 @@ export class Asset extends Downloadable
 					}
                     return include;
                 case AssetType.Script:
-					include = `<script src="${path}"></script>`;
-					if (this.loadMethod == LoadMethod.Async)
-					{
-						include = `<script async src="${path}"></script>`;
-					}
+					attr = this.loadMethod == LoadMethod.Defer ? "defer" : "async";
+					if (this.loadMethod == LoadMethod.Default) attr = "";
+					include = `<script ${attr} id="${this.relativeDownloadPath.basename + "-script"}" src="${path}" onload='this.onload=null;this.setAttribute(\"loaded\", \"true\")'></script>`;
                     return include;
                 case AssetType.Media:
-					include = `<${this.getTag()} src="${path}">`;
-					if (this.loadMethod == LoadMethod.Async)
-					{
-						include = `<${this.getTag()} src="${path}" loading="lazy">`;
-					}
+					attr = this.loadMethod == LoadMethod.Defer ? "loading='eager'" : "loading='lazy'";
+					if (this.loadMethod == LoadMethod.Default) attr = "";
+					include = `<${this.getTag()} src="${path}" ${attr} />`;
                     return include;
                 case AssetType.Font:
 					include = `<style>@font-face{font-family:'${this.filename}';src:url('${path}') format('woff2');}</style>`;

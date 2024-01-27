@@ -90,14 +90,6 @@ export namespace HTMLGeneration
 				afterEl.textContent = "...";
 			}
 
-			// the before element is for future styling
-			if (!hEl.querySelector(".heading-before")) 
-			{
-				let beforeEl = hEl.createDiv({ cls: "heading-before" });
-				hEl.prepend(beforeEl);
-				beforeEl.textContent = "";
-			}
-
 			let children = header.createDiv({ cls: "heading-children" });
 
 			makeHeaderTree(header, children);
@@ -143,8 +135,6 @@ export namespace HTMLGeneration
 
 		let bodyClasses = document.body.classList;
 		let validClasses = "";
-
-		if (Settings.settings.sidebarsAlwaysCollapsible) validClasses += " sidebars-always-collapsible ";
 		validClasses += " publish ";
 		
 		// keep body classes that are referenced in the styles

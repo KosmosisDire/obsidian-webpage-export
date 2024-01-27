@@ -1,0 +1,226 @@
+
+/*#region Sidebars */
+
+.sidebar {
+    height: 100%;
+    min-width: var(--sidebar-width);
+    max-width: var(--sidebar-width);
+    font-size: 14px;
+    z-index: 10;
+
+    position: relative;
+    overflow: hidden;
+	
+    transition: min-width ease-in-out, max-width ease-in-out;
+	transition-duration: .2s;
+}
+
+.sidebar-left {
+    left: 0;
+}
+
+.sidebar-right {
+    right: 0;
+}
+
+.sidebar.is-collapsed {
+    min-width: 0;
+    max-width: 0;
+}
+
+body.floating-sidebars .sidebar {
+	position: absolute;
+}
+
+.sidebar-content {
+    height: 100%;
+    min-width: var(--sidebar-width);
+	top: 0;
+    padding: var(--sidebar-margin);
+    line-height: var(--line-height-tight);
+    background-color: var(--background-secondary);
+	transition: background-color var(--color-fade-speed) ease-in-out;
+
+    position: absolute;
+}
+
+.sidebar-left .sidebar-content
+{
+    left: 0;
+    border-right: 1px solid var(--divider-color);
+    border-top-right-radius: var(--radius-l);
+	border-bottom-right-radius: var(--radius-l);
+}
+
+.sidebar-right .sidebar-content 
+{
+    right: 0;
+    border-left: 1px solid var(--divider-color);
+	border-top-left-radius: var(--radius-l);
+	border-bottom-left-radius: var(--radius-l);
+	padding-top: 4em;
+}
+
+.sidebar-topbar {
+    height: 2em;
+    width: var(--sidebar-width);
+    top: var(--sidebar-margin);
+    padding-inline: var(--sidebar-margin);
+    z-index: 1;
+
+    position: fixed;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+
+    pointer-events: none;
+    transition: width ease-in-out;
+    transition-duration: inherit;
+}
+
+.sidebar.is-collapsed .sidebar-topbar {
+    width: calc(2.3em + var(--sidebar-margin) * 2);
+}
+
+.sidebar .sidebar-topbar.is-collapsed
+{
+	width: 0;
+}
+
+.sidebar-left .sidebar-topbar {
+    flex-direction: row-reverse;
+	left: 0;
+}
+
+.sidebar-right .sidebar-topbar {
+    flex-direction: row;
+	right: 0;
+}
+
+.clickable-icon.sidebar-collapse-icon {
+    background-color: transparent;
+    color: var(--icon-color-focused);
+    pointer-events: all;
+    padding: 0;
+    margin: 0;
+    height: 100%;
+    margin-inline: 0.14em;
+}
+
+.sidebar-left .clickable-icon.sidebar-collapse-icon {
+    transform: rotateY(180deg);
+}
+
+.clickable-icon.sidebar-collapse-icon svg.svg-icon {
+    width: 100%;
+	height: 100%;
+}
+
+
+.sidebar-section-header
+{
+  margin: 0 0 1em 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+/*#endregion */
+
+/*#region Content / Markdown Preview View */
+
+body
+{
+	transition: background-color var(--color-fade-speed) ease-in-out;
+}
+
+.webpage-container {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    width: 100%;
+    position: fixed;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.document-container {
+	opacity: 1;
+    flex-basis: 100%;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1em;
+    max-width: 100%;
+	padding-bottom: 0;
+	transition: opacity 0.2s ease-in-out;
+}
+
+.hide
+{
+	opacity: 0;
+}
+
+.document-container > .markdown-preview-view {
+    display: flex;
+    padding-bottom: 30em;
+    align-items: flex-start;
+    justify-content: center;
+    background-color: var(--background-primary);
+    transition: background-color var(--color-fade-speed) ease-in-out;
+    border-top-right-radius: var(--window-radius, var(--radius-m));
+    border-top-left-radius: var(--window-radius, var(--radius-m));
+    overflow-x: hidden;
+    overflow-y: scroll;
+    z-index: 0;
+}
+
+.document-container > .markdown-preview-view > .markdown-preview-sizer 
+{
+    padding: 1.5em;
+    padding-bottom: 50vh;
+    width: 100%;
+    position: absolute;
+    max-width: var(--line-width);
+    flex-basis: var(--line-width);
+    transition: background-color var(--color-fade-speed) ease-in-out;
+	z-index: 0;
+}
+
+.view-content img:not([width]), .markdown-rendered img:not([width]) 
+{
+    max-width: 100%;
+    outline: none;
+}
+
+/* If the markdown view is displaying a raw file or embed then increase it's size to make everything as large as possible */
+.document-container > .view-content.embed {
+    display: flex;
+    padding: 1em;
+    height: 100%;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.document-container > .view-content.embed > *
+{
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+}
+
+/* For custom view exports */
+.document-container > .view-content
+{
+	overflow-x: scroll;
+	contain: content;
+	padding: 0;
+	margin: 0;
+	height: 100%;
+}
+
+/*#endregion */

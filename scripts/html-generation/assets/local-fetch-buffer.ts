@@ -24,6 +24,8 @@ export class FetchBuffer extends Asset
 
 			this.url = this.url.makeUnixStyle().asString;
 		}
+
+		if (this.url.startsWith("http") && this.url.split(".").length <= 2) return;
 		
 		let res: Response;
 		try

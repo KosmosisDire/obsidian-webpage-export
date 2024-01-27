@@ -31,7 +31,7 @@ export class GlobalVariableStyles extends Asset
 			--collapse-arrow-size: 11px;
 			--tree-horizontal-spacing: 0.6em;
 			--tree-vertical-spacing: 0.6em;
-			--sidebar-margin: 24px;
+			--sidebar-margin: 12px;
         }
 
 		body

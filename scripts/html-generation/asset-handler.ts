@@ -6,6 +6,8 @@ import tinyColorJS from "assets/tinycolor.txt.js";
 import pixiJS from "assets/pixi.txt.js";
 import websiteJS from "assets/website.txt.js";
 import webpageStyles from "assets/plugin-styles.txt.css";
+import deferredJS from "assets/deferred.txt.js";
+import deferredCSS from "assets/deferred.txt.css";
 
 import { Path } from "scripts/utils/path.js";
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./assets/asset.js";
@@ -41,16 +43,18 @@ export class AssetHandler
 	public static mathjaxStyles: MathjaxStyles = new MathjaxStyles();
 	public static globalDataStyles: GlobalVariableStyles = new GlobalVariableStyles();
 	public static supportedPluginStyles: SupportedPluginStyles = new SupportedPluginStyles();
-	public static websiteStyles: Asset = new Asset("main-styles.css", webpageStyles, AssetType.Style, InlinePolicy.Auto, true, Mutability.Static);
+	public static websiteStyles: Asset = new Asset("main-styles.css", webpageStyles, AssetType.Style, InlinePolicy.Auto, true, Mutability.Static, LoadMethod.Async);
+	public static deferredCSS: Asset = new Asset("deferred.css", deferredCSS, AssetType.Style, InlinePolicy.AlwaysInline, true, Mutability.Static, LoadMethod.Defer);
 
 	// scripts
-	public static websiteJS: Asset = new Asset("webpage.js", websiteJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
+	public static websiteJS: Asset = new Asset("webpage.js", websiteJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, LoadMethod.Default);
 	public static graphViewJS: Asset = new Asset("graph-view.js", graphViewJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
 	public static graphWASMJS: Asset = new Asset("graph-wasm.js", graphWASMJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
 	public static graphWASM: Asset = new Asset("graph-wasm.wasm", Buffer.from(graphWASM), AssetType.Script, InlinePolicy.None, false, Mutability.Static);
 	public static renderWorkerJS: Asset = new Asset("graph-render-worker.js", renderWorkerJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
 	public static tinyColorJS: Asset = new Asset("tinycolor.js", tinyColorJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
 	public static pixiJS: Asset = new Asset("pixi.js", pixiJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
+	public static deferredJS: Asset = new Asset("deferred.js", deferredJS, AssetType.Script, InlinePolicy.AlwaysInline, true, Mutability.Static, LoadMethod.Defer);
 
 	// other
 	public static favicon: Favicon = new Favicon();
@@ -73,7 +77,7 @@ export class AssetHandler
 		this.allAssets.forEach(async (asset) => await asset.load());
 		
 		let graphViewPath = this.graphViewJS.getAssetPath();
-		this.graphViewJS.getHTMLInclude = () => `<script type="module" src="${graphViewPath}"></script>`;
+		this.graphViewJS.getHTMLInclude = () => `<script type="module" async id="graph-view-script" src="${graphViewPath}"></script>`;
 	}
 
 	public static async reloadAssets()
@@ -134,6 +138,9 @@ export class AssetHandler
 		for (let urlObj of urls)
 		{
 			let url = urlObj[1] || urlObj[2];
+			url = url.trim();
+
+			if (url == "") continue;
 
 			if (url.startsWith("data:"))
 			{
@@ -166,7 +173,7 @@ export class AssetHandler
 					let filename = `${dataHash}.${extension}`;
 					let type = Asset.extentionToType(extension);
 
-					let childAsset = new Asset(filename, buffer, type, InlinePolicy.None, false, mut, 0);
+					let childAsset = new Asset(filename, buffer, type, InlinePolicy.None, false, mut);
 					await childAsset.load();
 
 					if (childAsset.content == undefined || childAsset.content == null || childAsset.content.length == 0)
@@ -183,7 +190,7 @@ export class AssetHandler
 
 			let path = new Path(url);
 			let type = Asset.extentionToType(path.extension);
-			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.None, false, mut, 0);
+			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.None, false, mut);
 			await childAsset.load();
 			
 			if (childAsset.content == undefined || childAsset.content == null || childAsset.content.length == 0)
@@ -199,10 +206,14 @@ export class AssetHandler
 			}
 			else
 			{
+				childAsset.setRelativeDownloadDirectory(childAsset.relativeDownloadDirectory.makeWebStyle(Settings.settings.makeNamesWebStyle));
+				if (Settings.settings.makeNamesWebStyle) childAsset.setFilename(Path.toWebStyle(childAsset.filename));
+
 				let newPath = childAsset.getAssetPath(asset.getAssetPath());
 				content = content.replaceAll(url, newPath.asString);
 			}
 		}
+
 
 		return content;
 	}

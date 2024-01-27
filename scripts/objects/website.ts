@@ -69,18 +69,18 @@ export class Website
 
 		if (Settings.settings.includeGraphView)
 		{
-			this.graphDataAsset = new Asset("graph-data.js", this.globalGraph.getExportData(), AssetType.Script, InlinePolicy.Auto, true, Mutability.Temporary, 0);
+			this.graphDataAsset = new Asset("graph-data.js", this.globalGraph.getExportData(), AssetType.Script, InlinePolicy.Auto, true, Mutability.Temporary);
 			this.graphDataAsset.load();
 		}
 
 		if (Settings.settings.includeFileTree)
 		{
-			this.fileTreeAsset = new Asset("file-tree.html", this.fileTreeHtml, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary, 0);
+			this.fileTreeAsset = new Asset("file-tree.html", this.fileTreeHtml, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
 			this.fileTreeAsset.load();
 		}
 
 		// add body classes as an html asset
-		new Asset("body-classes.html", Website.validBodyClasses, AssetType.HTML, InlinePolicy.None, true, Mutability.Temporary, 0);
+		new Asset("body-classes.html", Website.validBodyClasses, AssetType.HTML, InlinePolicy.None, true, Mutability.Temporary);
 
 		await this.index.init();
 	}

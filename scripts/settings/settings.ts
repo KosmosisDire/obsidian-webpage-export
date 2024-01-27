@@ -32,7 +32,6 @@ export interface SettingsData
 	makeNamesWebStyle: boolean;
 	allowFoldingHeadings: boolean;
 	allowFoldingLists: boolean;
-	sidebarsAlwaysCollapsible: boolean;
 	addFilenameTitle: boolean;
 	minifyHTML: boolean;
 	documentWidth: string;
@@ -93,7 +92,6 @@ export const DEFAULT_SETTINGS: SettingsData =
 	makeNamesWebStyle: true,
 	allowFoldingHeadings: true,
 	allowFoldingLists: true,
-	sidebarsAlwaysCollapsible: false,
 	addFilenameTitle: true,
 	minifyHTML: true,
 	documentWidth: "50em",
@@ -556,16 +554,6 @@ export class Settings extends PluginSettingTab
 					.setValue(Settings.settings.allowFoldingLists)
 					.onChange(async (value) => {
 						Settings.settings.allowFoldingLists = value;
-						await Settings.saveSettings();
-					}));
-
-			new Setting(contentEl)
-				.setName('Sidebars Always Collapsible')
-				.setDesc('Always allow the sidebars to be collapsed regardless of the space on the screen. By default the sidebars adjust whether they can be collapsed based on the space available.')
-				.addToggle((toggle) => toggle
-					.setValue(Settings.settings.sidebarsAlwaysCollapsible)
-					.onChange(async (value) => {
-						Settings.settings.sidebarsAlwaysCollapsible = value;
 						await Settings.saveSettings();
 					}));
 

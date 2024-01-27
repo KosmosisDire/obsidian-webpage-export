@@ -34,7 +34,8 @@ export class SnippetStyles extends Asset
     override async load()
     {
         let enabledSnippets = SnippetStyles.getEnabledSnippets();
-        if (enabledSnippets == this.lastEnabledSnippets) return;
+        // if (enabledSnippets == this.lastEnabledSnippets) return; 
+		// we can't rely on this because snippets can change
 
         let snippetsList = await SnippetStyles.getStyleSnippetsContent();
         let snippets = "\n";
