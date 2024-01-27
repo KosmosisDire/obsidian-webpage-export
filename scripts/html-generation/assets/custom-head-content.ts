@@ -9,7 +9,7 @@ export class CustomHeadContent extends Asset
 
     constructor()
     {
-        super("custom-head-content.html", "", AssetType.HTML, InlinePolicy.Auto, false, Mutability.Dynamic, 100);
+        super("custom-head-content.html", "", AssetType.HTML, InlinePolicy.Auto, false, Mutability.Dynamic);
     }
     
     override async load()

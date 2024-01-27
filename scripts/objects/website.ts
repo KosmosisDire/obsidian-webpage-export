@@ -64,6 +64,7 @@ export class Website
 			tempTreeContainer.remove();
 		}
 
+		// wipe all temporary assets and reload dynamic assets
 		await AssetHandler.reloadAssets();
 
 		if (Settings.settings.includeGraphView)
@@ -78,11 +79,15 @@ export class Website
 			this.fileTreeAsset.load();
 		}
 
+		// add body classes as an html asset
+		new Asset("body-classes.html", Website.validBodyClasses, AssetType.HTML, InlinePolicy.None, true, Mutability.Temporary, 0);
+
 		await this.index.init();
 	}
 
 	public async createWithFiles(files: TFile[], destination: Path): Promise<Website | undefined>
 	{
+		console.log("Creating website with files: ", files);
 		this.batchFiles = files;
 		this.destination = destination;
 		await this.initExport();
@@ -100,43 +105,33 @@ export class Website
 			let shouldExportPage = (useIncrementalExport && this.index.isFileChanged(file)) || !useIncrementalExport;
 			if (!shouldExportPage) continue;
 			
-			if (!webpage.isConvertable) webpage.downloads.push(await webpage.getSelfDownloadable());
 			let createdPage = await webpage.create();
-			if(!createdPage) 
-			{
-				if (MarkdownRenderer.cancelled) return undefined;
-				
-				continue;
-			}
+			if(!createdPage) continue;
 
 			this.webpages.push(webpage);
-			this.downloads.push(...webpage.downloads);
+			this.downloads.push(...webpage.dependencies);
+			this.downloads.push(await webpage.getSelfDownloadable());
 			this.dependencies.push(...webpage.dependencies);
 		}
 
-		// if there are no webpages then just export dependencies in case they changed
-		if (this.webpages.length == 0)
-		{
-			let assetDownloads = AssetHandler.getAssetDownloads();
-			this.dependencies.push(...assetDownloads);
-			this.downloads.push(...assetDownloads);
-		}
+		this.dependencies.push(...AssetHandler.getAssetDownloads());
+		this.downloads.push(...AssetHandler.getAssetDownloads());
 
+		this.filterDownloads(true);
 		this.index.build();
-		
 		this.filterDownloads();
-
+		
 		return this;
 	}
-
-	private filterDownloads()
+	
+	private filterDownloads(onlyDuplicates: boolean = false)
 	{
 		// remove duplicates from the dependencies and downloads
 		this.dependencies = this.dependencies.filter((file, index) => this.dependencies.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath) == index);
 		this.downloads = this.downloads.filter((file, index) => this.downloads.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath) == index);
-
+		
 		// remove files that have not been modified since last export
-		if (!this.index.shouldApplyIncrementalExport()) return;
+		if (!this.index.shouldApplyIncrementalExport() || onlyDuplicates) return;
 		
 		let localThis = this;
 		function filterFunction(file: Downloadable)
@@ -145,23 +140,29 @@ export class Website
 			if (file.filename.endsWith(".html")) return true;
 
 			// always exclude fonts if they exist
-			if (localThis.index.hasFileByPath(file.relativeDownloadPath.asString) &&
+			if 
+			(
+				localThis.index.hasFileByPath(file.relativeDownloadPath.asString) &&
 				file.filename.endsWith(".woff") || 
 				file.filename.endsWith(".woff2") ||
 				file.filename.endsWith(".otf") ||
-				file.filename.endsWith(".ttf"))
-				{
-					console.log("Skipping font: " + file.filename);
-					return false;
-				}
+				file.filename.endsWith(".ttf")
+			)
+			{
+				return false;
+			}
+
+			// always include files that have been modified since last export
+			let metadata = localThis.index.getMetadataForPath(file.relativeDownloadPath.copy.makeUnixStyle().asString);
+			if (metadata && (file.modifiedTime > metadata.modifiedTime || metadata.sourceSize != file.content.length)) 
+				return true;
 			
-			console.log("Skipping file: " + file.filename);
+			console.log("Filtering file: ", file);
 			return false;
 		}
 
 		this.dependencies = this.dependencies.filter(filterFunction);
 		this.downloads = this.downloads.filter(filterFunction);
-		
 	}
 
 	public static getTitle(file: TFile): { title: string, icon: string, isDefaultIcon: boolean }
@@ -170,10 +171,10 @@ export class Website
 		const { titleProperty } = Settings.settings;
 		const fileCache = app.metadataCache.getFileCache(file);
 		const frontmatter = fileCache?.frontmatter;
-		const titleFromFrontmatter = frontmatter?.[titleProperty];
+		const titleFromFrontmatter = frontmatter?.[titleProperty] ?? frontmatter?.banner_header; // banner plugin support
 		const title = titleFromFrontmatter ?? file.basename;
 
-		let iconProperty = frontmatter?.icon ?? frontmatter?.sticker;
+		let iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support
 		let isDefaultIcon = false;
 		if (!iconProperty && Settings.settings.showDefaultTreeIcons) 
 		{

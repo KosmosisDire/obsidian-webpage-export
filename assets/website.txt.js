@@ -104,7 +104,7 @@ async function loadIncludes()
         if (e.length > 0)
         {
             var error = document.createElement("div");
-            error.textContent = "Web-server style exports cannot be opened locally. They must be hosted on a web server.";
+            error.textContent = "Web server exports relay on fetch() to load content, which is unsupported by the file:// protocol. Please use a web server to view this vault.";
             error.style.position = "fixed";
             error.style.top = "50%";
             error.style.left = "50%";
@@ -148,16 +148,6 @@ async function initializePage(showInTree = true, changeURL = true)
 
 		window.addEventListener('resize', () => onResize());
 		onResize();
-		document.body.classList.toggle("post-load", true);
-		document.body.classList.toggle("loading", false);
-		setTimeout(function() 
-		{ 
-			document.body.classList.toggle("loaded", true);
-			document.body.classList.toggle("post-load", false); 
-		}, 2000);
-
-		// insert 
-
 		fullyInitialized = true;
 	}
 

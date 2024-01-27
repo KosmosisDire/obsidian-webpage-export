@@ -8,7 +8,7 @@ import websiteJS from "assets/website.txt.js";
 import webpageStyles from "assets/plugin-styles.txt.css";
 
 import { Path } from "scripts/utils/path.js";
-import { Asset, AssetType, InlinePolicy, Mutability } from "./assets/asset.js";
+import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./assets/asset.js";
 import { ObsidianStyles } from "./assets/obsidian-styles.js";
 import { OtherPluginStyles } from "./assets/other-plugin-styles.js";
 import { ThemeStyles } from "./assets/theme-styles.js";
@@ -41,16 +41,16 @@ export class AssetHandler
 	public static mathjaxStyles: MathjaxStyles = new MathjaxStyles();
 	public static globalDataStyles: GlobalVariableStyles = new GlobalVariableStyles();
 	public static supportedPluginStyles: SupportedPluginStyles = new SupportedPluginStyles();
-	public static websiteStyles: Asset = new Asset("main-styles.css", webpageStyles, AssetType.Style, InlinePolicy.Auto, true, Mutability.Static, 14);
+	public static websiteStyles: Asset = new Asset("main-styles.css", webpageStyles, AssetType.Style, InlinePolicy.Auto, true, Mutability.Static);
 
 	// scripts
-	public static websiteJS: Asset = new Asset("webpage.js", websiteJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, 28);
-	public static graphViewJS: Asset = new Asset("graph-view.js", graphViewJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, 20);
-	public static graphWASMJS: Asset = new Asset("graph-wasm.js", graphWASMJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, 22);
-	public static graphWASM: Asset = new Asset("graph-wasm.wasm", Buffer.from(graphWASM), AssetType.Script, InlinePolicy.None, false, Mutability.Static, 24);
-	public static renderWorkerJS: Asset = new Asset("graph-render-worker.js", renderWorkerJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, 26);
-	public static tinyColorJS: Asset = new Asset("tinycolor.js", tinyColorJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, 18);
-	public static pixiJS: Asset = new Asset("pixi.js", pixiJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, 16);
+	public static websiteJS: Asset = new Asset("webpage.js", websiteJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
+	public static graphViewJS: Asset = new Asset("graph-view.js", graphViewJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
+	public static graphWASMJS: Asset = new Asset("graph-wasm.js", graphWASMJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
+	public static graphWASM: Asset = new Asset("graph-wasm.wasm", Buffer.from(graphWASM), AssetType.Script, InlinePolicy.None, false, Mutability.Static);
+	public static renderWorkerJS: Asset = new Asset("graph-render-worker.js", renderWorkerJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
+	public static tinyColorJS: Asset = new Asset("tinycolor.js", tinyColorJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
+	public static pixiJS: Asset = new Asset("pixi.js", pixiJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
 
 	// other
 	public static favicon: Favicon = new Favicon();
@@ -64,7 +64,7 @@ export class AssetHandler
 		
 		this.customHeadContent = new CustomHeadContent();
 		
-		this.allAssets.sort((a, b) => a.loadPriority - b.loadPriority);
+		this.allAssets.sort((a, b) => a.loadMethod - b.loadMethod);
 		
 		// by default all static assets have a modified time the same as main.js
 		this.mainJsModTime = this.vaultPluginsPath.joinString("webpage-html-export/main.js").stat?.mtimeMs ?? 0;
@@ -112,7 +112,7 @@ export class AssetHandler
 		// remove duplicates
 		downloadAssets = downloadAssets.filter((asset, index, self) => self.findIndex((t) => t.relativeDownloadPath.asString == asset.relativeDownloadPath.asString) === index);
 
-		downloadAssets.sort((a, b) => a.loadPriority - b.loadPriority);
+		// downloadAssets.sort((a, b) => a.loadPriority - b.loadPriority);
 		return downloadAssets;
 	}
 

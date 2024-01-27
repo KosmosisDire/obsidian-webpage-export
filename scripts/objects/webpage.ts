@@ -53,20 +53,13 @@ export class Webpage
 	public document?: Document;
 
 	/**
-	 * The external files that need to be downloaded for this file to work including the file itself.
-	 */
-	public downloads: Downloadable[] = [];
-
-	/**
 	 * The external files that need to be downloaded for this file to work NOT including the file itself.
 	 */
 	public dependencies: Downloadable[] = [];
 
-
 	public viewType: string = "markdown";
 
 	public isConvertable: boolean = false;
-
 
 	/**
 	 * @param file The original markdown file to export
@@ -206,13 +199,10 @@ export class Webpage
 			}
 
 			// inject search bar
+			// TODO: don't hardcode searchbar html
 			if (Settings.settings.includeSearchBar)
 			{
-				let searchbarHTML = `<div class="search-input-container">
-<input enterkeyhint="search" type="search" spellcheck="false" placeholder="Search...">
-<div class="search-input-clear-button" aria-label="Clear search"></div>
-</div>`;
-
+				let searchbarHTML = `<div class="search-input-container"><input enterkeyhint="search" type="search" spellcheck="false" placeholder="Search..."><div class="search-input-clear-button" aria-label="Clear search"></div></div>`;
 				leftSidebar.createDiv().outerHTML = searchbarHTML;
 			}
 
@@ -228,11 +218,7 @@ export class Webpage
 		}
 
 		await this.addMetadata();
-
-		// if (MainSettings.settings.addFilenameTitle) commented if you want to add setting back
-		this.addTitle();
-
-		this.downloads.unshift(await this.getSelfDownloadable());
+		await this.addTitle();
 
 		return this;
 	}
@@ -283,6 +269,7 @@ export class Webpage
 		{ 
 			contentEl.classList.toggle("allow-fold-headings", Settings.settings.allowFoldingHeadings);
 			contentEl.classList.toggle("allow-fold-lists", Settings.settings.allowFoldingLists);
+			contentEl.classList.add("is-readable-line-width");
 		}
 
 		if(this.sizerElement) this.sizerElement.style.paddingBottom = "";
@@ -304,12 +291,6 @@ export class Webpage
 		// modify links to work outside of obsidian (including relative links)
 		this.convertLinks();
 		
-		// inline / outline images
-		let outlinedImages : Downloadable[] = [];
-		if (Settings.settings.inlineAssets) await this.inlineMedia();
-		else outlinedImages = await this.exportMedia();
-		
-
 		// add math styles to the document. They are here and not in <head> because they are unique to each document
 		let mathStyleEl = document.createElement("style");
 		mathStyleEl.id = "MJX-CHTML-styles";
@@ -317,21 +298,21 @@ export class Webpage
 		mathStyleEl.innerHTML = AssetHandler.mathjaxStyles.content;
 		this.contentElement.prepend(mathStyleEl);
 
-		let dependencies_temp: Downloadable[] = AssetHandler.getAssetDownloads();
-		dependencies_temp.push(...outlinedImages);
-
-		this.downloads.push(...dependencies_temp);
+		// inline / outline images
+		let outlinedImages : Downloadable[] = [];
+		if (Settings.settings.inlineAssets) await this.inlineMedia();
+		else outlinedImages = await this.exportMedia();
+		
+		this.dependencies.push(...outlinedImages);
 
 		if(Settings.settings.makeNamesWebStyle)
 		{
-			this.downloads.forEach((file) =>
+			this.dependencies.forEach((file) =>
 			{
 				file.filename = Path.toWebStyle(file.filename);
 				file.relativeDownloadDirectory = file.relativeDownloadDirectory?.makeWebStyle();
 			});
 		}
-
-		this.dependencies.push(...this.downloads);
 
 		return this;
 	}
@@ -393,7 +374,7 @@ export class Webpage
 		leftGutter.setAttribute("class", "sidebar-gutter");
 		leftGutterIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
 
-		documentContainer.setAttribute("class", "document-container");
+		documentContainer.setAttribute("class", "document-container markdown-reading-view");
 
 		rightSidebar.setAttribute("class", "sidebar-right sidebar");
 		rightSidebarContainer.setAttribute("class", "sidebar-container");
@@ -429,7 +410,7 @@ export class Webpage
 		return {container: pageContainer, left: leftContent, right: rightContent, center: documentContainer};
 	}
 
-	private addTitle() 
+	private async addTitle() 
 	{
 		if (!this.document) return;
 		
@@ -471,15 +452,28 @@ export class Webpage
 			}
 		}
 
+		// remove banner header
+		this.document.querySelector(".banner-header")?.remove();
+
 		// Create h1 with title
 		let titleEl = this.document.createElement("h1");
 		titleEl.id = "inline-title";
 
 		// Create a div with icon
-		if (icon != "" && !titleInfo.isDefaultIcon)
+		if ((icon != "" && !titleInfo.isDefaultIcon))
 		{
 			let pageIcon = this.document.createElement("div");
 			pageIcon.id = "webpage-icon";
+
+			// try to use twemoji if the icon is an emoji
+			// if (/\p{Emoji}/u.test(icon)) 
+			// {
+			// 	let codepoint = [...icon].map(e => e.codePointAt(0)?.toString(16)).join(`-`);
+			// 	let iconResp = await fetch(`https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/${codepoint}.svg`);
+			// 	console.log(iconResp);
+			// 	if (iconResp.ok) icon = await iconResp.text();
+			// }
+
 			pageIcon.innerHTML = icon;
 			titleEl.appendChild(pageIcon); // Add the icon div as the second child of the title element
 		}
@@ -504,7 +498,6 @@ export class Webpage
 			console.error("markdown-preview-section not found. Unable to append title.");
 		}
 	}
-	
 
 	private async addMetadata()
 	{
@@ -617,7 +610,9 @@ export class Webpage
 		{
 			let rawSrc = mediaEl.getAttribute("src") ?? "";
 			let filePath = Webpage.getMediaPath(rawSrc, this.source.path);
-			if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
+			if (filePath.isEmpty || filePath.isDirectory || 
+				filePath.isAbsolute || MarkdownRenderer.isConvertable(filePath.extension)) 
+				continue;
 
 			let exportLocation = filePath.copy;
 

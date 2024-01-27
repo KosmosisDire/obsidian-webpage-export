@@ -7,18 +7,38 @@ import { Path } from "scripts/utils/path";
 import { ExportPreset, Settings } from "scripts/settings/settings";
 import HTMLExportPlugin from "scripts/main";
 import { TFile } from "obsidian";
+import { AssetHandler } from "scripts/html-generation/asset-handler";
 
 export class WebsiteIndex
 {
 	private web: Website;
 
 	public exportTime: number = Date.now();
-	public previousExportMetadata: any = undefined;
+	public previousMetadata: 
+	{
+		vaultName: string,
+		lastExport: number,
+		pluginVersion: string,
+		validBodyClasses: string,
+		mainDependencies: string[],
+		files: string[],
+		fileInfo: 
+		{
+			[path: string]: 
+			{
+				modifiedTime: number,
+				sourceSize: number,
+				exportedPath: string,
+				dependencies: string[]
+			}
+		}
+	} | undefined = undefined;
 	
-	public oldFilesSource: string[] = []; // old files that are no longer being exported. These have the format of the source in obsidian
-	public oldFilesWeb: string[] = []; // old files that are no longer being exported. These have the format of the export in the website
+	private allFiles: string[] = []; // all files that are being exported
+	private removedFiles: string[] = []; // old files that are no longer being exported
+	private addedFiles: string[] = []; // new files that are being exported
+	private keptDependencies: string[] = []; // dependencies that are being kept
 
-	
 	constructor(website: Website)
 	{
 		this.web = website;
@@ -27,7 +47,7 @@ export class WebsiteIndex
 	public async init(): Promise<boolean>
 	{
 		this.exportTime = Date.now();
-		this.previousExportMetadata = await this.getExportMetadata();
+		this.previousMetadata = await this.getExportMetadata();
 
 		// if the plugin version changed notify the user that all files will be exported
 		if (!this.shouldApplyIncrementalExport() && Settings.settings.incrementalExport)
@@ -35,7 +55,7 @@ export class WebsiteIndex
 			RenderLog.warning("New export or plugin version changed, exporting all files");
 		}
 
-		if (!this.previousExportMetadata) return false;
+		if (!this.previousMetadata) return false;
 		return true;
 	}
 
@@ -44,7 +64,7 @@ export class WebsiteIndex
 		return Settings.settings.incrementalExport && 
 			   !this.isVersionChanged() && 
 			   Settings.settings.exportPreset == ExportPreset.Website
-			   && this.previousExportMetadata != undefined;
+			   && this.previousMetadata != undefined;
 	}
 
 	private async getExportMetadata(): Promise<any>
@@ -111,12 +131,10 @@ export class WebsiteIndex
 		}
 
 		const htmlWebpages = this.web.webpages.filter(webpage => webpage.document && webpage.contentElement);
-		// filter batchfiles to exclude convertable files
-		let nonHTMLFiles = this.web.batchFiles.filter((file) => !MarkdownRenderer.isConvertable(file.extension));
 
 		// progress counters
 		let progressCount = 0;
-		let totalCount = htmlWebpages.length + nonHTMLFiles.length + this.oldFilesWeb.length;
+		let totalCount = htmlWebpages.length + this.web.dependencies.length + this.removedFiles.length;
 
 
 		for (const webpage of htmlWebpages) 
@@ -150,21 +168,21 @@ export class WebsiteIndex
 		}
 
 		// add other files to search
-		for (const file of nonHTMLFiles)
+		for (const file of this.web.dependencies)
 		{
 			if(MarkdownRenderer.checkCancelled()) return undefined;
 			
-			const filePath = new Path(file.path).makeUnixStyle().makeWebStyle(Settings.settings.makeNamesWebStyle).asString;
+			const filePath = file.relativeDownloadPath.asString;
 			if (index.has(filePath)) 
 			{
 				continue;
 			}
 
-			RenderLog.progress(progressCount, totalCount, "Indexing", "Adding: " + file.name, "var(--color-blue)");
+			RenderLog.progress(progressCount, totalCount, "Indexing", "Adding: " + file.filename, "var(--color-blue)");
 			
 			index.add({
 				path: filePath,
-				title: file.name,
+				title: file.relativeDownloadPath.basename,
 				content: "",
 				tags: [],
 				headers: [],
@@ -174,7 +192,7 @@ export class WebsiteIndex
 		}
 
 		// remove old files
-		for (const oldFile of this.oldFilesWeb)
+		for (const oldFile of this.removedFiles)
 		{
 			if(MarkdownRenderer.checkCancelled()) return undefined;
 			RenderLog.progress(progressCount, totalCount, "Indexing", "Removing: " + oldFile, "var(--color-blue)");
@@ -195,16 +213,18 @@ export class WebsiteIndex
 	{
 		// metadata stores a list of files in the export, their relative paths, and modification times. 
 		// is also stores the vault name, the export time, and the plugin version
-		let metadata: any = this.previousExportMetadata ?? {};
+		let metadata: any = this.previousMetadata ? JSON.parse(JSON.stringify(this.previousMetadata)) : {};
 		metadata.vaultName = app.vault.getName();
 		metadata.lastExport = this.exportTime;
 		metadata.pluginVersion = HTMLExportPlugin.plugin.manifest.version;
 		metadata.validBodyClasses = Website.validBodyClasses;
-		metadata.files = this.previousExportMetadata?.files ?? {};
+		metadata.files = this.allFiles;
+		metadata.mainDependencies = AssetHandler.getAssetDownloads().map((asset) => asset.relativeDownloadPath.copy.makeUnixStyle().asString);
+		if (!metadata.fileInfo) metadata.fileInfo = {};
 
 		// progress counters
 		let progressCount = 0;
-		let totalCount = this.web.webpages.length + this.web.dependencies.length + this.oldFilesWeb.length;
+		let totalCount = this.web.webpages.length + this.web.dependencies.length + this.removedFiles.length;
 		
 		for (const page of this.web.webpages)
 		{
@@ -214,10 +234,11 @@ export class WebsiteIndex
 			let fileInfo: any = {};
 			fileInfo.modifiedTime = this.exportTime;
 			fileInfo.sourceSize = page.source.stat.size;
-			fileInfo.exportedPath = page.exportPath.asString;
+			fileInfo.exportedPath = page.exportPath.copy.makeUnixStyle().asString;
+			fileInfo.dependencies = page.dependencies.map((asset) => asset.relativeDownloadPath.copy.makeUnixStyle().asString);
 			
 			let exportPath = new Path(page.source.path).makeUnixStyle().asString;
-			metadata.files[exportPath] = fileInfo;
+			metadata.fileInfo[exportPath] = fileInfo;
 			progressCount++;
 		}
 
@@ -225,23 +246,24 @@ export class WebsiteIndex
 		{
 			if(MarkdownRenderer.checkCancelled()) return undefined;
 			RenderLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + file.relativeDownloadPath.asString, "var(--color-cyan)");
-			
+
 			let fileInfo: any = {};
 			fileInfo.modifiedTime = this.exportTime;
 			fileInfo.sourceSize = file.content.length;
-			fileInfo.exportedPath = file.relativeDownloadPath.asString;
-			
+			fileInfo.exportedPath = file.relativeDownloadPath.copy.makeUnixStyle().asString;
+			fileInfo.dependencies = [];
+
 			let exportPath = file.relativeDownloadPath.copy.makeUnixStyle().asString;
-			metadata.files[exportPath] = fileInfo;
+			metadata.fileInfo[exportPath] = fileInfo;
 			progressCount++;
 		}
 
 		// remove old files
-		for (const oldFile of this.oldFilesSource)
+		for (const oldFile of this.removedFiles)
 		{
 			if(MarkdownRenderer.checkCancelled()) return undefined;
 			RenderLog.progress(progressCount, totalCount, "Creating Metadata", "Removing: " + oldFile, "var(--color-cyan)");
-			delete metadata.files[oldFile];
+			delete metadata.fileInfo[oldFile];
 			progressCount++;
 		}
 
@@ -250,16 +272,25 @@ export class WebsiteIndex
 
 	public async deleteOldFiles()
 	{
-		for (let i = 0; i < this.oldFilesWeb.length; i++)
+		if (!this.previousMetadata) return;
+		if (this.removedFiles.length == 0)
+		{
+			RenderLog.log("No old files to delete");
+			return;
+		}
+
+		for (let i = 0; i < this.removedFiles.length; i++)
 		{
 			if(MarkdownRenderer.checkCancelled()) return;
-			let file = this.oldFilesWeb[i];
-			let path = this.web.destination.joinString(file);
-			if (path.exists) 
-			{
-				await path.delete(true);
-				RenderLog.progress(i, this.oldFilesWeb.length, "Deleting Old Files", "Deleting: " + path.asString, "var(--color-orange)");
-			}
+			let removedPath = this.removedFiles[i];
+			console.log("Removing old file: ", this.previousMetadata.fileInfo);
+			let exportedPath = new Path(this.previousMetadata.fileInfo[removedPath].exportedPath);
+			exportedPath.makeWebStyle(Settings.settings.makeNamesWebStyle);
+
+			let deletePath = this.web.destination.join(exportedPath);
+			console.log("Deleting old file: " + deletePath.asString);
+			await deletePath.delete(true);
+			RenderLog.progress(i, this.removedFiles.length, "Deleting Old Files", "Deleting: " + deletePath.asString, "var(--color-orange)");
 		}
 
 		let folders = (await Path.getAllEmptyFoldersRecursive(this.web.destination));
@@ -276,12 +307,36 @@ export class WebsiteIndex
 		}
 	}
 
+	public async updateBodyClasses()
+	{
+		if (!this.previousMetadata) return;
+		if (this.previousMetadata.validBodyClasses == Website.validBodyClasses) return;
+		console.log("Updating body classes");
+
+		let convertableFiles = this.previousMetadata.files.filter((path) => MarkdownRenderer.isConvertable(path.split(".").pop() ?? ""));
+		let exportedPaths = convertableFiles.map((path) => new Path(this.previousMetadata?.fileInfo[path]?.exportedPath ?? "", this.web.destination.asString));
+		exportedPaths = exportedPaths.filter((path) => !path.isEmpty);
+
+		for (let i = 0; i < exportedPaths.length; i++)
+		{
+			if(MarkdownRenderer.checkCancelled()) return;
+			let exportedPath = exportedPaths[i];
+			let content = await exportedPath.readFileString();
+			if (!content) continue;
+			let dom = new DOMParser().parseFromString(content, "text/html");
+			let body = dom.querySelector("body");
+			if (!body) continue;
+			body.className = Website.validBodyClasses;
+			await exportedPath.writeFile(dom.documentElement.outerHTML);
+			RenderLog.progress(i, exportedPaths.length, "Updating Body Classes", "Updating: " + exportedPath.asString, "var(--color-yellow)");
+		}
+	}
+
 	public isFileChanged(file: TFile): boolean
 	{
 		let metadata = this.getMetadataForFile(file);
 		if (!metadata)
 		{
-			console.log("File not found in metadata: " + file.path);
 			return true;
 		}
 		return metadata.modifiedTime < file.stat.mtime || metadata.sourceSize !== file.stat.size;
@@ -297,41 +352,96 @@ export class WebsiteIndex
 		return this.getMetadataForPath(path) !== undefined;
 	}
 
-	public getMetadataForFile(file: TFile): any
+	public getMetadataForFile(file: TFile): {modifiedTime: number,sourceSize: number,exportedPath: string,dependencies: string[]} | undefined
 	{
-		return this.previousExportMetadata?.files[file.path];
+		return this.previousMetadata?.fileInfo[file.path];
 	}
 
-	public getMetadataForPath(path: string): any
+	public getMetadataForPath(path: string):  {modifiedTime: number,sourceSize: number,exportedPath: string,dependencies: string[]} | undefined
 	{
-		return this.previousExportMetadata?.files[path];
+		return this.previousMetadata?.fileInfo[path];
 	}
 
 	public isVersionChanged(): boolean
 	{
-		return this.previousExportMetadata?.pluginVersion !== HTMLExportPlugin.plugin.manifest.version;
+		return this.previousMetadata?.pluginVersion !== HTMLExportPlugin.plugin.manifest.version;
 	}
 
-	public getOldFiles(): string[]
+	public getAllFiles(): string[]
 	{
-		if (!this.previousExportMetadata) return [];
+		this.allFiles = [];
 
-		this.oldFilesSource = [];
-		
-		for (const file in this.previousExportMetadata.files)
+		for (let file of this.web.batchFiles)
 		{
-			if (!this.web.batchFiles.find(f => f.path == file))
-			{
-				this.oldFilesSource.push(file);
-				this.oldFilesWeb.push(this.previousExportMetadata.files[file].exportedPath);
-			}
+			this.allFiles.push(file.path);
 		}
 
-		return this.oldFilesSource;
+		for (let asset of this.web.dependencies)
+		{
+			if (this.allFiles.some((path) => Path.equal(path, asset.relativeDownloadPath.asString))) continue;
+
+			this.allFiles.push(asset.relativeDownloadPath.copy.makeUnixStyle().asString);
+		}
+
+		console.log("All files: ", this.allFiles);
+
+		return this.allFiles;
+	}
+
+	public getRemovedFiles(): string[]
+	{
+		if (!this.previousMetadata) return [];
+
+		this.removedFiles = this.previousMetadata.files.filter((path) => 
+		{
+			return 	!this.allFiles.includes(path) && 
+					!this.previousMetadata?.mainDependencies.includes(path) &&
+					!this.keptDependencies.includes(path);
+		});
+
+		console.log("Old files: ", this.removedFiles);
+
+		return this.removedFiles;
+	}
+
+	public getAddedFiles(): string[]
+	{
+		if (!this.previousMetadata) return [];
+
+		this.addedFiles = this.allFiles.filter(path => !this.previousMetadata?.files.includes(path));
+		console.log("New files: ", this.addedFiles);
+
+		return this.addedFiles;
+	}
+
+	public getKeptDependencies(): string[]
+	{
+		if (!this.previousMetadata) return [];
+
+		this.keptDependencies = [];
+		
+		for (let file of this.allFiles)
+		{
+			let dep = this.previousMetadata.fileInfo[file]?.dependencies ?? [];
+			this.keptDependencies.push(...dep);
+		}
+
+		// add kept dependencies to the list of all files and remove duplicates
+		this.allFiles.push(...this.keptDependencies);
+		this.allFiles = this.allFiles.filter((path, index) => this.allFiles.findIndex((f) => f == path) == index);
+
+		console.log("Kept dependencies: ", this.keptDependencies);
+
+		return this.keptDependencies;
 	}
 
 	public async build(): Promise<boolean>
 	{
+		this.getAllFiles();
+		this.getKeptDependencies();
+		this.getRemovedFiles();
+		this.getAddedFiles();
+
 		// create website metadata and index
 		let metadataAsset = await this.createMetadata();
 		if (!metadataAsset) return false;

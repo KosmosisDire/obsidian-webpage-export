@@ -60,7 +60,7 @@ body
     border-radius: var(--radius-l) 0 0 var(--radius-l);
 }
 
-.sidebar-gutter.is-collapsed, body.loading:not(.file-protocol) .sidebar-gutter {
+.sidebar-gutter.is-collapsed {
     height: 100%;
     width: 0 !important;
     padding: var(--sidebar-margin);
@@ -75,7 +75,7 @@ body
     min-width: var(--sidebar-width);
 }
 
-.sidebar.is-collapsed .sidebar-sizer, body.loading:not(.file-protocol) .sidebar-sizer {
+.sidebar.is-collapsed .sidebar-sizer {
     width: 0;
     min-width: 0;
 }
@@ -193,11 +193,6 @@ body
 
 .floating-sidebars .document-container {
     position: absolute;
-}
-
-.markdown-reading-view
-{
-	display: none;
 }
 
 .document-container > .markdown-preview-view {
@@ -340,7 +335,7 @@ body .webpage-container .tree-container .tree-scroll-area
 	font-family: emoji;
 }
 
-.tree-container .tree-item-icon svg
+.tree-container .tree-item-icon :is(svg, img)
 {
 	height: 1em;
 	translate: 0px 1.5px;
@@ -564,22 +559,25 @@ body .webpage-container .tree-container .tree-scroll-area
 
 /*#region Headers */
 
-#webpage-icon > svg
+#webpage-icon > :is(svg, img)
 {
   width: 100%;
   height: 100%;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
 }
 
-#webpage-icon:has(svg)
+#webpage-icon:has(:is(svg, img))
 {
-	font-size: 1em;
+	font-size: 40px;
 	width: 40px;
 	height: 40px;
 	margin-bottom: 0 !important;
 }
 
 #webpage-icon {
-  font-size: 2em;
+  font-size: 40px;
   margin-bottom: 8px !important;
   font-family: emoji;
 }
@@ -595,23 +593,6 @@ body .webpage-container .tree-container .tree-scroll-area
 {
 	position: relative;
 }
-
-/* make hover apply to margins of heading */
-/* .heading::after, .heading:before
-{
-  content:'';
-  width: 100%;
-  height: var(--p-spacing);
-  position: absolute;
-  left: calc(0px - var(--p-spacing));
-  top: 100%;
-  z-index: 1;
-}
-
-.heading:before
-{
-  top: calc(0px - var(--p-spacing));
-} */
 
 .heading-wrapper 
 {
@@ -1102,30 +1083,6 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
     z-index: 1000;
     box-shadow: 0 0 1em .1em var(--color-accent) inset;
 	opacity: 0;
-}
-
-body.post-load .sidebar-sizer
-{
-	transition-delay: 0.3s !important;
-	transition-duration: 0.3s !important;
-}
-
-body.post-load .sidebar-gutter
-{
-	transition-delay: 0.5s !important;
-	transition-duration: 0.2s !important;
-}
-
-body.loading.file-protocol .sidebar-sizer
-{
-    transition-delay: 0s !important;
-    transition-duration: 0s !important;
-}
-
-body.loading.file-protocol .sidebar-gutter
-{
-    transition-delay: 0s !important;
-    transition-duration: 0s !important;
 }
 
 .loading-icon 

@@ -1,4 +1,4 @@
-import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
+import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { Settings } from "scripts/settings/settings";
 import { RenderLog } from "../render-log";
 import obsidianStyleOverrides from "assets/obsidian-styles.txt.css";
@@ -9,7 +9,7 @@ export class ObsidianStyles extends Asset
 
     constructor()
     {
-        super("obsidian.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, 2);
+        super("obsidian.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Default);
     }
 
     private static obsidianStylesFilter = 

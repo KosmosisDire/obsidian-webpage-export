@@ -24,6 +24,7 @@ export namespace MarkdownRenderer
 
 	export function isConvertable(extention: string)
 	{
+		if (extention.startsWith(".")) extention = extention.substring(1);
 		return convertableExtensions.contains(extention);
 	}
 

@@ -80,7 +80,7 @@ export default class HTMLExportPlugin extends Plugin
 					.setSection("export")
 					.onClick(() =>
 					{
-						ExportModal.title = file.name + " to HTML";
+						ExportModal.title = `Export ${file.name} as HTML`;
 						if(file instanceof TFile)
 						{
 							HTMLExporter.export(false, [file]);

@@ -31,6 +31,12 @@ export enum Mutability
 	Temporary // this asset is created only for the current export and is deleted afterwards
 }
 
+export enum LoadMethod
+{
+	Default,
+	Async,
+}
+
 export class Asset extends Downloadable 
 {
 	// this path is used to generate the relative path to the images folder, likewise for the other paths
@@ -86,16 +92,16 @@ export class Asset extends Downloadable
     public inlinePolicy: InlinePolicy; // should this asset be inlined into the html file
 	public mutability: Mutability; // can this asset change
     public minify: boolean; // should the asset be minified
-    public loadPriority: number = 1; // which order should the assets be loaded in, lower numbers are loaded first
+    public loadMethod: LoadMethod = LoadMethod.Default; // should this asset be loaded asynchronously if possible
 
-	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadPriority: number = 1)
+	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async)
     {
         super(filename, content, Asset.typeToPath(type));
         this.type = type;
         this.inlinePolicy = inlinePolicy;
 		this.mutability = mutability;
         this.minify = minify;
-        this.loadPriority = loadPriority;
+        this.loadMethod = loadMethod;
 
         if(mutability == Mutability.Static) 
 		{
@@ -266,16 +272,34 @@ export class Asset extends Downloadable
         {
             let path = this.getAssetPath().asString;
 
+			let include = "";
             switch(this.type)
             {
                 case AssetType.Style:
-                    return `<link rel="stylesheet" href="${path}">`;
+					include = `<link rel="stylesheet" href="${path}">`;
+					if (this.loadMethod == LoadMethod.Async)
+					{
+						include = `<link rel="preload" href="${path}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+						<noscript><link rel="stylesheet" href="${path}"></noscript>`
+					}
+                    return include;
                 case AssetType.Script:
-                    return `<script src="${path}"></script>`;
+					include = `<script src="${path}"></script>`;
+					if (this.loadMethod == LoadMethod.Async)
+					{
+						include = `<script async src="${path}"></script>`;
+					}
+                    return include;
                 case AssetType.Media:
-                    return `<${this.getTag()} src="${path}">`;
+					include = `<${this.getTag()} src="${path}">`;
+					if (this.loadMethod == LoadMethod.Async)
+					{
+						include = `<${this.getTag()} src="${path}" loading="lazy">`;
+					}
+                    return include;
                 case AssetType.Font:
-                    return `<style>@font-face{font-family:'${this.filename}';src:url('${path}') format('woff2');}</style>`;
+					include = `<style>@font-face{font-family:'${this.filename}';src:url('${path}') format('woff2');}</style>`;
+                    return include;
 				case AssetType.HTML:
 					return `<include src="${path}"></include>`
                 default:

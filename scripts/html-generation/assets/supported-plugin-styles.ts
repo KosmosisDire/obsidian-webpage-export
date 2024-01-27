@@ -8,7 +8,7 @@ export class SupportedPluginStyles extends Asset
 
     constructor()
     {
-        super("supported-plugins.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, 2);
+        super("supported-plugins.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic);
     }
     
     override async load()

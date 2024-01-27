@@ -1,4 +1,4 @@
-import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
+import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { Path } from "scripts/utils/path";
 import { RenderLog } from "../render-log";
 import { AssetHandler } from "../asset-handler";
@@ -10,7 +10,7 @@ export class ThemeStyles extends Asset
 
     constructor()
     {
-        super("theme.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, 4);
+        super("theme.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Async);
     }
 
     private static async getThemeContent(themeName: string): Promise<string>

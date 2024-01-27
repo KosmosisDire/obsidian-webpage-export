@@ -9,7 +9,7 @@ export class OtherPluginStyles extends Asset
 
     constructor()
     {
-        super("other-plugins.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, 6);
+        super("other-plugins.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic);
     }
     
     override async load()

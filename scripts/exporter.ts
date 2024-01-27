@@ -18,7 +18,7 @@ export class HTMLExporter
 		let info = await Settings.updateSettings(usePreviousSettings, overrideFiles);
 		if ((!info && !usePreviousSettings) || (info && info.canceled)) return;
 
-		let files = overrideFiles ?? info?.pickedFiles ?? Settings.getFilesToExport();
+		let files = info?.pickedFiles ?? overrideFiles ?? Settings.getFilesToExport();
 		let exportPath = info?.exportPath ?? new Path(Settings.settings.exportPath);
 
 		let website = await HTMLExporter.exportFiles(files, exportPath, true, Settings.settings.deleteOldExportedFiles);
@@ -38,6 +38,7 @@ export class HTMLExporter
 			return;
 		}
 
+		await website.index.updateBodyClasses();
 		if (deleteOld) await website.index.deleteOldFiles();
 		if (saveFiles) 
 		{

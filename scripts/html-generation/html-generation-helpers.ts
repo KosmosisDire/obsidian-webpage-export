@@ -145,8 +145,7 @@ export namespace HTMLGeneration
 		let validClasses = "";
 
 		if (Settings.settings.sidebarsAlwaysCollapsible) validClasses += " sidebars-always-collapsible ";
-		if (Settings.settings.inlineAssets) validClasses += " inlined-assets ";
-		validClasses += " loading ";
+		validClasses += " publish ";
 		
 		// keep body classes that are referenced in the styles
 		for (var style of AssetHandler.getAssetsOfType(AssetType.Style))

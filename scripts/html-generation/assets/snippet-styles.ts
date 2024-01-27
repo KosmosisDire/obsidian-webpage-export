@@ -9,7 +9,7 @@ export class SnippetStyles extends Asset
 
     constructor()
     {
-        super("snippets.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, 8);
+        super("snippets.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic);
     }
 
     private static getEnabledSnippets(): string[]
@@ -42,6 +42,9 @@ export class SnippetStyles extends Asset
         {
             snippets += snippetsList[i] + "\n";
         }
+
+		// replace "publish" styles with a high specificity prefix
+		snippets = snippets.replaceAll(/^publish /gm, "html body[class].publish ");
 		
         this.content = snippets;
         this.lastEnabledSnippets = enabledSnippets;

@@ -8,7 +8,7 @@ export class GlobalDataScript extends Asset
 
     constructor()
     {
-        super("global-data-script.js", "", AssetType.Script, InlinePolicy.Auto, true, Mutability.Dynamic, 16);
+        super("global-data-script.js", "", AssetType.Script, InlinePolicy.Auto, true, Mutability.Dynamic);
     }
     
     override async load()

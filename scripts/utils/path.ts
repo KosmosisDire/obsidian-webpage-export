@@ -779,6 +779,13 @@ export class Path
 		return path.replaceAll(" ", "-").replaceAll(/-{2,}/g, "-").toLowerCase();
 	}
 
+	static equal(path1: string, path2: string): boolean
+	{
+		let path1Parsed = new Path(path1).makeUnixStyle().makeWebStyle().asString;
+		let path2Parsed = new Path(path2).makeUnixStyle().makeWebStyle().asString;
+		return path1Parsed == path2Parsed;
+	}
+
 	public static async getAllEmptyFoldersRecursive(folder: Path): Promise<Path[]>
 	{
 		if (!folder.isDirectory) throw new Error("folder must be a directory: " + folder.asString);
