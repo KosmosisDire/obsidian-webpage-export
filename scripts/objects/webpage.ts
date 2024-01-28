@@ -193,7 +193,7 @@ export class Webpage
 			// inject darkmode toggle
 			if (Settings.settings.includeThemeToggle)
 			{
-				HTMLGeneration.createThemeToggle(leftSidebar);
+				HTMLGeneration.createThemeToggle(layout.leftBar);
 			}
 
 			// inject search bar
@@ -315,9 +315,9 @@ export class Webpage
 		return this;
 	}
 	
-	private generateWebpageLayout(middleContent: HTMLElement): {container: HTMLElement, left: HTMLElement, right: HTMLElement, center: HTMLElement}
+	private generateWebpageLayout(middleContent: HTMLElement): {container: HTMLElement, left: HTMLElement, leftBar: HTMLElement, right: HTMLElement, rightBar: HTMLElement, center: HTMLElement}
 	{
-		if (!this.document) return {container: middleContent, left: middleContent, right: middleContent, center: middleContent};
+		if (!this.document) return {container: middleContent, left: middleContent, leftBar: middleContent, right: middleContent, rightBar: middleContent, center: middleContent};
 
 		/*
 		- div.webpage-container
@@ -343,45 +343,51 @@ export class Webpage
 		let pageContainer = this.document.createElement("div");
 		let leftSidebar = this.document.createElement("div");
 		let leftContent = this.document.createElement("div");
-		let leftGutter = this.document.createElement("div");
-		let leftGutterIcon = this.document.createElement("div");
+		let leftTopbar = this.document.createElement("div");
+		let leftTopbarContent = this.document.createElement("div");
+		let leftCollapseIcon = this.document.createElement("div");
 		let documentContainer = this.document.createElement("div");
 		let rightSidebar = this.document.createElement("div");
 		let rightContent = this.document.createElement("div");
-		let rightGutter = this.document.createElement("div");
-		let rightGutterIcon = this.document.createElement("div");
+		let rightTopbar = this.document.createElement("div");
+		let rightTopbarContent = this.document.createElement("div");
+		let rightCollapseIcon = this.document.createElement("div");
 
 		pageContainer.setAttribute("class", "webpage-container");
 
 		leftSidebar.setAttribute("class", "sidebar-left sidebar is-collapsed");
 		leftContent.setAttribute("class", "sidebar-content");
-		leftGutter.setAttribute("class", "sidebar-topbar");
-		leftGutterIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
+		leftTopbar.setAttribute("class", "sidebar-topbar");
+		leftTopbarContent.setAttribute("class", "topbar-content");
+		leftCollapseIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
 
 		documentContainer.setAttribute("class", "document-container markdown-reading-view");
 
 		rightSidebar.setAttribute("class", "sidebar-right sidebar is-collapsed");
 		rightContent.setAttribute("class", "sidebar-content");
-		rightGutter.setAttribute("class", "sidebar-topbar");
-		rightGutterIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
+		rightTopbar.setAttribute("class", "sidebar-topbar");
+		rightTopbarContent.setAttribute("class", "topbar-content");
+		rightCollapseIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
 
 		pageContainer.appendChild(leftSidebar);
 		pageContainer.appendChild(documentContainer);
 		pageContainer.appendChild(rightSidebar);
 
+		leftSidebar.appendChild(leftTopbar);
 		leftSidebar.appendChild(leftContent);
-		leftSidebar.appendChild(leftGutter);
-		leftGutter.appendChild(leftGutterIcon);
-		leftGutterIcon.innerHTML = collapseSidebarIcon;
+		leftTopbar.appendChild(leftTopbarContent);
+		leftTopbar.appendChild(leftCollapseIcon);
+		leftCollapseIcon.innerHTML = collapseSidebarIcon;
 
 		documentContainer.appendChild(middleContent);
 
+		rightSidebar.appendChild(rightTopbar);
 		rightSidebar.appendChild(rightContent);
-		rightSidebar.appendChild(rightGutter);
-		rightGutter.appendChild(rightGutterIcon);
-		rightGutterIcon.innerHTML = collapseSidebarIcon;
+		rightTopbar.appendChild(rightTopbarContent);
+		rightTopbar.appendChild(rightCollapseIcon);
+		rightCollapseIcon.innerHTML = collapseSidebarIcon;
 
-		return {container: pageContainer, left: leftContent, right: rightContent, center: documentContainer};
+		return {container: pageContainer, left: leftContent, leftBar: leftTopbarContent, right: rightContent, rightBar: rightTopbarContent, center: documentContainer};
 	}
 
 	private async addTitle() 

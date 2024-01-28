@@ -9,7 +9,7 @@ export class ObsidianStyles extends Asset
 
     constructor()
     {
-        super("obsidian.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Default);
+        super("obsidian.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Async);
     }
 
     private static obsidianStylesFilter = 

@@ -29,6 +29,7 @@ export class OtherPluginStyles extends Asset
             if (style)
             {
                 this.content += style;
+				console.log("Loaded plugin style: " + thirdPartyPluginStyleNames[i] + " size: " + style.length);
             }
         }
 

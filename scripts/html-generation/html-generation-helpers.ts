@@ -3,6 +3,7 @@ import { AssetHandler } from "./asset-handler";
 import { AssetType } from "./assets/asset";
 import { RenderLog } from "./render-log";
 import { getIcon as getObsidianIcon } from "obsidian";
+import { Utils } from "scripts/utils/utils";
 
 export namespace HTMLGeneration
 {
@@ -110,8 +111,7 @@ export namespace HTMLGeneration
 
 	export function createThemeToggle(container: HTMLElement) : HTMLElement
 	{
-		let toggle = container.createDiv();
-		let label = toggle.createEl("label");
+		let label = container.createEl("label");
 		let input = label.createEl("input");
 		let div = label.createDiv();
 
@@ -124,11 +124,11 @@ export namespace HTMLGeneration
 
 		div.classList.add("toggle-background");
 
-		return toggle;
+		return label;
 	}
 
 	let _validBodyClasses: string | undefined = undefined;
-	export function getValidBodyClasses(cleanCache: boolean): string
+	export async function getValidBodyClasses(cleanCache: boolean): Promise<string>
 	{
 		if (cleanCache) _validBodyClasses = undefined;
 		if (_validBodyClasses) return _validBodyClasses;
@@ -138,8 +138,11 @@ export namespace HTMLGeneration
 		validClasses += " publish ";
 		
 		// keep body classes that are referenced in the styles
-		for (var style of AssetHandler.getAssetsOfType(AssetType.Style))
+		let styles = AssetHandler.getAssetsOfType(AssetType.Style);
+		let i = 0;
+		for (var style of styles)
 		{
+			RenderLog.progress(i, styles.length, "Finding valid body classes", "Scanning: " + style.filename, "var(--color-yellow)");
 			if (typeof(style.content) != "string") continue;
 			
 			// this matches every class name with the dot
@@ -149,6 +152,8 @@ export namespace HTMLGeneration
 				let className = match[0].replace(".", "").trim();
 				if (bodyClasses.contains(className)) validClasses += " " + className + " ";
 			}
+			i++;
+			await Utils.delay(0);
 		}
 
 		_validBodyClasses = validClasses.replace(/\s\s+/g, ' ');

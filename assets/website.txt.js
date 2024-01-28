@@ -1692,7 +1692,8 @@ function setupCanvas(setupOnNode)
 	}
 
 	// fit all nodes to view on initialization after centering the camera
-	fitViewToCanvas();
+	// after any animations have possibly played
+	setTimeout(fitViewToCanvas, 300);
 }
 
 /**Gets the bounding rect of the voew-content or markdown-preview-sizer*/
@@ -2218,7 +2219,7 @@ function scrollIntoView(element, options)
     
 	const flashTiming = 
 	{
-		duration: 1000,
+		duration: 1500,
 		iterations: 1,
 		delay: 500,
 	};
@@ -2244,6 +2245,8 @@ function scrollIntoView(element, options)
 
 	var savePos = element.style.position;
 	element.style.position = "relative";
+
+	console.log("Scrolling to element", flashElement, element);
 
 	flashAnimation = flashElement.animate(flashAnimationData, flashTiming);
 	flashAnimation.onfinish = function()

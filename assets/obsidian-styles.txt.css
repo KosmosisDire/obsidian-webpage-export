@@ -48,17 +48,11 @@ h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-i
 
 /*#region Misc Hiding */
 
-.collapse-icon::before 
-{ 
-    content: "​" !important; 
-    /* content: "" !important; */
-    visibility: hidden !important;
-}
-
 .mod-header .metadata-container
 {
 	display: none !important;
 }
+
 /*#endregion */
 
 /*#region Transclusions */

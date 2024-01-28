@@ -42,27 +42,24 @@ function loadIncludes()
 	}
 
 	observer.disconnect();
-	if (document.body.querySelector(".sidebar")) uncollapseSidebars();
+}
+
+function hideDocument()
+{
+	document.querySelector(".document-container")?.classList.add("hide");
+
+	observer.disconnect();
+
+	if (document.body.querySelector(".sidebar-content include")) loadIncludes();
 	else
 	{
 		observer = new MutationObserver(() => 
 		{
-			if (document.body.querySelector(".sidebar")) uncollapseSidebars();
+			if (document.body.querySelector(".sidebar-content include")) loadIncludes();
 		});
 		observer.observe(document.body, { childList: true });
 	}
 }
-
-function uncollapseSidebars()
-{
-	document.querySelector(".document-container").classList.add("hide");
-	return; // disabled for now
-	let viewportWidth = window.innerWidth;
-	let sidebars = document.querySelectorAll(".sidebar");
-	if (viewportWidth > 1600) sidebars.forEach(sidebar => sidebar.classList.remove("is-collapsed"));
-	else if (viewportWidth > 900) document.querySelector(".sidebar-left").classList.remove("is-collapsed");
-}
-
 
 function updateTheme()
 {
@@ -80,12 +77,12 @@ function updateTheme()
 
 	observer.disconnect();
 
-	if (document.body.querySelector("include")) loadIncludes();
+	if (document.body.querySelector(".document-container")) hideDocument();
 	else
 	{
 		observer = new MutationObserver(() => 
 		{
-			if (document.body.querySelector("include")) loadIncludes();
+			if (document.body.querySelector(".document-container")) hideDocument();
 		});
 		observer.observe(document.body, { childList: true });
 	}

@@ -37,9 +37,8 @@ export class Website
 		this.progress = 0;
 		this.index = new WebsiteIndex(this);
 
-		Website.validBodyClasses = HTMLGeneration.getValidBodyClasses(true);
-
 		await MarkdownRenderer.beginBatch();
+		Website.validBodyClasses = await HTMLGeneration.getValidBodyClasses(true);
 
 		if (Settings.settings.includeGraphView)
 		{

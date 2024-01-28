@@ -174,7 +174,7 @@ input[type=checkbox].file-checkbox
 	width: 100%;
 	height: 100%;
 	max-height: 100%;
-	overflow-y: scroll;
+	overflow-y: auto;
 	padding: 1em;
 	padding-right: calc(1em + var(--sidebar-margin));
 	padding-bottom: 3em;
@@ -224,19 +224,20 @@ input[type=checkbox].file-checkbox
 
 .tree-container .tree-item-contents 
 {
-    width: -webkit-fill-available;
+    width: 100%;
     height: 100%;
+	margin: 0 !important;
+	padding: 0 !important;
 	background-color: transparent !important;
     border-radius: var(--radius-s);
-    padding-left: calc(var(--tree-horizontal-spacing) + var(--checkbox-size) * 2 + 1px);
-    padding-bottom: calc(var(--tree-vertical-spacing) / 2);
-    padding-top: calc(var(--tree-vertical-spacing) / 2);
+    padding-left: calc(var(--tree-horizontal-spacing) + var(--checkbox-size) * 2 + 1px) !important;
+    padding-bottom: calc(var(--tree-vertical-spacing) / 2) !important;
+    padding-top: calc(var(--tree-vertical-spacing) / 2) !important;
     color: var(--text-normal);
-	display: flex;
-	flex-direction: row;
+	display: flex !important;
+	flex-direction: row !important;
 	justify-content: flex-start;
     align-items: center;
-	margin: 0;
 }
 
 .tree-container .tree-item-contents:has(.tree-item-icon.collapse-icon)
@@ -382,7 +383,10 @@ input[type=checkbox].file-checkbox
 
 .tree-container .nav-file-title-content, .tree-container .nav-folder-title-content
 {
+    margin-top: unset !important;
     margin-bottom: unset !important;
+    margin-left: unset !important;
+    margin-right: unset !important;
     display: unset !important;
     border-radius: unset !important;
     cursor: unset !important;
@@ -391,5 +395,10 @@ input[type=checkbox].file-checkbox
     line-height: unset !important;
 	padding: unset !important;
 	border: unset !important;
+}
+
+.tree-item-contents:has(.tree-item-icon) .tree-item-title::before
+{
+	display: none !important;
 }
 /*#endregion */

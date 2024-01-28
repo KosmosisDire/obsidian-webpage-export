@@ -21,17 +21,13 @@ export class GlobalVariableStyles extends Asset
 		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
 		this.content = 
         `
-        body
+        html body
         {
 			--line-width: ${lineWidth};
 			--line-width-adaptive: ${lineWidth};
 			--file-line-width: ${lineWidth};
 			--content-width: ${contentWidth};
-			--sidebar-width: calc(min(${sidebarWidth}, 80vw));
-			--collapse-arrow-size: 11px;
-			--tree-horizontal-spacing: 0.6em;
-			--tree-vertical-spacing: 0.6em;
-			--sidebar-margin: 12px;
+			--sidebar-width: min(${sidebarWidth}, 80vw);
         }
 
 		body
