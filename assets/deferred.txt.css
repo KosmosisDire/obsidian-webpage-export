@@ -127,6 +127,7 @@ body.floating-sidebars .sidebar {
     padding: 0!important;
     margin: 0!important;
     height: 100%!important;
+	width: 2.3em !important;
     margin-inline: 0.14em!important;
     position: absolute;
 }
@@ -214,7 +215,6 @@ body
 .document-container>.markdown-preview-view>.markdown-preview-sizer {
     padding: 1.5em !important;
     padding-bottom: 50vh !important;
-    min-height: 100% !important;
     width: 100%;
     position: absolute;
     max-width: var(--line-width);

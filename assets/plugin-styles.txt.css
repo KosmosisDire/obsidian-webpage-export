@@ -79,7 +79,7 @@ body .webpage-container .tree-container .tree-scroll-area
 	text-overflow: ellipsis;
 }
 
-.tree-container .tree-item-icon > *
+.tree-container .tree-item-icon *
 {
 	color: var(--text-muted); 
 	font-family: emoji;
@@ -87,10 +87,14 @@ body .webpage-container .tree-container .tree-scroll-area
 
 .tree-container .tree-item-icon :is(svg,img) 
 {
-    height: 1em;
-    position: absolute;
-    inset: 50%;
-    translate: -50% -50%;
+	-webkit-mask-image-repeat: no-repeat;
+	-webkit-mask-image-position: center;
+}
+
+/* Skip outer wrappers around icons */
+.tree-container .tree-item-icon *:has(svg)
+{
+	display: contents !important;
 }
 
 .tree-container .tree-item-icon
@@ -98,7 +102,9 @@ body .webpage-container .tree-container .tree-scroll-area
 	min-width: 1.6em;
 	max-width: 1.6em;
 	margin-left: 2px;
-	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
 }
 
 .tree-container .tree-item.mod-active > .tree-link > .tree-item-contents
@@ -317,13 +323,18 @@ body .webpage-container .tree-container .tree-scroll-area
 
 /*#region Headers */
 
-#webpage-icon > :is(svg, img)
+#webpage-icon :is(svg, img)
 {
   width: 100%;
   height: 100%;
   box-shadow: none !important;
   border: none !important;
   border-radius: 0 !important;
+}
+
+#webpage-icon *:has(:is(svg, img))
+{
+	display: contents !important;
 }
 
 #webpage-icon:has(:is(svg, img))

@@ -103,16 +103,32 @@ input[type=checkbox].file-checkbox
 	display: inline-block;
 }
 
-.tree-container .tree-item-icon > *
+
+.tree-container .tree-item-icon *
 {
-	color: var(--text-muted);
-	padding-right: 0.3em;
+	color: var(--text-muted); 
+	font-family: emoji;
 }
 
-.tree-container .tree-item-icon svg
+.tree-container .tree-item-icon :is(svg,img) 
 {
-	height: 1em;
-	translate: 0px 1.5px;
+	-webkit-mask-image-repeat: no-repeat;
+	-webkit-mask-image-position: center;
+}
+
+/* Skip outer wrappers around icons */
+.tree-container .tree-item-icon *:has(svg)
+{
+	display: contents !important;
+}
+
+.tree-container .tree-item-icon
+{
+	min-width: 1.6em;
+	max-width: 1.6em;
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
 }
 
 .theme-dark .tree-item:has(> .tree-link > .tree-item-contents > .file-checkbox:not(.checked)):has(.file-checkbox.checked).mod-tree-folder
