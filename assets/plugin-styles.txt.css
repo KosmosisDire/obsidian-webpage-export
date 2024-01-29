@@ -655,7 +655,8 @@ a {
     height: var(--handle-width);
     width: var(--handle-width);
     transition: transform 0.3s;
-    background: url('https://api.iconify.design/lucide/moon.svg?color=white') no-repeat center center;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-moon"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>') 
+	no-repeat center center;
     transform: scale(0.9);
 }
 
@@ -663,7 +664,8 @@ a {
 .theme-toggle-input:checked ~ .toggle-background::after
 {
     transform: translateX(calc(var(--handle-translation) * -1)) scale(0.9);
-    background: url('https://api.iconify.design/lucide/sun.svg') no-repeat center center;
+    background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-sun"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>')
+	no-repeat center center;
 }
 
 /*#endregion */
@@ -1006,60 +1008,6 @@ a.tree-hint-label:hover
 	margin: 0 !important;
 	padding: 0 !important;
 	scroll-margin: 2em !important;
-}
-
-#search-results
-{
-  --search-spacing: calc(var(--tree-vertical-spacing)/ 2);
-  border: 1px solid var(--divider-color);
-  border-bottom-left-radius: var(--radius-s);
-  border-bottom-right-radius: var(--radius-s);
-  border-top: 0;
-  padding: var(--search-spacing);
-}
-
-#search-results > * > div
-{
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--search-spacing);
-  overflow: visible;
-}
-
-#search-results > div:empty::after
-{
-  content: "No search results...";
-  color: var(--text-normal);
-}
-
-.icon
-{
-  width: 1em;
-  height: 1em;
-  margin-left: var(--search-spacing);
-  margin-right: var(--search-spacing);
-  display: inline-block;
-  transform: translateY(2px);
-}
-
-.search-result > a
-{
-  text-overflow: ellipsis;
-  text-wrap: nowrap;
-  white-space: nowrap;
-  overflow: hidden;
-  color: var(--text-normal);
-  padding: var(--search-spacing);
-  border-radius: var(--radius-s);
-  position: relative;
-  transition: background-color 0.2s;
-  text-decoration: none;
-}
-
-.search-result > a:hover
-{
-  background-color: hsla(var(--color-accent-hsl),.25);
 }
 
 .search-input-container:has(+ #search-results) > input[type="search"]
