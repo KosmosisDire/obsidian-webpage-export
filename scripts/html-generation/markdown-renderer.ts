@@ -198,7 +198,7 @@ export namespace MarkdownRenderer
 	{
 		let renderComp = new Component();
 		renderComp.load();
-		await ObsidianRenderer.renderMarkdown(markdown, container, "/", renderComp);
+		await ObsidianRenderer.render(app, markdown, container, "/", renderComp);
 		renderComp.unload();
 
 		let renderedEl = container.children[container.children.length - 1];
@@ -240,7 +240,7 @@ export namespace MarkdownRenderer
 		let renderComp = new Component();
 		renderComp.load();
 		let container = document.createElement("div");
-		await ObsidianRenderer.renderMarkdown(markdown, container, "/", renderComp);
+		await ObsidianRenderer.render(app, markdown, container, "/", renderComp);
 		renderComp.unload();
 		
 		//remove rendered lists and replace them with plain text
