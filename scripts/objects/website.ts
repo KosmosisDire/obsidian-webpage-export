@@ -3,7 +3,7 @@ import { Webpage } from "./webpage";
 import { FileTree } from "./file-tree";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
-import { TFile, getIcon } from "obsidian";
+import { FileManager, TAbstractFile, TFile, TFolder, getIcon } from "obsidian";
 import { ExportPreset, Settings } from "scripts/settings/settings";
 import { GraphView } from "./graph-view";
 import { Path } from "scripts/utils/path";
@@ -32,12 +32,29 @@ export class Website
 	
 	public static validBodyClasses: string;
 
+	private giveWarnings()
+	{
+		// @ts-ignore
+		if (app.plugins.enabledPlugins.has("obsidian-icon-folder"))
+		{
+			// @ts-ignore
+			let fileToIconName = app.plugins.plugins['obsidian-icon-folder'].data;
+			let noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;
+			if (!noteIconsEnabled)
+			{
+				RenderLog.warning("For Iconize plugin support, enable \"Toggle icons while editing notes\" in the Iconize plugin's settings.");
+			}
+		}
+	}
+
 	private async initExport()
 	{
 		this.progress = 0;
 		this.index = new WebsiteIndex(this);
 
 		await MarkdownRenderer.beginBatch();
+
+		this.giveWarnings();
 		Website.validBodyClasses = await HTMLGeneration.getValidBodyClasses(true);
 
 		if (Settings.settings.includeGraphView)
@@ -164,26 +181,81 @@ export class Website
 		this.downloads = this.downloads.filter(filterFunction);
 	}
 
-	public static getTitle(file: TFile): { title: string, icon: string, isDefaultIcon: boolean }
+	public static async getTitleAndIcon(file: TAbstractFile): Promise<{ title: string; icon: string; isDefaultIcon: boolean; }>
 	{
 		const { app } = HTMLExportPlugin.plugin;
 		const { titleProperty } = Settings.settings;
-		const fileCache = app.metadataCache.getFileCache(file);
-		const frontmatter = fileCache?.frontmatter;
-		const titleFromFrontmatter = frontmatter?.[titleProperty] ?? frontmatter?.banner_header; // banner plugin support
-		const title = titleFromFrontmatter ?? file.basename;
 
-		let iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support
-		let isDefaultIcon = false;
-		if (!iconProperty && Settings.settings.showDefaultTreeIcons) 
+		let iconOutput = "";
+		let iconProperty: string | undefined = "";
+		let title = file.name;
+		let useDefaultIcon = false;
+		if (file instanceof TFile)
 		{
-			let isMedia = Asset.extentionToType(file.extension) == AssetType.Media;
-			iconProperty = isMedia ? Settings.settings.defaultMediaIcon : Settings.settings.defaultFileIcon;
-			if (file.extension == "canvas") iconProperty = "lucide//layout-dashboard";
-			isDefaultIcon = true;
+			const fileCache = app.metadataCache.getFileCache(file);
+			const frontmatter = fileCache?.frontmatter;
+			const titleFromFrontmatter = frontmatter?.[titleProperty] ?? frontmatter?.banner_header; // banner plugin support
+			title = titleFromFrontmatter ?? file.basename;
+
+			iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support
+			if (!iconProperty && Settings.settings.showDefaultTreeIcons) 
+			{
+				useDefaultIcon = true;
+				let isMedia = Asset.extentionToType(file.extension) == AssetType.Media;
+				iconProperty = isMedia ? Settings.settings.defaultMediaIcon : Settings.settings.defaultFileIcon;
+				if (file.extension == "canvas") iconProperty = "lucide//layout-dashboard";
+			}
 		}
 
-		let iconOutput = HTMLGeneration.getIcon(iconProperty ?? "");
-		return { title: title, icon: iconOutput, isDefaultIcon: isDefaultIcon };
+		if (file instanceof TFolder && Settings.settings.showDefaultTreeIcons)
+		{
+			iconProperty = Settings.settings.defaultFolderIcon;
+			useDefaultIcon = true;
+		}
+
+		iconOutput = HTMLGeneration.getIcon(iconProperty ?? "");
+
+		// add iconize icon as frontmatter if iconize exists
+		let isUnchangedNotEmojiNotHTML = (iconProperty == iconOutput && iconOutput.length < 40) && !/\p{Emoji}/u.test(iconOutput) && !iconOutput.includes("<") && !iconOutput.includes(">");
+		let parsedAsIconize = false;
+		if (file instanceof TFolder) console.log(useDefaultIcon, iconProperty, isUnchangedNotEmojiNotHTML);
+		//@ts-ignore
+		if ((useDefaultIcon || !iconProperty || isUnchangedNotEmojiNotHTML) && app.plugins.enabledPlugins.has("obsidian-icon-folder"))
+		{
+			//@ts-ignore
+			let fileToIconName = app.plugins.plugins['obsidian-icon-folder'].data;
+			let noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;
+			
+			// only add icon if rendering note icons is enabled
+			// because that is what we rely on to get the icon
+			if (noteIconsEnabled)
+			{
+				let iconIdentifier = fileToIconName.settings.iconIdentifier ?? ":";
+				let iconProperty = fileToIconName[file.path];
+
+				if (iconProperty && typeof iconProperty != "string")
+				{
+					iconProperty = iconProperty.iconName ?? "";
+				}
+
+				if (iconProperty && typeof iconProperty == "string" && iconProperty.trim() != "")
+				{
+					if (file instanceof TFile)
+						app.fileManager.processFrontMatter(file, (frontmatter) =>
+						{
+							frontmatter.icon = iconProperty;
+						});
+
+					iconOutput = iconIdentifier + iconProperty + iconIdentifier;
+					parsedAsIconize = true;
+
+					console.log("Added iconize icon: ", file.path);
+				}
+			}
+		}
+
+		if (!parsedAsIconize && isUnchangedNotEmojiNotHTML) iconOutput = "";
+
+		return { title: title, icon: iconOutput, isDefaultIcon: useDefaultIcon };
 	}
 }

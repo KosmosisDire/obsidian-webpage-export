@@ -84,7 +84,7 @@ export class Webpage
 		this.name += this.isConvertable ? ".html" : "." + file.extension;
 		if (this.isConvertable) this.document = document.implementation.createHTMLDocument(this.source.basename);
 
-		let parentPath = file.parent.path;
+		let parentPath = file.parent?.path ?? "/";
 		if (parentPath.trim() == "/" || parentPath.trim() == "\\") parentPath = "";
 		this.exportPath = Path.joinStrings(parentPath, this.name);
 		if (forceExportToRoot) this.exportPath.reparse(this.name);
@@ -402,7 +402,7 @@ export class Webpage
 		let makeTitle = this.document.querySelector(".mk-inline-context");
 		makeTitle?.remove();
 
-		let titleInfo = Website.getTitle(this.source);
+		let titleInfo = await Website.getTitleAndIcon(this.source);
 		let title = titleInfo.title;
 		let icon = titleInfo.icon;
 
@@ -485,7 +485,7 @@ export class Webpage
 
 		let rootPath = this.pathToRoot.copy.makeWebStyle(Settings.settings.makeNamesWebStyle).asString;
 
-		let titleInfo = Website.getTitle(this.source);
+		let titleInfo = await Website.getTitleAndIcon(this.source);
 		let domtitle = titleInfo.title;
 		if (titleInfo.icon.length <= 14) domtitle = titleInfo.icon + " " + domtitle;
 

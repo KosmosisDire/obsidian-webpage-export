@@ -154,7 +154,7 @@ export class WebsiteIndex
 
 				index.add({
 					path: webpagePath,
-					title: Website.getTitle(webpage.source).title,
+					title: (await Website.getTitleAndIcon(webpage.source)).title,
 					content: content,
 					tags: webpage.getTags(),
 					headers: webpage.getHeaders(),

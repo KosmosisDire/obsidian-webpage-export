@@ -14,10 +14,12 @@ export class FilePickerTree extends FileTree
 	public constructor(files: TFile[], keepOriginalExtensions: boolean = false, sort = true)
 	{
 		super(files, keepOriginalExtensions, sort);
+	}
 
-		this.renderMarkdownTitles = true;
-		
-		for (let file of files)
+	protected override async populateTree(): Promise<void> 
+	{
+
+		for (let file of this.files)
 		{
 			let pathSections: TAbstractFile[] = [];
 
@@ -25,6 +27,7 @@ export class FilePickerTree extends FileTree
 			while (parentFile != undefined)
 			{
 				pathSections.push(parentFile);
+				// @ts-ignore
 				parentFile = parentFile.parent;
 			}
 
@@ -48,7 +51,8 @@ export class FilePickerTree extends FileTree
 					if(child.isFolder) 
 					{
 						child.href = section.path;
-						if (Settings.settings.showDefaultTreeIcons) child.icon = HTMLGeneration.getIcon(Settings.settings.defaultFolderIcon);
+						let titleInfo = await Website.getTitleAndIcon(section);
+						child.icon = titleInfo.icon;
 						child.itemClass = "mod-tree-folder"
 					}
 					else 
@@ -64,14 +68,14 @@ export class FilePickerTree extends FileTree
 			
 			if (parent instanceof FilePickerTreeItem)
 			{
-				let titleInfo = Website.getTitle(file);
+				let titleInfo = await Website.getTitleAndIcon(file);
 				let path = new Path(file.path).makeUnixStyle();
 
 				if (file instanceof TFolder) path.makeForceFolder();
 				else 
 				{
 					parent.originalExtension = path.extensionName;
-					if(!keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
+					if(!this.keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
 				}
 				parent.href = path.asString;
 				parent.title = path.basename == "." ? "" : titleInfo.title;
@@ -79,7 +83,7 @@ export class FilePickerTree extends FileTree
 			}
 		}
 
-		if (sort) 
+		if (this.sort) 
 		{
 			this.sortAlphabetically();
 			this.sortByIsFolder();

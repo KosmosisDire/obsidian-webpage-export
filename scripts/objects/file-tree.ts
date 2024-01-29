@@ -13,13 +13,22 @@ export class FileTree extends Tree
 	/** File extentions matching this will not show extention tags */
 	public hideFileExtentionTags: string[] = [];
 
+	public files: TFile[];
+	public keepOriginalExtensions: boolean;
+	public sort: boolean;
+
 	public constructor(files: TFile[], keepOriginalExtensions: boolean = false, sort = true)
 	{
 		super();
-
+		this.files = files;
+		this.keepOriginalExtensions = keepOriginalExtensions;
+		this.sort = sort;
 		this.renderMarkdownTitles = true;
+	}
 
-		for (let file of files)
+	protected async populateTree()
+	{
+		for (let file of this.files)
 		{
 			let pathSections: TAbstractFile[] = [];
 
@@ -27,6 +36,7 @@ export class FileTree extends Tree
 			while (parentFile != undefined)
 			{
 				pathSections.push(parentFile);
+				// @ts-ignore
 				parentFile = parentFile.parent;
 			}
 
@@ -49,8 +59,9 @@ export class FileTree extends Tree
 
 					if(child.isFolder) 
 					{
-						child.itemClass = "mod-tree-folder nav-folder"
-						if (Settings.settings.showDefaultTreeIcons) child.icon = HTMLGeneration.getIcon(Settings.settings.defaultFolderIcon);
+						child.itemClass = "mod-tree-folder nav-folder";
+						let titleInfo = await Website.getTitleAndIcon(section);
+						child.icon = titleInfo.icon;
 					}
 					else child.itemClass = "mod-tree-file nav-file"
 
@@ -62,14 +73,14 @@ export class FileTree extends Tree
 			
 			if (parent instanceof FileTreeItem)
 			{
-				let titleInfo = Website.getTitle(file);
+				let titleInfo = await Website.getTitleAndIcon(file);
 				let path = new Path(file.path).makeUnixStyle();
 
 				if (file instanceof TFolder) path.makeForceFolder();
 				else 
 				{
 					parent.originalExtension = path.extensionName;
-					if(!keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
+					if(!this.keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
 				}
 
 				parent.href = path.asString;	
@@ -78,11 +89,17 @@ export class FileTree extends Tree
 			}
 		}
 
-		if (sort) 
+		if (this.sort) 
 		{
 			this.sortAlphabetically();
 			this.sortByIsFolder();
 		}
+	}
+
+	public override async generateTree(container: HTMLElement): Promise<void> 
+	{
+		await this.populateTree();
+		await super.generateTree(container);
 	}
 
 	public sortByIsFolder(reverse: boolean = false)
