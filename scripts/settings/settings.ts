@@ -1,4 +1,4 @@
-import { Notice, Plugin, PluginSettingTab, Setting, TFile, TextComponent, getIcon } from 'obsidian';
+import { Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder, TextComponent, getIcon } from 'obsidian';
 import { Utils } from '../utils/utils';
 import { Path } from '../utils/path';
 import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
@@ -6,6 +6,7 @@ import { FlowList } from './flow-list';
 import { ExportInfo, ExportModal } from './export-modal';
 import { migrateSettings } from './settings-migration';
 import { RenderLog } from 'scripts/html-generation/render-log';
+import HTMLExportPlugin from 'scripts/main';
 
 // #region Settings Definition
 
@@ -217,14 +218,22 @@ export class Settings extends PluginSettingTab
 	static getFilesToExport(): TFile[]
 	{
 		let files: TFile[] = [];
-		Settings.settings.filesToExport.forEach((fileList) =>
+
+		let allFiles = HTMLExportPlugin.plugin.app.vault.getFiles();
+		let exportPaths = Settings.settings.filesToExport[0];
+		if (!exportPaths) return [];
+
+		for (let path of exportPaths)
 		{
-			fileList.forEach((filePath) =>
+			let file = app.vault.getAbstractFileByPath(path);
+			if (file instanceof TFile) files.push(file);
+			else if (file instanceof TFolder)
 			{
-				let file = app.vault.getAbstractFileByPath(filePath);
-				if (file instanceof TFile) files.push(file);
-			});
-		});
+				let newFiles = allFiles.filter((f) => f.path.startsWith(file?.path ?? "*"));
+				files.push(...newFiles);
+			}
+		};
+
 		return files;
 	}
 
