@@ -1,4 +1,4 @@
-import { Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, MarkdownPreviewView, loadMermaid, TFile } from "obsidian";
+import { Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, MarkdownPreviewView, loadMermaid, TFile, MarkdownView } from "obsidian";
 import { Utils } from "scripts/utils/utils";
 import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
@@ -40,11 +40,11 @@ export namespace MarkdownRenderer
 		return false;
 	}
 
-	function failRender(file: TFile, message: any): undefined
+	function failRender(file: TFile | undefined, message: any): undefined
 	{
 		if (checkCancelled()) return undefined;
 
-		RenderLog.error(message, `Rendering ${file.path} failed: `);
+		RenderLog.error(message, `Rendering ${file?.path ?? " custom markdown "} failed: `);
 		return;
 	}
 
@@ -106,7 +106,80 @@ export namespace MarkdownRenderer
 		return {contentEl: html, viewType: viewType};
 	}
 
-	export async function renderMarkdownView(preview: MarkdownPreviewView, container: HTMLElement): Promise<HTMLElement | undefined>
+	export async function renderMarkdownInsert(markdown: string, container: HTMLElement, addMarkdownContainer: boolean = true): Promise<HTMLElement | undefined>
+	{
+		let loneFile = !batchStarted;
+		if (loneFile) 
+		{
+			RenderLog.log("Exporting single file, starting batch");
+			await MarkdownRenderer.beginBatch();
+		}
+
+		let success = await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 1);
+		if (!success || !renderLeaf) return failRender(undefined, "Failed to get leaf for rendering!");
+		
+
+		let view = new MarkdownView(renderLeaf);
+		renderLeaf.view = view;
+
+		try
+		{ 
+			view.setViewData(markdown, true);
+		}
+		catch (e)
+		{
+			return failRender(undefined, e);
+		}
+
+
+		let html: HTMLElement | undefined;
+		let viewType = view.getViewType();
+
+		// @ts-ignore
+		let preview = view.previewMode;
+		html = await renderMarkdownView(preview, container, addMarkdownContainer);
+
+		if(checkCancelled()) return undefined;
+		if (!html) return failRender(undefined, "Failed to render file!");
+
+		await postProcessHTML(html);
+
+		if (loneFile) MarkdownRenderer.endBatch();
+
+		return html;
+	}
+
+	export async function renderMarkdown(markdown: string, options: {container: HTMLElement, addMarkdownContainer: boolean} | undefined): Promise<string | HTMLElement>
+	{
+		let container = options?.container;
+		let internalContainer = false;
+		if (!container)
+		{
+			container = document.createElement("div");
+			container.style.display = "none";
+			document.body.appendChild(container);
+			internalContainer = true;
+		}
+
+		let html = await renderMarkdownInsert(markdown, container, options?.addMarkdownContainer ?? false);
+		if (!html) return "";
+
+		if (!options?.addMarkdownContainer)
+		{
+			html.querySelectorAll(".mod-header, .mod-footer").forEach((e: HTMLElement) => e.remove());
+		}
+
+		if (internalContainer) 
+		{
+			let text = html.innerHTML;
+			container.remove();
+			return text;
+		}
+
+		return html;
+	}
+
+	export async function renderMarkdownView(preview: MarkdownPreviewView, container: HTMLElement, addMarkdownContainer: boolean = true): Promise<HTMLElement | undefined>
 	{
 		// @ts-ignore
 		let renderer = preview.renderer;
@@ -122,12 +195,18 @@ export namespace MarkdownRenderer
 
 		let sections = renderer.sections as {"rendered": boolean, "height": number, "computed": boolean, "lines": number, "lineStart": number, "lineEnd": number, "used": boolean, "highlightRanges": number, "level": number, "headingCollapsed": boolean, "shown": boolean, "usesFrontMatter": boolean, "html": string, "el": HTMLElement}[];
 
-		let viewEl = document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
-		let sizerEl = viewEl.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
-		let pusherEl = sizerEl.createDiv({ cls: "markdown-preview-pusher" });
-		pusherEl.style.height = "0.1px";
-		pusherEl.style.marginBottom = "0px";
-		pusherEl.style.width = "1px";
+		let sizerEl = container;
+		let viewEl = container;
+
+		if (addMarkdownContainer)
+		{
+			viewEl = document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
+			sizerEl = viewEl.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
+			let pusherEl = sizerEl.createDiv({ cls: "markdown-preview-pusher" });
+			pusherEl.style.height = "0.1px";
+			pusherEl.style.marginBottom = "0px";
+			pusherEl.style.width = "1px";
+		}
 
 		// @ts-ignore
 		let promises: Promise<any>[] = [];
@@ -188,8 +267,7 @@ export namespace MarkdownRenderer
 			sizerEl.appendChild(section.el);
 		}
 
-		container.appendChild(viewEl);
-		// await AssetHandler.mathjaxStyles.load();
+		if (addMarkdownContainer) container.appendChild(viewEl);
 
 		return viewEl;
 	}
@@ -512,7 +590,6 @@ export namespace MarkdownRenderer
 			renderEl.remove();
 		}
 	}
-
 
     export async function beginBatch()
 	{

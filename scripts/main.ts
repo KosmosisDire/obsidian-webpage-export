@@ -8,12 +8,14 @@ import { HTMLExporter } from './exporter';
 import { Path } from './utils/path';
 import { RenderLog } from './html-generation/render-log';
 import { ExportModal } from './settings/export-modal';
+import { MarkdownRenderer } from './html-generation/markdown-renderer';
 
 export default class HTMLExportPlugin extends Plugin
 {
 	static plugin: HTMLExportPlugin;
 	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string} = {updateAvailable: false, latestVersion: "0", currentVersion: "0", updateNote: ""};
 	static pluginVersion: string = "0.0.0";
+	public markdownRenderer = MarkdownRenderer;
 
 	async onload()
 	{

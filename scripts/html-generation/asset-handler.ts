@@ -116,7 +116,20 @@ export class AssetHandler
 		// remove duplicates
 		downloadAssets = downloadAssets.filter((asset, index, self) => self.findIndex((t) => t.relativeDownloadPath.asString == asset.relativeDownloadPath.asString) === index);
 
-		// downloadAssets.sort((a, b) => a.loadPriority - b.loadPriority);
+		function loadMethodToPriority(loadMethod: LoadMethod): number
+		{
+			switch (loadMethod)
+			{
+				case LoadMethod.Defer:
+					return 0;
+				case LoadMethod.Default:
+					return 2;
+				case LoadMethod.Async:
+					return 3;
+			}
+		}
+
+		downloadAssets.sort((a, b) => loadMethodToPriority(b.loadMethod) - loadMethodToPriority(a.loadMethod));
 		return downloadAssets;
 	}
 
