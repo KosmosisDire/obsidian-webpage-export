@@ -146,7 +146,7 @@ export namespace HTMLGeneration
 			if (typeof(style.content) != "string") continue;
 			
 			// this matches every class name with the dot
-			let matches = style.content.matchAll(/(?![0-9].*$)\.(?!cm.*$)(?![0-9].*$)[^ ͼ\>\+\{\(\,\.\[\)\:\;\/]{1,}/gm);
+			let matches = style.content.matchAll(/\.([A-Za-z_-]+)/g);
 			for (var match of matches)
 			{
 				let className = match[0].replace(".", "").trim();
