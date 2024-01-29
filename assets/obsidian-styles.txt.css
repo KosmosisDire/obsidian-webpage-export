@@ -22,7 +22,7 @@ h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-i
 	transition: opacity 0.15s ease-in-out;
 }
 
-.cm-fold-indicator .collapse-indicator, .cm-gutterElement .collapse-indicator, .collapse-indicator, .fold-gutter
+.collapse-indicator, .fold-gutter
 {
 	opacity: 0;
 	transition: opacity 0.15s ease-in-out;

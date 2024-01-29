@@ -47,7 +47,7 @@ export class AssetHandler
 	public static deferredCSS: Asset = new Asset("deferred.css", deferredCSS, AssetType.Style, InlinePolicy.AlwaysInline, true, Mutability.Static, LoadMethod.Defer);
 
 	// scripts
-	public static websiteJS: Asset = new Asset("webpage.js", websiteJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, LoadMethod.Default);
+	public static websiteJS: Asset = new Asset("webpage.js", websiteJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, LoadMethod.Async);
 	public static graphViewJS: Asset = new Asset("graph-view.js", graphViewJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
 	public static graphWASMJS: Asset = new Asset("graph-wasm.js", graphWASMJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
 	public static graphWASM: Asset = new Asset("graph-wasm.wasm", Buffer.from(graphWASM), AssetType.Script, InlinePolicy.None, false, Mutability.Static);

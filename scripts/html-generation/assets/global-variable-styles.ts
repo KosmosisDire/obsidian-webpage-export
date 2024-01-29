@@ -1,4 +1,4 @@
-import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
+import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { Settings } from "scripts/settings/settings";
 
 export class GlobalVariableStyles extends Asset

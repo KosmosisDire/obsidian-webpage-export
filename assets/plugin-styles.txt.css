@@ -731,8 +731,7 @@ body.is-small-screen .graph-view-container.expanded
     color: var(--text-muted);
 }
 
-.graph-view-container .graph-icon > svg
-{
+.graph-view-container .graph-icon>svg {
     width: 24px;
     height: 24px;
 
@@ -743,6 +742,10 @@ body.is-small-screen .graph-view-container.expanded
     outline-style: solid;
     border-radius: 100px;
     margin: 10px;
+	
+    transition: outline-color, background-color;
+    transition-timing-function: ease-in-out;
+    transition-duration: var(--color-fade-speed);
 }
 
 .graph-view-placeholder 
@@ -1016,11 +1019,13 @@ a.tree-hint-label:hover
   border-bottom-right-radius: 0;
 }
 
-input[type=search] 
-{
-    box-shadow: none !important;
+input[type=search] {
+    box-shadow: none!important;
     height: 2.5em;
     font-size: 1em;
+    transition: background, background-color, border;
+    transition-duration: var(--color-fade-speed);
+	transition-timing-function: ease-in-out;
 }
 
 .search-input-container

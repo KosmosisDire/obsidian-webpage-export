@@ -2455,6 +2455,7 @@ async function search(query)
 			hintLabels.push(hints);
 		}
 
+		let fileTree = document.querySelector(".file-tree");
 		if (fileTree)
 		{
 			// filter the file tree and sort it by the order of the search results

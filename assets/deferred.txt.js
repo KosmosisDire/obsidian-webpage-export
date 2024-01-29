@@ -1,5 +1,7 @@
-function loadIncludes()
+async function loadIncludes()
 {
+	observer.disconnect();
+
 	if (location.protocol != "file:") 
 	{
 		// replace include tags with the contents of the file
@@ -8,18 +10,15 @@ function loadIncludes()
 		{
 			let includeTag = includeTags[i];
 			let includePath = includeTag.getAttribute("src");
-			
-			const request = new XMLHttpRequest();
-			request.open("GET", includePath, false); // `false` makes the request synchronous
-			request.send(null);
-			
-			if (request.status !== 200) 
+
+			const request = await fetch(includePath);
+			if (!request.ok) 
 			{
 				console.log("Could not include file: " + includePath);
 				continue;
 			}
 			
-			let includeText = request.responseText;
+			let includeText = await request.text();
 			includeTag.outerHTML = includeText;
 		}
 	}
@@ -29,7 +28,7 @@ function loadIncludes()
 		if (e.length > 0)
 		{
 			var error = document.createElement("div");
-			error.textContent = "Web server exports relay on fetch() to load content, which is unsupported by the file:// protocol. Please use a web server to view this vault.";
+			error.textContent = "Web server exports must be hosted on an http / web server to be viewed correctly.";
 			error.style.position = "fixed";
 			error.style.top = "50%";
 			error.style.left = "50%";
@@ -41,7 +40,6 @@ function loadIncludes()
 		}
 	}
 
-	observer.disconnect();
 }
 
 function hideDocument()
