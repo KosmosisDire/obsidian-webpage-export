@@ -739,7 +739,7 @@ function parseURLParams()
 {
 	const highlightParam = loadedURL.searchParams.get('mark');
 	const searchParam = loadedURL.searchParams.get('query');
-	const hashParam = loadedURL.hash;
+	const hashParam = decodeURI(loadedURL.hash);
 	
 	if (highlightParam) 
 	{

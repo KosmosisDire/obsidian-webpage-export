@@ -367,7 +367,8 @@ body .webpage-container .tree-container .tree-scroll-area
 {
     transition: height ease-in-out, margin-bottom ease-in-out;
     transition-duration: 0.2s;
-    display: block;
+    display: flex;
+	flex-direction: column;
 	position: relative;
 }
 
@@ -1039,6 +1040,35 @@ input[type=search] {
     mask-repeat: no-repeat;
     top: 50%;
     transform: translateY(-50%);
+}
+
+/*#endregion */
+
+/*#region Sideabr Resize */
+
+.sidebar-handle:hover ~ .sidebar-content {
+    border-width: var(--divider-width-hover);
+	border-color: var(--divider-color-hover);
+}
+
+.sidebar-handle {
+    width: min(max(calc(var(--sidebar-margin) / 2.0), 3px), 12px);
+    height: calc(100vh - 2 * var(--radius-l));
+    margin-top: var(--radius-l);
+    margin-bottom: var(--radius-l);
+    top: 0;
+    position: absolute;
+    cursor: ew-resize;
+    z-index: 1;
+    transition: background-color .2s ease-in-out;
+}
+
+.sidebar-left .sidebar-handle {
+    right: 0;
+}
+
+.sidebar-right .sidebar-handle {
+    left: 0;
 }
 
 /*#endregion */
