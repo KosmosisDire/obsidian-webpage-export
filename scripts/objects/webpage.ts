@@ -364,7 +364,7 @@ export class Webpage
 		leftTopbarContent.setAttribute("class", "topbar-content");
 		leftCollapseIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
 
-		documentContainer.setAttribute("class", "document-container markdown-reading-view");
+		documentContainer.setAttribute("class", "document-container markdown-reading-view hide");
 
 		rightSidebar.setAttribute("class", "sidebar-right sidebar is-collapsed");
 		rightSidebarHandle.setAttribute("class", "sidebar-handle");

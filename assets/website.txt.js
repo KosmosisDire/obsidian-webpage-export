@@ -2121,9 +2121,10 @@ function setupSidebars()
 	let minResizeWidth = parseFloat(getComputedStyle(leftHandle.parentElement).fontSize) * 15;
 	let collapseWidth = minResizeWidth / 2.0;
 
-	let storedWidth = localStorage.getItem('sidebar-width');
-	let initialWidth = storedWidth ? storedWidth : (sidebarDefaultWidth + "px");
-	setSidebarWidth(initialWidth);
+	let rightWidth = localStorage.getItem('sidebar-right-width');
+	let leftWidth = localStorage.getItem('sidebar-left-width');
+	if (rightWidth) leftHandle.closest('.sidebar').style.setProperty('--sidebar-width', leftWidth);
+	if (leftWidth) rightHandle.closest('.sidebar').style.setProperty('--sidebar-width', rightWidth);
 
 	function resizeMove(e)
 	{
@@ -2131,17 +2132,17 @@ function setupSidebars()
 		
 		let isLeft = resizingSidebar.classList.contains("sidebar-left");
 		var distance = isLeft ? e.clientX : window.innerWidth - e.clientX;
-		var newWidth = Math.max(distance, minResizeWidth)  + 'px';
+		var newWidth = Math.min(Math.max(distance, minResizeWidth), window.innerWidth * 0.4)  + 'px';
 
 		if (distance < collapseWidth)
 		{
-			resizingSidebar.classList.add('is-collapsed');
+			resizingSidebar.collapse(true);
 			resizingSidebar.style.removeProperty('--sidebar-width');
 			resizingSidebar.style.removeProperty('transition-duration');
 		} 
 		else 
 		{
-			resizingSidebar.classList.remove('is-collapsed');
+			resizingSidebar.collapse(false);
 			resizingSidebar.style.setProperty('--sidebar-width', newWidth);
 			if (distance > minResizeWidth) resizingSidebar.style.transitionDuration = "0s";
 		}
@@ -2162,14 +2163,6 @@ function setupSidebars()
 
 	leftHandle.addEventListener('mousedown', handleClick);
 	rightHandle.addEventListener('mousedown', handleClick);
-}
-
-function setSidebarWidth(width) {
-	var closestSidebar = document.querySelector('.sidebar');
-	if (closestSidebar) 
-	{
-		closestSidebar.style.setProperty('--sidebar-width', width);
-	}
 }
 
 /**Get the computed target sidebar width in px*/

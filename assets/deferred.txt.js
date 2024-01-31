@@ -42,23 +42,6 @@ async function loadIncludes()
 
 }
 
-function hideDocument()
-{
-	document.querySelector(".document-container")?.classList.add("hide");
-
-	observer.disconnect();
-
-	if (document.body.querySelector(".sidebar-content include")) loadIncludes();
-	else
-	{
-		observer = new MutationObserver(() => 
-		{
-			if (document.body.querySelector(".sidebar-content include")) loadIncludes();
-		});
-		observer.observe(document.body, { childList: true });
-	}
-}
-
 function updateTheme()
 {
 	
@@ -75,12 +58,12 @@ function updateTheme()
 
 	observer.disconnect();
 
-	if (document.body.querySelector(".document-container")) hideDocument();
+	if (document.body.querySelector(".sidebar-content include")) loadIncludes();
 	else
 	{
 		observer = new MutationObserver(() => 
 		{
-			if (document.body.querySelector(".document-container")) hideDocument();
+			if (document.body.querySelector(".sidebar-content include")) loadIncludes();
 		});
 		observer.observe(document.body, { childList: true });
 	}
