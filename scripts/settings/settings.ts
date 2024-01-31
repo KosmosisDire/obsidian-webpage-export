@@ -535,14 +535,20 @@ export class Settings extends PluginSettingTab
 				.addDropdown((dropdown) => dropdown
 					.addOption('1', '1')
 					.addOption('2', '2')
-					.addOption('3', '3')
-					.addOption('4', '4')
-					.addOption('5', '5')
-					.addOption('6', '6')
 					.addOption('7', 'No Collapse')
 					.setValue(Settings.settings.minOutlineCollapse.toString())
 					.onChange(async (value) => {
 						Settings.settings.minOutlineCollapse = parseInt(value);
+						await Settings.saveSettings();
+					}));
+			
+			new Setting(contentEl)
+				.setName('Start Outline Collapsed')
+				.setDesc('All outline items will be collapsed by default.')
+				.addToggle((toggle) => toggle
+					.setValue(Settings.settings.startOutlineCollapsed)
+					.onChange(async (value) => {
+						Settings.settings.startOutlineCollapsed = value;
 						await Settings.saveSettings();
 					}));
 

@@ -14,6 +14,7 @@ let rightSidebar;
 let sidebarCollapseIcons;
 let sidebarGutters;
 let sidebars;
+let sidebarDefaultWidth;
 let sidebarTargetWidth;
 let contentTargetWidth;
 
@@ -101,7 +102,7 @@ async function initializePage(showInTree = true, changeURL = true)
 		await setupSearch();
 		setupRootPath(document);
 
-		sidebarTargetWidth = await getComputedPixelValue("--sidebar-width");
+		sidebarDefaultWidth = await getComputedPixelValue("--sidebar-width");
 		contentTargetWidth = await getComputedPixelValue("--line-width") * 0.9;
 
 		window.addEventListener('resize', () => onResize());
@@ -237,7 +238,7 @@ function onResize(isInitial = false)
 		return (w < value && lastScreenWidth == undefined) || (w < value && lastScreenWidth > value);
 	}
 
-	if (widthNowGreaterThan(contentTargetWidth + sidebarTargetWidth * 2))
+	if (widthNowGreaterThan(contentTargetWidth + sidebarDefaultWidth * 2))
 	{
 		deviceSize = "large-screen";
 		document.body.classList.toggle("floating-sidebars", false);
@@ -248,7 +249,7 @@ function onResize(isInitial = false)
 		sidebars.forEach(function (sidebar) { sidebar.collapse(false) });
 		sidebarGutters.forEach(function (gutter) { gutter.collapse(false) });
 	}
-	else if (widthNowInRange((contentTargetWidth + sidebarTargetWidth) * 0.8, contentTargetWidth + sidebarTargetWidth * 2))
+	else if (widthNowInRange((contentTargetWidth + sidebarDefaultWidth) * 0.8, contentTargetWidth + sidebarDefaultWidth * 2))
 	{
 		deviceSize = "small screen";
 		document.body.classList.toggle("floating-sidebars", false);
@@ -263,7 +264,7 @@ function onResize(isInitial = false)
 			rightSidebar.collapse(true);
 		}
 	}
-	else if (widthNowInRange(sidebarTargetWidth * 1.4, (contentTargetWidth + sidebarTargetWidth) * 0.8))
+	else if (widthNowInRange(sidebarDefaultWidth * 1.4, (contentTargetWidth + sidebarDefaultWidth) * 0.8))
 	{
 		deviceSize = "tablet";
 		document.body.classList.toggle("floating-sidebars", true);
@@ -280,7 +281,7 @@ function onResize(isInitial = false)
 
 		if(leftSidebar && !fullyInitialized) leftSidebar.collapse(true);
 	}
-	else if (widthNowLessThan(sidebarTargetWidth * 1.4))
+	else if (widthNowLessThan(sidebarDefaultWidth * 1.4))
 	{
 		deviceSize = "phone";
 		document.body.classList.toggle("floating-sidebars", true);
@@ -2109,6 +2110,66 @@ function setupSidebars()
 			icon.sidebar.toggleCollapse();
 		});
 	});
+	
+	// sidebar resizing
+	if (isMobile()) return;
+
+	let leftHandle = document.querySelector('.sidebar-left .sidebar-handle');
+	let rightHandle = document.querySelector('.sidebar-right .sidebar-handle');
+	let resizingSidebar = null;
+
+	let minResizeWidth = parseFloat(getComputedStyle(leftHandle.parentElement).fontSize) * 15;
+	let collapseWidth = minResizeWidth / 2.0;
+
+	let storedWidth = localStorage.getItem('sidebar-width');
+	let initialWidth = storedWidth ? storedWidth : (sidebarDefaultWidth + "px");
+	setSidebarWidth(initialWidth);
+
+	function resizeMove(e)
+	{
+		if (!resizingSidebar) return;
+		
+		let isLeft = resizingSidebar.classList.contains("sidebar-left");
+		var distance = isLeft ? e.clientX : window.innerWidth - e.clientX;
+		var newWidth = Math.max(distance, minResizeWidth)  + 'px';
+
+		if (distance < collapseWidth)
+		{
+			resizingSidebar.classList.add('is-collapsed');
+			resizingSidebar.style.removeProperty('--sidebar-width');
+			resizingSidebar.style.removeProperty('transition-duration');
+		} 
+		else 
+		{
+			resizingSidebar.classList.remove('is-collapsed');
+			resizingSidebar.style.setProperty('--sidebar-width', newWidth);
+			if (distance > minResizeWidth) resizingSidebar.style.transitionDuration = "0s";
+		}
+	}
+
+	function handleClick(e) 
+	{
+		resizingSidebar = e.target.closest('.sidebar');
+		document.addEventListener('mousemove', resizeMove);
+		document.addEventListener('mouseup', function () 
+		{
+			document.removeEventListener('mousemove', resizeMove);
+			var finalWidth = getComputedStyle(resizingSidebar).getPropertyValue('--sidebar-width');
+			localStorage.setItem('sidebar-width', finalWidth);
+			resizingSidebar.style.removeProperty('transition-duration');
+		});
+	}
+
+	leftHandle.addEventListener('mousedown', handleClick);
+	rightHandle.addEventListener('mousedown', handleClick);
+}
+
+function setSidebarWidth(width) {
+	var closestSidebar = document.querySelector('.sidebar');
+	if (closestSidebar) 
+	{
+		closestSidebar.style.setProperty('--sidebar-width', width);
+	}
 }
 
 /**Get the computed target sidebar width in px*/

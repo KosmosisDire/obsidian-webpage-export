@@ -1047,8 +1047,15 @@ input[type=search] {
 /*#region Sideabr Resize */
 
 .sidebar-handle:hover ~ .sidebar-content {
-    border-width: var(--divider-width-hover);
 	border-color: var(--divider-color-hover);
+}
+
+.sidebar-left .sidebar-handle:hover ~ .sidebar-content {
+	box-shadow: calc(0px - var(--divider-width-hover) + 1px) 0 0 0 var(--divider-color-hover) inset;
+}
+
+.sidebar-right .sidebar-handle:hover ~ .sidebar-content {
+	box-shadow: calc(var(--divider-width-hover) - 1px) 0 0 0 var(--divider-color-hover) inset;
 }
 
 .sidebar-handle {

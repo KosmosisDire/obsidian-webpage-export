@@ -135,7 +135,6 @@ export namespace HTMLGeneration
 
 		let bodyClasses = document.body.classList;
 		let validClasses = "";
-		validClasses += " publish ";
 		
 		// keep body classes that are referenced in the styles
 		let styles = AssetHandler.getAssetsOfType(AssetType.Style);
@@ -156,6 +155,8 @@ export namespace HTMLGeneration
 			await Utils.delay(0);
 		}
 
+		validClasses += " publish ";
+		validClasses += " css-settings-manager ";
 		_validBodyClasses = validClasses.replace(/\s\s+/g, ' ');
 
 		// convert to array and remove duplicates

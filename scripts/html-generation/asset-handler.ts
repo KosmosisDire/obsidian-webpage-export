@@ -43,7 +43,7 @@ export class AssetHandler
 	public static mathjaxStyles: MathjaxStyles = new MathjaxStyles();
 	public static globalDataStyles: GlobalVariableStyles = new GlobalVariableStyles();
 	public static supportedPluginStyles: SupportedPluginStyles = new SupportedPluginStyles();
-	public static websiteStyles: Asset = new Asset("main-styles.css", webpageStyles, AssetType.Style, InlinePolicy.Auto, true, Mutability.Static, LoadMethod.Async);
+	public static websiteStyles: Asset = new Asset("main-styles.css", webpageStyles, AssetType.Style, InlinePolicy.Auto, true, Mutability.Static, LoadMethod.Async, 4);
 	public static deferredCSS: Asset = new Asset("deferred.css", deferredCSS, AssetType.Style, InlinePolicy.AlwaysInline, true, Mutability.Static, LoadMethod.Defer);
 
 	// scripts
@@ -116,20 +116,7 @@ export class AssetHandler
 		// remove duplicates
 		downloadAssets = downloadAssets.filter((asset, index, self) => self.findIndex((t) => t.relativeDownloadPath.asString == asset.relativeDownloadPath.asString) === index);
 
-		function loadMethodToPriority(loadMethod: LoadMethod): number
-		{
-			switch (loadMethod)
-			{
-				case LoadMethod.Defer:
-					return 0;
-				case LoadMethod.Default:
-					return 2;
-				case LoadMethod.Async:
-					return 3;
-			}
-		}
-
-		downloadAssets.sort((a, b) => loadMethodToPriority(b.loadMethod) - loadMethodToPriority(a.loadMethod));
+		downloadAssets.sort((a, b) => b.loadPriority - a.loadPriority);
 		return downloadAssets;
 	}
 

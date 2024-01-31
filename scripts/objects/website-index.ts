@@ -311,7 +311,7 @@ export class WebsiteIndex
 	{
 		if (!this.previousMetadata) return;
 		if (this.previousMetadata.validBodyClasses == Website.validBodyClasses) return;
-		console.log("Updating body classes");
+		console.log("Updating body classes from: ", this.previousMetadata.validBodyClasses, " to: ", Website.validBodyClasses);
 
 		let convertableFiles = this.previousMetadata.files.filter((path) => MarkdownRenderer.isConvertable(path.split(".").pop() ?? ""));
 		let exportedPaths = convertableFiles.map((path) => new Path(this.previousMetadata?.fileInfo[path]?.exportedPath ?? "", this.web.destination.asString));

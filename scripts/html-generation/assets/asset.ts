@@ -94,8 +94,9 @@ export class Asset extends Downloadable
 	public mutability: Mutability; // can this asset change
     public minify: boolean; // should the asset be minified
     public loadMethod: LoadMethod = LoadMethod.Default; // should this asset be loaded asynchronously if possible
+	public loadPriority: number = 100; // the priority of this asset when loading 
 
-	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async)
+	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async, loadPriority: number = 100)
     {
 		if(Settings.settings.makeNamesWebStyle) filename = Path.toWebStyle(filename);
         super(filename, content, Asset.typeToPath(type));
@@ -104,6 +105,7 @@ export class Asset extends Downloadable
 		this.mutability = mutability;
         this.minify = minify;
         this.loadMethod = loadMethod;
+		this.loadPriority = loadPriority;
 
         if(mutability == Mutability.Static) 
 		{

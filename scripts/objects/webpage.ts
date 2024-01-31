@@ -342,12 +342,14 @@ export class Webpage
 
 		let pageContainer = this.document.createElement("div");
 		let leftSidebar = this.document.createElement("div");
+		let leftSidebarHandle = this.document.createElement("div");
 		let leftContent = this.document.createElement("div");
 		let leftTopbar = this.document.createElement("div");
 		let leftTopbarContent = this.document.createElement("div");
 		let leftCollapseIcon = this.document.createElement("div");
 		let documentContainer = this.document.createElement("div");
 		let rightSidebar = this.document.createElement("div");
+		let rightSidebarHandle = this.document.createElement("div");
 		let rightContent = this.document.createElement("div");
 		let rightTopbar = this.document.createElement("div");
 		let rightTopbarContent = this.document.createElement("div");
@@ -356,6 +358,7 @@ export class Webpage
 		pageContainer.setAttribute("class", "webpage-container");
 
 		leftSidebar.setAttribute("class", "sidebar-left sidebar is-collapsed");
+		leftSidebarHandle.setAttribute("class", "sidebar-handle");
 		leftContent.setAttribute("class", "sidebar-content");
 		leftTopbar.setAttribute("class", "sidebar-topbar");
 		leftTopbarContent.setAttribute("class", "topbar-content");
@@ -364,6 +367,7 @@ export class Webpage
 		documentContainer.setAttribute("class", "document-container markdown-reading-view");
 
 		rightSidebar.setAttribute("class", "sidebar-right sidebar is-collapsed");
+		rightSidebarHandle.setAttribute("class", "sidebar-handle");
 		rightContent.setAttribute("class", "sidebar-content");
 		rightTopbar.setAttribute("class", "sidebar-topbar");
 		rightTopbarContent.setAttribute("class", "topbar-content");
@@ -373,6 +377,7 @@ export class Webpage
 		pageContainer.appendChild(documentContainer);
 		pageContainer.appendChild(rightSidebar);
 
+		leftSidebar.appendChild(leftSidebarHandle);
 		leftSidebar.appendChild(leftTopbar);
 		leftSidebar.appendChild(leftContent);
 		leftTopbar.appendChild(leftTopbarContent);
@@ -381,6 +386,7 @@ export class Webpage
 
 		documentContainer.appendChild(middleContent);
 
+		rightSidebar.appendChild(rightSidebarHandle);
 		rightSidebar.appendChild(rightTopbar);
 		rightSidebar.appendChild(rightContent);
 		rightTopbar.appendChild(rightTopbarContent);

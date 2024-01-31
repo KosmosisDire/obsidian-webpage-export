@@ -95,9 +95,6 @@ export class Website
 			this.fileTreeAsset.load();
 		}
 
-		// add body classes as an html asset
-		new Asset("body-classes.html", Website.validBodyClasses, AssetType.HTML, InlinePolicy.None, true, Mutability.Temporary);
-
 		await this.index.init();
 	}
 

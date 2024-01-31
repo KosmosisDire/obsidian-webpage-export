@@ -88,7 +88,7 @@ function updateTheme()
 
 var observer = new MutationObserver(() => 
 {
-	if (document.body) updateTheme();
+	if (document.body.classList.length != 0) updateTheme();
 });
 observer.observe(document.documentElement, { childList: true });
 

@@ -55,7 +55,7 @@ body.floating-sidebars .sidebar {
 	padding-top: 4em;
     line-height: var(--line-height-tight);
     background-color: var(--background-secondary);
-	transition: background-color, border-right, border-left;
+	transition: background-color, border-right, border-left, box-shadow;
 	transition-duration: var(--color-fade-speed);
 	transition-timing-function: ease-in-out;
 

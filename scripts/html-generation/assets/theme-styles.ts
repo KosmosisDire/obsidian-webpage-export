@@ -10,7 +10,7 @@ export class ThemeStyles extends Asset
 
     constructor()
     {
-        super("theme.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Default);
+        super("theme.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Default, 8);
     }
 
     private static async getThemeContent(themeName: string): Promise<string>

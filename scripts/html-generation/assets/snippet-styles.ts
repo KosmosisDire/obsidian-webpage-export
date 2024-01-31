@@ -1,4 +1,4 @@
-import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
+import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { Path } from "scripts/utils/path";
 import { RenderLog } from "../render-log";
 
@@ -9,7 +9,7 @@ export class SnippetStyles extends Asset
 
     constructor()
     {
-        super("snippets.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic);
+        super("snippets.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Async, 2);
     }
 
     private static getEnabledSnippets(): string[]

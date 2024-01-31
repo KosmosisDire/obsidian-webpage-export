@@ -1,5 +1,5 @@
 import { Settings } from "scripts/settings/settings";
-import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
+import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { AssetHandler } from "../asset-handler";
 
 export class OtherPluginStyles extends Asset
@@ -9,7 +9,7 @@ export class OtherPluginStyles extends Asset
 
     constructor()
     {
-        super("other-plugins.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic);
+        super("other-plugins.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Async, 9);
     }
     
     override async load()
