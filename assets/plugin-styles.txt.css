@@ -1044,17 +1044,17 @@ input[type=search] {
 
 /*#endregion */
 
-/*#region Sideabr Resize */
+/*#region Sidebar Resize */
 
 .sidebar-handle:hover ~ .sidebar-content {
 	border-color: var(--divider-color-hover);
 }
 
-.sidebar-left .sidebar-handle:hover ~ .sidebar-content {
+.sidebar-left .sidebar-handle:hover ~ .sidebar-content, .sidebar-left.is-resizing .sidebar-content {
 	box-shadow: calc(0px - var(--divider-width-hover) + 1px) 0 0 0 var(--divider-color-hover) inset;
 }
 
-.sidebar-right .sidebar-handle:hover ~ .sidebar-content {
+.sidebar-right .sidebar-handle:hover ~ .sidebar-content, .sidebar-right.is-resizing .sidebar-content {
 	box-shadow: calc(var(--divider-width-hover) - 1px) 0 0 0 var(--divider-color-hover) inset;
 }
 

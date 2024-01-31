@@ -2139,7 +2139,6 @@ function setupSidebars()
 		if (distance < collapseWidth)
 		{
 			resizingSidebar.collapse(true);
-			resizingSidebar.style.removeProperty('--sidebar-width');
 			resizingSidebar.style.removeProperty('transition-duration');
 		} 
 		else 
@@ -2162,7 +2161,7 @@ function setupSidebars()
 
 			let isLeft = resizingSidebar.classList.contains("sidebar-left");
 			localStorage.setItem(isLeft ? 'sidebar-left-width' : 'sidebar-right-width', finalWidth);
-			resizingSidebar.classList.add('is-resizing');
+			resizingSidebar.classList.remove('is-resizing');
 			resizingSidebar.style.removeProperty('transition-duration');
 		});
 	}
