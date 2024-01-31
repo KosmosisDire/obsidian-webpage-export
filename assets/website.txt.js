@@ -2119,7 +2119,7 @@ function setupSidebars()
 	let resizingSidebar = null;
 
 	let minResizeWidth = parseFloat(getComputedStyle(leftHandle.parentElement).fontSize) * 15;
-	let collapseWidth = minResizeWidth / 2.0;
+	let collapseWidth = minResizeWidth / 4.0;
 
 	let rightWidth = localStorage.getItem('sidebar-right-width');
 	let leftWidth = localStorage.getItem('sidebar-left-width');
@@ -2153,6 +2153,7 @@ function setupSidebars()
 	function handleClick(e) 
 	{
 		resizingSidebar = e.target.closest('.sidebar');
+		resizingSidebar.classList.add('is-resizing');
 		document.addEventListener('mousemove', resizeMove);
 		document.addEventListener('mouseup', function () 
 		{
@@ -2161,6 +2162,7 @@ function setupSidebars()
 
 			let isLeft = resizingSidebar.classList.contains("sidebar-left");
 			localStorage.setItem(isLeft ? 'sidebar-left-width' : 'sidebar-right-width', finalWidth);
+			resizingSidebar.classList.add('is-resizing');
 			resizingSidebar.style.removeProperty('transition-duration');
 		});
 	}
