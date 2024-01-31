@@ -44,8 +44,8 @@ async function loadIncludes()
 
 function updateTheme()
 {
-	
-	if (localStorage.getItem("theme") == "dark")
+	let theme = localStorage.getItem("theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+	if (theme == "dark")
 	{
 		document.body.classList.add("theme-dark");
 		document.body.classList.remove("theme-light");
