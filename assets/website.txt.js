@@ -2156,7 +2156,9 @@ function setupSidebars()
 		{
 			document.removeEventListener('mousemove', resizeMove);
 			var finalWidth = getComputedStyle(resizingSidebar).getPropertyValue('--sidebar-width');
-			localStorage.setItem('sidebar-width', finalWidth);
+
+			let isLeft = resizingSidebar.classList.contains("sidebar-left");
+			localStorage.setItem(isLeft ? 'sidebar-left-width' : 'sidebar-right-width', finalWidth);
 			resizingSidebar.style.removeProperty('transition-duration');
 		});
 	}
