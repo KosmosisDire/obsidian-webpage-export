@@ -2123,8 +2123,10 @@ function setupSidebars()
 
 	let rightWidth = localStorage.getItem('sidebar-right-width');
 	let leftWidth = localStorage.getItem('sidebar-left-width');
-	if (rightWidth) leftHandle.closest('.sidebar').style.setProperty('--sidebar-width', leftWidth);
-	if (leftWidth) rightHandle.closest('.sidebar').style.setProperty('--sidebar-width', rightWidth);
+	console.log("Right width: " + rightWidth);
+	console.log("Left width: " + leftWidth);
+	if (rightWidth) document.querySelector('.sidebar-right').style.setProperty('--sidebar-width', leftWidth);
+	if (leftWidth) document.querySelector('.sidebar-left').style.setProperty('--sidebar-width', rightWidth);
 
 	function resizeMove(e)
 	{
