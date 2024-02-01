@@ -233,14 +233,16 @@ export class Webpage
 		return [];
 	}
 
-	public getHeaders(): string[]
+	public getHeadings(): {heading: string, level: number, headingEl: HTMLElement}[]
 	{
-		let headers: string[] = [];
+		let headers: {heading: string, level: number, headingEl: HTMLElement}[] = [];
 		if (this.document)
 		{
 			this.document.querySelectorAll(".heading").forEach((headerEl: HTMLElement) =>
 			{
-				headers.push(headerEl.innerText ?? "");
+				let level = parseInt(headerEl.tagName[1]);
+				let heading = headerEl.innerText ?? "";
+				headers.push({heading, level, headingEl: headerEl});
 			});
 		}
 
@@ -251,7 +253,6 @@ export class Webpage
 	{
 		if (!this.isConvertable || !this.document) return this;
 
-		// set custom line width on body
 		let body = this.document.body;
 		body.setAttribute("class", Website.validBodyClasses);
 
@@ -273,7 +274,7 @@ export class Webpage
 		if(this.sizerElement) this.sizerElement.style.paddingBottom = "";
 
 		// move banner plugin's wrapper above the sizer
-		let bannerWrapper = this.document.querySelector(".obsidian-banner-wrapper");
+		let bannerWrapper = this.document.querySelector(".obsidian-banner-wrapper");  
 
 		let sizerParent = bannerWrapper?.closest(".markdown-preview-sizer");
 		let contentParent = bannerWrapper?.closest(".markdown-preview-view");
@@ -412,7 +413,7 @@ export class Webpage
 		let title = titleInfo.title;
 		let icon = titleInfo.icon;
 
-		// if the first header element is basically the same as the title, remove it
+		// if the first header element is basically the same as the title, use it's text and remove it
 		let firstHeader = this.document.querySelector(":is(h1, h2, h3, h4, h5, h6):not(.markdown-embed-content *)");
 		if (firstHeader)
 		{
@@ -426,10 +427,29 @@ export class Webpage
 				let basenameDiff = Utils.levenshteinDistance(firstHeaderTitle, this.source.basename.toLowerCase()) / this.source.basename.length;
 				let difference = Math.min(titleDiff, basenameDiff);
 
-				if (difference < 0.15)
+				if ((firstHeader.tagName == "H1" && difference < 0.2) || (firstHeader.tagName == "H2" && difference < 0.1))
 				{
+					if(titleInfo.isDefaultTitle) title = firstHeader.innerHTML;
 					firstHeader.remove();
-					RenderLog.log(`"${firstHeaderTextNode.textContent ?? ""}" header replaced because it was very similar to the file's title.`);
+					RenderLog.log(`Removing "${firstHeaderTextNode.textContent ?? ""}" header because it was very similar to the file's title.`);
+				}
+				else if (firstHeader.tagName == "H1")
+				{
+					// if the difference is too large but the first header is an h1 and it's the first element in the body, use it as the title
+					let headerEl = firstHeader.closest(".header-wrapper") ?? firstHeader;
+					let headerParent = headerEl.parentElement;
+					console.log("Header parent", headerParent);
+					if (headerParent && headerParent.tagName == "BODY")
+					{
+						let childPosition = Array.from(headerParent.children).indexOf(headerEl);
+						if (childPosition <= 3)
+						{
+							console.log("Header position", childPosition);
+							if(titleInfo.isDefaultTitle) title = firstHeader.innerHTML;
+							firstHeader.remove();
+							RenderLog.log(`Removing "${firstHeaderTextNode.textContent ?? ""}" header because it was H1 at the top of the page`);
+						}
+					}
 				}
 			}
 			else
@@ -445,28 +465,17 @@ export class Webpage
 		let titleEl = this.document.createElement("h1");
 		titleEl.id = "inline-title";
 
+		let pageIcon = undefined;
 		// Create a div with icon
 		if ((icon != "" && !titleInfo.isDefaultIcon))
 		{
-			let pageIcon = this.document.createElement("div");
+			pageIcon = this.document.createElement("div");
 			pageIcon.id = "webpage-icon";
-
-			// try to use twemoji if the icon is an emoji
-			// if (/\p{Emoji}/u.test(icon)) 
-			// {
-			// 	let codepoint = [...icon].map(e => e.codePointAt(0)?.toString(16)).join(`-`);
-			// 	let iconResp = await fetch(`https://cdn.jsdelivr.net/gh/jdecked/twemoji@latest/assets/svg/${codepoint}.svg`);
-			// 	console.log(iconResp);
-			// 	if (iconResp.ok) icon = await iconResp.text();
-			// }
-
-			pageIcon.innerHTML = icon;
-			titleEl.appendChild(pageIcon); // Add the icon div as the second child of the title element
 		}
 		
-		// Inser title into the title element
+		// Insert title into the title element
 		MarkdownRenderer.renderSingleLineMarkdown(title, titleEl);
-	
+		if (pageIcon) MarkdownRenderer.renderSingleLineMarkdown(icon, pageIcon);
 	
 		if (this.contentElement)
 		{
@@ -476,11 +485,14 @@ export class Webpage
 			if (modHeader) 
 			{
 				// Append the title element as the last child of the document container
+				if (pageIcon) modHeader.appendChild(pageIcon);
 				modHeader.appendChild(titleEl);
 			} else {
 				console.error("mod-header not found within markdown-preview-section. Unable to append title.");
 			}
-		} else {
+		} 
+		else
+		{
 			console.error("markdown-preview-section not found. Unable to append title.");
 		}
 	}
@@ -492,12 +504,10 @@ export class Webpage
 		let rootPath = this.pathToRoot.copy.makeWebStyle(Settings.settings.makeNamesWebStyle).asString;
 
 		let titleInfo = await Website.getTitleAndIcon(this.source);
-		let domtitle = titleInfo.title;
-		if (titleInfo.icon.length <= 14) domtitle = titleInfo.icon + " " + domtitle;
 
 		let head =
 		`
-		<title>${domtitle}</title>
+		<title>${titleInfo.title}</title>
 		<base href="${rootPath}/">
 		<meta id="root-path" root-path="${rootPath}/">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">

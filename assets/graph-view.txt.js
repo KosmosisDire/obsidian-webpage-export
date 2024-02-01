@@ -8,7 +8,7 @@ let startingCameraRect = {minX: -1, minY: -1, maxX: 1, maxY: 1};
 
 let mouseWorldPos = { x: undefined, y: undefined };
 let scrollVelocity = 0;
-let averageFPS = targetFPS;
+let averageFPS = targetFPS * 2;
 
 let pixiApp = undefined;
 let renderWorker = undefined;
@@ -641,12 +641,19 @@ function updateGraph()
 
     averageFPS = averageFPS * 0.95 + pixiApp.ticker.FPS * 0.05;
 
-    if (averageFPS < targetFPS * 0.9 && batchFraction > minBatchFraction)
+    if (averageFPS < targetFPS * 0.8 && batchFraction > minBatchFraction)
     {
         batchFraction = Math.max(batchFraction - 0.5 * 1/targetFPS, minBatchFraction);
         GraphAssembly.batchFraction = batchFraction;
         GraphAssembly.repulsionForce = repulsionForce / batchFraction;
     }
+
+	if (averageFPS > targetFPS * 1.2 && batchFraction < 1)
+	{
+		batchFraction = Math.min(batchFraction + 0.5 * 1/targetFPS, 1);
+		GraphAssembly.batchFraction = batchFraction;
+		GraphAssembly.repulsionForce = repulsionForce / batchFraction;
+	}
 
     if (scrollVelocity != 0)
     {

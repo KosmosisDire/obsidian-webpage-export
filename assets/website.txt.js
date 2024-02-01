@@ -2153,10 +2153,10 @@ function setupSidebars()
 	{
 		resizingSidebar = e.target.closest('.sidebar');
 		resizingSidebar.classList.add('is-resizing');
-		document.addEventListener('mousemove', resizeMove);
-		document.addEventListener('mouseup', function () 
+		document.addEventListener('pointermove', resizeMove);
+		document.addEventListener('pointerup', function () 
 		{
-			document.removeEventListener('mousemove', resizeMove);
+			document.removeEventListener('pointermove', resizeMove);
 			var finalWidth = getComputedStyle(resizingSidebar).getPropertyValue('--sidebar-width');
 
 			let isLeft = resizingSidebar.classList.contains("sidebar-left");
@@ -2166,8 +2166,24 @@ function setupSidebars()
 		});
 	}
 
-	leftHandle.addEventListener('mousedown', handleClick);
-	rightHandle.addEventListener('mousedown', handleClick);
+	leftHandle.addEventListener('pointerdown', handleClick);
+	rightHandle.addEventListener('pointerdown', handleClick);
+
+	// reset sidebar width on double click
+	function resetSidebarEvent(e)
+	{
+		let sidebar = e.target.closest('.sidebar');
+		if (sidebar) 
+		{
+			sidebar.style.removeProperty('transition-duration');
+			sidebar.style.removeProperty('--sidebar-width');
+			let isLeft = sidebar.classList.contains("sidebar-left");
+			localStorage.removeItem(isLeft ? 'sidebar-left-width' : 'sidebar-right-width');
+		}
+	}
+
+	leftHandle.addEventListener('dblclick', resetSidebarEvent);
+	rightHandle.addEventListener('dblclick', resetSidebarEvent);
 }
 
 /**Get the computed target sidebar width in px*/

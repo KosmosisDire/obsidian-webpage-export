@@ -44,8 +44,8 @@ export namespace RenderLog
 
 		if(Settings.loaded && !(Settings.settings.logLevel == "all")) return;
 
-        if (messageTitle != "") console.info(messageTitle + " ", message);
-        else console.info(message);
+        if (messageTitle != "") console.log(messageTitle + " ", message);
+        else console.log(message);
         MarkdownRenderer._reportInfo(messageTitle, message);
     }
 

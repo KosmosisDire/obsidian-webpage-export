@@ -254,7 +254,7 @@ export namespace MarkdownRenderer
 			// @ts-ignore
 			await preview.postProcess(section, promises, renderer.frontmatter);
 
-			await Utils.delay(0);
+			// await Utils.delay(0);
 		}
 
 		// @ts-ignore
@@ -549,6 +549,7 @@ export namespace MarkdownRenderer
 		});
 
 		// add space after inline math
+		// this should be changed to add the space to the front of the following text node
 		html.querySelectorAll(".math-inline").forEach((element: HTMLElement) =>
 		{
 			element.style.marginRight = "0.5em";
@@ -565,6 +566,12 @@ export namespace MarkdownRenderer
 			}
 		}
 
+		// add lazy loading to iframe elements
+		html.querySelectorAll("iframe").forEach((element: HTMLIFrameElement) =>
+		{
+			element.setAttribute("loading", "lazy");
+		});
+
 		// add collapse icons to lists if they don't already have them
 		var collapsableListItems = Array.from(html.querySelectorAll("li:has(ul), li:has(ol)"));
 		for (const item of collapsableListItems)
@@ -577,7 +584,6 @@ export namespace MarkdownRenderer
 				item.prepend(collapseIcon);
 			}
 		}
-		
 
 		// if the dynamic table of contents plugin is included on this page
 		// then parse each list item and render markdown for it

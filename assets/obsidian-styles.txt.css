@@ -57,26 +57,14 @@ h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-i
 
 /*#region Transclusions */
 
-.webpage-container .internal-embed.markdown-embed .markdown-rendered .heading
-{
-	margin-block-start: var(--p-spacing) !important;
-	margin-block-end: var(--p-spacing) !important;
-}
-
-.markdown-embed .markdown-embed-content .markdown-preview-sizer
-{
-	padding-left: 1em !important;
+.markdown-embed .heading-collapse-indicator {
+    translate: -1em 0;
 }
 
 .markdown-embed.internal-embed.inline-embed .markdown-embed-content,
 .markdown-embed.internal-embed.inline-embed .markdown-embed-content .markdown-preview-view
 {
 	overflow: visible !important;
-}
-
-.markdown-embed .markdown-embed-content .markdown-preview-view
-{
-	padding-bottom: 1px !important; /* workaround to force inner margin to be respected */
 }
 
 .markdown-embed-link

@@ -15,10 +15,8 @@ export namespace HTMLGeneration
 		/*
 		- .heading-wrapper
 			- h1.heading
-				- .heading-before
 				- .heading-collapse-indicator.collapse-indicator.collapse-icon
 				- "Text"
-				- .heading-after
 			- .heading-children
 		*/
 
@@ -66,11 +64,6 @@ export namespace HTMLGeneration
 		{
 			header.classList.add("heading-wrapper");
 
-			// header.createEl("div", { cls: "heading-wrapper-span" }); 
-			// the heading wrapper span is as wide as the whole screen, but has the same height and position as the heading wrapper
-			// this is used for vertical hover effects
-			// disabled because it is not being used
-
 			let hEl = getHeaderEl(header) as HTMLHeadingElement;
 
 			if (!hEl || hEl.classList.contains("heading")) return;
@@ -83,12 +76,6 @@ export namespace HTMLGeneration
 				collapseIcon = hEl.createDiv({ cls: "heading-collapse-indicator collapse-indicator collapse-icon" });
 				collapseIcon.innerHTML = arrowHTML;
 				hEl.prepend(collapseIcon);
-			}
-
-			if (!hEl.querySelector(".heading-after")) 
-			{
-				let afterEl = hEl.createDiv({ cls: "heading-after" });
-				afterEl.textContent = "...";
 			}
 
 			let children = header.createDiv({ cls: "heading-children" });

@@ -95,9 +95,9 @@ export const DEFAULT_SETTINGS: SettingsData =
 	allowFoldingLists: true,
 	addFilenameTitle: true,
 	minifyHTML: true,
-	documentWidth: "50em",
+	documentWidth: "40em",
 	contentWidth: "500em",
-	sidebarWidth: "25em",
+	sidebarWidth: "20em",
 	minOutlineCollapse: 2,
 	startOutlineCollapsed: false,
 
@@ -592,7 +592,7 @@ export class Settings extends PluginSettingTab
 			.setDesc('Sets the line width of the exported document in css units. (ex. 600px, 50em)')
 			.addText((text) => text
 				.setValue(Settings.settings.documentWidth)
-				.setPlaceholder('50em')
+				.setPlaceholder('40em')
 				.onChange(async (value) => {
 					Settings.settings.documentWidth = value;
 					await Settings.saveSettings();
@@ -606,10 +606,10 @@ export class Settings extends PluginSettingTab
 
 		new Setting(contentEl)
 			.setName('Content Width')
-			.setDesc('Sets the width of the empty area that contains the document in css units. (ex. 1000px, 70em)')
+			.setDesc('Sets the width of the empty area that contains the document in css units. If this is wider than the screen the sidebars will be pushed all the way to the sides of the screen. (ex. 1000px, 70em)')
 			.addText((text) => text
 				.setValue(Settings.settings.contentWidth)
-				.setPlaceholder('100em')
+				.setPlaceholder('500em')
 				.onChange(async (value) => {
 					Settings.settings.contentWidth = value;
 					await Settings.saveSettings();

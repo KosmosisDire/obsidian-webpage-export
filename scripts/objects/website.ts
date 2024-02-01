@@ -34,6 +34,7 @@ export class Website
 
 	private giveWarnings()
 	{
+		// if iconize plugin is installed, warn if note icons are not enabled
 		// @ts-ignore
 		if (app.plugins.enabledPlugins.has("obsidian-icon-folder"))
 		{
@@ -42,9 +43,22 @@ export class Website
 			let noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;
 			if (!noteIconsEnabled)
 			{
-				RenderLog.warning("For Iconize plugin support, enable \"Toggle icons while editing notes\" in the Iconize plugin's settings.");
+				RenderLog.warning("For Iconize plugin support, enable \"Toggle icons while editing notes\" in the Iconize plugin settings.");
 			}
 		}
+
+		// if excalidraw installed and the embed mode is not set to Native SVG, warn
+		// @ts-ignore
+		if (app.plugins.enabledPlugins.has("obsidian-excalidraw-plugin"))
+		{
+			// @ts-ignore
+			let embedMode = app.plugins.plugins['obsidian-excalidraw-plugin'].settings['previewImageType'];		
+			if (embedMode != "SVG")
+			{
+				RenderLog.warning("For Excalidraw embed support, set the embed mode to \"Native SVG\" in the Excalidraw plugin settings.");
+			}
+		}
+
 	}
 
 	private async initExport()
@@ -178,7 +192,7 @@ export class Website
 		this.downloads = this.downloads.filter(filterFunction);
 	}
 
-	public static async getTitleAndIcon(file: TAbstractFile): Promise<{ title: string; icon: string; isDefaultIcon: boolean; }>
+	public static async getTitleAndIcon(file: TAbstractFile): Promise<{ title: string; icon: string; isDefaultIcon: boolean; isDefaultTitle: boolean }>
 	{
 		const { app } = HTMLExportPlugin.plugin;
 		const { titleProperty } = Settings.settings;
@@ -186,6 +200,7 @@ export class Website
 		let iconOutput = "";
 		let iconProperty: string | undefined = "";
 		let title = file.name;
+		let isDefaultTitle = true;
 		let useDefaultIcon = false;
 		if (file instanceof TFile)
 		{
@@ -193,6 +208,7 @@ export class Website
 			const frontmatter = fileCache?.frontmatter;
 			const titleFromFrontmatter = frontmatter?.[titleProperty] ?? frontmatter?.banner_header; // banner plugin support
 			title = titleFromFrontmatter ?? file.basename;
+			if (title != file.basename) isDefaultTitle = false;
 
 			iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support
 			if (!iconProperty && Settings.settings.showDefaultTreeIcons) 
@@ -253,6 +269,6 @@ export class Website
 
 		if (!parsedAsIconize && isUnchangedNotEmojiNotHTML) iconOutput = "";
 
-		return { title: title, icon: iconOutput, isDefaultIcon: useDefaultIcon };
+		return { title: title, icon: iconOutput, isDefaultIcon: useDefaultIcon, isDefaultTitle: isDefaultTitle };
 	}
 }

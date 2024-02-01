@@ -157,7 +157,7 @@ export class WebsiteIndex
 					title: (await Website.getTitleAndIcon(webpage.source)).title,
 					content: content,
 					tags: webpage.getTags(),
-					headers: webpage.getHeaders(),
+					headers: webpage.getHeadings().map((header) => header.heading),
 				});
 			}
 			else

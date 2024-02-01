@@ -351,24 +351,27 @@ body .webpage-container .tree-container .tree-scroll-area
   font-family: emoji;
 }
 
-#inline-title 
-{
-    display: flex;
-    align-items: flex-start;
-    flex-direction: column;
-}
-
 .heading
 {
 	position: relative;
+}
+
+.heading-wrapper.is-collapsed > .heading::after 
+{
+    content: "..." !important;
+    display: inline-block !important;
+    position: absolute !important;
+	margin: 0 !important;
+	padding: 0 !important;
+    margin-left: 0.3em !important;
+    color: var(--text-muted);
 }
 
 .heading-wrapper 
 {
     transition: height ease-in-out, margin-bottom ease-in-out;
     transition-duration: 0.2s;
-    display: flex;
-	flex-direction: column;
+    display: inline;
 	position: relative;
 }
 
