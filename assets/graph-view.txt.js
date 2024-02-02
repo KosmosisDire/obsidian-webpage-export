@@ -11,7 +11,7 @@ let scrollVelocity = 0;
 let averageFPS = targetFPS * 2;
 
 let pixiApp = undefined;
-let renderWorker = undefined;
+let graphRenderer = undefined;
 
 class GraphAssembly
 {
@@ -376,7 +376,11 @@ class GraphRenderWorker
 
     autoResizeCanvas()
     {
-        this.resizeCanvas(this.canvas.offsetWidth, this.canvas.offsetHeight);
+		if (this.width != this.canvas.offsetWidth || this.height != this.canvas.offsetHeight)
+		{
+			this.centerCamera();
+        	this.resizeCanvas(this.canvas.offsetWidth, this.canvas.offsetHeight);
+		}
     }
 
     centerCamera()
@@ -583,15 +587,15 @@ async function initializeGraphView()
     console.log("Module Ready");
     GraphAssembly.init(nodes);
 
-    renderWorker = new GraphRenderWorker();
-    window.renderWorker = renderWorker;
+    graphRenderer = new GraphRenderWorker();
+    window.graphRenderer = graphRenderer;
 
     initializeGraphEvents();
 
     pixiApp.ticker.maxFPS = targetFPS;
     pixiApp.ticker.add(updateGraph);
 
-    setActiveDocument(new URL(window.location.href));
+    setActiveDocument(new URL(window.location.href), false, false);
 
     setInterval(() =>
     {
@@ -602,7 +606,7 @@ async function initializeGraphView()
 
         try
         {
-            var hidden = (renderWorker.canvasSidebar.classList.contains("is-collapsed"));
+            var hidden = (graphRenderer.canvasSidebar.classList.contains("is-collapsed"));
         }
         catch(e)
         {
@@ -616,8 +620,8 @@ async function initializeGraphView()
         else if (!running && !hidden)
         {
             running = true;
-            renderWorker.autoResizeCanvas();
-            renderWorker.centerCamera();
+            graphRenderer.autoResizeCanvas();
+            graphRenderer.centerCamera();
         }
 
     }, 1000);
@@ -627,17 +631,18 @@ function updateGraph()
 {
     if(!running) return;
 
-	if (renderWorker.canvasSidebar.classList.contains("is-collapsed")) return;
+	if (graphRenderer.canvasSidebar.classList.contains("is-collapsed")) return;
 
-    GraphAssembly.update(mouseWorldPos, renderWorker.grabbedNode, renderWorker.cameraScale);
+    GraphAssembly.update(mouseWorldPos, graphRenderer.grabbedNode, graphRenderer.cameraScale);
 
-    if (GraphAssembly.hoveredNode != renderWorker.hoveredNode)
+    if (GraphAssembly.hoveredNode != graphRenderer.hoveredNode)
     {
-        renderWorker.hoveredNode = GraphAssembly.hoveredNode;
-        renderWorker.canvas.style.cursor = GraphAssembly.hoveredNode == -1 ? "default" : "pointer";
+        graphRenderer.hoveredNode = GraphAssembly.hoveredNode;
+        graphRenderer.canvas.style.cursor = GraphAssembly.hoveredNode == -1 ? "default" : "pointer";
     }
 
-    renderWorker.draw(GraphAssembly.positions);
+	graphRenderer.autoResizeCanvas();
+    graphRenderer.draw(GraphAssembly.positions);
 
     averageFPS = averageFPS * 0.95 + pixiApp.ticker.FPS * 0.05;
 
@@ -657,7 +662,7 @@ function updateGraph()
 
     if (scrollVelocity != 0)
     {
-        let cameraCenter = renderWorker.getCameraCenterWorldspace();
+        let cameraCenter = graphRenderer.getCameraCenterWorldspace();
 
         if (Math.abs(scrollVelocity) < 0.001)
         {
@@ -672,32 +677,32 @@ function updateGraph()
 
 function zoomGraphViewAroundPoint(point, zoom, minScale = 0.15, maxScale = 15.0)
 {
-	let cameraCenter = renderWorker.getCameraCenterWorldspace();
+	let cameraCenter = graphRenderer.getCameraCenterWorldspace();
 
-	renderWorker.cameraScale = Math.max(Math.min(renderWorker.cameraScale + zoom * renderWorker.cameraScale, maxScale), minScale);
-	if(renderWorker.cameraScale != minScale && renderWorker.cameraScale != maxScale && scrollVelocity > 0 && mouseWorldPos.x != undefined && mouseWorldPos.y != undefined)
+	graphRenderer.cameraScale = Math.max(Math.min(graphRenderer.cameraScale + zoom * graphRenderer.cameraScale, maxScale), minScale);
+	if(graphRenderer.cameraScale != minScale && graphRenderer.cameraScale != maxScale && scrollVelocity > 0 && mouseWorldPos.x != undefined && mouseWorldPos.y != undefined)
 	{
 		let aroundDiff = {x: point.x - cameraCenter.x, y: point.y - cameraCenter.y};
 		let movePos = {x: cameraCenter.x + aroundDiff.x * zoom, y: cameraCenter.y + aroundDiff.y * zoom};
-		renderWorker.setCameraCenterWorldspace(movePos);
+		graphRenderer.setCameraCenterWorldspace(movePos);
 	}
-	else renderWorker.setCameraCenterWorldspace(cameraCenter);
+	else graphRenderer.setCameraCenterWorldspace(cameraCenter);
 }
 
 function scaleGraphViewAroundPoint(point, scale, minScale = 0.15, maxScale = 15.0)
 {
-	let cameraCenter = renderWorker.getCameraCenterWorldspace();
+	let cameraCenter = graphRenderer.getCameraCenterWorldspace();
 
-	let scaleBefore = renderWorker.cameraScale;
-	renderWorker.cameraScale = Math.max(Math.min(scale * renderWorker.cameraScale, maxScale), minScale);
-	let diff = (scaleBefore - renderWorker.cameraScale) / scaleBefore;
-	if(renderWorker.cameraScale != minScale && renderWorker.cameraScale != maxScale && scale != 0)
+	let scaleBefore = graphRenderer.cameraScale;
+	graphRenderer.cameraScale = Math.max(Math.min(scale * graphRenderer.cameraScale, maxScale), minScale);
+	let diff = (scaleBefore - graphRenderer.cameraScale) / scaleBefore;
+	if(graphRenderer.cameraScale != minScale && graphRenderer.cameraScale != maxScale && scale != 0)
 	{
 		let aroundDiff = {x: point.x - cameraCenter.x, y: point.y - cameraCenter.y};
 		let movePos = {x: cameraCenter.x - aroundDiff.x * diff, y: cameraCenter.y - aroundDiff.y * diff};
-		renderWorker.setCameraCenterWorldspace(movePos);
+		graphRenderer.setCameraCenterWorldspace(movePos);
 	}
-	else renderWorker.setCameraCenterWorldspace(cameraCenter);
+	else graphRenderer.setCameraCenterWorldspace(cameraCenter);
 }
 
 function initializeGraphEvents()
@@ -709,20 +714,20 @@ function initializeGraphEvents()
     });
 
 	let graphExpanded = false;
-    let lastCanvasWidth = renderWorker.canvas.width;
+    let lastCanvasWidth = graphRenderer.canvas.width;
     window.addEventListener('resize', () =>
     {
         if(graphExpanded)
         {
-            renderWorker.autoResizeCanvas();
-            renderWorker.centerCamera();
+            graphRenderer.autoResizeCanvas();
+            graphRenderer.centerCamera();
         }
         else
         {
-            if (renderWorker.canvas.width != lastCanvasWidth)
+            if (graphRenderer.canvas.width != lastCanvasWidth)
             {
-                renderWorker.autoResizeCanvas();
-                renderWorker.centerCamera();
+                graphRenderer.autoResizeCanvas();
+                graphRenderer.centerCamera();
             }
         }
     });
@@ -750,12 +755,12 @@ function initializeGraphEvents()
         {
             container.classList.toggle("expanded");
 
-            renderWorker.autoResizeCanvas();
-            renderWorker.centerCamera();
+            graphRenderer.autoResizeCanvas();
+            graphRenderer.centerCamera();
 
             let finalWidth = container.clientWidth;
             let finalHeight = container.clientHeight;
-            renderWorker.cameraScale *= ((finalWidth / initialWidth) + (finalHeight / initialHeight)) / 2;
+            graphRenderer.cameraScale *= ((finalWidth / initialWidth) + (finalHeight / initialHeight)) / 2;
 
             container.classList.remove("scale-down");
             container.classList.add("scale-up");
@@ -777,17 +782,17 @@ function initializeGraphEvents()
 
 	async function navigateToNode(nodeIndex)
 	{
-		if (!graphExpanded) GraphAssembly.saveState(renderWorker);
+		if (!graphExpanded) GraphAssembly.saveState(graphRenderer);
 		else toggleExpandedGraph();
 		let url = nodes.paths[nodeIndex];
 		if(window.location.pathname.endsWith(nodes.paths[nodeIndex])) return;
-		await loadDocument(url);
+		await loadDocument(url, true, true);
 	}
 
     // Get the mouse position relative to the canvas.
 	function getPointerPosOnCanvas(event)
 	{
-		var rect = renderWorker.canvas.getBoundingClientRect();
+		var rect = graphRenderer.canvas.getBoundingClientRect();
 		let pos = getPointerPosition(event);
 
 		return {
@@ -816,25 +821,25 @@ function initializeGraphEvents()
 		function handleMouseMove(move)
 		{
 			pointerPos = getPointerPosOnCanvas(move);
-			mouseWorldPos = renderWorker.vecToWorldspace(pointerPos);
+			mouseWorldPos = graphRenderer.vecToWorldspace(pointerPos);
 			pointerDelta = { x: pointerPos.x - lastPointerPos.x, y: pointerPos.y - lastPointerPos.y };
 			lastPointerPos = pointerPos;
 
-			if (renderWorker.grabbedNode != -1) dragDisplacement = { x: pointerPos.x - startPointerPos.x, y: pointerPos.y - startPointerPos.y };
+			if (graphRenderer.grabbedNode != -1) dragDisplacement = { x: pointerPos.x - startPointerPos.x, y: pointerPos.y - startPointerPos.y };
 
-			if (pointerDown && renderWorker.hoveredNode != -1 && renderWorker.grabbedNode == -1 && renderWorker.hoveredNode != renderWorker.grabbedNode)
+			if (pointerDown && graphRenderer.hoveredNode != -1 && graphRenderer.grabbedNode == -1 && graphRenderer.hoveredNode != graphRenderer.grabbedNode)
 			{
-				renderWorker.grabbedNode = renderWorker.hoveredNode;
+				graphRenderer.grabbedNode = graphRenderer.hoveredNode;
 			}
 
-			if ((pointerDown && renderWorker.hoveredNode == -1 && renderWorker.grabbedNode == -1) || middleDown)
+			if ((pointerDown && graphRenderer.hoveredNode == -1 && graphRenderer.grabbedNode == -1) || middleDown)
 			{
-				renderWorker.cameraOffset = { x: renderWorker.cameraOffset.x + pointerDelta.x, y: renderWorker.cameraOffset.y + pointerDelta.y };
+				graphRenderer.cameraOffset = { x: graphRenderer.cameraOffset.x + pointerDelta.x, y: graphRenderer.cameraOffset.y + pointerDelta.y };
 			}
 			else
 			{
-				if (renderWorker.hoveredNode != -1) renderWorker.canvas.style.cursor = "pointer";
-				else renderWorker.canvas.style.cursor = "default";
+				if (graphRenderer.hoveredNode != -1) graphRenderer.canvas.style.cursor = "pointer";
+				else graphRenderer.canvas.style.cursor = "default";
 			}
 		}
 
@@ -870,15 +875,15 @@ function initializeGraphEvents()
 					lastDistance = distance;
 					pointerDelta = { x: 0, y: 0 };
 					mouseWorldPos = { x: undefined, y: undefined};
-					renderWorker.grabbedNode = -1;
-					renderWorker.hoveredNode = -1;
+					graphRenderer.grabbedNode = -1;
+					graphRenderer.hoveredNode = -1;
 				}
 
 				let distanceDelta = distance - lastDistance;
 				let scaleDelta = distanceDelta / lastDistance;
 
-				scaleGraphViewAroundPoint(renderWorker.vecToWorldspace(pointerPos), 1 + scaleDelta, 0.15, 15.0);
-				renderWorker.cameraOffset = { x: renderWorker.cameraOffset.x + pointerDelta.x, y: renderWorker.cameraOffset.y + pointerDelta.y };
+				scaleGraphViewAroundPoint(graphRenderer.vecToWorldspace(pointerPos), 1 + scaleDelta, 0.15, 15.0);
+				graphRenderer.cameraOffset = { x: graphRenderer.cameraOffset.x + pointerDelta.x, y: graphRenderer.cameraOffset.y + pointerDelta.y };
 
 				lastDistance = distance;
 			}
@@ -892,14 +897,14 @@ function initializeGraphEvents()
 
 			setTimeout(() => 
 			{
-				if (pointerDown && renderWorker.hoveredNode != -1 && Math.abs(dragDisplacement.x) <= 4 && Math.abs(dragDisplacement.y) <= 4 && pointerUpTime - startDragTime < 300)
+				if (pointerDown && graphRenderer.hoveredNode != -1 && Math.abs(dragDisplacement.x) <= 4 && Math.abs(dragDisplacement.y) <= 4 && pointerUpTime - startDragTime < 300)
 				{
-					navigateToNode(renderWorker.hoveredNode);
+					navigateToNode(graphRenderer.hoveredNode);
 				}
 
-				if (pointerDown && renderWorker.grabbedNode != -1)
+				if (pointerDown && graphRenderer.grabbedNode != -1)
 				{
-					renderWorker.grabbedNode = -1;
+					graphRenderer.grabbedNode = -1;
 				}
 
 				if (up.button == 0) pointerDown = false;
@@ -920,7 +925,7 @@ function initializeGraphEvents()
 		function handlePointerDown(down)
 		{
 			document.addEventListener("pointerup", handlePointerUp);
-			mouseWorldPos = renderWorker.vecToWorldspace(pointerPos);
+			mouseWorldPos = graphRenderer.vecToWorldspace(pointerPos);
 			dragDisplacement = { x: 0, y: 0 };
 			if (down.button == 0) pointerDown = true;
 			if (down.pointerType == "touch" && firstPointerDownId == -1) 
@@ -933,9 +938,9 @@ function initializeGraphEvents()
 			startPointerPos = pointerPos;
 			startDragTime = Date.now();
 
-			if (pointerDown && renderWorker.hoveredNode != -1)
+			if (pointerDown && graphRenderer.hoveredNode != -1)
 			{
-				renderWorker.grabbedNode = renderWorker.hoveredNode;
+				graphRenderer.grabbedNode = graphRenderer.hoveredNode;
 			}
 		}
 
@@ -956,7 +961,7 @@ function initializeGraphEvents()
 		}
 
 		pointerPos = getPointerPosOnCanvas(enter);
-		mouseWorldPos = renderWorker.vecToWorldspace(pointerPos);
+		mouseWorldPos = graphRenderer.vecToWorldspace(pointerPos);
 		lastPointerPos = getPointerPosOnCanvas(enter);
 		pointerInside = true;
 
@@ -999,7 +1004,7 @@ function initializeGraphEvents()
 
 	document.querySelector(".theme-toggle-input")?.addEventListener("change", event =>
 	{
-		setTimeout(() => renderWorker.resampleColors(), 0);
+		setTimeout(() => graphRenderer.resampleColors(), 0);
 	});
 }
 

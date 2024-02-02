@@ -163,6 +163,7 @@ if( 'function' === typeof importScripts)
 	function showLabel(index, fade, hovered = false)
 	{
 		let label = pixiLabels[index];
+		if (!label) return;
 		labelFade[index] = fade;
 
 		if(fade > 0.01) label.visible = true;

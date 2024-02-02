@@ -49,8 +49,10 @@ let deviceSize; // "large-screen" | "small screen" | "tablet" | "phone"
 
 let fullyInitialized = false;
 
-function initGlobalObjects()
+async function initGlobalObjects()
 {
+	await waitUntil(() => !document.querySelector("include"), 20);
+
 	loadingIcon = document.createElement("div");
 	loadingIcon.classList.add("loading-icon");
 	document.body.appendChild(loadingIcon);
@@ -64,7 +66,6 @@ function initGlobalObjects()
 	fileTree = document.querySelector(".file-tree");
 	outlineTree = document.querySelector(".outline-tree");
 	fileTreeItems = Array.from(document.querySelectorAll(".tree-container.file-tree .tree-item"));
-	outlineTreeItems = Array.from(document.querySelectorAll(".tree-container.outline-tree .tree-item"));
 
 	sidebars = []
 	sidebarGutters = []
@@ -79,7 +80,7 @@ function initGlobalObjects()
 	themeToggle = document.querySelector(".theme-toggle-input");
 }
 
-async function initializePage(showInTree = true, changeURL = true)
+async function initializePage(showInTree, changeURL)
 {
 	focusedCanvasNode = null;
 	canvasWrapper = document.querySelector(".canvas-wrapper") ?? canvasWrapper;
@@ -91,11 +92,12 @@ async function initializePage(showInTree = true, changeURL = true)
 	canvasBackground = document.querySelector(".canvas-background") ?? canvasBackground;
 	canvasBackgroundPattern = document.querySelector(".canvas-background pattern") ?? canvasBackgroundPattern;
 	viewContent = document.querySelector(".document-container > .view-content") ?? document.querySelector(".document-container > .markdown-preview-view") ?? viewContent;
+	outlineTreeItems = Array.from(document.querySelectorAll(".tree-container.outline-tree .tree-item"));
 
 	if(!fullyInitialized)
 	{	
 		if (window.location.protocol == "file:") initializeForFileProtocol();
-		initGlobalObjects();
+		await initGlobalObjects();
 		initializeDocumentTypes(document);
 		setupSidebars();
 		setupThemeToggle();
@@ -107,7 +109,6 @@ async function initializePage(showInTree = true, changeURL = true)
 
 		window.addEventListener('resize', () => onResize());
 		onResize();
-		fullyInitialized = true;
 	}
 
 	setTimeout(() => documentContainer.classList.remove("hide"), 250);
@@ -131,7 +132,6 @@ async function initializePage(showInTree = true, changeURL = true)
 	}
 
 	parseURLParams();
-	setActiveDocument(loadedURL, showInTree, changeURL);
 	relativePathname = getVaultRelativePath(loadedURL.href);
 }
 
@@ -175,8 +175,10 @@ function initializeForFileProtocol()
 
 window.onload = async function()
 {
-	await initializePage();
+	await initializePage(true, false);
 	initializePageEvents(document);
+	setActiveDocument(loadedURL, true, false);
+	fullyInitialized = true;
 }
 
 window.onpopstate = function(event)
@@ -191,7 +193,7 @@ window.onpopstate = function(event)
 		return;
 	}
 
-	loadDocument(getURLPath(), false);
+	loadDocument(getURLPath(), false, true);
 	console.log("Popped state: " + getURLPath());
 }
 
@@ -323,6 +325,21 @@ function clamp(value, min, max)
 async function delay(ms)
 {
 	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function waitUntil(condition, interval = 100)
+{
+	return new Promise(resolve =>
+	{
+		let intervalId = setInterval(() =>
+		{
+			if (condition())
+			{
+				clearInterval(intervalId);
+				resolve();
+			}
+		}, interval);
+	});
 }
 
 /**Gets the bounding rect of a given element*/
@@ -586,7 +603,7 @@ function getURLExtention(url)
 
 let transferDocument = document.implementation.createHTMLDocument();
 let loading = false;
-async function loadDocument(url, changeURL = true, showInTree = true)
+async function loadDocument(url, changeURL, showInTree)
 {
 	url = decodeURI(url);
 	if (loading)
@@ -604,8 +621,8 @@ async function loadDocument(url, changeURL = true, showInTree = true)
 	{
 		console.log("Document already loaded.");
 		loadedURL = newLoadedURL;
-		setActiveDocument(loadedURL, false, true);
-		await initializePage();
+		setActiveDocument(loadedURL, false, false);
+		await initializePage(false, false);
 		loading = false;
 		return;
 	}
@@ -626,6 +643,7 @@ async function loadDocument(url, changeURL = true, showInTree = true)
 
 	if (response.ok)
 	{
+		console.log("load: " + changeURL)
 		setActiveDocument(loadedURL, showInTree, changeURL);
 		let extention = getURLExtention(url);
 
@@ -700,40 +718,45 @@ async function loadDocument(url, changeURL = true, showInTree = true)
 	}
 
 	await showLoading(false);
-	console.log("Finished loading document: ", newLoadedURL.pathname);
 	loading = false;
 
 	return;
 }
 
-function setActiveDocument(url, showInTree = true, changeURL = true)
+function setActiveDocument(url, showInTree, changeURL)
 {
 	let relativePath = getVaultRelativePath(url.href);
 	let decodedRelativePath = decodeURI(relativePath);
 	let searchlessHeaderlessPath = decodedRelativePath.split("#")[0].split("?")[0].replace("\"", "\\\"").replace("\'", "\\\'");
-	console.log(searchlessHeaderlessPath);
 
 	// switch active file in file tree
-	document.querySelector(".tree-item.mod-active")?.classList.remove("mod-active");
+	let oldActiveTreeItem = document.querySelector(".tree-item.mod-active");
 	let newActiveTreeItem = document.querySelector(`.tree-item:has(>.tree-link[href^="${searchlessHeaderlessPath}"])`);
-	if(newActiveTreeItem) 
+	if(newActiveTreeItem && !newActiveTreeItem.isEqualNode(oldActiveTreeItem)) 
 	{
+		oldActiveTreeItem?.classList.remove("mod-active");
 		newActiveTreeItem.classList.add("mod-active");
 		if(showInTree) scrollIntoView(newActiveTreeItem, {block: "center", inline: "nearest"});
 	}
 
 	// set the active file in the graph view
-	if(typeof nodes != 'undefined' && window.renderWorker)
+	if(typeof nodes != 'undefined' && window.graphRenderer)
 	{
 		let activeNode = nodes?.paths.findIndex(function(item) { return item.endsWith(searchlessHeaderlessPath); }) ?? -1;
 		
 		if(activeNode >= 0) 
 		{
-			window.renderWorker.activeNode = activeNode;
+			window.graphRenderer.activeNode = activeNode;
 		}
 	}
 
-	if(changeURL && window.location.protocol != "file:") window.history.pushState({ path: relativePath }, '', relativePath);
+	console.log("Active document: " + changeURL);
+
+	if(changeURL && window.location.protocol != "file:") 
+	{
+		window.history.pushState({ path: relativePath }, '', relativePath);
+		console.log("Pushed state: " + relativePath);
+	}
 }
 
 function parseURLParams()
@@ -1057,12 +1080,10 @@ function setupTrees(setupOnNode)
 
 	setupOnNode.querySelectorAll(".collapse-tree-button").forEach(function(button)
 	{
-		button.treeRoot = button.parentElement.parentElement;
+		button.treeRoot = button.closest(".tree-container");
 		button.icon = button.firstChild;
 		button.icon.innerHTML = "<path d></path><path d></path>";
 		
-		let treeItems = button.treeRoot.classList.contains("file-tree") ? fileTreeItems : outlineTreeItems;
-
 		button.setIcon = function(collapse)
 		{
 			button.icon.children[0].setAttribute("d", collapse ? collapseIconUp[0] : collapseIconDown[0]);
@@ -1070,14 +1091,18 @@ function setupTrees(setupOnNode)
 		}
 		button.collapse = function(collapse) 
 		{ 
+			let treeItems = button.treeRoot.classList.contains("file-tree") ? fileTreeItems : outlineTreeItems;
 			setTreeCollapsedAll(treeItems, collapse);
 			button.setIcon(collapse);
 			button.collapsed = collapse;
 		};
 		button.toggleCollapse = function() { button.collapse(!button.collapsed); };
-
-		button.collapsed = button.treeRoot.querySelectorAll(".tree-scroll-area + .tree-item.mod-collapsible.is-collapsed") != 0;
-		button.setIcon(button.collapsed);
+		button.toggleState = function(state) 
+		{ 
+			if (state === undefined) state = !button.collapsed;
+			button.collapsed = state;
+			button.setIcon(state); 
+		};
 
 		button.addEventListener("click", function(event)
 		{
@@ -1086,6 +1111,13 @@ function setupTrees(setupOnNode)
 			button.toggleCollapse();
 			return false;
 		});
+
+		// if any outline items are unncollapsed, toggle collapse all button state
+		let treeItems = button.treeRoot.classList.contains("file-tree") ? fileTreeItems : outlineTreeItems;
+		if (treeItems.some(item => !item.classList.contains("is-collapsed") && item.classList.contains("mod-collapsible")))
+		{
+			button.toggleState(false);
+		}
 	});
 
 	let fileTreeClick = Array.from(setupOnNode.querySelectorAll(".tree-container.file-tree .tree-item:has(.collapse-icon) > .tree-link"));
@@ -1112,13 +1144,11 @@ async function setTreeCollapsed(element, collapsed, animate = true, openParents 
 
 	if (!element || !element.classList.contains("mod-collapsible"))
 	{
-		console.log("Element is not collapsible", element);
 		return;
 	}
 
 	if (element.classList.contains("is-collapsed") == collapsed)
 	{
-		console.log("Element is already collapsed", element);
 		return;
 	}
 
@@ -1141,6 +1171,14 @@ async function setTreeCollapsed(element, collapsed, animate = true, openParents 
 		element.classList.remove("is-collapsed");
 		if(animate) slideDown(children, 100);
 		else children.style.display = "";
+
+		// make close all button collapse the tree instead of opening it if it's already open
+		let treeContainer = element.closest(".tree-container");
+		if (treeContainer)
+		{
+			let collapseButton = treeContainer.querySelector(".collapse-tree-button");
+			if (collapseButton) collapseButton.toggleState(false);
+		}
 	}
 
 }
@@ -2123,8 +2161,6 @@ function setupSidebars()
 
 	let rightWidth = localStorage.getItem('sidebar-right-width');
 	let leftWidth = localStorage.getItem('sidebar-left-width');
-	console.log("Right width: " + rightWidth);
-	console.log("Left width: " + leftWidth);
 	if (rightWidth) document.querySelector('.sidebar-right').style.setProperty('--sidebar-width', rightWidth);
 	if (leftWidth) document.querySelector('.sidebar-left').style.setProperty('--sidebar-width', leftWidth);
 
@@ -2134,7 +2170,7 @@ function setupSidebars()
 		
 		let isLeft = resizingSidebar.classList.contains("sidebar-left");
 		var distance = isLeft ? e.clientX : window.innerWidth - e.clientX;
-		var newWidth = Math.min(Math.max(distance, minResizeWidth), window.innerWidth * 0.4)  + 'px';
+		var newWidth = `min(max(${distance}px, 15em), 40vw)`; // 15em is minResizeWidth
 
 		if (distance < collapseWidth)
 		{
@@ -2287,21 +2323,20 @@ let flashElement = null;
 let flashAnimation = null;
 function scrollIntoView(element, options)
 {
-	if(options) element.scrollIntoView(options);
-	else element.scrollIntoView();
-
 	setTreeCollapsed(element, false);
     
 	const flashTiming = 
 	{
 		duration: 1500,
 		iterations: 1,
-		delay: 500,
+		delay: 300,
 	};
 
 	const flashAnimationData =
 	[
 		{ opacity: 0 },
+		{ opacity: 0.8 },
+		{ opacity: 0.8 },
 		{ opacity: 0.8 },
 		{ opacity: 0.8 },
 		{ opacity: 0.8 },
@@ -2313,15 +2348,16 @@ function scrollIntoView(element, options)
 		flashElement.remove();
 		flashAnimation.cancel();
 	}
+
 	flashElement = document.createElement("div");
 	flashElement.classList.add("scroll-highlight");
 	element.appendChild(flashElement);
 
+	if(options) flashElement.scrollIntoView(options);
+	else flashElement.scrollIntoView();
 
 	var savePos = element.style.position;
 	element.style.position = "relative";
-
-	console.log("Scrolling to element", flashElement, element);
 
 	flashAnimation = flashElement.animate(flashAnimationData, flashTiming);
 	flashAnimation.onfinish = function()

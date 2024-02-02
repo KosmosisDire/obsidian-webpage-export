@@ -64,7 +64,7 @@ body.floating-sidebars .sidebar {
 
 /* If the sidebar isn't collapsed the content should have the same width as it */
 .sidebar:not(.is-collapsed) .sidebar-content {
-    min-width: 100%;
+    min-width: max(100%, var(--sidebar-width));
 }
 
 .sidebar-left .sidebar-content
@@ -271,7 +271,7 @@ body
 .scroll-highlight 
 {
     position: absolute;
-    width: 200%;
+    width: 100%;
     height: 100%;
     pointer-events: none;
     z-index: 1000;

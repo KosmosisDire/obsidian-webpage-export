@@ -105,8 +105,11 @@ export class Webpage
 		let htmlString = "<!DOCTYPE html>\n" + this.document?.documentElement.outerHTML;
 
 		if (Settings.settings.minifyHTML) 
-			htmlString = await minify(htmlString, { collapseBooleanAttributes: true, collapseWhitespace: true, minifyCSS: true, minifyJS: true, removeComments: true, removeEmptyAttributes: true, removeRedundantAttributes: true, removeScriptTypeAttributes: true, removeStyleLinkTypeAttributes: true, useShortDoctype: true });
-
+		{
+			htmlString = await minify(htmlString, { collapseBooleanAttributes: true, minifyCSS: true, minifyJS: true, removeComments: true, removeEmptyAttributes: true, removeRedundantAttributes: true, removeScriptTypeAttributes: true, removeStyleLinkTypeAttributes: true, useShortDoctype: true });
+			// remove extra spaces
+			htmlString = htmlString.replaceAll(/>\s+</g, "><");
+		}
 		return htmlString;
 	}
 
@@ -167,6 +170,9 @@ export class Webpage
 
 		this.document.body.appendChild(layout.container);
 
+		await this.addMetadata();
+		await this.addTitle();
+
 		if (Settings.settings.exportPreset != ExportPreset.RawDocuments)
 		{
 			let rightSidebar = layout.right;
@@ -214,9 +220,6 @@ export class Webpage
 		{
 			layout.container.querySelectorAll(".sidebar").forEach((el) => el.remove());
 		}
-
-		await this.addMetadata();
-		await this.addTitle();
 
 		return this;
 	}
@@ -399,7 +402,7 @@ export class Webpage
 
 	private async addTitle() 
 	{
-		if (!this.document) return;
+		if (!this.document || !this.sizerElement || this.viewType != "markdown") return;
 		
 		// remove inline title
 		let inlineTitle = this.document.querySelector(".inline-title");
@@ -408,6 +411,10 @@ export class Webpage
 		// remove make.md title
 		let makeTitle = this.document.querySelector(".mk-inline-context");
 		makeTitle?.remove();
+
+		// remove mod-header
+		let modHeader = this.document.querySelector(".mod-header");
+		modHeader?.remove();
 
 		let titleInfo = await Website.getTitleAndIcon(this.source);
 		let title = titleInfo.title;
@@ -436,10 +443,9 @@ export class Webpage
 				else if (firstHeader.tagName == "H1")
 				{
 					// if the difference is too large but the first header is an h1 and it's the first element in the body, use it as the title
-					let headerEl = firstHeader.closest(".header-wrapper") ?? firstHeader;
+					let headerEl = firstHeader.closest(".heading-wrapper") ?? firstHeader;
 					let headerParent = headerEl.parentElement;
-					console.log("Header parent", headerParent);
-					if (headerParent && headerParent.tagName == "BODY")
+					if (headerParent && headerParent.classList.contains("markdown-preview-sizer"))
 					{
 						let childPosition = Array.from(headerParent.children).indexOf(headerEl);
 						if (childPosition <= 3)
@@ -461,9 +467,10 @@ export class Webpage
 		// remove banner header
 		this.document.querySelector(".banner-header")?.remove();
 
-		// Create h1 with title
+		// Create h1 inline title
 		let titleEl = this.document.createElement("h1");
-		titleEl.id = "inline-title";
+		titleEl.classList.add("inline-title", "heading");
+		titleEl.id = title;
 
 		let pageIcon = undefined;
 		// Create a div with icon
@@ -475,26 +482,14 @@ export class Webpage
 		
 		// Insert title into the title element
 		MarkdownRenderer.renderSingleLineMarkdown(title, titleEl);
-		if (pageIcon) MarkdownRenderer.renderSingleLineMarkdown(icon, pageIcon);
-	
-		if (this.contentElement)
+		if (pageIcon) 
 		{
-			// Find the element with class "mod-header" within the document container
-			let modHeader = this.contentElement.querySelector(".mod-header:not(.markdown-embed-content *)");
-	
-			if (modHeader) 
-			{
-				// Append the title element as the last child of the document container
-				if (pageIcon) modHeader.appendChild(pageIcon);
-				modHeader.appendChild(titleEl);
-			} else {
-				console.error("mod-header not found within markdown-preview-section. Unable to append title.");
-			}
-		} 
-		else
-		{
-			console.error("markdown-preview-section not found. Unable to append title.");
+			MarkdownRenderer.renderSingleLineMarkdown(icon, pageIcon);
+			titleEl.prepend(pageIcon);
 		}
+
+		// Insert title into the document
+		this.sizerElement.prepend(titleEl);
 	}
 
 	private async addMetadata()

@@ -202,10 +202,6 @@ export namespace MarkdownRenderer
 		{
 			viewEl = document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
 			sizerEl = viewEl.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
-			let pusherEl = sizerEl.createDiv({ cls: "markdown-preview-pusher" });
-			pusherEl.style.height = "0.1px";
-			pusherEl.style.marginBottom = "0px";
-			pusherEl.style.width = "1px";
 		}
 
 		// @ts-ignore
@@ -548,22 +544,17 @@ export namespace MarkdownRenderer
 			canvas.replaceWith(image);
 		});
 
-		// add space after inline math
-		// this should be changed to add the space to the front of the following text node
-		html.querySelectorAll(".math-inline").forEach((element: HTMLElement) =>
-		{
-			element.style.marginRight = "0.5em";
-		});
-
 		// move frontmatter before markdown-preview-sizer
 		let frontmatter = html.querySelector(".frontmatter");
 		if (frontmatter)
 		{
+			let frontmatterParent = frontmatter.parentElement;
 			let sizer = html.querySelector(".markdown-preview-sizer");
 			if (sizer)
 			{
 				sizer.before(frontmatter);
 			}
+			frontmatterParent?.remove();
 		}
 
 		// add lazy loading to iframe elements
