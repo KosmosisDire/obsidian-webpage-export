@@ -51,7 +51,7 @@ let fullyInitialized = false;
 
 async function initGlobalObjects()
 {
-	if(window.location.protocol != "file:") await waitUntil(() => !document.querySelector("include"), 20);
+	if(window.location.protocol != "file:") await waitUntil(() => !document.querySelector("include"), 10, 1000);
 
 	loadingIcon = document.createElement("div");
 	loadingIcon.classList.add("loading-icon");
@@ -327,15 +327,24 @@ async function delay(ms)
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function waitUntil(condition, interval = 100)
+async function waitUntil(condition, interval = 100, timeout = 2000)
 {
 	return new Promise(resolve =>
 	{
-		let intervalId = setInterval(() =>
+		let intervalId = 0;
+
+		let timeoutId = setTimeout(() =>
+		{
+			clearInterval(intervalId);
+			resolve();
+		}, timeout);
+
+		intervalId = setInterval(() =>
 		{
 			if (condition())
 			{
 				clearInterval(intervalId);
+				clearTimeout(timeoutId);
 				resolve();
 			}
 		}, interval);

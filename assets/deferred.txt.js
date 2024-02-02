@@ -17,6 +17,7 @@ async function loadIncludes()
 				if (!request.ok) 
 				{
 					console.log("Could not include file: " + includePath);
+					includeTag?.remove();
 					continue;
 				}
 				
@@ -25,6 +26,7 @@ async function loadIncludes()
 			}
 			catch (e)
 			{
+				includeTag?.remove();
 				console.log("Could not include file: " + includePath);
 				continue;
 			}
@@ -68,12 +70,12 @@ function updateTheme()
 
 	observer.disconnect();
 
-	if (document.body.querySelector(".sidebar-content include")) loadIncludes();
+	if (document.body.querySelector(".sidebar-content > include")) loadIncludes();
 	else
 	{
 		observer = new MutationObserver(() => 
 		{
-			if (document.body.querySelector(".sidebar-content include")) 
+			if (document.body.querySelector(".sidebar-content > include")) 
 				loadIncludes();
 		});
 		observer.observe(document.body, { childList: true });
