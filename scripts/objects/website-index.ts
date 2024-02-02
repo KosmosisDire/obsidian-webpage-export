@@ -71,7 +71,16 @@ export class WebsiteIndex
 	{
 		let metadataPath = this.web.destination.join(Asset.libraryPath).joinString("metadata.json");
 		let metadata = await metadataPath.readFileString();
-		if (metadata) return JSON.parse(metadata);
+		
+		try
+		{
+			if (metadata) return JSON.parse(metadata);
+		}
+		catch (e)
+		{
+			RenderLog.error(e, "Failed to parse metadata.json. Exporting all files.");
+		}
+
 		return undefined;
 	}
 

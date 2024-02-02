@@ -11,15 +11,23 @@ async function loadIncludes()
 			let includeTag = includeTags[i];
 			let includePath = includeTag.getAttribute("src");
 
-			const request = await fetch(includePath);
-			if (!request.ok) 
+			try
+			{
+				const request = await fetch(includePath);
+				if (!request.ok) 
+				{
+					console.log("Could not include file: " + includePath);
+					continue;
+				}
+				
+				let includeText = await request.text();
+				includeTag.outerHTML = includeText;
+			}
+			catch (e)
 			{
 				console.log("Could not include file: " + includePath);
 				continue;
 			}
-			
-			let includeText = await request.text();
-			includeTag.outerHTML = includeText;
 		}
 	}
 	else

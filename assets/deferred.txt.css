@@ -93,6 +93,12 @@ body.floating-sidebars .sidebar {
 	border-bottom-left-radius: var(--radius-l);
 }
 
+/* Hide empty sidebars */
+.sidebar:has(.sidebar-content:empty)
+{
+	display: none;
+}
+
 .sidebar-topbar {
     height: 2em;
     width: var(--sidebar-width);
@@ -165,7 +171,6 @@ body.floating-sidebars .sidebar {
     width: 100%;
 	height: 100%;
 }
-
 
 .sidebar-section-header
 {

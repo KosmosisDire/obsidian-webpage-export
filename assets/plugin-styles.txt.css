@@ -371,7 +371,8 @@ body .webpage-container .tree-container .tree-scroll-area
 {
     transition: height ease-in-out, margin-bottom ease-in-out;
     transition-duration: 0.2s;
-    display: inline;
+    display: flex;
+	flex-direction: column;
 	position: relative;
 }
 
@@ -387,7 +388,7 @@ html > body > .webpage-container > .document-container > .markdown-preview-view 
 
 .markdown-rendered .heading-wrapper:has(> .heading-children > div:last-child > :is(p,pre,table,ul,ol)) + .heading-wrapper > .heading:first-child
 {
-    margin-top: var(--heading-spacing);
+    margin-top: var(--heading-spacing) !important;
 }
 
 .heading-children
