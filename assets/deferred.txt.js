@@ -65,9 +65,12 @@ function updateTheme()
 	{
 		observer = new MutationObserver(() => 
 		{
-			if (document.body.querySelector(".sidebar-content include")) loadIncludes();
+			if (document.body.querySelector(".sidebar-content include")) 
+				loadIncludes();
 		});
 		observer.observe(document.body, { childList: true });
+
+		setTimeout(() => loadIncludes(), 150);
 	}
 }
 
