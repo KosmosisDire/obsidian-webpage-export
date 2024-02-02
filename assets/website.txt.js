@@ -51,7 +51,7 @@ let fullyInitialized = false;
 
 async function initGlobalObjects()
 {
-	await waitUntil(() => !document.querySelector("include"), 20);
+	if(window.location.protocol != "file:") await waitUntil(() => !document.querySelector("include"), 20);
 
 	loadingIcon = document.createElement("div");
 	loadingIcon.classList.add("loading-icon");

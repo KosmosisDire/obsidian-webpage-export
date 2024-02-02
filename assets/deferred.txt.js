@@ -28,6 +28,7 @@ async function loadIncludes()
 		if (e.length > 0)
 		{
 			var error = document.createElement("div");
+			error.id = "error";
 			error.textContent = "Web server exports must be hosted on an http / web server to be viewed correctly.";
 			error.style.position = "fixed";
 			error.style.top = "50%";
@@ -37,6 +38,7 @@ async function loadIncludes()
 			error.style.fontWeight = "bold";
 			error.style.textAlign = "center";
 			document.body.appendChild(error);
+			document.querySelector(".document-container")?.classList.remove("hide");
 		}
 	}
 

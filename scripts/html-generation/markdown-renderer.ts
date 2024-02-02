@@ -7,7 +7,7 @@ import { HTMLGeneration } from "./html-generation-helpers";
 
 export namespace MarkdownRenderer
 {
-	export let convertableExtensions = ["md", "canvas"];
+	export let convertableExtensions = ["md", "canvas", "drawing", "excalidraw"]; // drawing is an alias for excalidraw
 	export let renderLeaf: WorkspaceLeaf | undefined;
     export let errorInBatch: boolean = false;
 	export let cancelled: boolean = false;

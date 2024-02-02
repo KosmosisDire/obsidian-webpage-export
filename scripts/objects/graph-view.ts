@@ -1,6 +1,7 @@
 import { TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
 import { Settings } from "scripts/settings/settings";
+import { Website } from "./website";
 
 export class GraphView
 {
@@ -12,6 +13,8 @@ export class GraphView
 	public linkSources: number[];
 	public linkTargets: number[];
 
+	private isInitialized: boolean = false;
+
 	static InOutQuadBlend(start: number, end: number, t: number): number
 	{
 		t /= 2;
@@ -21,9 +24,11 @@ export class GraphView
 		return start + (end - start) * t2;
 	}
 
-	public constructor(forFiles: TFile[], minRadius: number, maxRadius: number, extraDepth: number = 0)
+	public async init(files: TFile[], minRadius: number, maxRadius: number, extraDepth: number = 0)
 	{
-		this.paths = forFiles.map(f => f.path);
+		if (this.isInitialized) return;
+
+		this.paths = files.map(f => f.path);
 
 
 		this.nodeCount = this.paths.length;
@@ -47,8 +52,13 @@ export class GraphView
 		for (let source of this.paths)
 		{
 			let sourceIndex = sources.indexOf(source);
-
-			this.labels.push(new Path(source).basename);
+			let file = files.find(f => f.path == source);
+			
+			if (file)
+			{
+				let titleInfo = await Website.getTitleAndIcon(file);
+				this.labels.push(titleInfo.title);
+			}
 
 			if (sourceIndex != -1)
 			{
@@ -88,6 +98,8 @@ export class GraphView
 			});
 
 		this.linkCount = this.linkSources.length;
+
+		this.isInitialized = true;
 	}
 
 	public static generateGraphEl(container: HTMLElement): HTMLElement
@@ -113,6 +125,8 @@ export class GraphView
 
 	public getExportData(): string
 	{
+		if (!this.isInitialized) throw new Error("Graph not initialized");
+
 		return `
 let nodes=\n${JSON.stringify(this)};
 let attractionForce = ${Settings.settings.graphAttractionForce};

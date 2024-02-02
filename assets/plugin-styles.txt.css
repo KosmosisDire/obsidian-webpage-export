@@ -155,10 +155,10 @@ body .webpage-container .tree-container .tree-scroll-area
 
 .tree-container .tree-item-title {
     overflow: hidden;
-    text-overflow: ellipsis;
-    text-wrap: nowrap;
-    white-space: nowrap;
-    position: relative;
+    text-overflow: ellipsis !important;
+    text-wrap: nowrap !important;
+    white-space: nowrap !important;
+    position: relative !important;
     border: none !important;
 
     width: 100%;
@@ -376,7 +376,7 @@ body .webpage-container .tree-container .tree-scroll-area
 }
 
 /* high specificity in order to override other style */
-html > body > .webpage-container > .document-container > .markdown-preview-view >  .markdown-preview-sizer > *
+html > body > .webpage-container > .document-container > .markdown-preview-view >  .markdown-preview-sizer > div
 {
 	margin-inline: 0 !important;
     margin: 0 !important;

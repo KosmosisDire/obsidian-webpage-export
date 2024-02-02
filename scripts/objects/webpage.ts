@@ -258,6 +258,7 @@ export class Webpage
 
 		let body = this.document.body;
 		body.setAttribute("class", Website.validBodyClasses);
+		console.log("valid body classes", Website.validBodyClasses);
 
 		// create obsidian document containers
 		let renderInfo = await MarkdownRenderer.renderFile(this.source, body);
@@ -436,9 +437,16 @@ export class Webpage
 
 				if ((firstHeader.tagName == "H1" && difference < 0.2) || (firstHeader.tagName == "H2" && difference < 0.1))
 				{
-					if(titleInfo.isDefaultTitle) title = firstHeader.innerHTML;
+					if(titleInfo.isDefaultTitle) 
+					{
+						title = firstHeader.innerHTML;
+						RenderLog.log(`Using "${firstHeaderTextNode.textContent ?? ""}" header because it was very similar to the file's title.`);
+					}
+					else
+					{
+						RenderLog.log(`Replacing "${firstHeaderTextNode.textContent ?? ""}" header because it was very similar to the file's title.`);
+					}
 					firstHeader.remove();
-					RenderLog.log(`Removing "${firstHeaderTextNode.textContent ?? ""}" header because it was very similar to the file's title.`);
 				}
 				else if (firstHeader.tagName == "H1")
 				{
@@ -448,12 +456,20 @@ export class Webpage
 					if (headerParent && headerParent.classList.contains("markdown-preview-sizer"))
 					{
 						let childPosition = Array.from(headerParent.children).indexOf(headerEl);
-						if (childPosition <= 3)
+						if (childPosition <= 2)
 						{
 							console.log("Header position", childPosition);
-							if(titleInfo.isDefaultTitle) title = firstHeader.innerHTML;
+							if(titleInfo.isDefaultTitle) 
+							{
+								title = firstHeader.innerHTML;
+								RenderLog.log(`Using "${firstHeaderTextNode.textContent ?? ""}" header as title because it was H1 at the top of the page`);
+							}
+							else
+							{
+								RenderLog.log(`Replacing "${firstHeaderTextNode.textContent ?? ""}" header because it was H1 at the top of the page`);
+							}
+
 							firstHeader.remove();
-							RenderLog.log(`Removing "${firstHeaderTextNode.textContent ?? ""}" header because it was H1 at the top of the page`);
 						}
 					}
 				}
@@ -469,7 +485,7 @@ export class Webpage
 
 		// Create h1 inline title
 		let titleEl = this.document.createElement("h1");
-		titleEl.classList.add("inline-title", "heading");
+		titleEl.classList.add("page-title", "heading");
 		titleEl.id = title;
 
 		let pageIcon = undefined;

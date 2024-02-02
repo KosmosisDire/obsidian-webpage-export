@@ -116,6 +116,9 @@ export class AssetHandler
 		// remove duplicates
 		downloadAssets = downloadAssets.filter((asset, index, self) => self.findIndex((t) => t.relativeDownloadPath.asString == asset.relativeDownloadPath.asString) === index);
 
+		// remove assets with no content
+		downloadAssets = downloadAssets.filter(asset => asset.content && asset.content.length > 0);
+
 		downloadAssets.sort((a, b) => b.loadPriority - a.loadPriority);
 		return downloadAssets;
 	}

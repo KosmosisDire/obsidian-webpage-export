@@ -79,6 +79,7 @@ export class FileTree extends Tree
 				if (file instanceof TFolder) path.makeForceFolder();
 				else 
 				{
+					if (path.asString.endsWith(".excalidraw.md")) path.setExtension("drawing");
 					parent.originalExtension = path.extensionName;
 					if(!this.keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
 				}

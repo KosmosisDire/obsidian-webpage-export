@@ -12,6 +12,16 @@ body
 	--sidebar-margin: 12px;
 }
 
+.page-title
+{
+	color: --inline-title-color;
+    font-family: --inline-title-font;
+    font-size: --inline-title-size;
+    font-style: --inline-title-style;
+    font-variant: --inline-title-variant;
+    font-weight: --inline-title-weight;
+    margin-bottom: --inline-title-margin-bottom;
+}
 
 /*#region Sidebars */
 

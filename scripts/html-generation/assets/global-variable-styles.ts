@@ -19,14 +19,17 @@ export class GlobalVariableStyles extends Asset
 		if (!isNaN(Number(lineWidth))) lineWidth += "px";
 		if (!isNaN(Number(contentWidth))) contentWidth += "px";
 		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
+
+		let lineWidthCss = `min(${lineWidth}, calc(100vw - 2em)`;
+		let contentWidthCss = `min(${contentWidth}, calc(100vw - 2em)`;
 		this.content = 
         `
         html body
         {
-			--line-width: ${lineWidth};
-			--line-width-adaptive: ${lineWidth};
-			--file-line-width: ${lineWidth};
-			--content-width: ${contentWidth};
+			--line-width: ${lineWidthCss};
+			--line-width-adaptive: ${lineWidthCss};
+			--file-line-width: ${lineWidthCss};
+			--content-width: ${contentWidthCss};
 			--sidebar-width: min(${sidebarWidth}, 80vw);
         }
 

@@ -1,3 +1,4 @@
+
 // Wasm glue
 var Module = typeof Module != "undefined" ? Module : {};
 var moduleOverrides = Object.assign({}, Module);
@@ -765,4 +766,12 @@ if (Module["preInit"]) {
         Module["preInit"].pop()()
     }
 }
-run();
+
+try
+{
+	run();
+}
+catch(e)
+{
+	console.error(e);
+}

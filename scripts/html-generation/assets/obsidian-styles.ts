@@ -12,7 +12,7 @@ export class ObsidianStyles extends Asset
         super("obsidian.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Async, 10);
     }
 
-    private static obsidianStylesFilter = 
+    public static stylesFilter = 
 	["workspace-", "cm-", "ghost", "leaf", "CodeMirror", 
 	"@media", "pdf", "xfa", "annotation", "@keyframes", 
 	"load", "@-webkit", "setting", "filter", "decorator", 
@@ -24,9 +24,9 @@ export class ObsidianStyles extends Asset
 	"progress", "native", "aria", "tooltip", 
 	"drop", "sidebar", "mod-windows", "is-frameless", 
 	"is-hidden-frameless", "obsidian-app", "show-view-header", 
-	"is-maximized"];
+	"is-maximized", "is-translucent"];
 
-	private static obsidianStylesKeep = ["scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager"];
+	public static stylesKeep = ["scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager"];
     
     override async load()
     {
@@ -53,12 +53,12 @@ export class ObsidianStyles extends Asset
                 let skip = false;
                 let selector = rule.cssText.split("{")[0];
 
-                for (let keep of ObsidianStyles.obsidianStylesKeep) 
+                for (let keep of ObsidianStyles.stylesKeep) 
                 {
                     if (!selector.includes(keep)) 
                     {
 						// filter out certain unused styles to reduce file size
-                        for (let filter of ObsidianStyles.obsidianStylesFilter) 
+                        for (let filter of ObsidianStyles.stylesFilter) 
                         {
                             if (selector.includes(filter)) 
                             {

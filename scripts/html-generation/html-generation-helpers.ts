@@ -4,6 +4,7 @@ import { AssetType } from "./assets/asset";
 import { RenderLog } from "./render-log";
 import { getIcon as getObsidianIcon } from "obsidian";
 import { Utils } from "scripts/utils/utils";
+import { ObsidianStyles } from "./assets/obsidian-styles";
 
 export namespace HTMLGeneration
 {
@@ -120,36 +121,55 @@ export namespace HTMLGeneration
 		if (cleanCache) _validBodyClasses = undefined;
 		if (_validBodyClasses) return _validBodyClasses;
 
-		let bodyClasses = document.body.classList;
+		let bodyClasses = Array.from(document.body.classList);
+		// filter classes
+		bodyClasses = bodyClasses.filter((value) => 
+			ObsidianStyles.stylesKeep.some(keep => value.includes(keep)) || 
+			!ObsidianStyles.stylesFilter.some(filter => value.includes(filter))
+		);
+		console.log("Body classes: ", bodyClasses);
 		let validClasses = "";
+		validClasses += " publish ";
+		validClasses += " css-settings-manager ";
 		
 		// keep body classes that are referenced in the styles
 		let styles = AssetHandler.getAssetsOfType(AssetType.Style);
 		let i = 0;
+		let classes: string[] = [];
+
 		for (var style of styles)
 		{
-			RenderLog.progress(i, styles.length, "Finding valid body classes", "Scanning: " + style.filename, "var(--color-yellow)");
+			RenderLog.progress(i, styles.length, "Compiling css classes", "Scanning: " + style.filename, "var(--color-yellow)");
 			if (typeof(style.content) != "string") continue;
 			
 			// this matches every class name with the dot
-			let matches = style.content.matchAll(/\.([A-Za-z_-]+)/g);
-			for (var match of matches)
-			{
-				let className = match[0].replace(".", "").trim();
-				if (bodyClasses.contains(className)) validClasses += " " + className + " ";
-			}
+			let matches = Array.from(style.content.matchAll(/\.([A-Za-z_-]+[\w-]+)/g));
+			let styleClasses = matches.map(match => match[0].substring(1).trim());
+			// remove duplicates
+			styleClasses = styleClasses.filter((value, index, self) => self.indexOf(value) === index);
+			classes = classes.concat(styleClasses);
 			i++;
 			await Utils.delay(0);
 		}
 
-		validClasses += " publish ";
-		validClasses += " css-settings-manager ";
+		// remove duplicates
+		classes = classes.filter((value, index, self) => self.indexOf(value) === index);
+		classes = classes.sort();
+
+		console.log("Classes: ", classes);
+
+		for (var bodyClass of bodyClasses)
+		{
+			if (classes.includes(bodyClass))
+			{
+				validClasses += bodyClass + " ";
+			}
+		}
+
 		_validBodyClasses = validClasses.replace(/\s\s+/g, ' ');
 
 		// convert to array and remove duplicates
 		_validBodyClasses = _validBodyClasses.split(" ").filter((value, index, self) => self.indexOf(value) === index).join(" ").trim();
-
-		RenderLog.log("Body classes: " + _validBodyClasses);
 		
 		return _validBodyClasses;
 	}

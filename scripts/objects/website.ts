@@ -74,7 +74,8 @@ export class Website
 		if (Settings.settings.includeGraphView)
 		{
 			let convertableFiles = this.batchFiles.filter((file) => MarkdownRenderer.isConvertable(file.extension));
-			this.globalGraph = new GraphView(convertableFiles, Settings.settings.graphMinNodeSize, Settings.settings.graphMaxNodeSize);
+			this.globalGraph = new GraphView();
+			await this.globalGraph.init(convertableFiles, Settings.settings.graphMinNodeSize, Settings.settings.graphMaxNodeSize);
 		}
 		
 		if (Settings.settings.includeFileTree)
@@ -209,6 +210,7 @@ export class Website
 			const titleFromFrontmatter = frontmatter?.[titleProperty] ?? frontmatter?.banner_header; // banner plugin support
 			title = titleFromFrontmatter ?? file.basename;
 			if (title != file.basename) isDefaultTitle = false;
+			if (title.endsWith(".excalidraw")) title = title.substring(0, title.length - 11);
 
 			iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support
 			if (!iconProperty && Settings.settings.showDefaultTreeIcons) 
