@@ -347,8 +347,19 @@ body .webpage-container .tree-container .tree-scroll-area
 
 #webpage-icon {
   font-size: 40px;
-  margin-bottom: 8px !important;
+  margin-bottom: 8px;
   font-family: emoji;
+}
+
+.markdown-rendered .page-title.heading
+{
+	color: var(--inline-title-color);
+    font-family: var(--inline-title-font);
+    font-size: var(--inline-title-size);
+    font-style: var(--inline-title-style);
+    font-variant: var(--inline-title-variant);
+    font-weight: var(--inline-title-weight);
+    margin-bottom: var(--inline-title-margin-bottom);
 }
 
 .heading
@@ -613,7 +624,7 @@ a {
     transition: background-color var(--color-fade-speed);
     z-index: 1000;
 
-    /* box-shadow: inset 0px 0px 100px -70px var(--color-accent); */
+	animation-duration: 0.2s;
 }
 
 /* Handle default */
@@ -629,25 +640,28 @@ a {
     border-radius: var(--handle-radius);
     background-color: var(--text-normal);
     box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.2);
-    animation: toggle-slide-left 0.2s ease-in-out normal both;
-
+    animation: toggle-slide-left ease-in-out normal both;
+	animation-duration: inherit;
     z-index: 1000;
 }
 
 /* handle light*/
 .theme-toggle-input:checked ~ .toggle-background::before 
 {
-    animation: toggle-slide-right 0.2s ease-in-out normal both;
+    animation: toggle-slide-right ease-in-out normal both;
+	animation-duration: inherit;
 }
 
 .theme-toggle-input:active ~ .toggle-background::before 
 {
-    animation: toggle-expand-right 0.2s ease-in-out normal both;
+    animation: toggle-expand-right ease-in-out normal both;
+	animation-duration: inherit;
 }
 
 .theme-toggle-input:active:checked ~ .toggle-background::before
 {
-    animation: toggle-expand-left 0.2s ease-in-out normal both;
+    animation: toggle-expand-left ease-in-out normal both;
+	animation-duration: inherit;
 }
 
 /* sun moon icon icon default */
@@ -692,37 +706,21 @@ a {
 .graph-view-container.expanded
 {
     position: fixed;
-    width: 60%;
+    width: 90%;
     height: 90%;
 	max-height: unset;
-    right: 20%;
+    right: 5%;
     top: 5%;
     background-color: var(--background-secondary);
     z-index: 100;
 }
 
-body.is-phone .graph-view-container.expanded
+body:is(.is-phone, .is-tablet) .graph-view-container.expanded
 {
-    position: fixed;
-    width: 94%;
-    height: 94%;
-    right: 3%;
-    top: 3%;
-}
-
-
-body.is-tablet .graph-view-container.expanded
-{
-    position: fixed;
-    width: 90%;
-    right: 5%;
-}
-
-body.is-small-screen .graph-view-container.expanded
-{
-    position: fixed;
-    width: 80%;
-    right: 10%;
+    width: 95%;
+    height: 95%;
+    right: 2.5%;
+    top: 2.5%;
 }
 
 .graph-view-container 
@@ -836,9 +834,11 @@ body :is(.canvas-node-container, .canvas-wrapper)
 
 /*#region Phone */
 
-body.is-phone .sidebar
+body.is-phone .sidebar 
 {
-	font-size: 1.06em;
+    font-size: 1.15em;
+    --tree-vertical-spacing: 0.9em;
+	--sidebar-width: 85vw !important;
 }
 
 body.is-phone

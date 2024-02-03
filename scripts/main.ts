@@ -3,12 +3,13 @@ import { Notice, Plugin, TFile, TFolder} from 'obsidian';
 
 // modules that are part of the plugin
 import { AssetHandler } from './html-generation/asset-handler';
-import { Settings } from './settings/settings';
+import { Settings, SettingsPage } from './settings/settings';
 import { HTMLExporter } from './exporter';
 import { Path } from './utils/path';
 import { RenderLog } from './html-generation/render-log';
 import { ExportModal } from './settings/export-modal';
 import { MarkdownRenderer } from './html-generation/markdown-renderer';
+import { Utils } from './utils/utils';
 
 export default class HTMLExportPlugin extends Plugin
 {
@@ -16,6 +17,7 @@ export default class HTMLExportPlugin extends Plugin
 	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string} = {updateAvailable: false, latestVersion: "0", currentVersion: "0", updateNote: ""};
 	static pluginVersion: string = "0.0.0";
 	public markdownRenderer = MarkdownRenderer;
+	public settings = Settings;
 
 	async onload()
 	{
@@ -24,8 +26,8 @@ export default class HTMLExportPlugin extends Plugin
 		HTMLExportPlugin.plugin = this;
 		this.checkForUpdates();
 		HTMLExportPlugin.pluginVersion = this.manifest.version;
-		this.addSettingTab(new Settings(this));
-		await Settings.loadSettings();
+		this.addSettingTab(new SettingsPage(this));
+		await SettingsPage.loadSettings();
 		await AssetHandler.initialize();
 
 		this.addRibbonIcon("folder-up", "Export Vault to HTML", () =>
@@ -34,7 +36,7 @@ export default class HTMLExportPlugin extends Plugin
 		});
 
 		// register callback for file rename so we can update the saved files to export
-		this.registerEvent(this.app.vault.on("rename", Settings.renameFile));
+		this.registerEvent(this.app.vault.on("rename", SettingsPage.renameFile));
 
 		this.addCommand({
 			id: 'export-html-vault',
@@ -110,7 +112,9 @@ export default class HTMLExportPlugin extends Plugin
 		try
 		{
 			let url = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/manifest.json?cache=" + Date.now() + "";
-			let manifest = await fetch(url, {cache: "no-store"}).then((response) => response.json());
+			let manifestResp = await Utils.fetch(url, 5000, {cache: "no-store"});
+			if (!manifestResp.ok) throw new Error("Could not fetch manifest");
+			let manifest = JSON.parse(await manifestResp.text());
 			let latestVersion = manifest.version ?? currentVersion;
 			let updateAvailable = currentVersion < latestVersion;
 			let updateNote = manifest.updateNote ?? "";

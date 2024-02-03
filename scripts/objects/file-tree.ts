@@ -3,7 +3,7 @@ import { Tree, TreeItem } from "./tree";
 import { Path } from "scripts/utils/path";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { Website } from "./website";
-import { Settings } from "scripts/settings/settings";
+import { SettingsPage } from "scripts/settings/settings";
 import { HTMLGeneration } from "scripts/html-generation/html-generation-helpers";
 
 export class FileTree extends Tree

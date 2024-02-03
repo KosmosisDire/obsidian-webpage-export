@@ -249,8 +249,6 @@ export namespace MarkdownRenderer
 			
 			// @ts-ignore
 			await preview.postProcess(section, promises, renderer.frontmatter);
-
-			// await Utils.delay(0);
 		}
 
 		// @ts-ignore
@@ -260,6 +258,7 @@ export namespace MarkdownRenderer
 		for (let i = 0; i < sections.length; i++)
 		{
 			let section = sections[i];
+			console.log(section.el.outerHTML);
 			sizerEl.appendChild(section.el);
 		}
 

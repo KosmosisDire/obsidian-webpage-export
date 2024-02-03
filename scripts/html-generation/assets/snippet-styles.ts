@@ -5,7 +5,6 @@ import { RenderLog } from "../render-log";
 export class SnippetStyles extends Asset
 {
     public content: string = "";
-    private lastEnabledSnippets: string[] = [];
 
     constructor()
     {
@@ -33,10 +32,6 @@ export class SnippetStyles extends Asset
     
     override async load()
     {
-        let enabledSnippets = SnippetStyles.getEnabledSnippets();
-        // if (enabledSnippets == this.lastEnabledSnippets) return; 
-		// we can't rely on this because snippets can change
-
         let snippetsList = await SnippetStyles.getStyleSnippetsContent();
         let snippets = "\n";
         for (let i = 0; i < snippetsList.length; i++)
@@ -48,7 +43,6 @@ export class SnippetStyles extends Asset
 		snippets = snippets.replaceAll(/^publish /gm, "html body[class].publish ");
 		
         this.content = snippets;
-        this.lastEnabledSnippets = enabledSnippets;
 		this.modifiedTime = Date.now();
 
         await super.load();

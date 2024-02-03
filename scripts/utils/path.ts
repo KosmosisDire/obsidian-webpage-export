@@ -468,7 +468,7 @@ export class Path
 		return this.copy.makeAbsolute(workingDirectory);
 	}
 
-	validate(allowEmpty: boolean = false, requireExists: boolean = false, requireAbsolute: boolean = false, requireRelative: boolean = false, requireIsFile: boolean = false, requireIsDirectory: boolean = false, requireExtention: string[] = []): {vaild: boolean, isEmpty: boolean, error: string}
+	validate(allowEmpty: boolean = false, requireExists: boolean = false, requireAbsolute: boolean = false, requireRelative: boolean = false, requireIsFile: boolean = false, requireIsDirectory: boolean = false, requireExtention: string[] = []): {valid: boolean, isEmpty: boolean, error: string}
 	{
 		let error = "";
 		let valid = true;
@@ -485,7 +485,7 @@ export class Path
 		}
 		else if (allowEmpty && isEmpty)
 		{
-			return { vaild: true, isEmpty: isEmpty, error: "" };
+			return { valid: true, isEmpty: isEmpty, error: "" };
 		}
 		
 		if (requireExists && !this.exists)
@@ -519,7 +519,7 @@ export class Path
 			valid = false;
 		}
 
-		return { vaild: valid, isEmpty: isEmpty, error: error };
+		return { valid: valid, isEmpty: isEmpty, error: error };
 	}
 
 	async createDirectory(): Promise<boolean>

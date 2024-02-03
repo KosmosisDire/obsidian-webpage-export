@@ -29,6 +29,16 @@
 	align-items: center;
 }
 
+.flow-item:has(input:checked) {
+    background-color: hsla(var(--color-accent-hsl), 0.3);
+}
+
+.flow-item input[type="checkbox"] {
+    padding: 0;
+    margin: 0.1em;
+    margin-right: 0.5em;
+}
+
 /* Progressbar used in the render progress */
 
 .html-render-progressbar::-webkit-progress-bar {

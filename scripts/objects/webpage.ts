@@ -1,7 +1,7 @@
 import { TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
 import { Downloadable } from "scripts/utils/downloadable";
-import { ExportPreset, Settings } from "scripts/settings/settings";
+import { ExportPreset, Settings, SettingsPage } from "scripts/settings/settings";
 import { OutlineTree } from "./outline-tree";
 import { GraphView } from "./graph-view";
 import { Website } from "./website";
@@ -90,7 +90,7 @@ export class Webpage
 		if (forceExportToRoot) this.exportPath.reparse(this.name);
 		this.exportPath.setWorkingDirectory(this.destinationFolder.asString);
 
-		if (Settings.settings.makeNamesWebStyle)
+		if (Settings.makeNamesWebStyle)
 		{
 			this.name = Path.toWebStyle(this.name);
 			this.exportPath.makeWebStyle();
@@ -104,7 +104,7 @@ export class Webpage
 	{
 		let htmlString = "<!DOCTYPE html>\n" + this.document?.documentElement.outerHTML;
 
-		if (Settings.settings.minifyHTML) 
+		if (Settings.minifyHTML && htmlString.length < 1000000) // don't minify files over 1MB 
 		{
 			htmlString = await minify(htmlString, { collapseBooleanAttributes: true, minifyCSS: true, minifyJS: true, removeComments: true, removeEmptyAttributes: true, removeRedundantAttributes: true, removeScriptTypeAttributes: true, removeStyleLinkTypeAttributes: true, useShortDoctype: true });
 			// remove extra spaces
@@ -167,53 +167,72 @@ export class Webpage
 		if(!(await this.getDocumentHTML())) return;
 
 		let layout = this.generateWebpageLayout(this.contentElement);
-
 		this.document.body.appendChild(layout.container);
+		let bodyScript = this.document.createElement("script");
+		bodyScript.setAttribute("defer", "");
+		bodyScript.innerHTML = AssetHandler.themeLoadJS.content.toString();
+		this.document.body.prepend(bodyScript);
 
 		await this.addMetadata();
 		await this.addTitle();
 
-		if (Settings.settings.exportPreset != ExportPreset.RawDocuments)
+		if (Settings.exportPreset != ExportPreset.RawDocuments)
 		{
 			let rightSidebar = layout.right;
 			let leftSidebar = layout.left;
 
 			// inject graph view
-			if (Settings.settings.includeGraphView)
+			if (Settings.includeGraphView)
 			{
 				GraphView.generateGraphEl(rightSidebar);
 			}
 
 			// inject outline
-			if (Settings.settings.includeOutline)
+			if (Settings.includeOutline)
 			{
 				let headerTree = new OutlineTree(this, 1);
 				headerTree.class = "outline-tree";
 				headerTree.title = "Table Of Contents";
 				headerTree.showNestingIndicator = false;
-				headerTree.generateWithItemsClosed = Settings.settings.startOutlineCollapsed;
-				headerTree.minCollapsableDepth = Settings.settings.minOutlineCollapse;
+				headerTree.generateWithItemsClosed = Settings.startOutlineCollapsed;
+				headerTree.minCollapsableDepth = Settings.minOutlineCollapse;
 				await headerTree.generateTreeWithContainer(rightSidebar);
 			}
 
 			// inject darkmode toggle
-			if (Settings.settings.includeThemeToggle)
+			if (Settings.includeThemeToggle)
 			{
 				HTMLGeneration.createThemeToggle(layout.leftBar);
 			}
 
 			// inject search bar
 			// TODO: don't hardcode searchbar html
-			if (Settings.settings.includeSearchBar)
+			if (Settings.includeSearchBar)
 			{
 				let searchbarHTML = `<div class="search-input-container"><input enterkeyhint="search" type="search" spellcheck="false" placeholder="Search..."><div class="search-input-clear-button" aria-label="Clear search"></div></div>`;
 				leftSidebar.createDiv().outerHTML = searchbarHTML;
 			}
 
 			// inject file tree
-			if (Settings.settings.includeFileTree)
+			if (Settings.includeFileTree)
 			{
 				leftSidebar.createDiv().outerHTML = this.website.fileTreeAsset.getHTMLInclude();
+				
+				// if the file will be opened locally, un-collapse the tree containing this file
+				if (Settings.exportPreset != ExportPreset.Website)
+				{
+					let sidebar = leftSidebar.querySelector(".file-tree");
+					let unixPath = this.exportPath.copy.makeUnixStyle().asString;
+					let fileElement: HTMLElement = sidebar?.querySelector(`[href="${unixPath}"]`) as HTMLElement;
+					fileElement = fileElement?.closest(".tree-item") as HTMLElement;
+					while (fileElement)
+					{
+						fileElement?.classList.remove("is-collapsed");
+						let children = fileElement?.querySelector(".tree-item-children") as HTMLElement;
+						if(children) children.style.display = "block";
+						fileElement = fileElement?.parentElement?.closest(".tree-item") as HTMLElement;
+					}
+				}
 			}
 		}
 		else
@@ -244,7 +263,7 @@ export class Webpage
 			this.document.querySelectorAll(".heading").forEach((headerEl: HTMLElement) =>
 			{
 				let level = parseInt(headerEl.tagName[1]);
-				let heading = headerEl.innerText ?? "";
+				let heading = headerEl.getAttribute("data-heading") ?? headerEl.innerText ?? "";
 				headers.push({heading, level, headingEl: headerEl});
 			});
 		}
@@ -258,7 +277,6 @@ export class Webpage
 
 		let body = this.document.body;
 		body.setAttribute("class", Website.validBodyClasses);
-		console.log("valid body classes", Website.validBodyClasses);
 
 		// create obsidian document containers
 		let renderInfo = await MarkdownRenderer.renderFile(this.source, body);
@@ -270,8 +288,8 @@ export class Webpage
 
 		if (this.viewType == "markdown")
 		{ 
-			contentEl.classList.toggle("allow-fold-headings", Settings.settings.allowFoldingHeadings);
-			contentEl.classList.toggle("allow-fold-lists", Settings.settings.allowFoldingLists);
+			contentEl.classList.toggle("allow-fold-headings", Settings.allowFoldingHeadings);
+			contentEl.classList.toggle("allow-fold-lists", Settings.allowFoldingLists);
 			contentEl.classList.add("is-readable-line-width");
 		}
 
@@ -303,12 +321,12 @@ export class Webpage
 
 		// inline / outline images
 		let outlinedImages : Downloadable[] = [];
-		if (Settings.settings.inlineAssets) await this.inlineMedia();
+		if (Settings.inlineAssets) await this.inlineMedia();
 		else outlinedImages = await this.exportMedia();
 		
 		this.dependencies.push(...outlinedImages);
 
-		if(Settings.settings.makeNamesWebStyle)
+		if(Settings.makeNamesWebStyle)
 		{
 			this.dependencies.forEach((file) =>
 			{
@@ -362,7 +380,7 @@ export class Webpage
 
 		pageContainer.setAttribute("class", "webpage-container");
 
-		leftSidebar.setAttribute("class", "sidebar-left sidebar is-collapsed");
+		leftSidebar.setAttribute("class", "sidebar-left sidebar");
 		leftSidebarHandle.setAttribute("class", "sidebar-handle");
 		leftContent.setAttribute("class", "sidebar-content");
 		leftTopbar.setAttribute("class", "sidebar-topbar");
@@ -371,7 +389,7 @@ export class Webpage
 
 		documentContainer.setAttribute("class", "document-container markdown-reading-view hide");
 
-		rightSidebar.setAttribute("class", "sidebar-right sidebar is-collapsed");
+		rightSidebar.setAttribute("class", "sidebar-right sidebar");
 		rightSidebarHandle.setAttribute("class", "sidebar-handle");
 		rightContent.setAttribute("class", "sidebar-content");
 		rightTopbar.setAttribute("class", "sidebar-topbar");
@@ -382,7 +400,7 @@ export class Webpage
 		pageContainer.appendChild(documentContainer);
 		pageContainer.appendChild(rightSidebar);
 
-		leftSidebar.appendChild(leftSidebarHandle);
+		if (Settings.allowResizingSidebars) leftSidebar.appendChild(leftSidebarHandle);
 		leftSidebar.appendChild(leftTopbar);
 		leftSidebar.appendChild(leftContent);
 		leftTopbar.appendChild(leftTopbarContent);
@@ -391,12 +409,19 @@ export class Webpage
 
 		documentContainer.appendChild(middleContent);
 
-		rightSidebar.appendChild(rightSidebarHandle);
+		if (Settings.allowResizingSidebars) rightSidebar.appendChild(rightSidebarHandle);
 		rightSidebar.appendChild(rightTopbar);
 		rightSidebar.appendChild(rightContent);
 		rightTopbar.appendChild(rightTopbarContent);
 		rightTopbar.appendChild(rightCollapseIcon);
 		rightCollapseIcon.innerHTML = collapseSidebarIcon;
+
+		let leftSidebarScript = leftSidebar.createEl("script");
+		let rightSidebarScript = rightSidebar.createEl("script");
+		leftSidebarScript.setAttribute("defer", "");
+		rightSidebarScript.setAttribute("defer", "");
+		leftSidebarScript.innerHTML = `let ls = document.querySelector(".sidebar-left"); ls.classList.add("is-collapsed"); if (window.innerWidth > 768) ls.classList.remove("is-collapsed"); console.log(window.innerWidth)`;
+		rightSidebarScript.innerHTML = `let rs = document.querySelector(".sidebar-right"); rs.classList.add("is-collapsed"); if (window.innerWidth > 768) rs.classList.remove("is-collapsed"); console.log(window.innerWidth)`;
 
 		return {container: pageContainer, left: leftContent, leftBar: leftTopbarContent, right: rightContent, rightBar: rightTopbarContent, center: documentContainer};
 	}
@@ -425,58 +450,48 @@ export class Webpage
 		let firstHeader = this.document.querySelector(":is(h1, h2, h3, h4, h5, h6):not(.markdown-embed-content *)");
 		if (firstHeader)
 		{
-			let headerChildren = Array.from(firstHeader.childNodes);
-			let firstHeaderTextNode = headerChildren.find((el) => el.nodeType == Node.TEXT_NODE);
-			if (firstHeaderTextNode)
+			let firstHeaderText = (firstHeader.getAttribute("data-heading") ?? firstHeader.textContent)?.toLowerCase() ?? "";
+			let lowerTitle = title.toLowerCase();
+			let titleDiff = Utils.levenshteinDistance(firstHeaderText, lowerTitle) / lowerTitle.length;
+			let basenameDiff = Utils.levenshteinDistance(firstHeaderText, this.source.basename.toLowerCase()) / this.source.basename.length;
+			let difference = Math.min(titleDiff, basenameDiff);
+
+			if ((firstHeader.tagName == "H1" && difference < 0.2) || (firstHeader.tagName == "H2" && difference < 0.1))
 			{
-				let firstHeaderTitle = firstHeaderTextNode.textContent?.toLowerCase() ?? "";
-				let lowerTitle = title.toLowerCase();
-				let titleDiff = Utils.levenshteinDistance(firstHeaderTitle, lowerTitle) / lowerTitle.length;
-				let basenameDiff = Utils.levenshteinDistance(firstHeaderTitle, this.source.basename.toLowerCase()) / this.source.basename.length;
-				let difference = Math.min(titleDiff, basenameDiff);
-
-				if ((firstHeader.tagName == "H1" && difference < 0.2) || (firstHeader.tagName == "H2" && difference < 0.1))
+				if(titleInfo.isDefaultTitle) 
 				{
-					if(titleInfo.isDefaultTitle) 
-					{
-						title = firstHeader.innerHTML;
-						RenderLog.log(`Using "${firstHeaderTextNode.textContent ?? ""}" header because it was very similar to the file's title.`);
-					}
-					else
-					{
-						RenderLog.log(`Replacing "${firstHeaderTextNode.textContent ?? ""}" header because it was very similar to the file's title.`);
-					}
-					firstHeader.remove();
+					title = firstHeader.innerHTML;
+					RenderLog.log(`Using "${firstHeaderText}" header because it was very similar to the file's title.`);
 				}
-				else if (firstHeader.tagName == "H1")
+				else
 				{
-					// if the difference is too large but the first header is an h1 and it's the first element in the body, use it as the title
-					let headerEl = firstHeader.closest(".heading-wrapper") ?? firstHeader;
-					let headerParent = headerEl.parentElement;
-					if (headerParent && headerParent.classList.contains("markdown-preview-sizer"))
-					{
-						let childPosition = Array.from(headerParent.children).indexOf(headerEl);
-						if (childPosition <= 2)
-						{
-							console.log("Header position", childPosition);
-							if(titleInfo.isDefaultTitle) 
-							{
-								title = firstHeader.innerHTML;
-								RenderLog.log(`Using "${firstHeaderTextNode.textContent ?? ""}" header as title because it was H1 at the top of the page`);
-							}
-							else
-							{
-								RenderLog.log(`Replacing "${firstHeaderTextNode.textContent ?? ""}" header because it was H1 at the top of the page`);
-							}
-
-							firstHeader.remove();
-						}
-					}
+					RenderLog.log(`Replacing "${firstHeaderText}" header because it was very similar to the file's title.`);
 				}
+				firstHeader.remove();
 			}
-			else
+			else if (firstHeader.tagName == "H1")
 			{
-				RenderLog.warning(`First header in ${this.source.basename} has no text node.`);
+				// if the difference is too large but the first header is an h1 and it's the first element in the body, use it as the title
+				let headerEl = firstHeader.closest(".heading-wrapper") ?? firstHeader;
+				let headerParent = headerEl.parentElement;
+				if (headerParent && headerParent.classList.contains("markdown-preview-sizer"))
+				{
+					let childPosition = Array.from(headerParent.children).indexOf(headerEl);
+					if (childPosition <= 2)
+					{
+						if(titleInfo.isDefaultTitle) 
+						{
+							title = firstHeader.innerHTML;
+							RenderLog.log(`Using "${firstHeaderText}" header as title because it was H1 at the top of the page`);
+						}
+						else
+						{
+							RenderLog.log(`Replacing "${firstHeaderText}" header because it was H1 at the top of the page`);
+						}
+
+						firstHeader.remove();
+					}
+				}
 			}
 		}
 
@@ -512,7 +527,7 @@ export class Webpage
 	{
 		if (!this.document) return;
 
-		let rootPath = this.pathToRoot.copy.makeWebStyle(Settings.settings.makeNamesWebStyle).asString;
+		let rootPath = this.pathToRoot.copy.makeWebStyle(Settings.makeNamesWebStyle).asString;
 
 		let titleInfo = await Website.getTitleAndIcon(this.source);
 
@@ -532,7 +547,8 @@ export class Webpage
 		for (let i = 0; i < downloads.length; i++)
 		{
 			let download = downloads[i];
-			head += download.getHTMLInclude(true);
+			let include = download.getHTMLInclude(!Settings.makeOfflineCompatible, true);
+			head += include;
 		}
 
 		head += `\n${AssetHandler.customHeadContent.getHTMLInclude()}\n`;
@@ -565,7 +581,7 @@ export class Webpage
 
 				let targetPath = new Path(targetFile.path);
 				if (MarkdownRenderer.isConvertable(targetPath.extensionName)) targetPath.setExtension("html");
-				targetPath.makeWebStyle(Settings.settings.makeNamesWebStyle);
+				targetPath.makeWebStyle(Settings.makeNamesWebStyle);
 
 				let finalHref = targetPath.makeUnixStyle() + targetHeader.replaceAll(" ", "_");
 				linkEl.setAttribute("href", finalHref);
@@ -634,7 +650,7 @@ export class Webpage
 				exportLocation = Asset.mediaPath.joinString(filePath.fullName);
 			}
 
-			exportLocation.makeWebStyle(Settings.settings.makeNamesWebStyle);
+			exportLocation.makeWebStyle(Settings.makeNamesWebStyle);
 			
 			mediaEl.setAttribute("src", exportLocation.asString);
 

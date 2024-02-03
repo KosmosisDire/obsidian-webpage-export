@@ -1,6 +1,6 @@
 import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
 import { Path } from "scripts/utils/path";
-import { Settings } from "scripts/settings/settings";
+import { Settings, SettingsPage } from "scripts/settings/settings";
 import { RenderLog } from "../render-log";
 
 export class CustomHeadContent extends Asset
@@ -14,7 +14,7 @@ export class CustomHeadContent extends Asset
     
     override async load()
     {
-        let customHeadPath = new Path(Settings.settings.customHeadContentPath);
+        let customHeadPath = new Path(Settings.customHeadContentPath);
 		if (customHeadPath.isEmpty)
 		{
 			this.content = "";
@@ -22,7 +22,7 @@ export class CustomHeadContent extends Asset
 		}
 
         let validation = customHeadPath.validate(false, true, true, false, true, false, ["html"]);
-        if (!validation.vaild)
+        if (!validation.valid)
         {
             this.content = "";
             RenderLog.error(validation.error + customHeadPath.asString);

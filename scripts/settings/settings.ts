@@ -1,4 +1,4 @@
-import { Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder, TextComponent, getIcon } from 'obsidian';
+import { Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder, TextComponent, Vault, getIcon } from 'obsidian';
 import { Utils } from '../utils/utils';
 import { Path } from '../utils/path';
 import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
@@ -17,71 +17,75 @@ export enum ExportPreset
 	RawDocuments = "raw-documents",
 }
 
-export interface SettingsData
+export class Settings
 {
-	settingsVersion: string;
+	public static settingsVersion: string;
 
 	// Asset Options
-	inlineAssets: boolean;
-	includePluginCSS: string;
-	includeSvelteCSS: boolean;
-	titleProperty: string;
-	customHeadContentPath: string;
-	faviconPath: string;
+	public static makeOfflineCompatible: boolean;
+	public static inlineAssets: boolean;
+	public static includePluginCSS: string;
+	public static includeSvelteCSS: boolean;
+	public static titleProperty: string;
+	public static customHeadContentPath: string;
+	public static faviconPath: string;
 
-	// Formatting Options
-	makeNamesWebStyle: boolean;
-	allowFoldingHeadings: boolean;
-	allowFoldingLists: boolean;
-	addFilenameTitle: boolean;
-	minifyHTML: boolean;
-	documentWidth: string;
-	contentWidth: string;
-	sidebarWidth: string;
-	minOutlineCollapse: number;
-	startOutlineCollapsed: boolean;
+	// Layout Options
+	public static documentWidth: string;
+	public static sidebarWidth: string;
+
+	// Behavior Options
+	public static minOutlineCollapse: number;
+	public static startOutlineCollapsed: boolean;
+	public static allowFoldingHeadings: boolean;
+	public static allowFoldingLists: boolean;
+	public static allowResizingSidebars: boolean;
 
 	// Export Options
-	logLevel: "all" | "warning" | "error" | "fatal" | "none";
-	incrementalExport: boolean;
-	deleteOldExportedFiles: boolean;
+	public static logLevel: "all" | "warning" | "error" | "fatal" | "none";
+	public static minifyHTML: boolean;
+	public static makeNamesWebStyle: boolean;
+	public static onlyExportModified: boolean;
+	public static deleteOldFiles: boolean;
 
 	// Page Features
-	includeThemeToggle: boolean;
-	includeOutline: boolean;
-	includeFileTree: boolean;
-	includeSearchBar: boolean;
-	includeGraphView: boolean;
+	public static includeThemeToggle: boolean;
+	public static includeOutline: boolean;
+	public static includeFileTree: boolean;
+	public static includeSearchBar: boolean;
+	public static includeGraphView: boolean;
+	public static addFilenameTitle: boolean;
 
 	// Main Export Options
-	exportPreset: ExportPreset;
-	openAfterExport: boolean;
+	public static exportPreset: ExportPreset;
+	public static openAfterExport: boolean;
 
 	// Graph View Settings
-	graphAttractionForce: number;
-	graphLinkLength: number;
-	graphRepulsionForce: number;
-	graphCentralForce: number;
-	graphEdgePruning: number;
-	graphMinNodeSize: number;
-	graphMaxNodeSize: number;
+	public static graphAttractionForce: number;
+	public static graphLinkLength: number;
+	public static graphRepulsionForce: number;
+	public static graphCentralForce: number;
+	public static graphEdgePruning: number;
+	public static graphMinNodeSize: number;
+	public static graphMaxNodeSize: number;
 
 	// icons
-	showDefaultTreeIcons: boolean,
-	defaultFileIcon: string,
-	defaultFolderIcon: string,
-	defaultMediaIcon: string,
+	public static showDefaultTreeIcons: boolean;
+	public static defaultFileIcon: string;
+	public static defaultFolderIcon: string;
+	public static defaultMediaIcon: string;
 
 	// Cache
-	exportPath: string;
-	filesToExport: string[][];
+	public static exportPath: string;
+	public static filesToExport: string[][];
 }
 
-export const DEFAULT_SETTINGS: SettingsData =
+export const DEFAULT_SETTINGS: Settings =
 {
 	settingsVersion: "0.0.0",
 
 	// Asset Options
+	makeOfflineCompatible: false,
 	inlineAssets: false,
 	includePluginCSS: '',
 	includeSvelteCSS: true,
@@ -89,29 +93,31 @@ export const DEFAULT_SETTINGS: SettingsData =
 	customHeadContentPath: '',
 	faviconPath: '',
 
-	// Formatting Options
-	makeNamesWebStyle: true,
-	allowFoldingHeadings: true,
-	allowFoldingLists: true,
-	addFilenameTitle: true,
-	minifyHTML: true,
+	// Layout Options
 	documentWidth: "40em",
-	contentWidth: "500em",
 	sidebarWidth: "20em",
+	
+	// Behavior Options
 	minOutlineCollapse: 2,
 	startOutlineCollapsed: false,
-
+	allowFoldingHeadings: true,
+	allowFoldingLists: true,
+	allowResizingSidebars: true,
+	
 	// Export Options
 	logLevel: "warning",
-	incrementalExport: false,
-	deleteOldExportedFiles: false,
-
+	minifyHTML: true,
+	makeNamesWebStyle: true,
+	onlyExportModified: true,
+	deleteOldFiles: true,
+	
 	// Page Features
 	includeThemeToggle: true,
 	includeOutline: true,
 	includeFileTree: true,
 	includeSearchBar: true,
 	includeGraphView: true,
+	addFilenameTitle: true,
 
 	// Main Export Options
 	exportPreset: ExportPreset.Website,
@@ -138,107 +144,9 @@ export const DEFAULT_SETTINGS: SettingsData =
 }
 
 // #endregion
-export class Settings extends PluginSettingTab
+
+export class SettingsPage extends PluginSettingTab
 {
-
-	// #region Class Functions and Variables
-
-	static settings: SettingsData = DEFAULT_SETTINGS;
-	static plugin: Plugin;
-	static loaded = false;
-
-
-	private blacklistedPluginIDs: string[] = [];
-	public async getBlacklistedPluginIDs(): Promise<string[]> 
-	{
-		if (this.blacklistedPluginIDs.length > 0) return this.blacklistedPluginIDs;
-		this.blacklistedPluginIDs = pluginStylesBlacklist.replaceAll("\r", "").split("\n");
-
-		return this.blacklistedPluginIDs;
-	}
-
-	constructor(plugin: Plugin) {
-		super(app, plugin);
-		Settings.plugin = plugin;
-	}
-
-	static async loadSettings() 
-	{
-		let loadedSettings = await Settings.plugin.loadData();
-		Settings.settings = Object.assign({}, DEFAULT_SETTINGS, loadedSettings);
-		Settings.settings.documentWidth = Settings.settings.documentWidth.toString();
-		if (Settings.settings.documentWidth === "0") Settings.settings.documentWidth = "";
-
-		await migrateSettings();
-
-		Settings.loaded = true;
-	}
-
-	static async saveSettings() {
-		await Settings.plugin.saveData(Settings.settings);
-	}
-
-	static renameFile(file: TFile, oldPath: string)
-	{
-		let oldPathParsed = new Path(oldPath).asString;
-		Settings.settings.filesToExport.forEach((fileList) =>
-		{
-			let index = fileList.indexOf(oldPathParsed);
-			if (index >= 0)
-			{
-				fileList[index] = file.path;
-			}
-		});
-
-		Settings.saveSettings();
-	}
-
-	static async updateSettings(usePreviousSettings: boolean = false, overrideFiles: TFile[] | undefined = undefined): Promise<ExportInfo | undefined>
-	{
-		if (!usePreviousSettings) 
-		{
-			let modal = new ExportModal();
-			if(overrideFiles) modal.overridePickedFiles(overrideFiles);
-			return await modal.open();
-		}
-		
-		let files = Settings.settings.filesToExport[0];
-		let path = new Path(Settings.settings.exportPath);
-		if ((files.length == 0 && overrideFiles == undefined) || !path.exists || !path.isAbsolute || !path.isDirectory)
-		{
-			new Notice("Please set the export path and files to export in the settings first.", 5000);
-			let modal = new ExportModal();
-			if(overrideFiles) modal.overridePickedFiles(overrideFiles);
-			return await modal.open();
-		}
-
-		return undefined;
-	}
-
-	static getFilesToExport(): TFile[]
-	{
-		let files: TFile[] = [];
-
-		let allFiles = HTMLExportPlugin.plugin.app.vault.getFiles();
-		let exportPaths = Settings.settings.filesToExport[0];
-		if (!exportPaths) return [];
-
-		for (let path of exportPaths)
-		{
-			let file = app.vault.getAbstractFileByPath(path);
-			if (file instanceof TFile) files.push(file);
-			else if (file instanceof TFolder)
-			{
-				let newFiles = allFiles.filter((f) => f.path.startsWith(file?.path ?? "*"));
-				files.push(...newFiles);
-			}
-		};
-
-		return files;
-	}
-
-	// #endregion
-
 	display() 
 	{
 		const { containerEl: contentEl } = this;
@@ -291,350 +199,241 @@ export class Settings extends PluginSettingTab
 
 		//#region Page Features
 
-		let hr = contentEl.createEl("hr");
-		hr.style.marginTop = "20px";
-		hr.style.marginBottom = "20px";
-		hr.style.borderColor = "var(--color-accent)";
-		hr.style.opacity = "0.5";
-
-		if (Settings.settings.exportPreset != ExportPreset.RawDocuments)
+		if (Settings.exportPreset != ExportPreset.RawDocuments)
 		{
-			new Setting(contentEl)
-				.setName('Page Features:')
-				.setDesc("Special features to embed onto the page.")
-				.setHeading()
+			SettingsPage.createDivider(contentEl);
+			let section = SettingsPage.createSection(contentEl, 'Page Features', 'Control the visibility of different page features');
 
-		
-			new Setting(contentEl)
-				.setName('Include theme toggle')
-				.setDesc('Adds a theme toggle to the left sidebar.')
-				.addToggle((toggle) => toggle
-					.setValue(Settings.settings.includeThemeToggle)
-					.onChange(async (value) => {
-						Settings.settings.includeThemeToggle = value;
-						await Settings.saveSettings();
-					}));
+			SettingsPage.createToggle(section, 'Theme toggle', () => Settings.includeThemeToggle, (value) => Settings.includeThemeToggle = value);
+			SettingsPage.createToggle(section, 'Document outline / table of contents', () => Settings.includeOutline, (value) => Settings.includeOutline = value);
+			SettingsPage.createToggle(section, 'File navigation tree', () => Settings.includeFileTree, (value) => Settings.includeFileTree = value);
 
-			new Setting(contentEl)
-				.setName('Include document outline')
-				.setDesc('Adds the document\'s table of contents to the right sidebar.')
-				.addToggle((toggle) => toggle
-					.setValue(Settings.settings.includeOutline)
-					.onChange(async (value) => {
-						Settings.settings.includeOutline = value;
-						await Settings.saveSettings();
-					}
-					));
+			if (Settings.exportPreset == ExportPreset.Website)
+			{
+				SettingsPage.createToggle(section, 'Search bar', () => Settings.includeSearchBar, (value) => Settings.includeSearchBar = value);
+				SettingsPage.createToggle(section, 'Graph view', () => Settings.includeGraphView, (value) => Settings.includeGraphView = value);
+				let graphViewSection = SettingsPage.createSection(section, 'Graph View Settings', 'Control the behavior of the graph view simulation');
 
-			new Setting(contentEl)
-				.setName('Include file tree')
-				.setDesc('Adds an interactive file tree to the left sidebar.')
-				.addToggle((toggle) => toggle
-					.setValue(Settings.settings.includeFileTree)
-					.onChange(async (value) => {
-						Settings.settings.includeFileTree = value;
-						await Settings.saveSettings();
-					}
-					));
-
-			if (Settings.settings.exportPreset == ExportPreset.Website)
-				new Setting(contentEl)
-					.setName('Include search bar')
-					.setDesc('Adds a full text search of the website to the left sidebar.')
-					.addToggle((toggle) => toggle
-						.setValue(Settings.settings.includeSearchBar)
+				new Setting(graphViewSection)
+					.setName('Attraction Force')
+					.setDesc("How much should linked nodes attract each other? This will make the graph appear more clustered.")
+					.addSlider((slider) => slider
+						.setLimits(0, 100, 1)
+						.setValue(Settings.graphAttractionForce / (2 / 100))
+						.setDynamicTooltip()
 						.onChange(async (value) => {
-							Settings.settings.includeSearchBar = value;
-							await Settings.saveSettings();
-						}
-						));
+							// remap to 0 - 2;
+							let remapMultiplier = 2 / 100;
+							Settings.graphAttractionForce = value * remapMultiplier;
+							await SettingsPage.saveSettings();
+						})
+						.showTooltip()
+					);
 
-			hr = contentEl.createEl("hr");
-			hr.style.marginTop = "20px";
-			hr.style.marginBottom = "20px";
-			hr.style.borderColor = "var(--color-accent)";
-			hr.style.opacity = "0.5";
+				new Setting(graphViewSection)
+					.setName('Link Length')
+					.setDesc("How long should the links between nodes be? The shorter the links the closer connected nodes will cluster together.")
+					.addSlider((slider) => slider
+						.setLimits(0, 100, 1)
+						.setValue(Settings.graphLinkLength)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							Settings.graphLinkLength = value;
+							await SettingsPage.saveSettings();
+						})
+						.showTooltip()
+					);
+
+				new Setting(graphViewSection)
+					.setName('Repulsion Force')
+					.setDesc("How much should nodes repel each other? This will make the graph appear more spread out.")
+					.addSlider((slider) => slider
+						.setLimits(0, 100, 1)
+						.setValue(Settings.graphRepulsionForce / 3)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							Settings.graphRepulsionForce = value * 3;
+							await SettingsPage.saveSettings();
+						})
+						.showTooltip()
+					);
+
+				new Setting(graphViewSection)
+					.setName('Central Force')
+					.setDesc("How much should nodes be attracted to the center? This will make the graph appear more dense and circular.")
+					.addSlider((slider) => slider
+						.setLimits(0, 100, 1)
+						.setValue(Settings.graphCentralForce / (5 / 100))
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							// remap to 0 - 5;
+							let remapMultiplier = 5 / 100;
+							Settings.graphCentralForce = value * remapMultiplier;
+							await SettingsPage.saveSettings();
+						})
+						.showTooltip()
+					);
+
+				new Setting(graphViewSection)
+					.setName('Max Node Radius')
+					.setDesc("How large should the largest nodes be? Nodes are sized by how many links they have. The larger a node is the more it will attract other nodes. This can be used to create a good grouping around the most important nodes.")
+					.addSlider((slider) => slider
+						.setLimits(3, 15, 1)
+						.setValue(Settings.graphMaxNodeSize)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							Settings.graphMaxNodeSize = value;
+							await SettingsPage.saveSettings();
+						})
+						.showTooltip()
+					);
+
+				new Setting(graphViewSection)
+					.setName('Min Node Radius')
+					.setDesc("How small should the smallest nodes be? The smaller a node is the less it will attract other nodes.")
+					.addSlider((slider) => slider
+						.setLimits(3, 15, 1)
+						.setValue(Settings.graphMinNodeSize)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							Settings.graphMinNodeSize = value;
+							await SettingsPage.saveSettings();
+						})
+						.showTooltip()
+					);
+
+				new Setting(graphViewSection)
+					.setName('Edge Pruning Factor')
+					.setDesc("Edges with a length below this threshold will not be rendered, however they will still contribute to the simulation. This can help large tangled graphs look more organised. Hovering over a node will still display these links.")
+					.addSlider((slider) => slider
+						.setLimits(0, 100, 1)
+						.setValue(100 - Settings.graphEdgePruning)
+						.setDynamicTooltip()
+						.onChange(async (value) => {
+							Settings.graphEdgePruning = 100 - value;
+							await SettingsPage.saveSettings();
+						})
+						.showTooltip()
+					);
+			
+			}
 		}
 
 		//#endregion
 
 		//#region Custom Features
 
-		new Setting(contentEl)
-				.setName('Custom Features:')
-				.setDesc("Customizable features to change various aspects of the website.")
-				.setHeading();
+		SettingsPage.createDivider(contentEl);
+		let section = SettingsPage.createSection(contentEl, 'Custom Features', 'Customizable features to change various aspects of the website');
 
-		if (Settings.settings.exportPreset != ExportPreset.RawDocuments)
-			new Setting(contentEl)
-				.setName('Show tree icons')
-				.setDesc('Adds decorative file and folder icons to the file tree. This does not have to be enabled to use custom icons.')
-				.addToggle((toggle) => toggle
-					.setValue(Settings.settings.showDefaultTreeIcons)
-					.onChange(async (value) => {
-						Settings.settings.showDefaultTreeIcons = value;
-						await Settings.saveSettings();
-					}));
+		if (Settings.exportPreset != ExportPreset.RawDocuments)
+		{
+			SettingsPage.createToggle(section, 'File & folder icons', () => Settings.showDefaultTreeIcons, (value) => Settings.showDefaultTreeIcons = value,
+							"Adds decorative file and folder icons to the file tree. This does not have to be enabled to use custom icons.");
+		}
 
-		let iconTutorial = new Setting(contentEl)
+		let iconTutorial = new Setting(section)
 			.setName('Custom icons')
-			.setDesc('The frontmatter property "icon" or "sticker" gives a file a custom icon.\n\n- The property can be set to an emoji or a lucide icon.\n- To set a lucide icon use the format: "lucide//icon-name".')
+			.setDesc("Use the 'Iconize' plugin to add custom icons to your files and folders.\nOr set the 'icon' property of your file to an emoji or lucide icon name.\n(Also supports MAKE.md plugin)")
 		iconTutorial.infoEl.style.marginBottom = "2em";
 		iconTutorial.infoEl.style.whiteSpace = "pre-wrap";
 
 
-		new Setting(contentEl)
-			.setName('Page title property')
-			.setDesc('Override a specific file\'s title / name by defining this property in the frontmatter.')
-			.addText((text) => text
-				.setValue(Settings.settings.titleProperty)
-				.onChange(async (value) => {
-					Settings.settings.titleProperty = value;
-					await Settings.saveSettings();
-				})
-			);
+		SettingsPage.createText(section, 'Page title property', () => Settings.titleProperty, (value) => Settings.titleProperty = value,
+						"Override a specific file's title / name by defining this property in the frontmatter.");
 
-		let headContentErrorMessage = contentEl.createDiv({ cls: 'setting-item-description' });
-		headContentErrorMessage.style.color = "var(--color-red)";
-		headContentErrorMessage.style.marginBottom = "0.75rem";
-
-		if (!(Settings.settings.customHeadContentPath.trim() == ""))
+		SettingsPage.createFileInput(section, () => Settings.customHeadContentPath, (value) => Settings.customHeadContentPath = value,
 		{
-			let tempPath = new Path(Settings.settings.customHeadContentPath);
-			headContentErrorMessage.setText(tempPath.validate(true, true, true, false, true, false, ["html"]).error);
-		}
+			name: 'Custom head content',
+			description: 'Custom scripts, styles, or anything else (html file)',
+			placeholder: 'Path to html formatted file...',
+			defaultPath: Path.vaultPath,
+			validation: (path) => path.validate(true, true, true, false, true, false, ["html", "htm", "txt"]),
+		});
 
-		let headContentInput : TextComponent | undefined = undefined;
-
-		new Setting(contentEl)
-			.setName('Custom head content path')
-			.setDesc('Custom scripts, styles, or anything else (.html file)')
-			.addText((text) => 
-			{
-				headContentInput = text;
-				text.inputEl.style.width = '100%';
-				text.setPlaceholder('Enter the absolute path to any .html file')
-					.setValue(Settings.settings.customHeadContentPath)
-					.onChange(async (value) => 
-					{
-						let path = new Path(value);
-						let validation = path.validate(true, true, true, false, true, false, ["html"]);
-						headContentErrorMessage.setText(validation.error);
-						if (validation.vaild) 
-						{
-							headContentErrorMessage.setText("");
-							Settings.settings.customHeadContentPath = value.replaceAll("\"", "");
-							text.setValue(Settings.settings.customHeadContentPath);
-							await Settings.saveSettings();
-						}
-					});
-			})
-			.addButton((button) =>
-			{
-				button.setButtonText('Browse').onClick(async () => 
-				{
-					let ideal = Utils.idealDefaultPath();
-					let path = (await Utils.showSelectFileDialog(ideal));
-					if (path) 
-					{
-						Settings.settings.customHeadContentPath = path.asString;
-						let validation = path.validate(true, true, true, false, true, false, ["html"]);
-						headContentErrorMessage.setText(validation.error);
-						if (validation.vaild)
-						{
-							await Settings.saveSettings();
-						}
-
-						headContentInput?.setValue(Settings.settings.customHeadContentPath);
-					}
-				});
-			});
-
-		contentEl.appendChild(headContentErrorMessage);
-		
-
-		let faviconErrorMessage = contentEl.createDiv({ cls: 'setting-item-description' });
-		faviconErrorMessage.style.color = "var(--color-red)";
-		faviconErrorMessage.style.marginBottom = "0.75rem";
-
-		if (!(Settings.settings.faviconPath.trim() == ""))
+		SettingsPage.createFileInput(section, () => Settings.faviconPath, (value) => Settings.faviconPath = value,
 		{
-			let tempPath = new Path(Settings.settings.faviconPath);
-			faviconErrorMessage.setText(tempPath.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]).error);
-		}
-
-		let faviconInput : TextComponent | undefined = undefined;
-
-		new Setting(contentEl)
-			.setName('Favicon path')
-			.setDesc('Add a custom favicon image to the website')
-			.addText((text) => 
-			{
-				faviconInput = text;
-				text.inputEl.style.width = '100%';
-				text.setPlaceholder('Enter an absolute path to any text file')
-					.setValue(Settings.settings.faviconPath)
-					.onChange(async (value) => 
-					{
-						let path = new Path(value);
-						let validation = path.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]);
-						faviconErrorMessage.setText(validation.error);
-						if (validation.vaild) 
-						{
-							faviconErrorMessage.setText("");
-							Settings.settings.faviconPath = value.replaceAll("\"", "");
-							text.setValue(Settings.settings.faviconPath);
-							await Settings.saveSettings();
-						}
-					});
-			})
-			.addButton((button) =>
-			{
-				button.setButtonText('Browse').onClick(async () => 
-				{
-					let ideal = Utils.idealDefaultPath();
-					let path = (await Utils.showSelectFileDialog(ideal));
-					if (path) 
-					{
-						Settings.settings.faviconPath = path.asString;
-						let validation = path.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]);
-						faviconErrorMessage.setText(validation.error);
-						if (validation.vaild) 
-						{
-							await Settings.saveSettings();
-						}
-						
-						faviconInput?.setValue(Settings.settings.faviconPath);
-					}
-				});
-			});
-
-		contentEl.appendChild(faviconErrorMessage);
+			name: 'Favicon path',
+			description: 'Add a custom favicon image to the website',
+			placeholder: 'Path to image file...',
+			defaultPath: Path.vaultPath,
+			validation: (path) => path.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]),
+		});
 
 		//#endregion
 
 		//#region Page Behaviors
 
-		if (Settings.settings.exportPreset != ExportPreset.RawDocuments)
+		if (Settings.exportPreset != ExportPreset.RawDocuments)
 		{
 			
-			hr = contentEl.createEl("hr");
-			hr.style.marginTop = "20px";
-			hr.style.marginBottom = "20px";
-			hr.style.borderColor = "var(--color-accent)";
-			hr.style.opacity = "0.5";
+			SettingsPage.createDivider(contentEl);
 
-			new Setting(contentEl)
-				.setName('Page Behaviors:')
-				.setDesc("Control the behavior of different page features.")
-				.setHeading()
-
-			new Setting(contentEl)
+			section = SettingsPage.createSection(contentEl, 'Page Behaviors', 'Change the behavior of included page features');
+			
+			new Setting(section)
 				.setName('Min Outline Collapse Depth')
 				.setDesc('Only allow outline items to be collapsed if they are at least this many levels deep in the tree.')
-				.addDropdown((dropdown) => dropdown
-					.addOption('1', '1')
-					.addOption('2', '2')
-					.addOption('7', 'No Collapse')
-					.setValue(Settings.settings.minOutlineCollapse.toString())
+				.addDropdown((dropdown) => dropdown.addOption('1', '1').addOption('2', '2').addOption('100', 'No Collapse')
+					.setValue(Settings.minOutlineCollapse.toString())
 					.onChange(async (value) => {
-						Settings.settings.minOutlineCollapse = parseInt(value);
-						await Settings.saveSettings();
-					}));
+						Settings.minOutlineCollapse = parseInt(value);
+						await SettingsPage.saveSettings();
+			}));
 			
-			new Setting(contentEl)
-				.setName('Start Outline Collapsed')
-				.setDesc('All outline items will be collapsed by default.')
-				.addToggle((toggle) => toggle
-					.setValue(Settings.settings.startOutlineCollapsed)
-					.onChange(async (value) => {
-						Settings.settings.startOutlineCollapsed = value;
-						await Settings.saveSettings();
-					}));
+			SettingsPage.createToggle(section, 'Start Outline Collapsed', () => Settings.startOutlineCollapsed, (value) => Settings.startOutlineCollapsed = value,
+							  'All outline items will be collapsed by default.');
 
-			new Setting(contentEl)
-				.setName('Allow folding headings')
-				.setDesc('Allow headings to be folded with an arrow icon beside each heading, just as in Obsidian.')
-				.addToggle((toggle) => toggle
-					.setValue(Settings.settings.allowFoldingHeadings)
-					.onChange(async (value) => {
-						Settings.settings.allowFoldingHeadings = value;
-						await Settings.saveSettings();
-					}));
+			SettingsPage.createToggle(section, 'Allow folding headings', () => Settings.allowFoldingHeadings, (value) => Settings.allowFoldingHeadings = value,
+							  'Fold headings using an arrow icon, like in Obsidian.');
 
-			new Setting(contentEl)
-				.setName('Allow folding lists')
-				.setDesc('Allow lists to be folded with an arrow icon beside each list item, just as in Obsidian.')
-				.addToggle((toggle) => toggle
-					.setValue(Settings.settings.allowFoldingLists)
-					.onChange(async (value) => {
-						Settings.settings.allowFoldingLists = value;
-						await Settings.saveSettings();
-					}));
+			SettingsPage.createToggle(section, 'Allow folding lists', () => Settings.allowFoldingLists, (value) => Settings.allowFoldingLists = value,
+							  'Fold lists using an arrow icon, like in Obsidian.');
 
+			SettingsPage.createToggle(section, 'Allow resizing sidebars', () => Settings.allowResizingSidebars, (value) => Settings.allowResizingSidebars = value,
+							  'Allow the user to resize the sidebar width.');
 		}
 
 		//#endregion
 
 		//#region Layout Options
 
-		hr = contentEl.createEl("hr");
-		hr.style.marginTop = "20px";
-		hr.style.marginBottom = "20px";
-		hr.style.borderColor = "var(--color-accent)";
-		hr.style.opacity = "0.5";
-		new Setting(contentEl)
-			.setName('Layout Options:')
-			.setHeading()
+		SettingsPage.createDivider(contentEl);
 
-		new Setting(contentEl)
+
+		section = SettingsPage.createSection(contentEl, 'Layout Options', 'Set document and sidebar widths');
+
+		new Setting(section)
 			.setName('Document Width')
 			.setDesc('Sets the line width of the exported document in css units. (ex. 600px, 50em)')
 			.addText((text) => text
-				.setValue(Settings.settings.documentWidth)
+				.setValue(Settings.documentWidth)
 				.setPlaceholder('40em')
 				.onChange(async (value) => {
-					Settings.settings.documentWidth = value;
-					await Settings.saveSettings();
+					Settings.documentWidth = value;
+					await SettingsPage.saveSettings();
 				}
 				))
 			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
-				Settings.settings.documentWidth = "";
-				Settings.saveSettings();
+				Settings.documentWidth = "";
+				SettingsPage.saveSettings();
 				this.display();
 			}));
 
-		new Setting(contentEl)
-			.setName('Content Width')
-			.setDesc('Sets the width of the empty area that contains the document in css units. If this is wider than the screen the sidebars will be pushed all the way to the sides of the screen. (ex. 1000px, 70em)')
-			.addText((text) => text
-				.setValue(Settings.settings.contentWidth)
-				.setPlaceholder('500em')
-				.onChange(async (value) => {
-					Settings.settings.contentWidth = value;
-					await Settings.saveSettings();
-				}
-				))
-			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
-				Settings.settings.contentWidth = "";
-				Settings.saveSettings();
-				this.display();
-			}));
-
-		new Setting(contentEl)
+		new Setting(section)
 			.setName('Sidebar Width')
 			.setDesc('Sets the width of the sidebar in css units. (ex. 20em, 200px)')
 			.addText((text) => text
-				.setValue(Settings.settings.sidebarWidth)
+				.setValue(Settings.sidebarWidth)
 				.setPlaceholder('20em')
 				.onChange(async (value) => {
-					Settings.settings.sidebarWidth = value;
-					await Settings.saveSettings();
+					Settings.sidebarWidth = value;
+					await SettingsPage.saveSettings();
 				}
 				))
 			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
-				Settings.settings.sidebarWidth = "";
-				Settings.saveSettings();
+				Settings.sidebarWidth = "";
+				SettingsPage.saveSettings();
 				this.display();
 			}));
 
@@ -642,17 +441,19 @@ export class Settings extends PluginSettingTab
 
 		//#region Export Options
 
-		hr = contentEl.createEl("hr");
-		hr.style.marginTop = "20px";
-		hr.style.marginBottom = "20px";
-		hr.style.borderColor = "var(--color-accent)";
-		hr.style.opacity = "0.5";
+		SettingsPage.createDivider(contentEl);
 
-		new Setting(contentEl)
-			.setName('Export Options:')
-			.setHeading()
 
-		new Setting(contentEl)
+		section = SettingsPage.createSection(contentEl, 'Export Options', 'Change the behavior of the export process.');
+
+		SettingsPage.createToggle(section, 'Only export modfied files', () => Settings.onlyExportModified, (value) => Settings.onlyExportModified = value,
+						'Only generate new html for files which have been modified since the last export.');
+		SettingsPage.createToggle(section, 'Delete old files', () => Settings.deleteOldFiles, (value) => Settings.deleteOldFiles = value,
+						'Delete files from a previous export that are no longer being exported.');
+		SettingsPage.createToggle(section, 'Minify HTML', () => Settings.minifyHTML, (value) => Settings.minifyHTML = value,
+						'Minify HTML to make it load faster.');
+
+		new Setting(section)
 			.setName('Log Level')
 			.setDesc('Set the level of logging to display in the export log.')
 			.addDropdown((dropdown) => dropdown
@@ -660,48 +461,31 @@ export class Settings extends PluginSettingTab
 				.addOption('warning', 'Warning')
 				.addOption('error', 'Error')
 				.addOption('fatal', 'Only Fatal Errors')
-				.setValue(Settings.settings.logLevel)
+				.setValue(Settings.logLevel)
 				.onChange(async (value: "all" | "warning" | "error" | "fatal" | "none") =>
 				{
-					Settings.settings.logLevel = value;
-					await Settings.saveSettings();
-				}));
-		
-		// new Setting(contentEl)
-		// 	.setName('Make names web style')
-		// 	.setDesc('Make the names of files and folders lowercase and replace spaces with dashes.')
-		// 	.addToggle((toggle) => toggle
-		// 		.setValue(MainSettings.settings.makeNamesWebStyle)
-		// 		.onChange(async (value) => {
-		// 			MainSettings.settings.makeNamesWebStyle = value;
-		// 			await MainSettings.saveSettings();
-		// 		}));
-
-		new Setting(contentEl)
-			.setName('Minify HTML')
-			.setDesc('Minify the HTML to make it load faster (but it will be less readable to humans).')
-			.addToggle((toggle) => toggle
-				.setValue(Settings.settings.minifyHTML)
-				.onChange(async (value) => {
-					Settings.settings.minifyHTML = value;
-					await Settings.saveSettings();
+					Settings.logLevel = value;
+					await SettingsPage.saveSettings();
 				}));
 
 		//#endregion
 
-		//#region Plugin CSS
+		//#region Asset Settings
 
-		hr = contentEl.createEl("hr");
-		hr.style.marginTop = "20px";
-		hr.style.marginBottom = "20px";
-		hr.style.borderColor = "var(--color-accent)";
-		hr.style.opacity = "0.5";
-		new Setting(contentEl)
-			.setName('Include Plugin CSS')
+		SettingsPage.createDivider(contentEl);
+
+		section = SettingsPage.createSection(contentEl, 'Asset Options', 'Add plugin styles, or make the page offline compatible.');
+
+		SettingsPage.createToggle(section, 'Make Offline Compatible', () => Settings.makeOfflineCompatible, (value) => Settings.makeOfflineCompatible = value,
+						'Download any online assets / images / scripts so the page can be viewed offline. Or so the website does not depend on a CDN.');
+		SettingsPage.createToggle(section, 'Include Svelte CSS', () => Settings.includeSvelteCSS, (value) => Settings.includeSvelteCSS = value,
+			'Include the CSS from any plugins that use the svelte framework. These can not be chosen individually because their styles are not associated with their respective plugins.');
+
+		new Setting(section)
+			.setName('Include CSS from Plugins')
 			.setDesc('Include the CSS from the following plugins in the exported HTML. If plugin features aren\'t rendering correctly, try adding the plugin to this list. Avoid adding plugins unless you specifically notice a problem, because more CSS will increase the loading time of your page.')
-			.setHeading()
 
-		let pluginsList = new FlowList(contentEl);
+		let pluginsList = new FlowList(section);
 		Utils.getPluginIDs().forEach(async (plugin) => {
 			let pluginManifest = Utils.getPluginManifest(plugin);
 			if (!pluginManifest) return;
@@ -717,196 +501,283 @@ export class Settings extends PluginSettingTab
 			let hasCSS = pluginPath.joinString('styles.css').exists;
 			if (!hasCSS) return;
 
-			let isChecked = Settings.settings.includePluginCSS.match(new RegExp(`^${plugin}`, 'm')) != null;
+			let isChecked = Settings.includePluginCSS.match(new RegExp(`^${plugin}`, 'm')) != null;
 
 			pluginsList.addItem(pluginManifest.name, plugin, isChecked, (value) => {
-				Settings.settings.includePluginCSS = pluginsList.checkedList.join('\n');
-				Settings.saveSettings();
+				Settings.includePluginCSS = pluginsList.checkedList.join('\n');
+				SettingsPage.saveSettings();
 			});
 		});
-
-		new Setting(contentEl)
-			.setName('Include Svelte CSS')
-			.setDesc('Include the CSS from any plugins that use the svelte framework.')
-			.addToggle((toggle) => toggle
-				.setValue(Settings.settings.includeSvelteCSS)
-				.onChange(async (value) => {
-					Settings.settings.includeSvelteCSS = value;
-					await Settings.saveSettings();
-				}));
 
 		//#endregion
 
 		//#region Experimental
-
-		if (Settings.settings.exportPreset == ExportPreset.Website)
-		{
-			let experimentalContainer = contentEl.createDiv();
-			let experimentalHR1 = experimentalContainer.createEl('hr');
-			let experimentalHeader = experimentalContainer.createEl('span', { text: 'Experimental' });
-			let experimentalHR2 = experimentalContainer.createEl('hr');
-
-			experimentalContainer.style.display = 'flex';
-			experimentalContainer.style.marginTop = '5em';
-			experimentalContainer.style.alignItems = 'center';
-
-			experimentalHR1.style.borderColor = "var(--color-red)";
-			experimentalHR2.style.borderColor = "var(--color-red)";
-			experimentalHeader.style.color = "var(--color-red)";
-
-			experimentalHR1.style.flexGrow = "1";
-			experimentalHR2.style.flexGrow = "1";
-			experimentalHeader.style.flexGrow = "0.1";
-			experimentalHeader.style.textAlign = "center";
-
-			new Setting(contentEl)
-				.setName('Only Export Modified')
-				.setDesc('Disable this to do a full re-export. If you have an existing vault since before this feature was introduced, please do a full re-export before turning this on!')
-				.addToggle((toggle) => toggle
-					.setValue(Settings.settings.incrementalExport)
-					.onChange(async (value) => {
-						Settings.settings.incrementalExport = value;
-						await Settings.saveSettings();
-			}));
-
-			new Setting(contentEl)
-				.setName('Delete Old Files')
-				.setDesc('Delete *ALL* files in the export directory that are not included in this export.')
-				.addToggle((toggle) => toggle
-					.setValue(Settings.settings.deleteOldExportedFiles)
-					.onChange(async (value) => {
-						Settings.settings.deleteOldExportedFiles = value;
-						await Settings.saveSettings();
-			}));
-
 		
-			new Setting(contentEl)
-				.setName('Graph View (PLEASE READ DESCRIPTION)')
-				.setDesc('This CANNOT be used with the file:// protocol, the assets for this also will not be inlined into the HTML file at this point.')
-				.setHeading()
 
-			new Setting(contentEl)
-				.setName('Include global graph view')
-				.setDesc('Include an interactive graph view sim of the WHOLE vault similar to obsidian\'s. ')
-				.addToggle((toggle) => toggle
-					.setValue(Settings.settings.includeGraphView)
-					.onChange(async (value) => {
-						Settings.settings.includeGraphView = value;
-						await Settings.saveSettings();
-					}));
+		// if (Settings.exportPreset == ExportPreset.Website)
+		// {
+		// 	let experimentalContainer = contentEl.createDiv();
+		// 	let experimentalHR1 = experimentalContainer.createEl('hr');
+		// 	let experimentalHeader = experimentalContainer.createEl('span', { text: 'Experimental' });
+		// 	let experimentalHR2 = experimentalContainer.createEl('hr');
 
-			new Setting(contentEl)
-				.setName('Graph View Settings')
-				.setDesc('Settings to control the behavior and look of the graph view. For now there is no live preview of this, so you must export your files to see your changes.')
-				.setHeading()
+		// 	experimentalContainer.style.display = 'flex';
+		// 	experimentalContainer.style.marginTop = '5em';
+		// 	experimentalContainer.style.alignItems = 'center';
 
-			new Setting(contentEl)
-				.setName('Attraction Force')
-				.setDesc("How much should linked nodes attract each other? This will make the graph appear more clustered.")
-				.addSlider((slider) => slider
-					.setLimits(0, 100, 1)
-					.setValue(Settings.settings.graphAttractionForce / (2 / 100))
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						// remap to 0 - 2;
-						let remapMultiplier = 2 / 100;
-						Settings.settings.graphAttractionForce = value * remapMultiplier;
-						await Settings.saveSettings();
-					})
-					.showTooltip()
-				);
+		// 	experimentalHR1.style.borderColor = "var(--color-red)";
+		// 	experimentalHR2.style.borderColor = "var(--color-red)";
+		// 	experimentalHeader.style.color = "var(--color-red)";
 
-			new Setting(contentEl)
-				.setName('Link Length')
-				.setDesc("How long should the links between nodes be? The shorter the links the closer connected nodes will cluster together.")
-				.addSlider((slider) => slider
-					.setLimits(0, 100, 1)
-					.setValue(Settings.settings.graphLinkLength)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						Settings.settings.graphLinkLength = value;
-						await Settings.saveSettings();
-					})
-					.showTooltip()
-				);
+		// 	experimentalHR1.style.flexGrow = "1";
+		// 	experimentalHR2.style.flexGrow = "1";
+		// 	experimentalHeader.style.flexGrow = "0.1";
+		// 	experimentalHeader.style.textAlign = "center";
 
-			new Setting(contentEl)
-				.setName('Repulsion Force')
-				.setDesc("How much should nodes repel each other? This will make the graph appear more spread out.")
-				.addSlider((slider) => slider
-					.setLimits(0, 100, 1)
-					.setValue(Settings.settings.graphRepulsionForce / 3)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						Settings.settings.graphRepulsionForce = value * 3;
-						await Settings.saveSettings();
-					})
-					.showTooltip()
-				);
-
-			new Setting(contentEl)
-				.setName('Central Force')
-				.setDesc("How much should nodes be attracted to the center? This will make the graph appear more dense and circular.")
-				.addSlider((slider) => slider
-					.setLimits(0, 100, 1)
-					.setValue(Settings.settings.graphCentralForce / (5 / 100))
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						// remap to 0 - 5;
-						let remapMultiplier = 5 / 100;
-						Settings.settings.graphCentralForce = value * remapMultiplier;
-						await Settings.saveSettings();
-					})
-					.showTooltip()
-				);
-
-			new Setting(contentEl)
-				.setName('Max Node Radius')
-				.setDesc("How large should the largest nodes be? Nodes are sized by how many links they have. The larger a node is the more it will attract other nodes. This can be used to create a good grouping around the most important nodes.")
-				.addSlider((slider) => slider
-					.setLimits(3, 15, 1)
-					.setValue(Settings.settings.graphMaxNodeSize)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						Settings.settings.graphMaxNodeSize = value;
-						await Settings.saveSettings();
-					})
-					.showTooltip()
-				);
-
-			new Setting(contentEl)
-				.setName('Min Node Radius')
-				.setDesc("How small should the smallest nodes be? The smaller a node is the less it will attract other nodes.")
-				.addSlider((slider) => slider
-					.setLimits(3, 15, 1)
-					.setValue(Settings.settings.graphMinNodeSize)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						Settings.settings.graphMinNodeSize = value;
-						await Settings.saveSettings();
-					})
-					.showTooltip()
-				);
-
-			new Setting(contentEl)
-				.setName('Edge Pruning Factor')
-				.setDesc("Edges with a length below this threshold will not be rendered, however they will still contribute to the simulation. This can help large tangled graphs look more organised. Hovering over a node will still display these links.")
-				.addSlider((slider) => slider
-					.setLimits(0, 100, 1)
-					.setValue(100 - Settings.settings.graphEdgePruning)
-					.setDynamicTooltip()
-					.onChange(async (value) => {
-						Settings.settings.graphEdgePruning = 100 - value;
-						await Settings.saveSettings();
-					})
-					.showTooltip()
-				);
-				
-				let experimentalHREnd = contentEl.createEl('hr');
-				experimentalHREnd.style.borderColor = "var(--color-red)";
-		}
+		// 	let experimentalHREnd = contentEl.createEl('hr');
+		// 	experimentalHREnd.style.borderColor = "var(--color-red)";
+		// }
 
 		//#endregion
 
 	}
+
+	// #region Class Functions and Variables
+
+	static settings: Settings = DEFAULT_SETTINGS;
+	static plugin: Plugin;
+	static loaded = false;
+
+
+	private blacklistedPluginIDs: string[] = [];
+	public async getBlacklistedPluginIDs(): Promise<string[]> 
+	{
+		if (this.blacklistedPluginIDs.length > 0) return this.blacklistedPluginIDs;
+		this.blacklistedPluginIDs = pluginStylesBlacklist.replaceAll("\r", "").split("\n");
+
+		return this.blacklistedPluginIDs;
+	}
+
+	constructor(plugin: Plugin) {
+		super(app, plugin);
+		SettingsPage.plugin = plugin;
+	}
+
+	static async loadSettings() 
+	{
+		let loadedSettings = await SettingsPage.plugin.loadData();
+		Object.assign(Settings, DEFAULT_SETTINGS, loadedSettings);
+		Settings.documentWidth = Settings.documentWidth.toString();
+		if (Settings.documentWidth === "0") Settings.documentWidth = "";
+
+		await migrateSettings();
+
+		SettingsPage.loaded = true;
+	}
+
+	static async saveSettings() {
+		await SettingsPage.plugin.saveData(Object.assign({}, Settings));
+	}
+
+	static renameFile(file: TFile, oldPath: string)
+	{
+		let oldPathParsed = new Path(oldPath).asString;
+		Settings.filesToExport.forEach((fileList) =>
+		{
+			let index = fileList.indexOf(oldPathParsed);
+			if (index >= 0)
+			{
+				fileList[index] = file.path;
+			}
+		});
+
+		SettingsPage.saveSettings();
+	}
+
+	static async updateSettings(usePreviousSettings: boolean = false, overrideFiles: TFile[] | undefined = undefined): Promise<ExportInfo | undefined>
+	{
+		if (!usePreviousSettings) 
+		{
+			let modal = new ExportModal();
+			if(overrideFiles) modal.overridePickedFiles(overrideFiles);
+			return await modal.open();
+		}
+		
+		let files = Settings.filesToExport[0];
+		let path = new Path(Settings.exportPath);
+		if ((files.length == 0 && overrideFiles == undefined) || !path.exists || !path.isAbsolute || !path.isDirectory)
+		{
+			new Notice("Please set the export path and files to export in the settings first.", 5000);
+			let modal = new ExportModal();
+			if(overrideFiles) modal.overridePickedFiles(overrideFiles);
+			return await modal.open();
+		}
+
+		return undefined;
+	}
+
+	static getFilesToExport(): TFile[]
+	{
+		let files: TFile[] = [];
+
+		let allFiles = HTMLExportPlugin.plugin.app.vault.getFiles();
+		let exportPaths = Settings.filesToExport[0];
+		if (!exportPaths) return [];
+
+		for (let path of exportPaths)
+		{
+			let file = app.vault.getAbstractFileByPath(path);
+			if (file instanceof TFile) files.push(file);
+			else if (file instanceof TFolder)
+			{
+				let newFiles = allFiles.filter((f) => f.path.startsWith(file?.path ?? "*"));
+				files.push(...newFiles);
+			}
+		};
+
+		return files;
+	}
+
+	public static createDivider(container: HTMLElement)
+	{
+		let hr = container.createEl("hr");
+		hr.style.marginTop = "20px";
+		hr.style.marginBottom = "20px";
+		hr.style.borderColor = "var(--color-accent)";
+		hr.style.opacity = "0.5";
+	}
+
+	public static createToggle(container: HTMLElement, name: string, get: () => boolean, set: (value: boolean) => void, desc: string = ""): Setting
+	{
+		let setting = new Setting(container);
+		setting.setName(name)
+		if (desc != "") setting.setDesc(desc);
+		setting.addToggle((toggle) => toggle
+			// @ts-ignore
+			.setValue(get())
+			.onChange(async (value) => {
+				// @ts-ignore
+				set(value);
+				await SettingsPage.saveSettings();
+			}));
+		return setting;
+	}
+
+	public static createText(container: HTMLElement, name: string, get: () => string, set: (value: string) => void, desc: string = ""): Setting
+	{
+		let setting = new Setting(container);
+		setting.setName(name)
+		if (desc != "") setting.setDesc(desc);
+		setting.addText((text) => text
+			.setValue(get())
+			.onChange(async (value) => {
+				set(value);
+				await SettingsPage.saveSettings();
+			}));
+
+		return setting;
+	}
+
+	public static createError(container: HTMLElement): HTMLElement
+	{
+		let error = container.createDiv({ cls: 'setting-item-description' });
+		error.style.color = "var(--color-red)";
+		error.style.marginBottom = "0.75rem";
+		return error;
+	}
+
+	public static createFileInput(container: HTMLElement, get: () => string, set: (value: string) => void, options?: {name?: string, description?: string, placeholder?: string, defaultPath?: Path, pickFolder?: boolean, validation?: (path: Path) => {valid: boolean, isEmpty: boolean, error: string}, browseButton?: boolean, onChanged?: (path: Path)=>void}): {fileInput: Setting, textInput: TextComponent, browseButton: HTMLElement | undefined}
+	{
+		let name = options?.name ?? "";
+		let description = options?.description ?? "";
+		let placeholder = options?.placeholder ?? "Path to file...";
+		let defaultPath = options?.defaultPath ?? Path.vaultPath;
+		let pickFolder = options?.pickFolder ?? false;
+		let validation = options?.validation ?? ((path) => ({valid: true, isEmpty: false, error: ""}));
+		let browseButton = options?.browseButton ?? true;
+		let onChanged = options?.onChanged;
+
+		let headContentErrorMessage = this.createError(container);
+		if (get().trim() != "")
+		{
+			let tempPath = new Path(get());
+			headContentErrorMessage.setText(validation(tempPath).error);
+		}
+
+		let headContentInput : TextComponent | undefined = undefined;
+
+		let fileInput = new Setting(container);
+		if(name != "") fileInput.setName(name);
+		if (description != "") fileInput.setDesc(description);
+		if (name == "" && description == "") fileInput.infoEl.style.display = "none";
+
+		let textEl: TextComponent;
+		fileInput.addText((text) => 
+		{
+			textEl = text;
+			headContentInput = text;
+			text.inputEl.style.width = '100%';
+			text.setPlaceholder(placeholder)
+				.setValue(get())
+				.onChange(async (value) => 
+				{
+					let path = new Path(value);
+					let valid = validation(path);
+					headContentErrorMessage.setText(valid.error);
+					if (valid.valid) 
+					{
+						headContentErrorMessage.setText("");
+						set(value.replaceAll("\"", ""));
+						text.setValue(get());
+						await SettingsPage.saveSettings();
+					}
+
+					if (onChanged) onChanged(path);
+				});
+		});
+
+		let browseButtonEl = undefined;
+		if(browseButton)
+		{
+			fileInput.addButton((button) =>
+			{
+				browseButtonEl = button.buttonEl;
+				button.setButtonText('Browse').onClick(async () => 
+				{
+					let path = pickFolder ? await Utils.showSelectFolderDialog(defaultPath) : await Utils.showSelectFileDialog(defaultPath);
+					if (!path) return;
+					
+					set(path.asString);
+					let valid = validation(path);
+					headContentErrorMessage.setText(valid.error);
+					if (valid.valid)
+					{
+						await SettingsPage.saveSettings();
+					}
+
+					headContentInput?.setValue(get());
+				});
+			});
+		}
+
+		container.appendChild(headContentErrorMessage);
+
+		return {fileInput: fileInput, textInput: textEl!, browseButton: browseButtonEl};
+	}
+
+	public static createSection(container: HTMLElement, name: string, desc: string): HTMLElement
+	{
+		let section = container.createEl('details');
+		let summary = section.createEl('summary');
+		summary.style.display = "block";
+
+		new Setting(summary)
+			.setName(name)
+			.setDesc(desc)
+			.setHeading()
+
+		return section;
+	}
+
+	// #endregion
 }

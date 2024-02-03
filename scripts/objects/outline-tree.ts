@@ -26,11 +26,7 @@ export class OutlineTree extends Tree
 		this.file = webpage.source;
 		this.minDepth = minDepth;
 
-		// let headings = app.metadataCache.getFileCache(this.file)?.headings ?? [];
 		let headings = webpage.getHeadings();
-		console.log(headings);
-
-		// if(headings.length > 0 && (headings[0].level != 1 && minDepth <= 1 && headings[0].heading != this.file.basename)) headings.unshift({heading: this.file.basename, level: 1});
 		this.depth = Math.min(...headings.map(h => h.level)) - 1;
 
 		let parent: OutlineTreeItem | OutlineTree = this;

@@ -4,7 +4,7 @@ import Minisearch from 'minisearch';
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { RenderLog } from "scripts/html-generation/render-log";
 import { Path } from "scripts/utils/path";
-import { ExportPreset, Settings } from "scripts/settings/settings";
+import { ExportPreset, Settings, SettingsPage } from "scripts/settings/settings";
 import HTMLExportPlugin from "scripts/main";
 import { TFile } from "obsidian";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
@@ -33,6 +33,16 @@ export class WebsiteIndex
 			}
 		}
 	} | undefined = undefined;
+	public index: Minisearch<any> | undefined = undefined;
+	private stopWords = ["a", "about", "actually", "almost", "also", "although", "always", "am", "an", "and", "any", "are", "as", "at", "be", "became", "become", "but", "by", "can", "could", "did", "do", "does", "each", "either", "else", "for", "from", "had", "has", "have", "hence", "how", "i", "if", "in", "is", "it", "its", "just", "may", "maybe", "me", "might", "mine", "must", "my", "mine", "must", "my", "neither", "nor", "not", "of", "oh", "ok", "when", "where", "whereas", "wherever", "whenever", "whether", "which", "while", "who", "whom", "whoever", "whose", "why", "will", "with", "within", "without", "would", "yes", "yet", "you", "your"];
+	private indexOptions = 
+	{
+		idField: 'path',
+		fields: ['path', 'title', 'content', 'tags', 'headers'],
+		storeFields: ['path', 'title', 'tags', 'headers'],
+		processTerm: (term:any, _fieldName:any) =>
+			this.stopWords.includes(term) ? null : term.toLowerCase()
+	}
 	
 	private allFiles: string[] = []; // all files that are being exported
 	private removedFiles: string[] = []; // old files that are no longer being exported
@@ -48,11 +58,12 @@ export class WebsiteIndex
 	{
 		this.exportTime = Date.now();
 		this.previousMetadata = await this.getExportMetadata();
+		this.index = await this.getExportIndex();
 
 		// if the plugin version changed notify the user that all files will be exported
-		if (!this.shouldApplyIncrementalExport() && Settings.settings.incrementalExport)
+		if (!this.shouldApplyIncrementalExport() && Settings.onlyExportModified)
 		{
-			RenderLog.warning("New export or plugin version changed, exporting all files");
+			RenderLog.warning("Something changed which requires a full re-export of all files");
 		}
 
 		if (!this.previousMetadata) return false;
@@ -61,52 +72,57 @@ export class WebsiteIndex
 
 	public shouldApplyIncrementalExport(): boolean
 	{
-		return Settings.settings.incrementalExport && 
+		return Settings.onlyExportModified && 
 			   !this.isVersionChanged() && 
-			   Settings.settings.exportPreset == ExportPreset.Website
-			   && this.previousMetadata != undefined;
+			   Settings.exportPreset == ExportPreset.Website
+			   && this.previousMetadata != undefined
+			   && this.index != undefined;
 	}
 
 	private async getExportMetadata(): Promise<any>
 	{
-		let metadataPath = this.web.destination.join(Asset.libraryPath).joinString("metadata.json");
-		let metadata = await metadataPath.readFileString();
-		
 		try
 		{
+			let metadataPath = this.web.destination.join(Asset.libraryPath).joinString("metadata.json");
+			let metadata = await metadataPath.readFileString();
 			if (metadata) return JSON.parse(metadata);
 		}
 		catch (e)
 		{
-			RenderLog.error(e, "Failed to parse metadata.json. Exporting all files.");
+			RenderLog.warning(e, "Failed to parse metadata.json. Recreating metadata.");
 		}
 
 		return undefined;
 	}
 
-	public async createIndex(): Promise<Asset | undefined>
+	private async getExportIndex(): Promise<Minisearch<any> | undefined>
 	{
-		const stopWords = ["a", "about", "actually", "almost", "also", "although", "always", "am", "an", "and", "any", "are", "as", "at", "be", "became", "become", "but", "by", "can", "could", "did", "do", "does", "each", "either", "else", "for", "from", "had", "has", "have", "hence", "how", "i", "if", "in", "is", "it", "its", "just", "may", "maybe", "me", "might", "mine", "must", "my", "mine", "must", "my", "neither", "nor", "not", "of", "oh", "ok", "when", "where", "whereas", "wherever", "whenever", "whether", "which", "while", "who", "whom", "whoever", "whose", "why", "will", "with", "within", "without", "would", "yes", "yet", "you", "your"];
-		const indexOptions = 
+		let index: Minisearch<any> | undefined = undefined;
+
+		try
 		{
-			idField: 'path',
-			fields: ['path', 'title', 'content', 'tags', 'headers'],
-			storeFields: ['path', 'title', 'tags', 'headers'],
-			processTerm: (term:any, _fieldName:any) =>
-    			stopWords.includes(term) ? null : term.toLowerCase()
+			// load current index or create a new one if it doesn't exist
+			let indexPath = this.web.destination.join(Asset.libraryPath).joinString("search-index.json");
+			let indexJson = await indexPath.readFileString();
+			if (indexJson)
+			{
+				index = Minisearch.loadJSON(indexJson, this.indexOptions);
+			}
+		}
+		catch (e)
+		{
+			RenderLog.warning(e, "Failed to load search-index.json. Creating new index.");
+			index = undefined;
 		}
 
-		// load current index or create a new one if it doesn't exist
-		let indexPath = this.web.destination.join(Asset.libraryPath).joinString("search-index.json");
-		let indexJson = await indexPath.readFileString();
-		let index: Minisearch<any>;
-		if (indexJson)
+		return index;
+	}
+
+	public async createIndex(): Promise<Asset | undefined>
+	{
+		if (!this.index)
 		{
-			index = Minisearch.loadJSON(indexJson, indexOptions);
-		}
-		else
-		{
-			index = new Minisearch(indexOptions);
+			this.index = new Minisearch(this.indexOptions);
 		}
 
 		function preprocessContent(contentElement: HTMLElement): string 
@@ -156,12 +172,12 @@ export class WebsiteIndex
 			if (content) 
 			{
 				const webpagePath = webpage.exportPath.copy.makeUnixStyle().asString;
-				if (index.has(webpagePath)) 
+				if (this.index.has(webpagePath)) 
 				{
-					index.discard(webpagePath);
+					this.index.discard(webpagePath);
 				}
 
-				index.add({
+				this.index.add({
 					path: webpagePath,
 					title: (await Website.getTitleAndIcon(webpage.source)).title,
 					content: content,
@@ -182,14 +198,14 @@ export class WebsiteIndex
 			if(MarkdownRenderer.checkCancelled()) return undefined;
 			
 			const filePath = file.relativeDownloadPath.asString;
-			if (index.has(filePath)) 
+			if (this.index.has(filePath)) 
 			{
 				continue;
 			}
 
 			RenderLog.progress(progressCount, totalCount, "Indexing", "Adding: " + file.filename, "var(--color-blue)");
 			
-			index.add({
+			this.index.add({
 				path: filePath,
 				title: file.relativeDownloadPath.basename,
 				content: "",
@@ -206,16 +222,16 @@ export class WebsiteIndex
 			if(MarkdownRenderer.checkCancelled()) return undefined;
 			RenderLog.progress(progressCount, totalCount, "Indexing", "Removing: " + oldFile, "var(--color-blue)");
 
-			if (index.has(oldFile))
-				index.discard(oldFile);
+			if (this.index.has(oldFile))
+			this.index.discard(oldFile);
 
 			progressCount++;
 		}
 
 		RenderLog.progress(totalCount, totalCount, "Indexing", "Cleanup index", "var(--color-blue)");
-		index.vacuum();
+		this.index.vacuum();
 
-		return new Asset("search-index.json", JSON.stringify(index), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary);
+		return new Asset("search-index.json", JSON.stringify(this.index), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary);
 	}
 
 	public async createMetadata(): Promise<Asset | undefined>
@@ -294,7 +310,7 @@ export class WebsiteIndex
 			let removedPath = this.removedFiles[i];
 			console.log("Removing old file: ", this.previousMetadata.fileInfo);
 			let exportedPath = new Path(this.previousMetadata.fileInfo[removedPath].exportedPath);
-			exportedPath.makeWebStyle(Settings.settings.makeNamesWebStyle);
+			exportedPath.makeWebStyle(Settings.makeNamesWebStyle);
 
 			let deletePath = this.web.destination.join(exportedPath);
 			console.log("Deleting old file: " + deletePath.asString);
@@ -320,7 +336,7 @@ export class WebsiteIndex
 	{
 		if (!this.previousMetadata) return;
 		if (this.previousMetadata.validBodyClasses == Website.validBodyClasses) return;
-		console.log("Updating body classes from: ", this.previousMetadata.validBodyClasses, " to: ", Website.validBodyClasses);
+		console.log("Updating body classes of previous export");
 
 		let convertableFiles = this.previousMetadata.files.filter((path) => MarkdownRenderer.isConvertable(path.split(".").pop() ?? ""));
 		let exportedPaths = convertableFiles.map((path) => new Path(this.previousMetadata?.fileInfo[path]?.exportedPath ?? "", this.web.destination.asString));
@@ -392,8 +408,6 @@ export class WebsiteIndex
 			this.allFiles.push(asset.relativeDownloadPath.copy.makeUnixStyle().asString);
 		}
 
-		console.log("All files: ", this.allFiles);
-
 		return this.allFiles;
 	}
 
@@ -439,8 +453,6 @@ export class WebsiteIndex
 		this.allFiles.push(...this.keptDependencies);
 		this.allFiles = this.allFiles.filter((path, index) => this.allFiles.findIndex((f) => f == path) == index);
 
-		console.log("Kept dependencies: ", this.keptDependencies);
-
 		return this.keptDependencies;
 	}
 
@@ -457,7 +469,7 @@ export class WebsiteIndex
 		this.web.dependencies.push(metadataAsset);
 		this.web.downloads.push(metadataAsset);
 
-		if (Settings.settings.includeSearchBar) // only create index if search bar is enabled
+		if (Settings.includeSearchBar) // only create index if search bar is enabled
 		{
 			let index = await this.createIndex();
 			if (!index) return false;

@@ -1,7 +1,7 @@
 import { Notice, TFile, TFolder } from "obsidian";
 import { Webpage } from "./objects/webpage";
 import { Path } from "./utils/path";
-import { Settings } from "./settings/settings";
+import { Settings, SettingsPage } from "./settings/settings";
 import { RenderLog } from "./html-generation/render-log";
 import { Downloadable } from "./utils/downloadable";
 import HTMLExportPlugin from "./main";
@@ -15,16 +15,16 @@ export class HTMLExporter
 {
 	public static async export(usePreviousSettings: boolean = true, overrideFiles: TFile[] | undefined = undefined)
 	{
-		let info = await Settings.updateSettings(usePreviousSettings, overrideFiles);
+		let info = await SettingsPage.updateSettings(usePreviousSettings, overrideFiles);
 		if ((!info && !usePreviousSettings) || (info && info.canceled)) return;
 
-		let files = info?.pickedFiles ?? overrideFiles ?? Settings.getFilesToExport();
-		let exportPath = info?.exportPath ?? new Path(Settings.settings.exportPath);
+		let files = info?.pickedFiles ?? overrideFiles ?? SettingsPage.getFilesToExport();
+		let exportPath = info?.exportPath ?? new Path(Settings.exportPath);
 
-		let website = await HTMLExporter.exportFiles(files, exportPath, true, Settings.settings.deleteOldExportedFiles);
+		let website = await HTMLExporter.exportFiles(files, exportPath, true, Settings.deleteOldFiles);
 
 		if (!website) return;
-		if (Settings.settings.openAfterExport) Utils.openPath(exportPath);
+		if (Settings.openAfterExport) Utils.openPath(exportPath);
 		new Notice("✅ Finished HTML Export:\n\n" + exportPath, 5000);
 	}
 

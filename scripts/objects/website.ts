@@ -4,7 +4,7 @@ import { FileTree } from "./file-tree";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
 import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { FileManager, TAbstractFile, TFile, TFolder, getIcon } from "obsidian";
-import { ExportPreset, Settings } from "scripts/settings/settings";
+import { ExportPreset, Settings, SettingsPage } from "scripts/settings/settings";
 import { GraphView } from "./graph-view";
 import { Path } from "scripts/utils/path";
 import { RenderLog } from "scripts/html-generation/render-log";
@@ -71,17 +71,17 @@ export class Website
 		this.giveWarnings();
 		Website.validBodyClasses = await HTMLGeneration.getValidBodyClasses(true);
 
-		if (Settings.settings.includeGraphView)
+		if (Settings.includeGraphView)
 		{
 			let convertableFiles = this.batchFiles.filter((file) => MarkdownRenderer.isConvertable(file.extension));
 			this.globalGraph = new GraphView();
-			await this.globalGraph.init(convertableFiles, Settings.settings.graphMinNodeSize, Settings.settings.graphMaxNodeSize);
+			await this.globalGraph.init(convertableFiles, Settings.graphMinNodeSize, Settings.graphMaxNodeSize);
 		}
 		
-		if (Settings.settings.includeFileTree)
+		if (Settings.includeFileTree)
 		{
 			this.fileTree = new FileTree(this.batchFiles, false, true);
-			this.fileTree.makeLinksWebStyle = Settings.settings.makeNamesWebStyle;
+			this.fileTree.makeLinksWebStyle = Settings.makeNamesWebStyle;
 			this.fileTree.showNestingIndicator = true;
 			this.fileTree.generateWithItemsClosed = true;
 			this.fileTree.showFileExtentionTags = true;
@@ -98,13 +98,13 @@ export class Website
 		// wipe all temporary assets and reload dynamic assets
 		await AssetHandler.reloadAssets();
 
-		if (Settings.settings.includeGraphView)
+		if (Settings.includeGraphView)
 		{
 			this.graphDataAsset = new Asset("graph-data.js", this.globalGraph.getExportData(), AssetType.Script, InlinePolicy.Auto, true, Mutability.Temporary);
 			this.graphDataAsset.load();
 		}
 
-		if (Settings.settings.includeFileTree)
+		if (Settings.includeFileTree)
 		{
 			this.fileTreeAsset = new Asset("file-tree.html", this.fileTreeHtml, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
 			this.fileTreeAsset.load();
@@ -115,7 +115,6 @@ export class Website
 
 	public async createWithFiles(files: TFile[], destination: Path): Promise<Website | undefined>
 	{
-		console.log("Creating website with files: ", files);
 		this.batchFiles = files;
 		this.destination = destination;
 		await this.initExport();
@@ -129,7 +128,7 @@ export class Website
 			this.progress++;
 			
 			let filename = new Path(file.path).basename;
-			let webpage = new Webpage(file, this, destination, this.batchFiles.length > 1, filename, Settings.settings.inlineAssets && this.batchFiles.length == 1);
+			let webpage = new Webpage(file, this, destination, this.batchFiles.length > 1, filename, Settings.inlineAssets && this.batchFiles.length == 1);
 			let shouldExportPage = (useIncrementalExport && this.index.isFileChanged(file)) || !useIncrementalExport;
 			if (!shouldExportPage) continue;
 			
@@ -185,7 +184,6 @@ export class Website
 			if (metadata && (file.modifiedTime > metadata.modifiedTime || metadata.sourceSize != file.content.length)) 
 				return true;
 			
-			console.log("Filtering file: ", file);
 			return false;
 		}
 
@@ -196,7 +194,7 @@ export class Website
 	public static async getTitleAndIcon(file: TAbstractFile): Promise<{ title: string; icon: string; isDefaultIcon: boolean; isDefaultTitle: boolean }>
 	{
 		const { app } = HTMLExportPlugin.plugin;
-		const { titleProperty } = Settings.settings;
+		const { titleProperty } = Settings;
 
 		let iconOutput = "";
 		let iconProperty: string | undefined = "";
@@ -213,18 +211,18 @@ export class Website
 			if (title.endsWith(".excalidraw")) title = title.substring(0, title.length - 11);
 
 			iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support
-			if (!iconProperty && Settings.settings.showDefaultTreeIcons) 
+			if (!iconProperty && Settings.showDefaultTreeIcons) 
 			{
 				useDefaultIcon = true;
 				let isMedia = Asset.extentionToType(file.extension) == AssetType.Media;
-				iconProperty = isMedia ? Settings.settings.defaultMediaIcon : Settings.settings.defaultFileIcon;
+				iconProperty = isMedia ? Settings.defaultMediaIcon : Settings.defaultFileIcon;
 				if (file.extension == "canvas") iconProperty = "lucide//layout-dashboard";
 			}
 		}
 
-		if (file instanceof TFolder && Settings.settings.showDefaultTreeIcons)
+		if (file instanceof TFolder && Settings.showDefaultTreeIcons)
 		{
-			iconProperty = Settings.settings.defaultFolderIcon;
+			iconProperty = Settings.defaultFolderIcon;
 			useDefaultIcon = true;
 		}
 
@@ -233,7 +231,7 @@ export class Website
 		// add iconize icon as frontmatter if iconize exists
 		let isUnchangedNotEmojiNotHTML = (iconProperty == iconOutput && iconOutput.length < 40) && !/\p{Emoji}/u.test(iconOutput) && !iconOutput.includes("<") && !iconOutput.includes(">");
 		let parsedAsIconize = false;
-		if (file instanceof TFolder) console.log(useDefaultIcon, iconProperty, isUnchangedNotEmojiNotHTML);
+
 		//@ts-ignore
 		if ((useDefaultIcon || !iconProperty || isUnchangedNotEmojiNotHTML) && app.plugins.enabledPlugins.has("obsidian-icon-folder"))
 		{
@@ -263,8 +261,6 @@ export class Website
 
 					iconOutput = iconIdentifier + iconProperty + iconIdentifier;
 					parsedAsIconize = true;
-
-					console.log("Added iconize icon: ", file.path);
 				}
 			}
 		}

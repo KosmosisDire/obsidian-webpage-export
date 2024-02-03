@@ -40,7 +40,6 @@ let collapseIconUp = ["m7 15 5 5 5-5", "m7 9 5-5 5 5"]; // path 1, path 2 - svg 
 let collapseIconDown = ["m7 20 5-5 5 5", "m7 4 5 5 5-5"]; // path 1, path 2 - svg paths
 
 let isTouchDevice = isTouchCapable();
-let isFileProtocol = window.location.protocol == "file:";
 
 let documentType; // "markdown" | "canvas" | "embed" | "custom" | "none"
 let embedType; // "img" | "video" | "audio" | "embed" | "none" 
@@ -51,7 +50,12 @@ let fullyInitialized = false;
 
 async function initGlobalObjects()
 {
-	if(window.location.protocol != "file:") await waitUntil(() => !document.querySelector("include"), 10, 1000);
+	if(window.location.protocol != "file:") 
+	{
+		await loadIncludes();
+	}
+
+
 
 	loadingIcon = document.createElement("div");
 	loadingIcon.classList.add("loading-icon");
@@ -80,7 +84,7 @@ async function initGlobalObjects()
 	themeToggle = document.querySelector(".theme-toggle-input");
 }
 
-async function initializePage(showInTree, changeURL)
+async function initializePage()
 {
 	focusedCanvasNode = null;
 	canvasWrapper = document.querySelector(".canvas-wrapper") ?? canvasWrapper;
@@ -111,7 +115,7 @@ async function initializePage(showInTree, changeURL)
 		onResize();
 	}
 
-	setTimeout(() => documentContainer.classList.remove("hide"), 250);
+	setTimeout(() => documentContainer.classList.remove("hide"));
 
 	// hide the right sidebar when viewing specific file types
 	if (rightSidebar && (embedType == "video" || embedType == "embed" || customType == "excalidraw" || customType == "kanban" || documentType == "canvas")) 
@@ -163,7 +167,6 @@ function initializeDocumentTypes(fromDocument)
 
 function initializeForFileProtocol()
 {
-	document.body.classList.toggle("file-protocol", true);
 	let graphEl = document.querySelector(".graph-view-placeholder");
 	if(graphEl)
 	{
@@ -175,11 +178,11 @@ function initializeForFileProtocol()
 
 window.onload = async function()
 {
-	await initializePage(true, false);
+	await initializePage();
 	initializePageEvents(document);
 	setActiveDocument(loadedURL, true, false);
 	fullyInitialized = true;
-}
+};
 
 window.onpopstate = function(event)
 {
@@ -240,7 +243,7 @@ function onResize(isInitial = false)
 		return (w < value && lastScreenWidth == undefined) || (w < value && lastScreenWidth > value);
 	}
 
-	if (widthNowGreaterThan(contentTargetWidth + sidebarDefaultWidth * 2))
+	if (widthNowGreaterThan(contentTargetWidth + sidebarDefaultWidth * 2) || widthNowGreaterThan(1025))
 	{
 		deviceSize = "large-screen";
 		document.body.classList.toggle("floating-sidebars", false);
@@ -251,7 +254,7 @@ function onResize(isInitial = false)
 		sidebars.forEach(function (sidebar) { sidebar.collapse(false) });
 		sidebarGutters.forEach(function (gutter) { gutter.collapse(false) });
 	}
-	else if (widthNowInRange((contentTargetWidth + sidebarDefaultWidth) * 0.8, contentTargetWidth + sidebarDefaultWidth * 2))
+	else if (widthNowInRange((contentTargetWidth + sidebarDefaultWidth) * 1, contentTargetWidth + sidebarDefaultWidth * 2) || widthNowInRange(769, 1024))
 	{
 		deviceSize = "small screen";
 		document.body.classList.toggle("floating-sidebars", false);
@@ -266,7 +269,7 @@ function onResize(isInitial = false)
 			rightSidebar.collapse(true);
 		}
 	}
-	else if (widthNowInRange(sidebarDefaultWidth * 1.4, (contentTargetWidth + sidebarDefaultWidth) * 0.8))
+	else if (widthNowInRange(sidebarDefaultWidth * 2, (contentTargetWidth + sidebarDefaultWidth) * 1) || widthNowInRange(481, 768))
 	{
 		deviceSize = "tablet";
 		document.body.classList.toggle("floating-sidebars", true);
@@ -283,7 +286,7 @@ function onResize(isInitial = false)
 
 		if(leftSidebar && !fullyInitialized) leftSidebar.collapse(true);
 	}
-	else if (widthNowLessThan(sidebarDefaultWidth * 1.4))
+	else if (widthNowLessThan(sidebarDefaultWidth * 2) || widthNowLessThan(480))
 	{
 		deviceSize = "phone";
 		document.body.classList.toggle("floating-sidebars", true);
@@ -631,7 +634,7 @@ async function loadDocument(url, changeURL, showInTree)
 		console.log("Document already loaded.");
 		loadedURL = newLoadedURL;
 		setActiveDocument(loadedURL, false, false);
-		await initializePage(false, false);
+		await initializePage();
 		loading = false;
 		return;
 	}
@@ -716,10 +719,9 @@ async function loadDocument(url, changeURL, showInTree)
 			}
 		}
 
-		await initializePage(showInTree, changeURL);
+		await initializePage();
 		initializePageEvents(documentContainer);
 		initializePageEvents(outlineTree);
-	
 	}
 	else
 	{
@@ -739,8 +741,8 @@ function setActiveDocument(url, showInTree, changeURL)
 	let searchlessHeaderlessPath = decodedRelativePath.split("#")[0].split("?")[0].replace("\"", "\\\"").replace("\'", "\\\'");
 
 	// switch active file in file tree
-	let oldActiveTreeItem = document.querySelector(".tree-item.mod-active");
-	let newActiveTreeItem = document.querySelector(`.tree-item:has(>.tree-link[href^="${searchlessHeaderlessPath}"])`);
+	let oldActiveTreeItem = document.querySelector(".file-tree .tree-item.mod-active");
+	let newActiveTreeItem = document.querySelector(`.file-tree .tree-item:has(>.tree-link[href^="${searchlessHeaderlessPath}"])`);
 	if(newActiveTreeItem && !newActiveTreeItem.isEqualNode(oldActiveTreeItem)) 
 	{
 		oldActiveTreeItem?.classList.remove("mod-active");
@@ -1246,7 +1248,7 @@ function toggleTreeCollapsedAll(elements)
 
 function getFileTreeItemFromPath(path)
 {
-	return document.querySelector(`.tree-item:has(> .tree-link[href^="${path}"])`);
+	return document.querySelector(`.file-tree .tree-item:has(> .tree-link[href^="${path}"])`);
 }
 
 // hide all files and folder except the ones in the list (show parents of shown files)
@@ -2158,11 +2160,14 @@ function setupSidebars()
 		});
 	});
 	
-	// sidebar resizing
-	if (isMobile()) return;
+	if (!isMobile()) setupSidebarResize();
+}
 
+function setupSidebarResize()
+{
 	let leftHandle = document.querySelector('.sidebar-left .sidebar-handle');
 	let rightHandle = document.querySelector('.sidebar-right .sidebar-handle');
+	if (!leftHandle || !rightHandle) return;
 	let resizingSidebar = null;
 
 	let minResizeWidth = parseFloat(getComputedStyle(leftHandle.parentElement).fontSize) * 15;
@@ -2477,10 +2482,9 @@ async function setupSearch()
 	if (isFileProtocol) return;
 	searchInput = document.querySelector('input[type="search"]');
 	if (!searchInput) return;
-	
-	await import('https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js');
 
-	const indexJSON = await fetch('lib/search-index.json').then(response => response.text());
+	const indexResp = await fetch('lib/search-index.json');
+	const indexJSON = await indexResp.text();
 	index = MiniSearch.loadJSON(indexJSON, { fields: ['title', 'path', 'tags', 'headers'] });
 
 	const inputClear = document.querySelector('.search-input-clear-button');

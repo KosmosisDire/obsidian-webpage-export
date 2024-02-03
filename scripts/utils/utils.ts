@@ -2,7 +2,7 @@ import {  MarkdownView, PluginManifest, TextFileView } from 'obsidian';
 import { Path } from './path';
 import { RenderLog } from '../html-generation/render-log';
 import { Downloadable } from './downloadable';
-import { Settings } from 'scripts/settings/settings';
+import { Settings, SettingsPage } from 'scripts/settings/settings';
 
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;
@@ -17,6 +17,17 @@ export class Utils
 	static padStringBeggining(str: string, length: number, char: string)
 	{
 		return char.repeat(length - str.length) + str;
+	}
+
+	static async fetch(url: RequestInfo | URL, timeout = 8000, options: RequestInit | undefined = undefined) 
+	{
+		const controller = new AbortController();
+		const id = setTimeout(() => controller.abort(), timeout);
+	  
+		const response = await fetch(url, {signal: controller.signal, ...options});
+		clearTimeout(id);
+	  
+		return response;
 	}
 
 	static sampleCSSColorHex(variable: string, testParentEl: HTMLElement): { a: number, hex: string }
@@ -90,8 +101,8 @@ export class Utils
 		if (picker.canceled) return;
 		
 		let pickedPath = new Path(picker.filePath);
-		Settings.settings.exportPath = pickedPath.asString;
-		Settings.saveSettings();
+		Settings.exportPath = pickedPath.asString;
+		SettingsPage.saveSettings();
 		
 		return pickedPath;
 	}
@@ -109,8 +120,8 @@ export class Utils
 		if (picker.canceled) return;
 
 		let path = new Path(picker.filePaths[0]);
-		Settings.settings.exportPath = path.directory.asString;
-		Settings.saveSettings();
+		Settings.exportPath = path.directory.asString;
+		SettingsPage.saveSettings();
 
 		return path;
 	}
@@ -133,7 +144,7 @@ export class Utils
 
 	static idealDefaultPath() : Path
 	{
-		let lastPath = new Path(Settings.settings.exportPath);
+		let lastPath = new Path(Settings.exportPath);
 
 		if (lastPath.asString != "" && lastPath.exists)
 		{

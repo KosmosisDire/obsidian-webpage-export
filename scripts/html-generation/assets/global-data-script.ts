@@ -1,6 +1,6 @@
 import { Website } from "scripts/objects/website";
 import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
-import { Settings } from "scripts/settings/settings";
+import { SettingsPage } from "scripts/settings/settings";
 
 export class GlobalDataScript extends Asset
 {

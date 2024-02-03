@@ -1,7 +1,7 @@
 import { ButtonComponent, Modal, Setting, TFile, TextComponent } from 'obsidian';
 import { Utils } from '../utils/utils';
 import HTMLExportPlugin from '../main';
-import { ExportPreset, Settings } from './settings';
+import { ExportPreset, Settings, SettingsPage } from './settings';
 import { FilePickerTree } from '../objects/file-picker';
 import { Path } from 'scripts/utils/path';
 
@@ -81,9 +81,9 @@ export class ExportModal extends Modal
 			this.filePicker.hideFileExtentionTags = ["md"];
 			await this.filePicker.generateTree(scrollArea);
 			
-			if((this.pickedFiles?.length ?? 0 > 0) || Settings.settings.filesToExport[0].length > 0) 
+			if((this.pickedFiles?.length ?? 0 > 0) || Settings.filesToExport[0].length > 0) 
 			{
-				let filesToPick = this.pickedFiles?.map(file => file.path) ?? Settings.settings.filesToExport[0];
+				let filesToPick = this.pickedFiles?.map(file => file.path) ?? Settings.filesToExport[0];
 				this.filePicker.setSelectedFiles(filesToPick);
 			}
 
@@ -91,8 +91,8 @@ export class ExportModal extends Modal
 			{
 				button.setButtonText("Save").onClick(async () =>
 				{
-					Settings.settings.filesToExport[0] = this.filePicker.getSelectedFilesSavePaths();
-					await Settings.saveSettings();
+					Settings.filesToExport[0] = this.filePicker.getSelectedFilesSavePaths();
+					await SettingsPage.saveSettings();
 				});
 			});
 
@@ -148,43 +148,43 @@ export class ExportModal extends Modal
 		let exportModeSetting = new Setting(contentEl)
 			.setName('Export Mode')
 			// @ts-ignore
-			.setDesc(modeDescriptions[Settings.settings.exportPreset] + "\n\nSome options are only available in certain modes.")
+			.setDesc(modeDescriptions[Settings.exportPreset] + "\n\nSome options are only available in certain modes.")
 			.setHeading()
 			.addDropdown((dropdown) => dropdown
 				.addOption('website', 'Online Web Server')
 				.addOption('documents', 'HTML Documents')
 				.addOption('raw-documents', 'Raw HTML Documents')
-				.setValue(["website", "documents", "raw-documents"].contains(Settings.settings.exportPreset) ? Settings.settings.exportPreset : 'website')
+				.setValue(["website", "documents", "raw-documents"].contains(Settings.exportPreset) ? Settings.exportPreset : 'website')
 				.onChange(async (value) =>
 				{
-					Settings.settings.exportPreset = value as ExportPreset;
+					Settings.exportPreset = value as ExportPreset;
 
 					switch (value) {
 						case 'website':
-							Settings.settings.inlineAssets = false;
-							Settings.settings.makeNamesWebStyle = true;
-							Settings.settings.includeGraphView = true;
-							Settings.settings.includeFileTree = true;
-							Settings.settings.includeSearchBar = true;
-							await Settings.saveSettings();
+							Settings.inlineAssets = false;
+							Settings.makeNamesWebStyle = true;
+							Settings.includeGraphView = true;
+							Settings.includeFileTree = true;
+							Settings.includeSearchBar = true;
+							await SettingsPage.saveSettings();
 
 							break;
 						case 'documents':
-							Settings.settings.inlineAssets = true;
-							Settings.settings.makeNamesWebStyle = false;
-							Settings.settings.includeFileTree = true;
-							Settings.settings.includeGraphView = false;
-							Settings.settings.includeSearchBar = false;
-							await Settings.saveSettings();
+							Settings.inlineAssets = true;
+							Settings.makeNamesWebStyle = false;
+							Settings.includeFileTree = true;
+							Settings.includeGraphView = false;
+							Settings.includeSearchBar = false;
+							await SettingsPage.saveSettings();
 
 							break;
 						case 'raw-documents':
-							Settings.settings.inlineAssets = true;
-							Settings.settings.makeNamesWebStyle = false;
-							Settings.settings.includeGraphView = false;
-							Settings.settings.includeFileTree = false;
-							Settings.settings.includeSearchBar = false;
-							await Settings.saveSettings();
+							Settings.inlineAssets = true;
+							Settings.makeNamesWebStyle = false;
+							Settings.includeGraphView = false;
+							Settings.includeFileTree = false;
+							Settings.includeSearchBar = false;
+							await SettingsPage.saveSettings();
 
 							break;
 					}
@@ -194,32 +194,9 @@ export class ExportModal extends Modal
 				));
 		exportModeSetting.descEl.style.whiteSpace = "pre-wrap";
 
-		new Setting(contentEl)
-			.setName('Open after export')
-			.addToggle((toggle) => toggle
-				.setTooltip('Open the exported file after exporting.')
-				.setValue(Settings.settings.openAfterExport)
-				.onChange(async (value) => {
-					Settings.settings.openAfterExport = value;
-					await Settings.saveSettings();
-		}));
-
-		let errorMessage = contentEl.createDiv({ cls: 'setting-item-description' });
-		errorMessage.style.color = "var(--color-red)";
-		errorMessage.style.marginBottom = "0.75rem";
-
-		let tempPath = new Path(Settings.settings.exportPath);
-		if(!tempPath.isDirectory) errorMessage.setText("Path must be a directory!");
-		else if(!tempPath.isAbsolute) errorMessage.setText("Path must be absolute!");
-		else if(!tempPath.exists) errorMessage.setText("Path does not exist!");
-
-		if(errorMessage.innerText != "") 
-		{
-			this.validPath = false;
-		}
-
+		SettingsPage.createToggle(contentEl, "Open after export", () => Settings.openAfterExport, (value) => Settings.openAfterExport = value);
+		
 		let exportButton : ButtonComponent | undefined = undefined;
-		let pathInput : TextComponent | undefined = undefined;
 
 		function setExportDisabled(disabled: boolean)
 		{
@@ -231,67 +208,83 @@ export class ExportModal extends Modal
 			}
 		}
 
-		new Setting(contentEl)
-			.setName('')
-			.setHeading()
-			.addText((text) => 
-			{
-				pathInput = text;
-				text.inputEl.style.width = '100%';
-				text.setPlaceholder('Enter an absolute export directory path')
-					.setValue(Settings.settings.exportPath)
-					.onChange(async (value) => 
-					{
-						let path = new Path(value);
-						if(!path.isDirectory) errorMessage.setText("Path must be a directory!");
-						else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
-						else if(!path.exists) errorMessage.setText("Path does not exist!");
-						else
-						{
-							errorMessage.setText("");
-							Settings.settings.exportPath = value.replaceAll("\"", "");
-							text.setValue(Settings.settings.exportPath);
-							this.validPath = true;
-							await Settings.saveSettings();
-						}
+		let validatePath = (path: Path) => path.validate(false, true, false, false, false, true);
 
-						setExportDisabled(!path.isDirectory || !path.isAbsolute || !path.exists);
-					});
-			})
-			.addButton((button) =>
-			{
-				button.setButtonText('Browse').onClick(async () => 
-				{
-					let ideal = Utils.idealDefaultPath();
-					let path = (await Utils.showSelectFolderDialog(ideal))?.directory;
-					if (path) 
-					{
-						Settings.settings.exportPath = path.directory.asString;
-						await Settings.saveSettings();
-
-						setExportDisabled(!path.isDirectory || !path.isAbsolute || !path.exists);
-
-						if(!path.isDirectory) errorMessage.setText("Path must be a directory!");
-						else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
-						else if(!path.exists) errorMessage.setText("Path does not exist!");
-						else errorMessage.setText("");
-
-						pathInput?.setValue(Settings.settings.exportPath);
-					}
-				});
-			})
-			.addButton((button) => 
-			{
-				exportButton = button;
-				setExportDisabled(!this.validPath);
-				button.setButtonText('Export').onClick(async () => 
-				{
-					this.canceled = false;
-					this.close();
-				});
+		let exportPathInput = SettingsPage.createFileInput(contentEl, () => Settings.exportPath, (value) => Settings.exportPath = value,
+		{
+			name: '',
+			description: '',
+			placeholder: 'Type or browse an export directory...',
+			defaultPath: Utils.idealDefaultPath(),
+			pickFolder: true,
+			validation: validatePath,
+			onChanged: (path) => (!validatePath(path).valid) ? setExportDisabled(true) : setExportDisabled(false)
 		});
 
-		contentEl.appendChild(errorMessage);
+		let { fileInput } = exportPathInput;
+		
+		fileInput.addButton((button) => {
+			exportButton = button;
+			setExportDisabled(!this.validPath);
+			button.setButtonText('Export').onClick(async () => 
+			{
+				this.canceled = false;
+				this.close();
+			});
+		});
+
+		// new Setting(contentEl)
+		// 	.setName('')
+		// 	.setHeading()
+		// 	.addText((text) => 
+		// 	{
+		// 		pathInput = text;
+		// 		text.inputEl.style.width = '100%';
+		// 		text.setPlaceholder('Enter an absolute export directory path')
+		// 			.setValue(Settings.exportPath)
+		// 			.onChange(async (value) => 
+		// 			{
+		// 				let path = new Path(value);
+		// 				if(!path.isDirectory) errorMessage.setText("Path must be a directory!");
+		// 				else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
+		// 				else if(!path.exists) errorMessage.setText("Path does not exist!");
+		// 				else
+		// 				{
+		// 					errorMessage.setText("");
+		// 					Settings.exportPath = value.replaceAll("\"", "");
+		// 					text.setValue(Settings.exportPath);
+		// 					this.validPath = true;
+		// 					await SettingsPage.saveSettings();
+		// 				}
+
+		// 				setExportDisabled(!path.isDirectory || !path.isAbsolute || !path.exists);
+		// 			});
+		// 	})
+		// 	.addButton((button) =>
+		// 	{
+		// 		button.setButtonText('Browse').onClick(async () => 
+		// 		{
+		// 			let ideal = Utils.idealDefaultPath();
+		// 			let path = (await Utils.showSelectFolderDialog(ideal))?.directory;
+		// 			if (path) 
+		// 			{
+		// 				Settings.exportPath = path.directory.asString;
+		// 				await SettingsPage.saveSettings();
+
+		// 				setExportDisabled(!path.isDirectory || !path.isAbsolute || !path.exists);
+
+		// 				if(!path.isDirectory) errorMessage.setText("Path must be a directory!");
+		// 				else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
+		// 				else if(!path.exists) errorMessage.setText("Path does not exist!");
+		// 				else errorMessage.setText("");
+
+		// 				pathInput?.setValue(Settings.exportPath);
+		// 			}
+		// 		});
+		// 	})
+			
+
+		// contentEl.appendChild(errorMessage);
 
 		new Setting(contentEl)
 			.setDesc("More options located on the plugin settings page.")
@@ -304,11 +297,11 @@ export class ExportModal extends Modal
 
 		this.filePickerModalEl.style.height = this.modalEl.clientHeight * 2 + "px";
 
-		await Utils.waitUntil(() => this.isClosed, 60 * 60 * 1000, 1);
+		await Utils.waitUntil(() => this.isClosed, 60 * 60 * 1000, 10);
 		
 		this.pickedFiles = this.filePicker.getSelectedFiles();
 		this.filePickerModalEl.remove();
-		this.exportInfo = { canceled: this.canceled, pickedFiles: this.pickedFiles, exportPath: new Path(Settings.settings.exportPath), validPath: this.validPath};
+		this.exportInfo = { canceled: this.canceled, pickedFiles: this.pickedFiles, exportPath: new Path(Settings.exportPath), validPath: this.validPath};
 
 		return this.exportInfo;
 	}

@@ -1,6 +1,6 @@
 import { Path } from "scripts/utils/path";
 import { MarkdownRenderer } from "./markdown-renderer";
-import { Settings } from "scripts/settings/settings";
+import { Settings, SettingsPage } from "scripts/settings/settings";
 import HTMLExportPlugin from "scripts/main";
 import { Plugin } from "obsidian";
 
@@ -42,7 +42,7 @@ export namespace RenderLog
         messageTitle = `[INFO] ${messageTitle}`
         fullLog += logToString(message, messageTitle);
 
-		if(Settings.loaded && !(Settings.settings.logLevel == "all")) return;
+		if(SettingsPage.loaded && !(Settings.logLevel == "all")) return;
 
         if (messageTitle != "") console.log(messageTitle + " ", message);
         else console.log(message);
@@ -56,7 +56,7 @@ export namespace RenderLog
         messageTitle = `[WARNING] ${messageTitle}`
         fullLog += logToString(message, messageTitle);
 
-		if(Settings.loaded && !["warning", "all"].contains(Settings.settings.logLevel)) return;
+		if(SettingsPage.loaded && !["warning", "all"].contains(Settings.logLevel)) return;
 
         if (messageTitle != "") console.warn(messageTitle + " ", message);
         else console.warn(message);
@@ -70,7 +70,7 @@ export namespace RenderLog
         messageTitle = (fatal ? "[FATAL ERROR] " : "[ERROR] ") + messageTitle;
         fullLog += logToString(message, messageTitle);
 
-        if (Settings.loaded && !fatal && !["error", "warning", "all"].contains(Settings.settings.logLevel)) return;
+        if (SettingsPage.loaded && !fatal && !["error", "warning", "all"].contains(Settings.logLevel)) return;
 		
         if (fatal && messageTitle == "Error") messageTitle = "Fatal Error";
 
@@ -120,7 +120,7 @@ export namespace RenderLog
 
         debugInfo += `Log:\n${fullLog}\n\n`;
 
-        let settingsCopy = Object.assign({}, Settings.settings);
+        let settingsCopy = Object.assign({}, Settings);
         //@ts-ignore
         settingsCopy.filesToExport = settingsCopy.filesToExport[0].length;
         settingsCopy.includePluginCSS = settingsCopy.includePluginCSS.split("\n").length + " plugins included";

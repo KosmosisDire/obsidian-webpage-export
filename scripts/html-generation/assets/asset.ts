@@ -1,7 +1,7 @@
 import { Path } from "scripts/utils/path";
 import { Downloadable } from "scripts/utils/downloadable";
 import { RenderLog } from "../render-log";
-import { Settings } from "scripts/settings/settings";
+import { Settings, SettingsPage } from "scripts/settings/settings";
 import { AssetHandler } from "../asset-handler";
 const { minify: runMinify } = require('html-minifier-terser');
 const mime = require('mime');
@@ -61,32 +61,32 @@ export class Asset extends Downloadable
     public static get libraryPath(): Path
     {
 		if (!this.libraryFolder) this.initialize();
-        return Asset.libraryFolder.copy.makeWebStyle(Settings.settings.makeNamesWebStyle);
+        return Asset.libraryFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
     }
     public static get mediaPath(): Path
     {
 		if (!this.mediaFolder) this.initialize();
-		return Asset.mediaFolder.copy.makeWebStyle(Settings.settings.makeNamesWebStyle);
+		return Asset.mediaFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
     }
     public static get jsPath(): Path
     {
 		if (!this.jsFolder) this.initialize();
-        return Asset.jsFolder.copy.makeWebStyle(Settings.settings.makeNamesWebStyle);
+        return Asset.jsFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
     }
     public static get cssPath(): Path
     {
 		if (!this.cssFolder) this.initialize();
-		return Asset.cssFolder.copy.makeWebStyle(Settings.settings.makeNamesWebStyle);
+		return Asset.cssFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
     }
 	public static get fontPath(): Path
 	{
 		if (!this.fontFolder) this.initialize();
-		return Asset.fontFolder.copy.makeWebStyle(Settings.settings.makeNamesWebStyle);
+		return Asset.fontFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
 	}
     public static get htmlPath(): Path
     {
 		if (!this.htmlFolder) this.initialize();
-		return Asset.htmlFolder.copy.makeWebStyle(Settings.settings.makeNamesWebStyle);
+		return Asset.htmlFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
     }
 
     public type: AssetType; // what type of asset is this
@@ -95,10 +95,11 @@ export class Asset extends Downloadable
     public minify: boolean; // should the asset be minified
     public loadMethod: LoadMethod = LoadMethod.Default; // should this asset be loaded asynchronously if possible
 	public loadPriority: number = 100; // the priority of this asset when loading 
+	public cdnPath: string | undefined = undefined; // the path to the asset on a CDN
 
-	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async, loadPriority: number = 100)
+	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async, loadPriority: number = 100, cdnPath: string | undefined = undefined)
     {
-		if(Settings.settings.makeNamesWebStyle) filename = Path.toWebStyle(filename);
+		if(Settings.makeNamesWebStyle) filename = Path.toWebStyle(filename);
         super(filename, content, Asset.typeToPath(type));
         this.type = type;
         this.inlinePolicy = inlinePolicy;
@@ -106,6 +107,7 @@ export class Asset extends Downloadable
         this.minify = minify;
         this.loadMethod = loadMethod;
 		this.loadPriority = loadPriority;
+		this.cdnPath = cdnPath;
 
         if(mutability == Mutability.Static) 
 		{
@@ -242,7 +244,7 @@ export class Asset extends Downloadable
 		if (relativeFrom == undefined) relativeFrom = Path.rootPath;
 		let toRoot = Path.getRelativePath(relativeFrom, Path.rootPath);
 		let newPath = toRoot.join(this.relativeDownloadPath).makeUnixStyle();
-		newPath.makeWebStyle(Settings.settings.makeNamesWebStyle);
+		newPath.makeWebStyle(Settings.makeNamesWebStyle);
 		
 		return newPath;
 	}
@@ -252,11 +254,11 @@ export class Asset extends Downloadable
         return !(this.inlinePolicy == InlinePolicy.None || (this.type == AssetType.HTML && this.inlinePolicy == InlinePolicy.Auto));
 	}
 
-    public getHTMLInclude(checkInlinePolicy: boolean = false): string
+    public getHTMLInclude(useCDN: boolean = false, onlyNotInline: boolean = false): string
     {
-		if (checkInlinePolicy && !this.shouldBeInlined()) return "";
+		if (onlyNotInline && !this.shouldBeInlined()) return "";
 
-        if((Settings.settings.inlineAssets && this.inlinePolicy != InlinePolicy.NeverInline) || this.inlinePolicy == InlinePolicy.AlwaysInline)
+        if((Settings.inlineAssets && this.inlinePolicy != InlinePolicy.NeverInline) || this.inlinePolicy == InlinePolicy.AlwaysInline)
         {
             switch(this.type)
             {
@@ -277,9 +279,10 @@ export class Asset extends Downloadable
             }
         }
         
-        if (!Settings.settings.inlineAssets || this.inlinePolicy == InlinePolicy.NeverInline)
+        if (!Settings.inlineAssets || this.inlinePolicy == InlinePolicy.NeverInline)
         {
             let path = this.getAssetPath().asString;
+			if (useCDN && this.cdnPath) path = this.cdnPath;
 
 			let include = "";
 			let attr = "";

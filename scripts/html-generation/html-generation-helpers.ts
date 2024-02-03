@@ -1,4 +1,4 @@
-import { Settings } from "scripts/settings/settings";
+import { SettingsPage } from "scripts/settings/settings";
 import { AssetHandler } from "./asset-handler";
 import { AssetType } from "./assets/asset";
 import { RenderLog } from "./render-log";
@@ -127,7 +127,7 @@ export namespace HTMLGeneration
 			ObsidianStyles.stylesKeep.some(keep => value.includes(keep)) || 
 			!ObsidianStyles.stylesFilter.some(filter => value.includes(filter))
 		);
-		console.log("Body classes: ", bodyClasses);
+
 		let validClasses = "";
 		validClasses += " publish ";
 		validClasses += " css-settings-manager ";
@@ -156,8 +156,6 @@ export namespace HTMLGeneration
 		classes = classes.filter((value, index, self) => self.indexOf(value) === index);
 		classes = classes.sort();
 
-		console.log("Classes: ", classes);
-
 		for (var bodyClass of bodyClasses)
 		{
 			if (classes.includes(bodyClass))
@@ -174,7 +172,7 @@ export namespace HTMLGeneration
 		return _validBodyClasses;
 	}
 
-	export function getLucideIcon(iconName: string): string
+	export function getLucideIcon(iconName: string): string | undefined
 	{
 		const iconEl = getObsidianIcon(iconName);
 		if (iconEl)
@@ -185,12 +183,11 @@ export namespace HTMLGeneration
 		}
 		else 
 		{
-			console.error(`Invalid lucide icon name: ${iconName}`);
-			return "�";
+			return undefined;
 		}
 	}
 
-	export function getEmojiIcon(iconCode: string): string
+	export function getEmojiIcon(iconCode: string): string | undefined
 	{
 		let iconCodeInt = parseInt(iconCode, 16);
 		if (!isNaN(iconCodeInt)) 
@@ -199,8 +196,7 @@ export namespace HTMLGeneration
 		} 
 		else 
 		{
-			console.error(`Invalid sticker number in frontmatter: ${iconCode}`);
-			return '�';
+			return undefined;
 		}
 	}
 
@@ -209,15 +205,15 @@ export namespace HTMLGeneration
 		if (iconName.startsWith('emoji//'))
 		{
 			const iconCode = iconName.replace(/^emoji\/\//, '');
-			return getEmojiIcon(iconCode);
+			return getEmojiIcon(iconCode) ?? "�";
 		}
 		else if (iconName.startsWith('lucide//'))
 		{
 			const lucideIconName = iconName.replace(/^lucide\/\//, '');
-			return getLucideIcon(lucideIconName);
+			return getLucideIcon(lucideIconName) ?? "�";
 		}
 
-		return iconName;
+		return getLucideIcon(iconName) ?? iconName; // try and parse a plain lucide icon name
 	}
 	
 }

@@ -1,7 +1,5 @@
 async function loadIncludes()
 {
-	observer.disconnect();
-
 	if (location.protocol != "file:") 
 	{
 		// replace include tags with the contents of the file
@@ -22,12 +20,28 @@ async function loadIncludes()
 				}
 				
 				let includeText = await request.text();
-				includeTag.outerHTML = includeText;
+				let docFrag = document.createRange().createContextualFragment(includeText);
+				let includeChildren = Array.from(docFrag.children);
+				for (let child of includeChildren)
+				{
+					child.classList.add("hide");
+					child.style.transition = "opacity 0.2s ease-in-out";
+
+					setTimeout(() => 
+					{
+						child.classList.remove("hide");
+					}, 10);
+				};
+
+				includeTag.before(docFrag);
+				includeTag.remove();
+
+				console.log("Included file: " + includePath);
 			}
 			catch (e)
 			{
 				includeTag?.remove();
-				console.log("Could not include file: " + includePath);
+				console.log("Could not include file: " + includePath, e);
 				continue;
 			}
 		}
@@ -51,44 +65,14 @@ async function loadIncludes()
 			document.querySelector(".document-container")?.classList.remove("hide");
 		}
 	}
-
 }
 
-function updateTheme()
+document.addEventListener("DOMContentLoaded", () => 
 {
-	let theme = localStorage.getItem("theme") || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-	if (theme == "dark")
-	{
-		document.body.classList.add("theme-dark");
-		document.body.classList.remove("theme-light");
-	}
-	else
-	{
-		document.body.classList.add("theme-light");
-		document.body.classList.remove("theme-dark");
-	}
-
-	observer.disconnect();
-
-	if (document.body.querySelector(".sidebar-content > include")) loadIncludes();
-	else
-	{
-		observer = new MutationObserver(() => 
-		{
-			if (document.body.querySelector(".sidebar-content > include")) 
-				loadIncludes();
-		});
-		observer.observe(document.body, { childList: true });
-
-		setTimeout(() => loadIncludes(), 150);
-	}
-}
-
-var observer = new MutationObserver(() => 
-{
-	if (document.body.classList.length != 0) updateTheme();
+	loadIncludes();
 });
-observer.observe(document.documentElement, { childList: true });
+
+let isFileProtocol = location.protocol == "file:";
 
 function waitLoadScripts(scriptNames, callback)
 {

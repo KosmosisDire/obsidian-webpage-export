@@ -1,11 +1,14 @@
 import HTMLExportPlugin from "scripts/main"
-import { DEFAULT_SETTINGS, Settings } from "./settings"
+import { DEFAULT_SETTINGS, Settings, SettingsPage } from "./settings"
 import { RenderLog } from "scripts/html-generation/render-log";
+import { Notice } from "obsidian";
 
 
 export async function migrateSettings()
 {
-	if (Settings.settings.settingsVersion == HTMLExportPlugin.pluginVersion) return;
+	if (Settings.settingsVersion == HTMLExportPlugin.pluginVersion) return;
+
+	new Notice("Webpage HTML Export settings have been updated to a new version. Please update your settings if any have been reset.", 10000);
 
 	var settingsToSave = 
 	[
@@ -24,24 +27,24 @@ export async function migrateSettings()
 
 	try
 	{
-		var savedSettings = JSON.parse(JSON.stringify(Settings.settings));
-		Settings.settings = DEFAULT_SETTINGS;
+		var savedSettings = JSON.parse(JSON.stringify(Object.assign({}, Settings)));
+		Object.assign(Settings, DEFAULT_SETTINGS);
 		for (var i = 0; i < settingsToSave.length; i++)
 		{
 			var settingName = settingsToSave[i]; 
 			// @ts-ignore
-			Settings.settings[settingName] = savedSettings[settingName];
+			Settings[settingName] = savedSettings[settingName];
 		}
 
-		Settings.settings.settingsVersion = HTMLExportPlugin.pluginVersion;
+		Settings.settingsVersion = HTMLExportPlugin.pluginVersion;
 	}
 	catch (e)
 	{
 		RenderLog.error(e, "Failed to migrate settings, resetting to default settings.");
-		Settings.settings = DEFAULT_SETTINGS;
+		Object.assign(Settings, DEFAULT_SETTINGS);
 	}
 
-	await Settings.saveSettings();
+	await SettingsPage.saveSettings();
 
 	return;
 }

@@ -2,12 +2,15 @@ import graphViewJS from "assets/graph-view.txt.js";
 import graphWASMJS from "assets/graph-wasm.txt.js";
 import renderWorkerJS from "assets/graph-render-worker.txt.js";
 import graphWASM from "assets/graph-wasm.wasm";
-import tinyColorJS from "assets/tinycolor.txt.js";
-import pixiJS from "assets/pixi.txt.js";
 import websiteJS from "assets/website.txt.js";
 import webpageStyles from "assets/plugin-styles.txt.css";
 import deferredJS from "assets/deferred.txt.js";
 import deferredCSS from "assets/deferred.txt.css";
+import themeLoadJS from "assets/theme-load.txt.js";
+
+import tinyColorJS from "assets/tinycolor.txt.js";
+import pixiJS from "assets/pixi.txt.js";
+import minisearchJS from "assets/minisearch.txt.js";
 
 import { Path } from "scripts/utils/path.js";
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./assets/asset.js";
@@ -17,7 +20,7 @@ import { ThemeStyles } from "./assets/theme-styles.js";
 import { SnippetStyles } from "./assets/snippet-styles.js";
 import { MathjaxStyles } from "./assets/mathjax-styles.js";
 import { CustomHeadContent } from "./assets/custom-head-content.js";
-import { Settings } from "scripts/settings/settings.js";
+import { Settings, SettingsPage } from "scripts/settings/settings.js";
 import { GlobalVariableStyles } from "./assets/global-variable-styles.js";
 import { Favicon } from "./assets/favicon.js";
 import { FetchBuffer } from "./assets/local-fetch-buffer.js";
@@ -52,10 +55,13 @@ export class AssetHandler
 	public static graphWASMJS: Asset = new Asset("graph-wasm.js", graphWASMJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
 	public static graphWASM: Asset = new Asset("graph-wasm.wasm", Buffer.from(graphWASM), AssetType.Script, InlinePolicy.None, false, Mutability.Static);
 	public static renderWorkerJS: Asset = new Asset("graph-render-worker.js", renderWorkerJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
-	public static tinyColorJS: Asset = new Asset("tinycolor.js", tinyColorJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
-	public static pixiJS: Asset = new Asset("pixi.js", pixiJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
 	public static deferredJS: Asset = new Asset("deferred.js", deferredJS, AssetType.Script, InlinePolicy.AlwaysInline, true, Mutability.Static, LoadMethod.Defer);
+	public static themeLoadJS: Asset = new Asset("theme-load.js", themeLoadJS, AssetType.Script, InlinePolicy.AlwaysInline, true, Mutability.Static, LoadMethod.Defer);
 
+	public static tinyColorJS: Asset = new Asset("tinycolor.js", tinyColorJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static);
+	public static pixiJS: Asset = new Asset("pixi.js", pixiJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, LoadMethod.Async, 100, "https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js");
+	public static minisearchJS: Asset = new Asset("minisearch.js", minisearchJS, AssetType.Script, InlinePolicy.Auto, true, Mutability.Static, LoadMethod.Async, 100, "https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js");
+	
 	// other
 	public static favicon: Favicon = new Favicon();
 	public static externalLinkIcon: Asset;
@@ -101,13 +107,18 @@ export class AssetHandler
 
 	public static getAssetDownloads(bypassInlineCheck: boolean = false): Asset[]
 	{
-		if(!bypassInlineCheck && Settings.settings.inlineAssets) return [];
+		if(!bypassInlineCheck && Settings.inlineAssets) return [];
 
 		let downloadAssets = this.allAssets;
 
-		if (!Settings.settings.includeGraphView)
+		if (!Settings.includeGraphView)
 		{
-			downloadAssets = downloadAssets.filter(asset => ![this.graphViewJS, this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS].includes(asset));
+			downloadAssets = downloadAssets.filter(asset => ![this.graphViewJS, this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS, this.pixiJS].includes(asset));
+		}
+
+		if (!Settings.includeSearchBar)
+		{
+			downloadAssets = downloadAssets.filter(asset => ![this.minisearchJS].includes(asset));
 		}
 
 		// remove assets that are always inlined
@@ -147,7 +158,7 @@ export class AssetHandler
 
 			if (url.startsWith("data:"))
 			{
-				if (!Settings.settings.inlineAssets && makeBase64External)
+				if (!Settings.inlineAssets && makeBase64External)
 				{
 					// decode the base64 data and create an Asset from it
 					// then replace the url with the relative path to the asset
@@ -202,15 +213,15 @@ export class AssetHandler
 				continue;
 			}
 
-			if (Settings.settings.inlineAssets)
+			if (Settings.inlineAssets)
 			{
 				let base64 = childAsset.content.toString("base64");
 				content = content.replaceAll(url, `data:${mime.getType(url)};base64,${base64}`);
 			}
 			else
 			{
-				childAsset.setRelativeDownloadDirectory(childAsset.relativeDownloadDirectory.makeWebStyle(Settings.settings.makeNamesWebStyle));
-				if (Settings.settings.makeNamesWebStyle) childAsset.setFilename(Path.toWebStyle(childAsset.filename));
+				childAsset.setRelativeDownloadDirectory(childAsset.relativeDownloadDirectory.makeWebStyle(Settings.makeNamesWebStyle));
+				if (Settings.makeNamesWebStyle) childAsset.setFilename(Path.toWebStyle(childAsset.filename));
 
 				let newPath = childAsset.getAssetPath(asset.getAssetPath());
 				content = content.replaceAll(url, newPath.asString);

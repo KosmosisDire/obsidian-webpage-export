@@ -1,6 +1,7 @@
 import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
 import { Path } from "scripts/utils/path";
 import { RenderLog } from "../render-log";
+import { Utils } from "scripts/utils/utils";
 
 export class FetchBuffer extends Asset
 {
@@ -11,6 +12,9 @@ export class FetchBuffer extends Asset
     {
         super(filename, "", type, inlinePolicy, minify, mutability, loadPriority);
         this.url = url;
+		
+		let stringURL = this.url instanceof Path ? this.url.asString : this.url;
+		if (stringURL.startsWith("http")) this.cdnPath = stringURL;
     }
     
     override async load()
@@ -25,12 +29,16 @@ export class FetchBuffer extends Asset
 			this.url = this.url.makeUnixStyle().asString;
 		}
 
-		if (this.url.startsWith("http") && this.url.split(".").length <= 2) return;
+		if (this.url.startsWith("http") && (this.url.split(".").length <= 2 || this.url.split("/").length <= 2)) 
+		{
+			this.cdnPath = undefined;
+			return;
+		}
 		
 		let res: Response;
 		try
 		{
-        	res = await fetch(this.url);
+        	res = await Utils.fetch(this.url, 1000);
 		}
 		catch (e)
 		{

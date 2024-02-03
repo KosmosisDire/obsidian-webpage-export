@@ -1,4 +1,4 @@
-import { Settings } from "scripts/settings/settings";
+import { Settings, SettingsPage } from "scripts/settings/settings";
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { RenderLog } from "../render-log";
 
@@ -25,7 +25,7 @@ export class SupportedPluginStyles extends Asset
 			(
 				styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET" || 
 				styleID == "css-settings-manager" ||
-				(Settings.settings.includeSvelteCSS && this.isSvelteStylesheet(stylesheets[i]))
+				(Settings.includeSvelteCSS && this.isSvelteStylesheet(stylesheets[i]))
 			)
             {
                 RenderLog.log("Including stylesheet: " + styleID);
