@@ -99,7 +99,6 @@ export namespace MarkdownRenderer
 		if (!html) return failRender(file, "Failed to render file!");
 
 		await postProcessHTML(html);
-		// await AssetHandler.mathjaxStyles.load();
 
 		if (loneFile) MarkdownRenderer.endBatch();
 
@@ -260,7 +259,11 @@ export namespace MarkdownRenderer
 			sizerEl.appendChild(section.el);
 		}
 
-		if (addMarkdownContainer) container.appendChild(viewEl);
+		if (addMarkdownContainer) 
+		{
+			container.innerHTML = viewEl.outerHTML;
+			viewEl = container.querySelector(".markdown-preview-view") as HTMLElement;
+		}
 
 		return viewEl;
 	}

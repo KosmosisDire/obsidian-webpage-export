@@ -331,7 +331,6 @@ export class Webpage
 		if (Settings.inlineAssets) await this.inlineMedia();
 		else outlinedImages = await this.exportMedia();
 
-		
 		this.dependencies.push(...outlinedImages);
 
 		if(Settings.makeNamesWebStyle)
@@ -657,14 +656,11 @@ export class Webpage
 
 			let data = await filePath.readFileBuffer() ?? Buffer.from([]);
 			let imageDownload = new Downloadable(exportLocation.fullName, data, exportLocation.directory.makeForceFolder());
-			let imageStat = await filePath.stat;
+			let imageStat = filePath.stat;
 			if (imageStat) imageDownload.modifiedTime = imageStat.mtimeMs;
 			if (data.length == 0) RenderLog.log(filePath, "No data for file: ");
 			downloads.push(imageDownload);
 		};
-
-		console.log(this.document.body.innerHTML.length);
-		if (this.document.body.innerHTML.length < 1000) console.log(this.document);
 
 		return downloads;
 	}
