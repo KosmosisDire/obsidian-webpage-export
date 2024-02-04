@@ -9,7 +9,7 @@ export class ObsidianStyles extends Asset
 
     constructor()
     {
-        super("obsidian.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Default, 10);
+        super("obsidian.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Default, 10);
     }
 
     public static stylesFilter = 
@@ -26,7 +26,7 @@ export class ObsidianStyles extends Asset
 	"is-hidden-frameless", "obsidian-app", "show-view-header", 
 	"is-maximized", "is-translucent"];
 
-	public static stylesKeep = ["scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager"];
+	public static stylesKeep = ["scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager", "inline-embed", "background"];
     
     override async load()
     {
@@ -85,9 +85,6 @@ export class ObsidianStyles extends Asset
         }
 
 		this.modifiedTime = Date.now();
-
-        this.content = Asset.filterBodyClasses(this.content);
-        this.content = await Asset.minify(this.content, false);
         await super.load();
     }
 }

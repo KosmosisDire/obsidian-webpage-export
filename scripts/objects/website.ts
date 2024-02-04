@@ -69,10 +69,10 @@ export class Website
 		await MarkdownRenderer.beginBatch();
 
 		this.giveWarnings();
-		Website.validBodyClasses = await HTMLGeneration.getValidBodyClasses(true);
 
 		if (Settings.includeGraphView)
 		{
+			RenderLog.progress(0, 1, "Initialize Export", "Generating graph view", "var(--color-yellow)");
 			let convertableFiles = this.batchFiles.filter((file) => MarkdownRenderer.isConvertable(file.extension));
 			this.globalGraph = new GraphView();
 			await this.globalGraph.init(convertableFiles, Settings.graphMinNodeSize, Settings.graphMaxNodeSize);
@@ -80,6 +80,7 @@ export class Website
 		
 		if (Settings.includeFileTree)
 		{
+			RenderLog.progress(0, 1, "Initialize Export", "Generating file tree", "var(--color-yellow)");
 			this.fileTree = new FileTree(this.batchFiles, false, true);
 			this.fileTree.makeLinksWebStyle = Settings.makeNamesWebStyle;
 			this.fileTree.showNestingIndicator = true;
@@ -96,20 +97,26 @@ export class Website
 		}
 
 		// wipe all temporary assets and reload dynamic assets
+		RenderLog.progress(0, 1, "Initialize Export", "loading assets", "var(--color-yellow)");
 		await AssetHandler.reloadAssets();
+
+		Website.validBodyClasses = await HTMLGeneration.getValidBodyClasses(true);
 
 		if (Settings.includeGraphView)
 		{
-			this.graphDataAsset = new Asset("graph-data.js", this.globalGraph.getExportData(), AssetType.Script, InlinePolicy.Auto, true, Mutability.Temporary);
+			RenderLog.progress(1, 1, "Loading graph asset", "...", "var(--color-yellow)");
+			this.graphDataAsset = new Asset("graph-data.js", this.globalGraph.getExportData(), AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Temporary);
 			this.graphDataAsset.load();
 		}
 
 		if (Settings.includeFileTree)
 		{
+			RenderLog.progress(1, 1, "Loading file tree asset", "...", "var(--color-yellow)");
 			this.fileTreeAsset = new Asset("file-tree.html", this.fileTreeHtml, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
 			this.fileTreeAsset.load();
 		}
 
+		RenderLog.progress(1, 1, "Initializing index", "...", "var(--color-yellow)");
 		await this.index.init();
 	}
 
@@ -119,12 +126,14 @@ export class Website
 		this.destination = destination;
 		await this.initExport();
 
+		console.log("Creating website with files: ", files);
+
 		let useIncrementalExport = this.index.shouldApplyIncrementalExport();
 
 		for (let file of files)
 		{			
 			if(MarkdownRenderer.checkCancelled()) return undefined;
-			RenderLog.progress(this.progress, this.batchFiles.length, "Generating HTML", "Exporting: " + file.path, "var(--color-accent)");
+			RenderLog.progress(this.progress, this.batchFiles.length, "Generating HTML", "Exporting: " + file.path, "var(--interactive-accent)");
 			this.progress++;
 			
 			let filename = new Path(file.path).basename;
@@ -141,21 +150,23 @@ export class Website
 			this.dependencies.push(...webpage.dependencies);
 		}
 
-		this.dependencies.push(...AssetHandler.getAssetDownloads());
-		this.downloads.push(...AssetHandler.getAssetDownloads());
+		this.dependencies.push(...AssetHandler.getDownloads());
+		this.downloads.push(...AssetHandler.getDownloads());
 
 		this.filterDownloads(true);
 		this.index.build();
 		this.filterDownloads();
 		
+		console.log("Website created: ", this);
+		 
 		return this;
 	}
 	
 	private filterDownloads(onlyDuplicates: boolean = false)
 	{
 		// remove duplicates from the dependencies and downloads
-		this.dependencies = this.dependencies.filter((file, index) => this.dependencies.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath) == index);
-		this.downloads = this.downloads.filter((file, index) => this.downloads.findIndex((f) => f.relativeDownloadPath == file.relativeDownloadPath) == index);
+		this.dependencies = this.dependencies.filter((file, index) => this.dependencies.findIndex((f) => f.relativeDownloadPath.asString == file.relativeDownloadPath.asString) == index);
+		this.downloads = this.downloads.filter((file, index) => this.downloads.findIndex((f) => f.relativeDownloadPath.asString == file.relativeDownloadPath.asString) == index);
 		
 		// remove files that have not been modified since last export
 		if (!this.index.shouldApplyIncrementalExport() || onlyDuplicates) return;
@@ -164,7 +175,7 @@ export class Website
 		function filterFunction(file: Downloadable)
 		{
 			// always include .html files
-			if (file.filename.endsWith(".html")) return true;
+			if (file.filename.endsWith(".html")) return true; 
 
 			// always exclude fonts if they exist
 			if 

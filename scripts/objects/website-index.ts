@@ -83,7 +83,7 @@ export class WebsiteIndex
 	{
 		try
 		{
-			let metadataPath = this.web.destination.join(Asset.libraryPath).joinString("metadata.json");
+			let metadataPath = this.web.destination.join(AssetHandler.libraryPath).joinString("metadata.json");
 			let metadata = await metadataPath.readFileString();
 			if (metadata) return JSON.parse(metadata);
 		}
@@ -102,7 +102,7 @@ export class WebsiteIndex
 		try
 		{
 			// load current index or create a new one if it doesn't exist
-			let indexPath = this.web.destination.join(Asset.libraryPath).joinString("search-index.json");
+			let indexPath = this.web.destination.join(AssetHandler.libraryPath).joinString("search-index.json");
 			let indexJson = await indexPath.readFileString();
 			if (indexJson)
 			{
@@ -231,7 +231,7 @@ export class WebsiteIndex
 		RenderLog.progress(totalCount, totalCount, "Indexing", "Cleanup index", "var(--color-blue)");
 		this.index.vacuum();
 
-		return new Asset("search-index.json", JSON.stringify(this.index), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary);
+		return new Asset("search-index.json", JSON.stringify(this.index), AssetType.Other, InlinePolicy.Download, false, Mutability.Temporary);
 	}
 
 	public async createMetadata(): Promise<Asset | undefined>
@@ -244,7 +244,7 @@ export class WebsiteIndex
 		metadata.pluginVersion = HTMLExportPlugin.plugin.manifest.version;
 		metadata.validBodyClasses = Website.validBodyClasses;
 		metadata.files = this.allFiles;
-		metadata.mainDependencies = AssetHandler.getAssetDownloads().map((asset) => asset.relativeDownloadPath.copy.makeUnixStyle().asString);
+		metadata.mainDependencies = AssetHandler.getDownloads().map((asset) => asset.relativeDownloadPath.copy.makeUnixStyle().asString);
 		if (!metadata.fileInfo) metadata.fileInfo = {};
 
 		// progress counters
@@ -292,7 +292,7 @@ export class WebsiteIndex
 			progressCount++;
 		}
 
-		return new Asset("metadata.json", JSON.stringify(metadata, null, 2), AssetType.Other, InlinePolicy.NeverInline, false, Mutability.Temporary);
+		return new Asset("metadata.json", JSON.stringify(metadata, null, 2), AssetType.Other, InlinePolicy.Download, false, Mutability.Temporary);
 	}
 
 	public async deleteOldFiles()

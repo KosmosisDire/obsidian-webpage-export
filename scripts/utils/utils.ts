@@ -19,12 +19,22 @@ export class Utils
 		return char.repeat(length - str.length) + str;
 	}
 
-	static async fetch(url: RequestInfo | URL, timeout = 8000, options: RequestInit | undefined = undefined) 
+	static includesAny(str: string, substrings: string[]): boolean
+	{
+		for (let substring of substrings)
+		{
+			if (str.includes(substring)) return true;
+		}
+
+		return false;
+	}
+
+	static async urlAvailable(url: RequestInfo | URL) 
 	{
 		const controller = new AbortController();
-		const id = setTimeout(() => controller.abort(), timeout);
-	  
-		const response = await fetch(url, {signal: controller.signal, ...options});
+		const id = setTimeout(() => controller.abort(), 4000);
+		
+		const response = await fetch(url, {signal: controller.signal, mode: "no-cors"});
 		clearTimeout(id);
 	  
 		return response;

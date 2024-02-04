@@ -567,11 +567,7 @@ export class SettingsPage extends PluginSettingTab
 	{
 		let loadedSettings = await SettingsPage.plugin.loadData();
 		Object.assign(Settings, DEFAULT_SETTINGS, loadedSettings);
-		Settings.documentWidth = Settings.documentWidth.toString();
-		if (Settings.documentWidth === "0") Settings.documentWidth = "";
-
 		await migrateSettings();
-
 		SettingsPage.loaded = true;
 	}
 
@@ -643,7 +639,7 @@ export class SettingsPage extends PluginSettingTab
 		let hr = container.createEl("hr");
 		hr.style.marginTop = "20px";
 		hr.style.marginBottom = "20px";
-		hr.style.borderColor = "var(--color-accent)";
+		hr.style.borderColor = "var(--interactive-accent)";
 		hr.style.opacity = "0.5";
 	}
 

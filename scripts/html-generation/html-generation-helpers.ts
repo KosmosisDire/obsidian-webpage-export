@@ -61,7 +61,7 @@ export namespace HTMLGeneration
 			}
 		}
 
-		html.querySelectorAll("div:has(> :is(h1, h2, h3, h4, h5, h6)):not(.markdown-preview-sizer)").forEach(function (header: HTMLDivElement)
+		html.querySelectorAll("div:has(> :is(h1, h2, h3, h4, h5, h6):not([class^='block-language-'] *)):not(.markdown-preview-sizer)").forEach(function (header: HTMLDivElement)
 		{
 			header.classList.add("heading-wrapper");
 
@@ -153,22 +153,33 @@ export namespace HTMLGeneration
 		}
 
 		// remove duplicates
+		RenderLog.progress(1, 1, "Filtering classes", "...", "var(--color-yellow)");
 		classes = classes.filter((value, index, self) => self.indexOf(value) === index);
+		RenderLog.progress(1, 1, "Sorting classes", "...", "var(--color-yellow)");
 		classes = classes.sort();
 
+		i = 0;
 		for (var bodyClass of bodyClasses)
 		{
+			RenderLog.progress(i, bodyClasses.length, "Collecting valid classes", "Scanning: " + bodyClass, "var(--color-yellow)");
+
 			if (classes.includes(bodyClass))
 			{
 				validClasses += bodyClass + " ";
 			}
+
+			i++;
 		}
 
+		RenderLog.progress(1, 1, "Cleanup classes", "...", "var(--color-yellow)");
 		_validBodyClasses = validClasses.replace(/\s\s+/g, ' ');
 
 		// convert to array and remove duplicates
+		RenderLog.progress(1, 1, "Filter duplicate classes", _validBodyClasses.length + " classes", "var(--color-yellow)");
 		_validBodyClasses = _validBodyClasses.split(" ").filter((value, index, self) => self.indexOf(value) === index).join(" ").trim();
 		
+		RenderLog.progress(1, 1, "Classes done", "...", "var(--color-yellow)");
+
 		return _validBodyClasses;
 	}
 

@@ -8,7 +8,7 @@ export class SnippetStyles extends Asset
 
     constructor()
     {
-        super("snippets.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Async, 2);
+        super("snippets.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 2);
     }
 
     private static getEnabledSnippets(): string[]

@@ -8,7 +8,7 @@ export class MathjaxStyles extends Asset
 
     constructor()
     {
-        super("mathjax.css", "", AssetType.Style, InlinePolicy.AlwaysInline, true, Mutability.Dynamic);
+        super("mathjax.css", "", AssetType.Style, InlinePolicy.Inline, true, Mutability.Dynamic);
     }
     
     override async load()
@@ -17,7 +17,6 @@ export class MathjaxStyles extends Asset
         if (this.mathjaxStylesheet == undefined) this.mathjaxStylesheet = Array.from(document.styleSheets).find((sheet) => sheet.ownerNode.id == ("MJX-CHTML-styles"));
         if (this.mathjaxStylesheet == undefined) 
 		{
-			console.warn("Mathjax stylesheet not found");
 			return;
 		}
 		
@@ -32,8 +31,6 @@ export class MathjaxStyles extends Asset
             {
                 this.content += this.mathjaxStylesheet.cssRules[i].cssText + "\n";
             }
-
-            this.content = await Asset.minify(this.content, false);
         }
         else
         {

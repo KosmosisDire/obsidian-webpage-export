@@ -9,7 +9,7 @@ export class Favicon extends Asset
 
     constructor()
     {
-        super("favicon.png", "", AssetType.Media, InlinePolicy.Auto, true, Mutability.Dynamic, 0);
+        super("favicon.png", "", AssetType.Media, InlinePolicy.AutoHead, false, Mutability.Dynamic);
     }
     
     override async load()
@@ -28,10 +28,8 @@ export class Favicon extends Asset
         await super.load();
     }
 
-    public override getHTMLInclude(checkInlinePolicy: boolean = false): string 
+    public override getHTML(): string
     {
-		if (checkInlinePolicy && !this.shouldBeInlined()) return "";
-		
         if (Settings.inlineAssets)
         {
             return `<link rel="icon" href="data:image/png;base64,${this.content.toString("base64")}">`;

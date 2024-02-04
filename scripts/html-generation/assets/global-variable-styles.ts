@@ -7,7 +7,7 @@ export class GlobalVariableStyles extends Asset
 
     constructor()
     {
-        super("global-variable-styles.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Async, 6);
+        super("global-variable-styles.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 6);
     }
     
     override async load()

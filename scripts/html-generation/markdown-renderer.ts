@@ -106,7 +106,7 @@ export namespace MarkdownRenderer
 		return {contentEl: html, viewType: viewType};
 	}
 
-	export async function renderMarkdownInsert(markdown: string, container: HTMLElement, addMarkdownContainer: boolean = true): Promise<HTMLElement | undefined>
+	async function renderMarkdownInsert(markdown: string, container: HTMLElement, addMarkdownContainer: boolean = true): Promise<HTMLElement | undefined>
 	{
 		let loneFile = !batchStarted;
 		if (loneFile) 
@@ -227,6 +227,13 @@ export namespace MarkdownRenderer
 			// @ts-ignore
 			let success = await Utils.waitUntil(() => (section.el && section.rendered) || checkCancelled(), 2000, 1);
 			if (!success) return failRender(preview.file, "Failed to render section!");
+			
+			// @ts-ignore
+			await preview.postProcess(section, promises, renderer.frontmatter);
+			await renderer.measureSection(section);
+
+			success = await Utils.waitUntil(() => section.computed || checkCancelled(), 2000, 1);
+			if (!success) return failRender(preview.file, "Failed to compute section!");
 
 			section.el.querySelectorAll(".language-mermaid").forEach(async (element: HTMLElement) =>
 			{
@@ -241,14 +248,6 @@ export namespace MarkdownRenderer
 					bindFunctions(element.parentElement);
 				}
 			});
-
-			await renderer.measureSection(section);
-
-			success = await Utils.waitUntil(() => section.computed || checkCancelled(), 2000, 1);
-			if (!success) return failRender(preview.file, "Failed to compute section!");
-			
-			// @ts-ignore
-			await preview.postProcess(section, promises, renderer.frontmatter);
 		}
 
 		// @ts-ignore
@@ -258,7 +257,6 @@ export namespace MarkdownRenderer
 		for (let i = 0; i < sections.length; i++)
 		{
 			let section = sections[i];
-			console.log(section.el.outerHTML);
 			sizerEl.appendChild(section.el);
 		}
 
@@ -306,47 +304,6 @@ export namespace MarkdownRenderer
 				listEl.remove();
 			}
 		});
-	}
-
-	export async function filterOutMarkdown(markdown: string): Promise<string>
-	{
-		let renderComp = new Component();
-		renderComp.load();
-		let container = document.createElement("div");
-		await ObsidianRenderer.render(app, markdown, container, "/", renderComp);
-		renderComp.unload();
-		
-		//remove rendered lists and replace them with plain text
-		container.querySelectorAll("ol").forEach((listEl: HTMLElement) =>
-		{
-			if(listEl.parentElement)
-			{
-				let start = listEl.getAttribute("start") ?? "1";
-				listEl.parentElement.createSpan().outerHTML = `<p>${start}. ${listEl.innerText}</p>`;
-				listEl.remove();
-			}
-		});
-		container.querySelectorAll("ul").forEach((listEl: HTMLElement) =>
-		{
-			if(listEl.parentElement)
-			{
-				listEl.parentElement.createSpan().innerHTML = "- " + listEl.innerHTML;
-				listEl.remove();
-			}
-		});
-		container.querySelectorAll("li").forEach((listEl: HTMLElement) =>
-		{
-			if(listEl.parentElement)
-			{
-				listEl.parentElement.createSpan().innerHTML = listEl.innerHTML;
-				listEl.remove();
-			}
-		});
-
-		let text = container.textContent ?? "";
-		container.remove();
-
-		return text;
 	}
 
 	async function renderGeneric(view: any, container: HTMLElement): Promise<HTMLElement | undefined>
@@ -740,7 +697,7 @@ export namespace MarkdownRenderer
 				<div style="display: flex;height: 100%;">
 					<div style="flex-grow: 1;display: flex;flex-direction: column;align-items: center;justify-content: center;">
 						<h1 style="">Generating HTML</h1>
-						<progress class="html-render-progressbar" value="0" min="0" max="1" style="width: 300px; height: 15px; background-color: transparent; color: var(--color-accent);"></progress>
+						<progress class="html-render-progressbar" value="0" min="0" max="1" style="width: 300px; height: 15px; background-color: transparent; color: var(--interactive-accent);"></progress>
 						<span class="html-render-submessage" style="margin-block-start: 2em;"></span>
 					</div>
 					<div class="html-render-log" style="display:none; flex-direction: column; border-left: 1px solid var(--divider-color); overflow-y: auto; width: 300px; max-width: 300px; min-width: 300px;">

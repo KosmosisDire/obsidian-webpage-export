@@ -9,11 +9,13 @@ export class CustomHeadContent extends Asset
 
     constructor()
     {
-        super("custom-head-content.html", "", AssetType.HTML, InlinePolicy.Auto, false, Mutability.Dynamic);
+        super("custom-head-content.html", "", AssetType.HTML, InlinePolicy.AutoHead, false, Mutability.Dynamic);
     }
     
     override async load()
     {
+		if (!SettingsPage.loaded) return;
+
         let customHeadPath = new Path(Settings.customHeadContentPath);
 		if (customHeadPath.isEmpty)
 		{

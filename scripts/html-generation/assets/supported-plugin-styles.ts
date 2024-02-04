@@ -8,7 +8,7 @@ export class SupportedPluginStyles extends Asset
 
     constructor()
     {
-        super("supported-plugins.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Async, 5);
+        super("supported-plugins.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 5);
     }
     
     override async load()
@@ -45,7 +45,6 @@ export class SupportedPluginStyles extends Asset
         }
 
 		this.modifiedTime = Date.now();
-        this.content = await Asset.minify(this.content, false);
         await super.load();
     }
 

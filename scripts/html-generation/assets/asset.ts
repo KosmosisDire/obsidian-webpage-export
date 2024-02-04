@@ -8,94 +8,50 @@ const mime = require('mime');
 
 export enum AssetType
 {
-    Style, // css
-    Script, // js
-    Media, // images, videos, audio, etc
-    HTML, // reusable html
-    Font, // fonts
-    Other // anything else
+    Style = "style", // css
+    Script = "script", // js
+    Media = "media", // images, videos, audio, etc
+    HTML = "html", // reusable html
+    Font = "font", // fonts
+    Other = "other" // anything else
 }
 
 export enum InlinePolicy
 {
-    AlwaysInline, // this asset will always be inlined into the html file
-    NeverInline, // this asset will never be inlined into the html file, and will always be saved as a separate file 
-    Auto, // this asset will be inlined if the user has enabled inline assets, otherwise it will be saved as a separate file
-    None // this asset is only used during export and is not saved automatically
+    AutoHead = "autohead", // Fine for js, css, html, and fonts. Include data itself or reference to downloaded data into head.
+    Auto = "auto", // Does not auto insert anywhere, but chooses format on whether assets are being inlined. (will download if not inlined)
+	Inline = "inline", // Does not auto insert anywhere, but is always inline format
+    Download = "download", // Just download, does not auto insert anywhere
+	DownloadHead = "downloadhead", // Download and include ref in head
+	InlineHead = "inlinehead", // Inline raw data into head
+    None = "none" // Do nothing with this asset
 }
 
 export enum Mutability
 {
-	Static, // this asset never changes
-	Dynamic, // this asset can change
-	Temporary // this asset is created only for the current export and is deleted afterwards
+	Static = "static", // this asset never changes
+	Dynamic = "dynamic", // this asset can change
+	Temporary = "temporary", // this asset is created only for the current export and is deleted afterwards
+	Child = "child", // this asset will only change when the parent changes
 }
 
 export enum LoadMethod
 {
-	Default,
-	Async,
-	Defer
+	Default = "",
+	Async = "async",
+	Defer = "defer"
 }
 
 export class Asset extends Downloadable 
 {
-	// this path is used to generate the relative path to the images folder, likewise for the other paths
-    private static libraryFolder: Path;
-	private static mediaFolder: Path;
-	private static jsFolder: Path;
-	private static cssFolder: Path;
-	private static fontFolder: Path;
-	private static htmlFolder: Path;
-
-	public static initialize() 
-	{
-		this.libraryFolder = new Path("lib").makeUnixStyle();
-		this.mediaFolder = this.libraryFolder.joinString("media").makeUnixStyle();
-		this.jsFolder = this.libraryFolder.joinString("scripts").makeUnixStyle(); 
-		this.cssFolder = this.libraryFolder.joinString("styles").makeUnixStyle();
-		this.fontFolder = this.libraryFolder.joinString("fonts").makeUnixStyle();
-		this.htmlFolder = this.libraryFolder.joinString("html").makeUnixStyle();
-	}
-
-    public static get libraryPath(): Path
-    {
-		if (!this.libraryFolder) this.initialize();
-        return Asset.libraryFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
-    }
-    public static get mediaPath(): Path
-    {
-		if (!this.mediaFolder) this.initialize();
-		return Asset.mediaFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
-    }
-    public static get jsPath(): Path
-    {
-		if (!this.jsFolder) this.initialize();
-        return Asset.jsFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
-    }
-    public static get cssPath(): Path
-    {
-		if (!this.cssFolder) this.initialize();
-		return Asset.cssFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
-    }
-	public static get fontPath(): Path
-	{
-		if (!this.fontFolder) this.initialize();
-		return Asset.fontFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
-	}
-    public static get htmlPath(): Path
-    {
-		if (!this.htmlFolder) this.initialize();
-		return Asset.htmlFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
-    }
-
     public type: AssetType; // what type of asset is this
     public inlinePolicy: InlinePolicy; // should this asset be inlined into the html file
 	public mutability: Mutability; // can this asset change
     public minify: boolean; // should the asset be minified
     public loadMethod: LoadMethod = LoadMethod.Default; // should this asset be loaded asynchronously if possible
 	public loadPriority: number = 100; // the priority of this asset when loading 
-	public cdnPath: string | undefined = undefined; // the path to the asset on a CDN
+	public onlineURL: string | undefined = undefined; // the link to the asset online
+	public childAssets: Asset[] = []; // assets that depend on this asset
 
 	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async, loadPriority: number = 100, cdnPath: string | undefined = undefined)
     {
@@ -107,42 +63,43 @@ export class Asset extends Downloadable
         this.minify = minify;
         this.loadMethod = loadMethod;
 		this.loadPriority = loadPriority;
-		this.cdnPath = cdnPath;
+		this.onlineURL = cdnPath;
+		this.modifiedTime = Date.now();
 
-        if(mutability == Mutability.Static) 
+		switch(mutability)
 		{
-			AssetHandler.staticAssets.push(this);
-			this.modifiedTime = AssetHandler.mainJsModTime; // by default all static assets have a modified time the same as main.js
+			case Mutability.Static:
+				AssetHandler.staticAssets.push(this);
+				this.modifiedTime = AssetHandler.mainJsModTime; // by default all static assets have a modified time the same as main.js
+				break;
+			case Mutability.Dynamic:
+				AssetHandler.dynamicAssets.push(this);
+				break;
+			case Mutability.Temporary:
+				AssetHandler.temporaryAssets.push(this);
+				break;
 		}
-        else if(mutability == Mutability.Dynamic) 
-		{
-			AssetHandler.dynamicAssets.push(this);
-			this.modifiedTime = Date.now();
-		}
-		else if(mutability == Mutability.Temporary) 
-		{
-			AssetHandler.temporaryAssets.push(this);
-			this.modifiedTime = Date.now();
-		}
-        AssetHandler.allAssets.push(this);
+
+        if (mutability != Mutability.Child) AssetHandler.allAssets.push(this);
     }
 
     public async load(): Promise<void>
     {
         if (this.type == AssetType.Style && typeof this.content == "string")
         {
-            this.content = await AssetHandler.createAssetsFromStyles(this, false);
+			this.childAssets = [];
+            this.content = await AssetHandler.getStyleChildAssets(this, false);
         }
 
-        if (this.minify && this.type != AssetType.HTML && typeof this.content == "string")
+        if (this.minify)
         {
-            this.content = await Asset.minify(this.content, this.type == AssetType.Script);
+            this.minifyAsset();
         }
     }
 
     override async download(downloadDirectory: Path): Promise<void> 
     {
-        if (this.inlinePolicy == InlinePolicy.AlwaysInline) return;
+        if (this.isInlineFormat()) return;
         await super.download(downloadDirectory);
     }
 
@@ -151,17 +108,17 @@ export class Asset extends Downloadable
         switch(type)
         {
             case AssetType.Style:
-                return this.cssPath;
+                return AssetHandler.cssPath;
             case AssetType.Script:
-                return this.jsPath;
+                return AssetHandler.jsPath;
             case AssetType.Media:
-                return this.mediaPath;
+                return AssetHandler.mediaPath;
             case AssetType.HTML:
-                return this.htmlPath;
+                return AssetHandler.htmlPath;
             case AssetType.Font:
-                return this.fontPath;
+                return AssetHandler.fontPath;
             case AssetType.Other:
-                return this.libraryPath;
+                return AssetHandler.libraryPath;
         }
     }
 
@@ -183,63 +140,39 @@ export class Asset extends Downloadable
         return AssetType.Other;
     }
 
-    public static filterBodyClasses(inputCSS: string): string
-    {
-		return inputCSS; // disabled because it breaks some themes
-        // replace all selectors that change based on the body's class to always be applied
-        let matchCount = 1;
-        while (matchCount != 0)
-        {
-            let matches = Array.from(inputCSS.matchAll(/body\.(?!theme-dark|theme-light)[\w-]+/g));
-            
-            matchCount = 0;
-            matches.forEach((match) =>
-            {
-                let selector = match[0];
-                let classes = selector.split(".")[1];
-                if (selector && classes && document.body.classList.contains(classes))
-                {
-                    inputCSS = inputCSS.replace(match[0].toString(), "body:is(.theme-dark, .theme-light)");
-                    matchCount++;
-                }
-            });
-        }
-
-        return inputCSS;
-    }
-
 	/**Minify the contents of a JS or CSS string (No HTML)*/
-    static async minify(content: string, asJavascript: boolean) : Promise<string>
+    async minifyAsset()
 	{
-		let tempContent = content;
+		if (this.type == AssetType.HTML || typeof this.content != "string") return;
+		let isJS = this.type == AssetType.Script;
+		let isCSS = this.type == AssetType.Style;
+
+		let tempContent = this.content;
 
 		try
 		{
 			// add script or style tags so that minifier can minify it as html
-			if (asJavascript) tempContent = `<script>${tempContent}</script>`;
-			else tempContent = `<style>${tempContent}</style>`;
+			if (isJS) tempContent = `<script>${tempContent}</script>`;
+			if (isCSS) tempContent = `<style>${tempContent}</style>`;
 			
-			tempContent = await runMinify(tempContent, { minifyCSS: true, minifyJS: true, removeComments: true});
+			tempContent = await runMinify(tempContent, { minifyCSS: isCSS, minifyJS: isJS, removeComments: true, collapseWhitespace: true});
 
 			// remove the <script> or <style> tags
-			content = tempContent.replace("<script>", "").replace("</script>", "").replace("<style>", "").replace("</style>", "");
+			tempContent = tempContent.replace("<script>", "").replace("</script>", "").replace("<style>", "").replace("</style>", "");
+			this.content = tempContent;
 		}
 		catch (e)
 		{
-			RenderLog.warning("Unable to minify " + (asJavascript ? "JS" : "CSS") + " file.");
+			RenderLog.warning("Unable to minify " + (isJS ? "JS" : "CSS") + " file.");
+
 			// remove whitespace manually
-			content = content.replace(/[\n\r]+/g, "");
-			return content;
-		} 
-
-		if (content == "") content = " ";
-
-		return content;
+			this.content = this.content.replace(/[\n\r]+/g, "");
+		}
 	}
 
 	public getAssetPath(relativeFrom: Path | undefined = undefined): Path
 	{
-		if (this.inlinePolicy == InlinePolicy.AlwaysInline) return new Path("");
+		if (this.isInlineFormat()) return new Path("");
 		
 		if (relativeFrom == undefined) relativeFrom = Path.rootPath;
 		let toRoot = Path.getRelativePath(relativeFrom, Path.rootPath);
@@ -249,27 +182,36 @@ export class Asset extends Downloadable
 		return newPath;
 	}
 
-	protected shouldBeInlined(): boolean
+	protected isInlineFormat(): boolean
 	{
-        return !(this.inlinePolicy == InlinePolicy.None || (this.type == AssetType.HTML && this.inlinePolicy == InlinePolicy.Auto));
+		let isInlineFormat = this.inlinePolicy == InlinePolicy.Inline || 
+							 this.inlinePolicy == InlinePolicy.InlineHead || 
+							 ((this.inlinePolicy == InlinePolicy.Auto || this.inlinePolicy == InlinePolicy.AutoHead) && Settings.inlineAssets);
+
+        return isInlineFormat;
 	}
 
-    public getHTMLInclude(useCDN: boolean = false, onlyNotInline: boolean = false): string
-    {
-		if (onlyNotInline && !this.shouldBeInlined()) return "";
+	protected isRefFormat(): boolean
+	{
+		let isRefFormat = this.inlinePolicy == InlinePolicy.Download || 
+						  this.inlinePolicy == InlinePolicy.DownloadHead ||
+						  ((this.inlinePolicy == InlinePolicy.Auto || this.inlinePolicy == InlinePolicy.AutoHead) && !Settings.inlineAssets);
 
-        if((Settings.inlineAssets && this.inlinePolicy != InlinePolicy.NeverInline) || this.inlinePolicy == InlinePolicy.AlwaysInline)
+		return isRefFormat;
+	}
+
+    public getHTML(allowOnlineURLs: boolean = false): string
+    {
+        if(this.isInlineFormat())
         {
             switch(this.type)
             {
                 case AssetType.Style:
                     return `<style>${this.content}</style>`;
                 case AssetType.Script:
-					let attr = this.loadMethod == LoadMethod.Defer ? "defer" : "async";
-					if (this.loadMethod == LoadMethod.Default) attr = "";
-                    return `<script ${attr}>${this.content}</script>`;
+                    return `<script ${this.loadMethod}>${this.content}</script>`;
 				case AssetType.Media:
-					return `<${this.getTag()} src="${this.getContentBase64()}">`;
+					return `<${this.getHTMLTagName()} src="${this.getContentBase64()}"/>`;
                 case AssetType.HTML:
                     return this.content as string;
                 case AssetType.Font:
@@ -279,10 +221,10 @@ export class Asset extends Downloadable
             }
         }
         
-        if (!Settings.inlineAssets || this.inlinePolicy == InlinePolicy.NeverInline)
+        if (this.isRefFormat())
         {
             let path = this.getAssetPath().asString;
-			if (useCDN && this.cdnPath) path = this.cdnPath;
+			if (allowOnlineURLs && this.onlineURL) path = this.onlineURL;
 
 			let include = "";
 			let attr = "";
@@ -292,19 +234,16 @@ export class Asset extends Downloadable
 					include = `<link rel="stylesheet" href="${path}">`;
 					if (this.loadMethod == LoadMethod.Async)
 					{
-						include = `<link rel="preload" href="${path}" as="style" onload="this.onload=null;this.rel='stylesheet'">
-						<noscript><link rel="stylesheet" href="${path}"></noscript>`
+						include = `<link rel="preload" href="${path}" as="style" onload="this.onload=null;this.rel='stylesheet'"><noscript><link rel="stylesheet" href="${path}"></noscript>`
 					}
                     return include;
                 case AssetType.Script:
-					attr = this.loadMethod == LoadMethod.Defer ? "defer" : "async";
-					if (this.loadMethod == LoadMethod.Default) attr = "";
-					include = `<script ${attr} id="${this.relativeDownloadPath.basename + "-script"}" src="${path}" onload='this.onload=null;this.setAttribute(\"loaded\", \"true\")'></script>`;
+					include = `<script ${this.loadMethod} id="${this.relativeDownloadPath.basename + "-script"}" src="${path}" onload='this.onload=null;this.setAttribute(\"loaded\", \"true\")'></script>`;
                     return include;
                 case AssetType.Media:
 					attr = this.loadMethod == LoadMethod.Defer ? "loading='eager'" : "loading='lazy'";
 					if (this.loadMethod == LoadMethod.Default) attr = "";
-					include = `<${this.getTag()} src="${path}" ${attr} />`;
+					include = `<${this.getHTMLTagName()} src="${path}" ${attr} />`;
                     return include;
                 case AssetType.Font:
 					include = `<style>@font-face{font-family:'${this.filename}';src:url('${path}') format('woff2');}</style>`;
@@ -322,143 +261,7 @@ export class Asset extends Downloadable
 
     public static mimeToExtention(mime: string): string
     {
-        const FileMimeType: {[key: string]: string} = {
-            'audio/x-mpeg': 'mpega',
-            'application/postscript': 'ps',
-            'audio/x-aiff': 'aiff',
-            'application/x-aim': 'aim',
-            'image/x-jg': 'art',
-            'video/x-ms-asf': 'asx',
-            'audio/basic': 'ulw',
-            'video/x-msvideo': 'avi',
-            'video/x-rad-screenplay': 'avx',
-            'application/x-bcpio': 'bcpio',
-            'application/octet-stream': 'exe',
-            'image/bmp': 'dib',
-            'text/html': 'html',
-            'application/x-cdf': 'cdf',
-            'application/pkix-cert': 'cer',
-            'application/java': 'class',
-            'application/x-cpio': 'cpio',
-            'application/x-csh': 'csh',
-            'text/css': 'css',
-            'application/msword': 'doc',
-            'application/xml-dtd': 'dtd',
-            'video/x-dv': 'dv',
-            'application/x-dvi': 'dvi',
-            'application/vnd.ms-fontobject': 'eot',
-            'text/x-setext': 'etx',
-            'image/gif': 'gif',
-            'application/x-gtar': 'gtar',
-            'application/x-gzip': 'gz',
-            'application/x-hdf': 'hdf',
-            'application/mac-binhex40': 'hqx',
-            'text/x-component': 'htc',
-            'image/ief': 'ief',
-            'text/vnd.sun.j2me.app-descriptor': 'jad',
-            'application/java-archive': 'jar',
-            'text/x-java-source': 'java',
-            'application/x-java-jnlp-file': 'jnlp',
-            'image/jpeg': 'jpg',
-            'application/javascript': 'js',
-            'text/plain': 'txt',
-            'application/json': 'json',
-            'audio/midi': 'midi',
-            'application/x-latex': 'latex',
-            'audio/x-mpegurl': 'm3u',
-            'image/x-macpaint': 'pnt',
-            'text/troff': 'tr',
-            'application/mathml+xml': 'mathml',
-            'application/x-mif': 'mif',
-            'video/quicktime': 'qt',
-            'video/x-sgi-movie': 'movie',
-            'audio/mpeg': 'mpa',
-            'video/mp4': 'mp4',
-            'video/mpeg': 'mpg',
-            'video/mpeg2': 'mpv2',
-            'application/x-wais-source': 'src',
-            'application/x-netcdf': 'nc',
-            'application/oda': 'oda',
-            'application/vnd.oasis.opendocument.database': 'odb',
-            'application/vnd.oasis.opendocument.chart': 'odc',
-            'application/vnd.oasis.opendocument.formula': 'odf',
-            'application/vnd.oasis.opendocument.graphics': 'odg',
-            'application/vnd.oasis.opendocument.image': 'odi',
-            'application/vnd.oasis.opendocument.text-master': 'odm',
-            'application/vnd.oasis.opendocument.presentation': 'odp',
-            'application/vnd.oasis.opendocument.spreadsheet': 'ods',
-            'application/vnd.oasis.opendocument.text': 'odt',
-            'application/vnd.oasis.opendocument.graphics-template': 'otg',
-            'application/vnd.oasis.opendocument.text-web': 'oth',
-            'application/vnd.oasis.opendocument.presentation-template': 'otp',
-            'application/vnd.oasis.opendocument.spreadsheet-template': 'ots',
-            'application/vnd.oasis.opendocument.text-template': 'ott',
-            'application/ogg': 'ogx',
-            'video/ogg': 'ogv',
-            'audio/ogg': 'spx',
-            'application/x-font-opentype': 'otf',
-            'audio/flac': 'flac',
-            'application/annodex': 'anx',
-            'audio/annodex': 'axa',
-            'video/annodex': 'axv',
-            'application/xspf+xml': 'xspf',
-            'image/x-portable-bitmap': 'pbm',
-            'image/pict': 'pict',
-            'application/pdf': 'pdf',
-            'image/x-portable-graymap': 'pgm',
-            'audio/x-scpls': 'pls',
-            'image/png': 'png',
-            'image/x-portable-anymap': 'pnm',
-            'image/x-portable-pixmap': 'ppm',
-            'application/vnd.ms-powerpoint': 'pps',
-            'image/vnd.adobe.photoshop': 'psd',
-            'image/x-quicktime': 'qtif',
-            'image/x-cmu-raster': 'ras',
-            'application/rdf+xml': 'rdf',
-            'image/x-rgb': 'rgb',
-            'application/vnd.rn-realmedia': 'rm',
-            'application/rtf': 'rtf',
-            'text/richtext': 'rtx',
-            'application/font-sfnt': 'sfnt',
-            'application/x-sh': 'sh',
-            'application/x-shar': 'shar',
-            'application/x-stuffit': 'sit',
-            'application/x-sv4cpio': 'sv4cpio',
-            'application/x-sv4crc': 'sv4crc',
-            'image/svg+xml': 'svg',
-            'application/x-shockwave-flash': 'swf',
-            'application/x-tar': 'tar',
-            'application/x-tcl': 'tcl',
-            'application/x-tex': 'tex',
-            'application/x-texinfo': 'texinfo',
-            'image/tiff': 'tiff',
-            'text/tab-separated-values': 'tsv',
-            'application/x-font-ttf': 'ttf',
-            'application/x-ustar': 'ustar',
-            'application/voicexml+xml': 'vxml',
-            'image/x-xbitmap': 'xbm',
-            'application/xhtml+xml': 'xhtml',
-            'application/vnd.ms-excel': 'xls',
-            'application/xml': 'xsl',
-            'image/x-xpixmap': 'xpm',
-            'application/xslt+xml': 'xslt',
-            'application/vnd.mozilla.xul+xml': 'xul',
-            'image/x-xwindowdump': 'xwd',
-            'application/vnd.visio': 'vsd',
-            'audio/x-wav': 'wav',
-            'image/vnd.wap.wbmp': 'wbmp',
-            'text/vnd.wap.wml': 'wml',
-            'application/vnd.wap.wmlc': 'wmlc',
-            'text/vnd.wap.wmlsc': 'wmls',
-            'application/vnd.wap.wmlscriptc': 'wmlscriptc',
-            'video/x-ms-wmv': 'wmv',
-            'application/font-woff': 'woff',
-            'application/font-woff2': 'woff2',
-            'model/vrml': 'wrl',
-            'application/wspolicy+xml': 'wspolicy',
-            'application/x-compress': 'z',
-            'application/zip': 'zip'
-          };
+        const FileMimeType: {[key: string]: string} = {'audio/x-mpeg': 'mpega', 'application/postscript': 'ps', 'audio/x-aiff': 'aiff', 'application/x-aim': 'aim', 'image/x-jg': 'art', 'video/x-ms-asf': 'asx', 'audio/basic': 'ulw', 'video/x-msvideo': 'avi', 'video/x-rad-screenplay': 'avx', 'application/x-bcpio': 'bcpio', 'application/octet-stream': 'exe', 'image/bmp': 'dib', 'text/html': 'html', 'application/x-cdf': 'cdf', 'application/pkix-cert': 'cer', 'application/java': 'class', 'application/x-cpio': 'cpio', 'application/x-csh': 'csh', 'text/css': 'css', 'application/msword': 'doc', 'application/xml-dtd': 'dtd', 'video/x-dv': 'dv', 'application/x-dvi': 'dvi', 'application/vnd.ms-fontobject': 'eot', 'text/x-setext': 'etx', 'image/gif': 'gif', 'application/x-gtar': 'gtar', 'application/x-gzip': 'gz', 'application/x-hdf': 'hdf', 'application/mac-binhex40': 'hqx', 'text/x-component': 'htc', 'image/ief': 'ief', 'text/vnd.sun.j2me.app-descriptor': 'jad', 'application/java-archive': 'jar', 'text/x-java-source': 'java', 'application/x-java-jnlp-file': 'jnlp', 'image/jpeg': 'jpg', 'application/javascript': 'js', 'text/plain': 'txt', 'application/json': 'json', 'audio/midi': 'midi', 'application/x-latex': 'latex', 'audio/x-mpegurl': 'm3u', 'image/x-macpaint': 'pnt', 'text/troff': 'tr', 'application/mathml+xml': 'mathml', 'application/x-mif': 'mif', 'video/quicktime': 'qt', 'video/x-sgi-movie': 'movie', 'audio/mpeg': 'mpa', 'video/mp4': 'mp4', 'video/mpeg': 'mpg', 'video/mpeg2': 'mpv2', 'application/x-wais-source': 'src', 'application/x-netcdf': 'nc', 'application/oda': 'oda', 'application/vnd.oasis.opendocument.database': 'odb', 'application/vnd.oasis.opendocument.chart': 'odc', 'application/vnd.oasis.opendocument.formula': 'odf', 'application/vnd.oasis.opendocument.graphics': 'odg', 'application/vnd.oasis.opendocument.image': 'odi', 'application/vnd.oasis.opendocument.text-master': 'odm', 'application/vnd.oasis.opendocument.presentation': 'odp', 'application/vnd.oasis.opendocument.spreadsheet': 'ods', 'application/vnd.oasis.opendocument.text': 'odt', 'application/vnd.oasis.opendocument.graphics-template': 'otg', 'application/vnd.oasis.opendocument.text-web': 'oth', 'application/vnd.oasis.opendocument.presentation-template': 'otp', 'application/vnd.oasis.opendocument.spreadsheet-template': 'ots', 'application/vnd.oasis.opendocument.text-template': 'ott', 'application/ogg': 'ogx', 'video/ogg': 'ogv', 'audio/ogg': 'spx', 'application/x-font-opentype': 'otf', 'audio/flac': 'flac', 'application/annodex': 'anx', 'audio/annodex': 'axa', 'video/annodex': 'axv', 'application/xspf+xml': 'xspf', 'image/x-portable-bitmap': 'pbm', 'image/pict': 'pict', 'application/pdf': 'pdf', 'image/x-portable-graymap': 'pgm', 'audio/x-scpls': 'pls', 'image/png': 'png', 'image/x-portable-anymap': 'pnm', 'image/x-portable-pixmap': 'ppm', 'application/vnd.ms-powerpoint': 'pps', 'image/vnd.adobe.photoshop': 'psd', 'image/x-quicktime': 'qtif', 'image/x-cmu-raster': 'ras', 'application/rdf+xml': 'rdf', 'image/x-rgb': 'rgb', 'application/vnd.rn-realmedia': 'rm', 'application/rtf': 'rtf', 'text/richtext': 'rtx', 'application/font-sfnt': 'sfnt', 'application/x-sh': 'sh', 'application/x-shar': 'shar', 'application/x-stuffit': 'sit', 'application/x-sv4cpio': 'sv4cpio', 'application/x-sv4crc': 'sv4crc', 'image/svg+xml': 'svg', 'application/x-shockwave-flash': 'swf', 'application/x-tar': 'tar', 'application/x-tcl': 'tcl', 'application/x-tex': 'tex', 'application/x-texinfo': 'texinfo', 'image/tiff': 'tiff', 'text/tab-separated-values': 'tsv', 'application/x-font-ttf': 'ttf', 'application/x-ustar': 'ustar', 'application/voicexml+xml': 'vxml', 'image/x-xbitmap': 'xbm', 'application/xhtml+xml': 'xhtml', 'application/vnd.ms-excel': 'xls', 'application/xml': 'xsl', 'image/x-xpixmap': 'xpm', 'application/xslt+xml': 'xslt', 'application/vnd.mozilla.xul+xml': 'xul', 'image/x-xwindowdump': 'xwd', 'application/vnd.visio': 'vsd', 'audio/x-wav': 'wav', 'image/vnd.wap.wbmp': 'wbmp', 'text/vnd.wap.wml': 'wml', 'application/vnd.wap.wmlc': 'wmlc', 'text/vnd.wap.wmlsc': 'wmls', 'application/vnd.wap.wmlscriptc': 'wmlscriptc', 'video/x-ms-wmv': 'wmv', 'application/font-woff': 'woff', 'application/font-woff2': 'woff2', 'model/vrml': 'wrl', 'application/wspolicy+xml': 'wspolicy', 'application/x-compress': 'z', 'application/zip': 'zip'};
 
         return FileMimeType[mime] || mime.split("/")[1] || "txt";
     }
@@ -471,7 +274,7 @@ export class Asset extends Downloadable
 		return `data:${mimeType};base64,${base64}`;
 	}
 
-	private getTag(): string
+	private getHTMLTagName(): string
 	{
 		switch(this.type)
 		{
@@ -487,32 +290,7 @@ export class Asset extends Downloadable
 		
 		// media
 		let extension = this.filename.split(".").pop() || "txt";
-		const extToTag: {[key: string]: string} = {
-			"png": "img",
-			"jpg": "img",
-			"jpeg": "img",
-			"tiff": "img",
-			"bmp": "img",
-			"avif": "img",
-			"apng": "img",
-			"gif": "img",
-			"svg": "img",
-			"webp": "img",
-			"ico": "img",
-			"mp4": "video",
-			"webm": "video",
-			"ogg": "video",
-			"3gp": "video",
-			"mov": "video",
-			"mpeg": "video",
-			"mp3": "audio",
-			"wav": "audio",
-			"flac": "audio",
-			"aac": "audio",
-			"m4a": "audio",
-			"opus": "audio"
-		};
-
+		const extToTag: {[key: string]: string} = {"png": "img", "jpg": "img", "jpeg": "img", "tiff": "img", "bmp": "img", "avif": "img", "apng": "img", "gif": "img", "svg": "img", "webp": "img", "ico": "img", "mp4": "video", "webm": "video", "ogg": "video", "3gp": "video", "mov": "video", "mpeg": "video", "mp3": "audio", "wav": "audio", "flac": "audio", "aac": "audio", "m4a": "audio", "opus": "audio"};
 		return extToTag[extension] || "img";
 	}
 }

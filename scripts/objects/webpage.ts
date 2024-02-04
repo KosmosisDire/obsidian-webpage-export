@@ -164,7 +164,13 @@ export class Webpage
 	{
 		if (!this.isConvertable || !this.document) return this;
 
-		if(!(await this.getDocumentHTML())) return;
+		let webpageWithContent = await this.getDocumentHTML();
+		if(!webpageWithContent)
+		{
+			if (!MarkdownRenderer.checkCancelled()) RenderLog.error(this.source, "Failed to create webpage");
+			return;
+		}
+
 
 		let layout = this.generateWebpageLayout(this.contentElement);
 		this.document.body.appendChild(layout.container);
@@ -216,7 +222,7 @@ export class Webpage
 			// inject file tree
 			if (Settings.includeFileTree)
 			{
-				leftSidebar.createDiv().outerHTML = this.website.fileTreeAsset.getHTMLInclude();
+				leftSidebar.createDiv().outerHTML = this.website.fileTreeAsset.getHTML();
 				
 				// if the file will be opened locally, un-collapse the tree containing this file
 				if (Settings.exportPreset != ExportPreset.Website)
@@ -263,6 +269,7 @@ export class Webpage
 			this.document.querySelectorAll(".heading").forEach((headerEl: HTMLElement) =>
 			{
 				let level = parseInt(headerEl.tagName[1]);
+				if (headerEl.closest("[class^='block-language-']") || headerEl.closest(".markdown-embed.inline-embed")) level += 6;
 				let heading = headerEl.getAttribute("data-heading") ?? headerEl.innerText ?? "";
 				headers.push({heading, level, headingEl: headerEl});
 			});
@@ -323,6 +330,7 @@ export class Webpage
 		let outlinedImages : Downloadable[] = [];
 		if (Settings.inlineAssets) await this.inlineMedia();
 		else outlinedImages = await this.exportMedia();
+
 		
 		this.dependencies.push(...outlinedImages);
 
@@ -378,7 +386,7 @@ export class Webpage
 		let rightTopbarContent = this.document.createElement("div");
 		let rightCollapseIcon = this.document.createElement("div");
 
-		pageContainer.setAttribute("class", "webpage-container");
+		pageContainer.setAttribute("class", "webpage-container workspace");
 
 		leftSidebar.setAttribute("class", "sidebar-left sidebar");
 		leftSidebarHandle.setAttribute("class", "sidebar-handle");
@@ -540,18 +548,7 @@ export class Webpage
 		<meta charset="UTF-8">
 		`;
 
-		head += `\n${AssetHandler.deferredCSS.getHTMLInclude()}\n`;
-		head += `\n${AssetHandler.deferredJS.getHTMLInclude()}\n`;
-
-		let downloads = AssetHandler.getAssetDownloads(true);
-		for (let i = 0; i < downloads.length; i++)
-		{
-			let download = downloads[i];
-			let include = download.getHTMLInclude(!Settings.makeOfflineCompatible, true);
-			head += include;
-		}
-
-		head += `\n${AssetHandler.customHeadContent.getHTMLInclude()}\n`;
+		head += AssetHandler.getHeadReferences();
 
 		this.document.head.innerHTML = head;
 	}
@@ -631,7 +628,8 @@ export class Webpage
 
 		let downloads: Downloadable[] = [];
 
-		let elements = Array.from(this.document.querySelectorAll("[src]:not(head [src])"))
+		let elements = Array.from(this.document.querySelectorAll("[src]:not(head [src]):not(span)"));
+
 		for (let mediaEl of elements)
 		{
 			let rawSrc = mediaEl.getAttribute("src") ?? "";
@@ -642,15 +640,17 @@ export class Webpage
 
 			let exportLocation = filePath.copy;
 
+
 			// if the media is inside the exported folder then keep it in the same place
 			let mediaPathInExport = Path.getRelativePath(this.sourceFolder, filePath);
 			if (mediaPathInExport.asString.startsWith(".."))
 			{
 				// if path is outside of the vault, outline it into the media folder
-				exportLocation = Asset.mediaPath.joinString(filePath.fullName);
+				exportLocation = AssetHandler.mediaPath.joinString(filePath.fullName);
 			}
 
 			exportLocation.makeWebStyle(Settings.makeNamesWebStyle);
+
 			
 			mediaEl.setAttribute("src", exportLocation.asString);
 
@@ -661,6 +661,9 @@ export class Webpage
 			if (data.length == 0) RenderLog.log(filePath, "No data for file: ");
 			downloads.push(imageDownload);
 		};
+
+		console.log(this.document.body.innerHTML.length);
+		if (this.document.body.innerHTML.length < 1000) console.log(this.document);
 
 		return downloads;
 	}

@@ -10,7 +10,7 @@ export class ThemeStyles extends Asset
 
     constructor()
     {
-        super("theme.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Default, 8);
+        super("theme.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Default, 8);
     }
 
     private static async getThemeContent(themeName: string): Promise<string>
@@ -24,8 +24,6 @@ export class ThemeStyles extends Asset
             return "";
         }
         let themeContent = await themePath.readFileString() ?? "";
-
-        themeContent = this.filterBodyClasses(themeContent);
 
         return themeContent;
     }

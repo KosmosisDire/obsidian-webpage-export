@@ -229,7 +229,7 @@ input[type=checkbox].file-checkbox
 
 .tree-container .tree-item.mod-active > .tree-link > .tree-item-contents
 {
-    color: var(--color-accent);
+    color: var(--interactive-accent);
 }
 
 .tree-container .tree-link {
@@ -345,7 +345,7 @@ input[type=checkbox].file-checkbox
 
 .tree-container .tree-item.mod-active
 {
-    border-left: var(--nav-indentation-guide-width) solid var(--color-accent);
+    border-left: var(--nav-indentation-guide-width) solid var(--interactive-accent);
 }
 
 

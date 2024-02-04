@@ -80,7 +80,7 @@ export namespace RenderLog
         MarkdownRenderer._reportError(messageTitle, message, fatal);
     }
 
-    export function progress(complete: number, total:number, message: string, subMessage: string, progressColor: string = "var(--color-accent)")
+    export function progress(complete: number, total:number, message: string, subMessage: string, progressColor: string = "var(--interactive-accent)")
     {
         pullPathLogs();
 		if (total == 0)

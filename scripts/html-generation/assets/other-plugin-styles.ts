@@ -9,7 +9,7 @@ export class OtherPluginStyles extends Asset
 
     constructor()
     {
-        super("other-plugins.css", "", AssetType.Style, InlinePolicy.Auto, true, Mutability.Dynamic, LoadMethod.Async, 9);
+        super("other-plugins.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 9);
     }
     
     override async load()
@@ -35,7 +35,6 @@ export class OtherPluginStyles extends Asset
 
 		this.modifiedTime = Date.now();
         this.lastEnabledPluginStyles = Settings.includePluginCSS;
-        this.content = Asset.filterBodyClasses(this.content);
         await super.load();
     }
 }

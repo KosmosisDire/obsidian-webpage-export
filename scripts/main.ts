@@ -1,5 +1,5 @@
 // imports from obsidian API
-import { Notice, Plugin, TFile, TFolder} from 'obsidian';
+import { Notice, Plugin, TFile, TFolder, requestUrl} from 'obsidian';
 
 // modules that are part of the plugin
 import { AssetHandler } from './html-generation/asset-handler';
@@ -9,7 +9,6 @@ import { Path } from './utils/path';
 import { RenderLog } from './html-generation/render-log';
 import { ExportModal } from './settings/export-modal';
 import { MarkdownRenderer } from './html-generation/markdown-renderer';
-import { Utils } from './utils/utils';
 
 export default class HTMLExportPlugin extends Plugin
 {
@@ -18,14 +17,18 @@ export default class HTMLExportPlugin extends Plugin
 	static pluginVersion: string = "0.0.0";
 	public markdownRenderer = MarkdownRenderer;
 	public settings = Settings;
+	public assetHandler = AssetHandler;
 
 	async onload()
 	{
-		RenderLog.log("Loading webpage-html-export plugin");
-
+		console.log("Loading webpage-html-export plugin");
 		HTMLExportPlugin.plugin = this;
 		this.checkForUpdates();
 		HTMLExportPlugin.pluginVersion = this.manifest.version;
+
+		// @ts-ignore
+		window.WebpageHTMLExport = this;
+
 		this.addSettingTab(new SettingsPage(this));
 		await SettingsPage.loadSettings();
 		await AssetHandler.initialize();
@@ -112,9 +115,10 @@ export default class HTMLExportPlugin extends Plugin
 		try
 		{
 			let url = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/manifest.json?cache=" + Date.now() + "";
-			let manifestResp = await Utils.fetch(url, 5000, {cache: "no-store"});
-			if (!manifestResp.ok) throw new Error("Could not fetch manifest");
-			let manifest = JSON.parse(await manifestResp.text());
+			if (this.manifest.version.endsWith("b")) url = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/manifest-beta.json?cache=" + Date.now() + "";
+			let manifestResp = await requestUrl(url);
+			if (manifestResp.status != 200) throw new Error("Could not fetch manifest");
+			let manifest = manifestResp.json;
 			let latestVersion = manifest.version ?? currentVersion;
 			let updateAvailable = currentVersion < latestVersion;
 			let updateNote = manifest.updateNote ?? "";
