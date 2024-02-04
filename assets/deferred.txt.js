@@ -25,7 +25,7 @@ async function loadIncludes()
 				for (let child of includeChildren)
 				{
 					child.classList.add("hide");
-					child.style.transition = "opacity 0.2s ease-in-out";
+					child.style.transition = "opacity 0.5s ease-in-out";
 
 					setTimeout(() => 
 					{

@@ -428,8 +428,8 @@ export class Webpage
 		let rightSidebarScript = rightSidebar.createEl("script");
 		leftSidebarScript.setAttribute("defer", "");
 		rightSidebarScript.setAttribute("defer", "");
-		leftSidebarScript.innerHTML = `let ls = document.querySelector(".sidebar-left"); ls.classList.add("is-collapsed"); if (window.innerWidth > 768) ls.classList.remove("is-collapsed"); console.log(window.innerWidth)`;
-		rightSidebarScript.innerHTML = `let rs = document.querySelector(".sidebar-right"); rs.classList.add("is-collapsed"); if (window.innerWidth > 768) rs.classList.remove("is-collapsed"); console.log(window.innerWidth)`;
+		leftSidebarScript.innerHTML = `let ls = document.querySelector(".sidebar-left"); ls.classList.add("is-collapsed"); if (window.innerWidth > 768) ls.classList.remove("is-collapsed"); ls.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-left-width"));`;
+		rightSidebarScript.innerHTML = `let rs = document.querySelector(".sidebar-right"); rs.classList.add("is-collapsed"); if (window.innerWidth > 768) rs.classList.remove("is-collapsed"); rs.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-right-width"));`;
 
 		return {container: pageContainer, left: leftContent, leftBar: leftTopbarContent, right: rightContent, rightBar: rightTopbarContent, center: documentContainer};
 	}
@@ -546,6 +546,7 @@ export class Webpage
 		<meta id="root-path" root-path="${rootPath}/">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
 		<meta charset="UTF-8">
+		<meta name="description" content="${app.vault.getName() + " - " + titleInfo.title}">
 		`;
 
 		head += AssetHandler.getHeadReferences();

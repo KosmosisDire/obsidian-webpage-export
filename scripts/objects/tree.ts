@@ -75,6 +75,7 @@ export class Tree
 		treeHeaderEl.classList.add("tree-header");
 		sectionHeaderEl.classList.add("sidebar-section-header");
 		collapseAllEl.classList.add("clickable-icon", "collapse-tree-button");
+		collapseAllEl.setAttribute("aria-label", "Collapse All");
 		collapseAllEl.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'></svg>";
 		treeScrollAreaEl.classList.add("tree-scroll-area", "tree-item-children", "nav-folder-children");
 		let invisFirst = treeScrollAreaEl.createDiv("tree-item mod-tree-folder nav-folder mod-collapsible is-collapsed"); // invisible first item
@@ -240,10 +241,10 @@ export class TreeItem
 		return itemContentsEl;
 	}
 
-	protected async createItemLink(container: HTMLElement): Promise<{ linkEl: HTMLAnchorElement, contentEl: HTMLSpanElement }>
+	protected async createItemLink(container: HTMLElement): Promise<{ linkEl: HTMLElement, contentEl: HTMLSpanElement }>
 	{
 		if (this.tree.makeLinksWebStyle && this.href) this.href = Path.toWebStyle(this.href);
-		let itemLinkEl = container.createEl("a", { cls: "tree-link" });
+		let itemLinkEl = container.createEl(this.href ? "a" : "div", { cls: "tree-link" });
 		if (this.href) itemLinkEl.setAttribute("href", this.href);
 
 		let itemContentEl = await this.createItemContents(itemLinkEl);

@@ -117,7 +117,7 @@ export class GraphView
 		`
 		<div class="graph-view-container">
 			<div class="graph-icon graph-expand" role="button" aria-label="Expand" data-tooltip-position="top"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><line x1="7" y1="17" x2="17" y2="7"></line><polyline points="7 7 17 7 17 17"></polyline></svg></div>
-			<canvas id="graph-canvas" width="512px" height="512px"></canvas>
+			<canvas id="graph-canvas" class="hide" width="512px" height="512px"></canvas>
 		</div>
 		`
 		return graphWrapper;

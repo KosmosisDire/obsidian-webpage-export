@@ -597,6 +597,8 @@ async function initializeGraphView()
 
     setActiveDocument(new URL(window.location.href), false, false);
 
+	setTimeout(() => graphRenderer?.canvas?.classList.remove("hide"), 500);
+
     setInterval(() =>
     {
         function isHidden(el) {

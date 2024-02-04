@@ -15,8 +15,8 @@ body
 
 .sidebar {
     height: 100%;
-    min-width: var(--sidebar-width);
-    max-width: var(--sidebar-width);
+    min-width: calc(var(--sidebar-width) + var(--divider-width-hover));
+    max-width: calc(var(--sidebar-width) + var(--divider-width-hover));
     font-size: 14px;
     z-index: 10;
 
@@ -47,24 +47,27 @@ body.floating-sidebars .sidebar {
 
 .sidebar-content {
     height: 100%;
-    min-width: var(--sidebar-width);
-	top: 0;
+    min-width: calc(var(--sidebar-width) - var(--divider-width-hover));
+    top: 0;
     padding: var(--sidebar-margin);
-	padding-top: 4em;
+    padding-top: 4em;
     line-height: var(--line-height-tight);
     background-color: var(--background-secondary);
-	transition: background-color, border-right, border-left, box-shadow;
-	transition-duration: var(--color-fade-speed);
-	transition-timing-function: ease-in-out;
-
+    transition: background-color,border-right,border-left,outline-width;
+    transition-duration: var(--color-fade-speed);
+    transition-timing-function: ease-in-out;
     position: absolute;
-	display: flex;
-	flex-direction: column;
+    display: flex;
+    flex-direction: column;
+    outline-width: 0;
+    outline-color: var(--divider-color-hover);
+    outline-style: solid;
 }
 
 /* If the sidebar isn't collapsed the content should have the same width as it */
 .sidebar:not(.is-collapsed) .sidebar-content {
-    min-width: max(100%, var(--sidebar-width));
+    min-width: calc(max(100%,var(--sidebar-width)) - 3px);
+    max-width: calc(max(100%,var(--sidebar-width)) - 3px);
 }
 
 .sidebar-left .sidebar-content

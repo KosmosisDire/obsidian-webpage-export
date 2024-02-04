@@ -180,7 +180,7 @@ window.onload = async function()
 {
 	await initializePage();
 	initializePageEvents(document);
-	setActiveDocument(loadedURL, true, false);
+	setActiveDocument(loadedURL, true, false, false);
 	fullyInitialized = true;
 };
 
@@ -734,7 +734,7 @@ async function loadDocument(url, changeURL, showInTree)
 	return;
 }
 
-function setActiveDocument(url, showInTree, changeURL)
+function setActiveDocument(url, showInTree, changeURL, animate = true)
 {
 	let relativePath = getVaultRelativePath(url.href);
 	let decodedRelativePath = decodeURI(relativePath);
@@ -747,7 +747,7 @@ function setActiveDocument(url, showInTree, changeURL)
 	{
 		oldActiveTreeItem?.classList.remove("mod-active");
 		newActiveTreeItem.classList.add("mod-active");
-		if(showInTree) scrollIntoView(newActiveTreeItem, {block: "center", inline: "nearest"});
+		if(showInTree) scrollIntoView(newActiveTreeItem, {block: "center", inline: "nearest"}, animate);
 	}
 
 	// set the active file in the graph view
@@ -2335,9 +2335,9 @@ function setupThemeToggle()
 
 let flashElement = null;
 let flashAnimation = null;
-function scrollIntoView(element, options)
+function scrollIntoView(element, options, animate = true)
 {
-	setTreeCollapsed(element, false);
+	setTreeCollapsed(element, false, animate);
     
 	const flashTiming = 
 	{
@@ -2367,8 +2367,8 @@ function scrollIntoView(element, options)
 	flashElement.classList.add("scroll-highlight");
 	element.appendChild(flashElement);
 
-	if(options) flashElement.scrollIntoView(options);
-	else flashElement.scrollIntoView();
+	if(options) flashElement.scrollIntoView({ behavior: animate ? "smooth" : "auto", ...options });
+	else flashElement.scrollIntoView({ behavior: animate ? "smooth" : "auto" });
 
 	var savePos = element.style.position;
 	element.style.position = "relative";

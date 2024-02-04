@@ -682,7 +682,7 @@ a {
 
 .graph-view-wrapper
 {
-	--graph-view-max-height: 45vh;
+	--graph-view-max-height: 35vh;
 }
 
 #graph-canvas
@@ -690,6 +690,7 @@ a {
     width: 100%;
     height: 100%;
 	aspect-ratio: 1;
+	transition: opacity 0.2s ease-in-out;
 }
 
 .graph-view-container.expanded
@@ -1084,16 +1085,9 @@ input[type=search] {
 
 /*#region Sidebar Resize */
 
-.sidebar-handle:hover ~ .sidebar-content {
-	border-color: var(--divider-color-hover);
-}
-
-.sidebar-left .sidebar-handle:hover ~ .sidebar-content, .sidebar-left.is-resizing .sidebar-content {
-	box-shadow: calc(0px - var(--divider-width-hover) + 1px) 0 0 0 var(--divider-color-hover) inset;
-}
-
-.sidebar-right .sidebar-handle:hover ~ .sidebar-content, .sidebar-right.is-resizing .sidebar-content {
-	box-shadow: calc(var(--divider-width-hover) - 1px) 0 0 0 var(--divider-color-hover) inset;
+.sidebar-handle:hover ~ .sidebar-content, .sidebar.is-resizing .sidebar-content
+{
+	outline-width: var(--divider-width-hover);
 }
 
 .sidebar-handle {
