@@ -180,6 +180,7 @@ export namespace MarkdownRenderer
 
 	export async function renderMarkdownView(preview: MarkdownPreviewView, container: HTMLElement, addMarkdownContainer: boolean = true): Promise<HTMLElement | undefined>
 	{
+		preview.load();
 		// @ts-ignore
 		let renderer = preview.renderer;
 		await renderer.unfoldAllHeadings();
@@ -194,13 +195,14 @@ export namespace MarkdownRenderer
 
 		let sections = renderer.sections as {"rendered": boolean, "height": number, "computed": boolean, "lines": number, "lineStart": number, "lineEnd": number, "used": boolean, "highlightRanges": number, "level": number, "headingCollapsed": boolean, "shown": boolean, "usesFrontMatter": boolean, "html": string, "el": HTMLElement}[];
 
-		let sizerEl = container;
-		let viewEl = container;
-
+		
+		let newSizerEl = container;
+		let newMarkdownEl = container;
+		
 		if (addMarkdownContainer)
 		{
-			viewEl = document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
-			sizerEl = viewEl.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
+			newMarkdownEl = document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
+			newSizerEl = newMarkdownEl.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
 		}
 
 		// @ts-ignore
@@ -216,9 +218,9 @@ export namespace MarkdownRenderer
 			section.resetCompute();
 			// @ts-ignore
 			section.setCollapsed(false);
-			section.el.innerHTML = "";
+			section.el.empty();
 
-			sizerEl.appendChild(section.el);
+			newSizerEl.appendChild(section.el);
 
 			// @ts-ignore
 			await section.render();
@@ -226,27 +228,40 @@ export namespace MarkdownRenderer
 			// @ts-ignore
 			let success = await Utils.waitUntil(() => (section.el && section.rendered) || checkCancelled(), 2000, 1);
 			if (!success) return failRender(preview.file, "Failed to render section!");
-			
-			// @ts-ignore
-			await preview.postProcess(section, promises, renderer.frontmatter);
-			await renderer.measureSection(section);
 
+			await renderer.measureSection(section);
 			success = await Utils.waitUntil(() => section.computed || checkCancelled(), 2000, 1);
 			if (!success) return failRender(preview.file, "Failed to compute section!");
 
-			section.el.querySelectorAll(".language-mermaid").forEach(async (element: HTMLElement) =>
-			{
-				let code = element.innerText;
-				
-				// @ts-ignore
-				const { svg, bindFunctions } = await mermaid.render("mermaid-" + preview.docId + "-" + i, code);
+			// @ts-ignore
+			await preview.postProcess(section, promises, renderer.frontmatter);
+			
+			await Utils.waitUntil(() => section.el.querySelectorAll(".block-language-dataview:empty").length == 0 || checkCancelled(), 4000, 5);
+			if (checkCancelled()) return undefined;
 
-				if(element.parentElement)
+			if (section.el.querySelectorAll(".block-language-dataview:empty").length > 0)
+			{
+				RenderLog.warning(preview.file.name, "Failed to render dataviews in file: ");
+			}
+
+			// convert canvas elements into images here because otherwise they will lose their data when moved
+			let canvases = Array.from(section.el.querySelectorAll("canvas:not(.pdf-embed canvas)")) as HTMLCanvasElement[];
+			for (let canvas of canvases)
+			{
+				let data = canvas.toDataURL();
+				if (data.length < 100) 
 				{
-					element.parentElement.outerHTML = `<div class="mermaid">${svg}</div>`;
-					bindFunctions(element.parentElement);
+					RenderLog.log(canvas.outerHTML, "Failed to render plugin element in file " + preview.file.name + ":");
+					canvas.remove();
+					continue;
 				}
-			});
+
+				let image = document.createElement("img");
+				image.src = data;
+				image.style.width = canvas.style.width || "100%";
+				image.style.maxWidth = "100%";
+				canvas.replaceWith(image);
+			};
 		}
 
 		// @ts-ignore
@@ -256,16 +271,24 @@ export namespace MarkdownRenderer
 		for (let i = 0; i < sections.length; i++)
 		{
 			let section = sections[i];
-			sizerEl.appendChild(section.el);
+			newSizerEl.appendChild(section.el);
+		}
+
+		// get banner plugin banner and insert it before the sizer element
+		let banner = preview.containerEl.querySelector(".obsidian-banner-wrapper");
+		if (banner)
+		{
+			newSizerEl.before(banner);
 		}
 
 		if (addMarkdownContainer) 
 		{
-			container.innerHTML = viewEl.outerHTML;
-			viewEl = container.querySelector(".markdown-preview-view") as HTMLElement;
+			container.appendChild(newMarkdownEl.cloneNode(true) as HTMLElement);
+			newMarkdownEl.remove();
+			newMarkdownEl = container.querySelector(".markdown-preview-view") as HTMLElement;
 		}
 
-		return viewEl;
+		return newMarkdownEl;
 	}
 
 	export async function renderSingleLineMarkdown(markdown: string, container: HTMLElement)
@@ -319,8 +342,6 @@ export namespace MarkdownRenderer
 		let content = view.contentEl;
 		container.appendChild(content);
 
-		// await AssetHandler.mathjaxStyles.load();
-
 		return content;
 	}
 
@@ -345,8 +366,6 @@ export namespace MarkdownRenderer
 		sizerEl.classList.add("excalidraw-plugin");
 
 		sizerEl.appendChild(svg);
-
-		// await AssetHandler.mathjaxStyles.load();
 
 		if (checkCancelled()) return undefined;
 
@@ -490,17 +509,6 @@ export namespace MarkdownRenderer
 		html.querySelectorAll("div[class^='mk-']").forEach((element: HTMLElement) =>
 		{
 			element.remove();
-		});
-
-		// convert canvas elements into images
-		html.querySelectorAll("canvas").forEach((canvas: HTMLCanvasElement) =>
-		{
-			let image = document.createElement("img");
-			let data = canvas.toDataURL();
-			image.src = data;
-			image.style.width = canvas.style.width || "100%";
-			image.style.maxWidth = "100%";
-			canvas.replaceWith(image);
 		});
 
 		// move frontmatter before markdown-preview-sizer

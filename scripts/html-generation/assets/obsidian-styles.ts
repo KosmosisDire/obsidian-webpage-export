@@ -26,7 +26,7 @@ export class ObsidianStyles extends Asset
 	"is-hidden-frameless", "obsidian-app", "show-view-header", 
 	"is-maximized", "is-translucent"];
 
-	public static stylesKeep = ["scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager", "inline-embed", "background"];
+	public static stylesKeep = ["scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager", "inline-embed", "background", "token"];
     
     override async load()
     {

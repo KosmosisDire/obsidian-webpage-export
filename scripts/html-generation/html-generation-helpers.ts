@@ -1,8 +1,8 @@
-import { SettingsPage } from "scripts/settings/settings";
+import { EmojiStyle, Settings, SettingsPage } from "scripts/settings/settings";
 import { AssetHandler } from "./asset-handler";
 import { AssetType } from "./assets/asset";
 import { RenderLog } from "./render-log";
-import { getIcon as getObsidianIcon } from "obsidian";
+import { getIcon as getObsidianIcon, requestUrl } from "obsidian";
 import { Utils } from "scripts/utils/utils";
 import { ObsidianStyles } from "./assets/obsidian-styles";
 
@@ -211,20 +211,45 @@ export namespace HTMLGeneration
 		}
 	}
 
-	export function getIcon(iconName: string): string
+	export async function getIcon(iconName: string): Promise<string>
 	{
 		if (iconName.startsWith('emoji//'))
 		{
 			const iconCode = iconName.replace(/^emoji\/\//, '');
-			return getEmojiIcon(iconCode) ?? "�";
+			iconName = getEmojiIcon(iconCode) ?? "�";
 		}
 		else if (iconName.startsWith('lucide//'))
 		{
 			const lucideIconName = iconName.replace(/^lucide\/\//, '');
-			return getLucideIcon(lucideIconName) ?? "�";
+			iconName = getLucideIcon(lucideIconName) ?? "�";
 		}
 
-		return getLucideIcon(iconName) ?? iconName; // try and parse a plain lucide icon name
+		// if it's an emoji convert it into a twemoji
+		if ((/^\p{Emoji}/gu).test(iconName))
+		{
+			let codepoint = [...iconName].map(e => e.codePointAt(0)!.toString(16)).join(`-`);
+
+			switch (Settings.emojiStyle)
+			{
+				case EmojiStyle.Twemoji:
+					return `<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/${codepoint}.svg" class="emoji" />`;
+				case EmojiStyle.OpenMoji:
+					console.log(codepoint);
+					return `<img src="https://openmoji.org/data/color/svg/${codepoint.toUpperCase()}.svg" class="emoji" />`;
+				case EmojiStyle.OpenMojiOutline:
+					let req = await requestUrl(`https://openmoji.org/data/black/svg/${codepoint.toUpperCase()}.svg`);
+					if (req.status == 200)
+						return req.text.replaceAll(/#00+/g, "currentColor").replaceAll(`stroke-width="2"`, `stroke-width="5"`);
+			
+					return iconName;
+				case EmojiStyle.FluentUI:
+					return `<img src="https://emoji.fluent-cdn.com/1.0.0/100x100/${codepoint}.png" class="emoji" />`;
+				default:
+					return iconName;
+			}
+		}
+
+		return getLucideIcon(iconName.toLowerCase()) ?? iconName; // try and parse a plain lucide icon name
 	}
 	
 }

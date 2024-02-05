@@ -17,6 +17,15 @@ export enum ExportPreset
 	RawDocuments = "raw-documents",
 }
 
+export enum EmojiStyle
+{
+	Native = "Native",
+	Twemoji = "Twemoji",
+	OpenMoji = "OpenMoji",
+	OpenMojiOutline = "OpenMojiOutline",
+	FluentUI = "FluentUI",
+}
+
 export class Settings
 {
 	public static settingsVersion: string;
@@ -71,6 +80,7 @@ export class Settings
 
 	// icons
 	public static showDefaultTreeIcons: boolean;
+	public static emojiStyle: EmojiStyle;
 	public static defaultFileIcon: string;
 	public static defaultFolderIcon: string;
 	public static defaultMediaIcon: string;
@@ -134,6 +144,7 @@ export const DEFAULT_SETTINGS: Settings =
 
 	// icons
 	showDefaultTreeIcons: false,
+	emojiStyle: EmojiStyle.Native,
 	defaultFileIcon: "lucide//file",
 	defaultFolderIcon: "lucide//folder",
 	defaultMediaIcon: "lucide//file-image",
@@ -207,7 +218,7 @@ export class SettingsPage extends PluginSettingTab
 			SettingsPage.createToggle(section, 'Theme toggle', () => Settings.includeThemeToggle, (value) => Settings.includeThemeToggle = value);
 			SettingsPage.createToggle(section, 'Document outline / table of contents', () => Settings.includeOutline, (value) => Settings.includeOutline = value);
 			SettingsPage.createToggle(section, 'File navigation tree', () => Settings.includeFileTree, (value) => Settings.includeFileTree = value);
-
+			SettingsPage.createToggle(section, 'File & folder icons', () => Settings.showDefaultTreeIcons, (value) => Settings.showDefaultTreeIcons = value);
 			if (Settings.exportPreset == ExportPreset.Website)
 			{
 				SettingsPage.createToggle(section, 'Search bar', () => Settings.includeSearchBar, (value) => Settings.includeSearchBar = value);
@@ -304,7 +315,7 @@ export class SettingsPage extends PluginSettingTab
 
 				new Setting(graphViewSection)
 					.setName('Edge Pruning Factor')
-					.setDesc("Edges with a length below this threshold will not be rendered, however they will still contribute to the simulation. This can help large tangled graphs look more organised. Hovering over a node will still display these links.")
+					.setDesc("Edges with a length above this threshold will not be rendered, however they will still contribute to the simulation. This can help large tangled graphs look more organised. Hovering over a node will still display these links.")
 					.addSlider((slider) => slider
 						.setLimits(0, 100, 1)
 						.setValue(100 - Settings.graphEdgePruning)
@@ -317,52 +328,53 @@ export class SettingsPage extends PluginSettingTab
 					);
 			
 			}
-		}
 
-		//#endregion
-
-		//#region Custom Features
-
-		SettingsPage.createDivider(contentEl);
-		let section = SettingsPage.createSection(contentEl, 'Custom Features', 'Customizable features to change various aspects of the website');
-
-		if (Settings.exportPreset != ExportPreset.RawDocuments)
-		{
-			SettingsPage.createToggle(section, 'File & folder icons', () => Settings.showDefaultTreeIcons, (value) => Settings.showDefaultTreeIcons = value,
-							"Adds decorative file and folder icons to the file tree. This does not have to be enabled to use custom icons.");
-		}
-
-		let iconTutorial = new Setting(section)
+			let iconTutorial = new Setting(section)
 			.setName('Custom icons')
-			.setDesc("Use the 'Iconize' plugin to add custom icons to your files and folders.\nOr set the 'icon' property of your file to an emoji or lucide icon name.\n(Also supports MAKE.md plugin)")
-		iconTutorial.infoEl.style.marginBottom = "2em";
-		iconTutorial.infoEl.style.whiteSpace = "pre-wrap";
+			.setDesc("Use the 'Iconize' plugin to add custom icons to your files and folders.\nOr set the 'icon' property of your file to an emoji or lucide icon name.\n This feature does not require \"File & folder icons\" to be enbaled.\n(Also supports MAKE.md plugin)");
+			iconTutorial.infoEl.style.whiteSpace = "pre-wrap";
 
+			new Setting(section)
+				.setName('Emoji style')
+				.addDropdown((dropdown) =>
+				{
+					for (let style in EmojiStyle) dropdown.addOption(style, style);
+					dropdown.setValue(Settings.emojiStyle);
+					dropdown.onChange(async (value) => {
+						Settings.emojiStyle = value as EmojiStyle;
+						await SettingsPage.saveSettings();
+					});
+				});
 
-		SettingsPage.createText(section, 'Page title property', () => Settings.titleProperty, (value) => Settings.titleProperty = value,
+			SettingsPage.createText(section, 'Page title property', () => Settings.titleProperty, (value) => Settings.titleProperty = value,
 						"Override a specific file's title / name by defining this property in the frontmatter.");
 
-		SettingsPage.createFileInput(section, () => Settings.customHeadContentPath, (value) => Settings.customHeadContentPath = value,
-		{
-			name: 'Custom head content',
-			description: 'Custom scripts, styles, or anything else (html file)',
-			placeholder: 'Path to html formatted file...',
-			defaultPath: Path.vaultPath,
-			validation: (path) => path.validate(true, true, true, false, true, false, ["html", "htm", "txt"]),
-		});
+			SettingsPage.createFileInput(section, () => Settings.customHeadContentPath, (value) => Settings.customHeadContentPath = value,
+			{
+				name: 'Custom head content',
+				description: 'Custom scripts, styles, or anything else (html file)',
+				placeholder: 'Path to html formatted file...',
+				defaultPath: Path.vaultPath,
+				validation: (path) => path.validate(true, true, true, false, true, false, ["html", "htm", "txt"]),
+			});
 
-		SettingsPage.createFileInput(section, () => Settings.faviconPath, (value) => Settings.faviconPath = value,
-		{
-			name: 'Favicon path',
-			description: 'Add a custom favicon image to the website',
-			placeholder: 'Path to image file...',
-			defaultPath: Path.vaultPath,
-			validation: (path) => path.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]),
-		});
+			SettingsPage.createFileInput(section, () => Settings.faviconPath, (value) => Settings.faviconPath = value,
+			{
+				name: 'Favicon path',
+				description: 'Add a custom favicon image to the website',
+				placeholder: 'Path to image file...',
+				defaultPath: Path.vaultPath,
+				validation: (path) => path.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]),
+			});
+
+			
+		}
 
 		//#endregion
 
 		//#region Page Behaviors
+
+		let section;
 
 		if (Settings.exportPreset != ExportPreset.RawDocuments)
 		{
@@ -766,6 +778,9 @@ export class SettingsPage extends PluginSettingTab
 		let section = container.createEl('details');
 		let summary = section.createEl('summary');
 		summary.style.display = "block";
+		summary.style.marginLeft = "-1em";
+		section.style.paddingLeft = "2em";
+		section.style.borderLeft = "1px solid var(--interactive-accent)";
 
 		new Setting(summary)
 			.setName(name)

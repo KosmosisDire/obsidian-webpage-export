@@ -216,25 +216,25 @@ body
 	transition: opacity 0.2s ease-in-out;
 }
 
-.document-container > .markdown-preview-view {
-	padding: 1em !important;
+.document-container>.markdown-preview-view {
+    padding: 1em!important;
     padding-bottom: 30em;
     background-color: var(--background-primary);
     transition: background-color var(--color-fade-speed) ease-in-out;
-    border-top-right-radius: var(--window-radius, var(--radius-m));
-    border-top-left-radius: var(--window-radius, var(--radius-m));
-    overflow-x: hidden !important;
-    overflow-y: auto !important;
-	scrollbar-gutter: auto !important;
-	display: flex !important;
-	justify-content: center;
+    border-top-right-radius: var(--window-radius,var(--radius-m));
+    border-top-left-radius: var(--window-radius,var(--radius-m));
+    overflow-x: hidden!important;
+    overflow-y: auto!important;
+    scrollbar-gutter: auto!important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
 }
 
 .document-container>.markdown-preview-view>.markdown-preview-sizer {
     padding: 1.5em !important;
     padding-bottom: 50vh !important;
     width: 100% !important;
-    position: absolute !important;
     max-width: var(--line-width) !important;
     flex-basis: var(--line-width) !important;
     transition: background-color var(--color-fade-speed) ease-in-out;

@@ -52,10 +52,24 @@ export class Website
 		if (app.plugins.enabledPlugins.has("obsidian-excalidraw-plugin"))
 		{
 			// @ts-ignore
-			let embedMode = app.plugins.plugins['obsidian-excalidraw-plugin'].settings['previewImageType'];		
+			let embedMode = app.plugins.plugins['obsidian-excalidraw-plugin']?.settings['previewImageType'] ?? "";		
 			if (embedMode != "SVG")
 			{
 				RenderLog.warning("For Excalidraw embed support, set the embed mode to \"Native SVG\" in the Excalidraw plugin settings.");
+			}
+		}
+
+		// the plugin only supports the banner plugin above version 2.0.5
+		// @ts-ignore
+		if (app.plugins.enabledPlugins.has("obsidian-banners"))
+		{
+			// @ts-ignore
+			let bannerPlugin = app.plugins.plugins['obsidian-banners'];
+			let version = bannerPlugin?.manifest?.version ?? "0.0.0";
+			version = version.substring(0, 5);
+			if (version < "2.0.5")
+			{
+				RenderLog.warning("The Banner plugin version 2.0.5 or higher is required for full support. You have version " + version + ".");
 			}
 		}
 
@@ -237,7 +251,7 @@ export class Website
 			useDefaultIcon = true;
 		}
 
-		iconOutput = HTMLGeneration.getIcon(iconProperty ?? "");
+		iconOutput = await HTMLGeneration.getIcon(iconProperty ?? "");
 
 		// add iconize icon as frontmatter if iconize exists
 		let isUnchangedNotEmojiNotHTML = (iconProperty == iconOutput && iconOutput.length < 40) && !/\p{Emoji}/u.test(iconOutput) && !iconOutput.includes("<") && !iconOutput.includes(">");

@@ -88,11 +88,6 @@ export class OutlineTreeItem extends TreeItem
 		super.forAllChildren(func, recursive);
 	}
 
-	protected isCollapsible(): boolean 
-	{
-		return super.isCollapsible() && this.depth > 1;
-	}
-
 	protected override async createItemContents(container: HTMLElement): Promise<HTMLDivElement> 
 	{
 		let linkEl = await super.createItemContents(container);

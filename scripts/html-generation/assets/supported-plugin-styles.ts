@@ -73,7 +73,11 @@ export class SupportedPluginStyles extends Asset
 		if (styleID.contains("svelte")) return true;
 
 		let sheetContent = this.getStylesheetContent(stylesheet);
-		if (sheetContent.length < 5000 && sheetContent.contains(".svelte-")) return true;
+		let first1000 = sheetContent.substring(0, 1000);
+		if (first1000.contains(".svelte-")) 
+		{
+			return true;
+		}
 
 		return false;
 	}

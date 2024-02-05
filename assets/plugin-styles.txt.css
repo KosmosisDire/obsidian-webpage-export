@@ -89,6 +89,8 @@ body .webpage-container .tree-container .tree-scroll-area
 {
 	-webkit-mask-image-repeat: no-repeat;
 	-webkit-mask-image-position: center;
+	max-width: 1.3em;
+	height: 100%;
 }
 
 /* Skip outer wrappers around icons */
@@ -349,6 +351,7 @@ body .webpage-container .tree-container .tree-scroll-area
   font-size: 40px;
   margin-bottom: 8px;
   font-family: emoji;
+  width: fit-content;
 }
 
 .heading
@@ -481,19 +484,6 @@ div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
 .markdown-embed .markdown-embed-content .markdown-preview-view .heading-wrapper-span 
 {
     width: 100%;
-}
-
-/*#endregion */
-
-/*#region Text Wrapping */
-
-a {
-    overflow-wrap: anywhere;
-}
-
-*
-{
-    overflow-wrap: break-word;
 }
 
 /*#endregion */
@@ -1279,36 +1269,6 @@ body.theme-light .excalidraw-svg svg.light, body.theme-light .excalidraw-plugin 
 {
 	display: none;
 }
-
-.obsidian-banner-wrapper {
-    height: 300px;
-    top: 0;
-    left: 0;
-    z-index: 1;
-    max-height: 300px;
-    width: 100%;
-    position: absolute;
-}
-
-.obsidian-banner
-{
-	width: 100%;
-	height: 100%;
-}
-
-.obsidian-banner img
-{
-	object-position: 50% 50%;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.obsidian-banner-wrapper + .markdown-preview-sizer:is(.document-container>.markdown-preview-view>.markdown-preview-sizer)
-{
-	margin-top: 300px;
-}
-
 
 /*#endregion */
 

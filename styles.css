@@ -124,6 +124,8 @@ input[type=checkbox].file-checkbox
 {
 	-webkit-mask-image-repeat: no-repeat;
 	-webkit-mask-image-position: center;
+	max-width: 1.3em;
+	height: 100%;
 }
 
 /* Skip outer wrappers around icons */

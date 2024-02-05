@@ -103,13 +103,6 @@ export class Webpage
 	public async getHTML(): Promise<string>
 	{
 		let htmlString = "<!DOCTYPE html>\n" + this.document?.documentElement.outerHTML;
-
-		if (Settings.minifyHTML && htmlString.length < 1000000) // don't minify files over 1MB 
-		{
-			htmlString = await minify(htmlString, { collapseBooleanAttributes: true, minifyCSS: true, minifyJS: true, removeComments: true, removeEmptyAttributes: true, removeRedundantAttributes: true, removeScriptTypeAttributes: true, removeStyleLinkTypeAttributes: true, useShortDoctype: true });
-			// remove extra spaces
-			htmlString = htmlString.replaceAll(/>\s+</g, "><");
-		}
 		return htmlString;
 	}
 
@@ -301,17 +294,6 @@ export class Webpage
 		}
 
 		if(this.sizerElement) this.sizerElement.style.paddingBottom = "";
-
-		// move banner plugin's wrapper above the sizer
-		let bannerWrapper = this.document.querySelector(".obsidian-banner-wrapper");  
-
-		let sizerParent = bannerWrapper?.closest(".markdown-preview-sizer");
-		let contentParent = bannerWrapper?.closest(".markdown-preview-view");
-		if(sizerParent && contentParent && bannerWrapper) 
-		{
-			if(bannerWrapper) contentParent.appendChild(bannerWrapper);
-			if (sizerParent) contentParent.appendChild(sizerParent);
-		}
 
 		// convert headings from linear to trees
 		HTMLGeneration.makeHeadingsTrees(contentEl);
