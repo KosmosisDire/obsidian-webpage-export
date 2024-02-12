@@ -1,6 +1,6 @@
 # Webpage HTML Export
 
-Export single files or whole vaults as HTML websites / webpages. Its goal is to support as many features of obsidian possible including themes, dataview, graph view, and more.
+Export html from single files, canvas pages, or whole vaults. Direct access to the exported HTML files allows you to publish your digital garden anywhere. Focuses on flexibility, features, and style parity.
 
 ![image](https://github.com/KosmosisDire/obsidian-webpage-export/assets/39423700/bbb97fda-7a11-4b47-9e54-efc5e907d51f)
 
