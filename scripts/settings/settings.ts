@@ -335,7 +335,7 @@ export class SettingsPage extends PluginSettingTab
 			iconTutorial.infoEl.style.whiteSpace = "pre-wrap";
 
 			new Setting(section)
-				.setName('Emoji style')
+				.setName('Icon emoji style')
 				.addDropdown((dropdown) =>
 				{
 					for (let style in EmojiStyle) dropdown.addOption(style, style);
@@ -762,6 +762,8 @@ export class SettingsPage extends PluginSettingTab
 					{
 						await SettingsPage.saveSettings();
 					}
+
+					if (onChanged) onChanged(path);
 
 					headContentInput?.setValue(get());
 				});

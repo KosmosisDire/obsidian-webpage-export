@@ -391,7 +391,7 @@ html > body > .webpage-container > .document-container > .markdown-preview-view 
 
 .markdown-rendered .heading-wrapper:has(> .heading-children > div:last-child > :is(p,pre,table,ul,ol)) + .heading-wrapper > .heading:first-child
 {
-    margin-top: var(--heading-spacing) !important;
+    margin-top: var(--heading-spacing);
 }
 
 .heading-children
@@ -930,30 +930,6 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 
 @media print 
 {
-    /* .sidebar, .outline-container, .theme-toggle-container, .theme-toggle-container-inline, .toggle-background, .theme-toggle-input, .obsidian-banner-wrapper, .heading-after
-    {
-        display: none !important;
-    }
-
-	head, body, .webpage-container, .document-container, .markdown-preview-sizer, .markdown-preview-view, .view-content
-	{
-		display: block !important;
-		margin: 0 !important;
-		overflow: visible !important;
-		contain: none !important;
-		position: relative;
-	}
-
-	.heading-children
-	{
-		display: contents !important;
-	}
-
-	*:has(+ .heading-children)
-	{
-		padding-bottom: 1em !important;
-	}*/
-
 	body .webpage-container .document-container *
 	{ 
 		overflow: visible !important;
@@ -961,12 +937,12 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 		overflow-x: visible !important;
 	}
 
-	.sidebar
+	html body.publish :is(.sidebar, script, style, include)
 	{
 		display: none !important;
 	}
 
-	:root, html body.publish > :is(.webpage-container, .document-container, .markdown-preview-view)
+	:root, html body.publish > :is(.webpage-container, .document-container, .markdown-preview-view):not(script, style, include)
 	{
 		display: contents !important;
 	}
@@ -982,9 +958,18 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 		background: var(--background-primary);
 	}
 
-	.document-container>.markdown-preview-view>.markdown-preview-sizer
+	.document-container > .markdown-preview-view > .markdown-preview-sizer
 	{
+		padding: 0 !important;
+		margin: 0 !important;
+		padding: var(--file-margins) !important;
 		padding-bottom: 0 !important;
+	}
+
+	html body.publish :is(.document-container, .markdown-preview-view)
+	{
+		margin: 0 !important;
+		padding: 0 !important;
 	}
 
 
@@ -1075,9 +1060,9 @@ input[type=search] {
 
 /*#region Sidebar Resize */
 
-.sidebar-handle:hover ~ .sidebar-content, .sidebar.is-resizing .sidebar-content
+.sidebar .sidebar-handle:hover ~ .sidebar-content, .sidebar.is-resizing .sidebar-content
 {
-	outline-width: var(--divider-width-hover);
+	box-shadow: 0 0 0 var(--divider-width-hover) var(--divider-color-hover);
 }
 
 .sidebar-handle {
@@ -1113,7 +1098,14 @@ input[type=search] {
 	margin-right: 0.5em;
 }
 
-.tree-item-contents:has(.tree-item-icon) .tree-item-title::before
+.tree-item::before
+{
+	margin-left: calc(var(--tree-horizontal-spacing) - 0.3em);
+}
+
+.tree-item-contents:has(.tree-item-icon) .tree-item-title::before, 
+.tree-item-contents:has(.tree-item-icon)::before, 
+.tree-item:has(.tree-item-contents > .tree-item-icon)::before
 {
 	display: none !important;
 }
@@ -1268,6 +1260,11 @@ body.theme-light .excalidraw-svg svg.light, body.theme-light .excalidraw-plugin 
 .obsidian-banner .lock-button
 {
 	display: none;
+}
+
+.markdown-preview-view:has(.obsidian-banner-wrapper)
+{
+	padding-top: 0 !important;
 }
 
 /*#endregion */

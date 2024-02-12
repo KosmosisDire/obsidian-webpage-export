@@ -305,50 +305,50 @@ class GraphRenderWorker
 		this.cameraOffset = { x: (this.width / 2) - ((rect.minX + width / 2) * scale), y: (this.height / 2) - ((rect.minY + height / 2) * scale) };
 	}
 
+	sampleColor(variable) 
+	{
+		let testEl = document.createElement('div');
+		document.body.appendChild(testEl);
+		testEl.style.setProperty('display', 'none');
+		testEl.style.setProperty('color', 'var(' + variable + ')');
+
+		let col = getComputedStyle(testEl).color;
+		let opacity = getComputedStyle(testEl).opacity;
+
+		testEl.remove();
+
+		function toColorObject(str)
+		{
+			var match = str.match(/rgb?\((\d+),\s*(\d+),\s*(\d+)\)/);
+			return match ? {
+				red: parseInt(match[1]),
+				green: parseInt(match[2]),
+				blue: parseInt(match[3]),
+				alpha: 1
+			} : null
+		}
+
+		let color = toColorObject(col);
+		let alpha = parseFloat(opacity);
+		let result = 
+		{
+			a: (alpha * color?.alpha ?? 1) ?? 1,
+			rgb: (color?.red << 16 | color?.green << 8 | color?.blue) ?? 0x888888
+		};
+
+		return result;
+	};
+
     resampleColors()
     {
-        function sampleColor(variable) 
-        {
-            let testEl = document.createElement('div');
-            document.body.appendChild(testEl);
-            testEl.style.setProperty('display', 'none');
-            testEl.style.setProperty('color', 'var(' + variable + ')');
-
-            let col = getComputedStyle(testEl).color;
-            let opacity = getComputedStyle(testEl).opacity;
-
-            testEl.remove();
-
-            function toColorObject(str)
-            {
-                var match = str.match(/rgb?\((\d+),\s*(\d+),\s*(\d+)\)/);
-                return match ? {
-                    red: parseInt(match[1]),
-                    green: parseInt(match[2]),
-                    blue: parseInt(match[3]),
-                    alpha: 1
-                } : null
-            }
-
-            var color = toColorObject(col), alpha = parseFloat(opacity);
-            return isNaN(alpha) && (alpha = 1),
-            color ? {
-                a: alpha * color.alpha,
-                rgb: color.red << 16 | color.green << 8 | color.blue
-            } : {
-                a: alpha,
-                rgb: 8947848
-            }
-        };
-
         this.colors =
         {
-            background: sampleColor('--background-secondary').rgb,
-            link: sampleColor('--graph-line').rgb,
-            node: sampleColor('--graph-node').rgb,
-            outline: sampleColor('--graph-line').rgb,
-            text: sampleColor('--graph-text').rgb,
-            accent: sampleColor('--interactive-accent').rgb,
+            background: this.sampleColor('--background-secondary').rgb,
+            link: this.sampleColor('--graph-line').rgb,
+            node: this.sampleColor('--graph-node').rgb,
+            outline: this.sampleColor('--graph-line').rgb,
+            text: this.sampleColor('--graph-text').rgb,
+            accent: this.sampleColor('--interactive-accent').rgb,
         };
     }
 
@@ -597,8 +597,6 @@ async function initializeGraphView()
 
     setActiveDocument(new URL(window.location.href), false, false);
 
-	setTimeout(() => graphRenderer?.canvas?.classList.remove("hide"), 500);
-
     setInterval(() =>
     {
         function isHidden(el) {
@@ -629,11 +627,18 @@ async function initializeGraphView()
     }, 1000);
 }
 
+let firstUpdate = true;
 function updateGraph()
 {
     if(!running) return;
 
 	if (graphRenderer.canvasSidebar.classList.contains("is-collapsed")) return;
+
+	if (firstUpdate)
+	{
+		setTimeout(() => graphRenderer?.canvas?.classList.remove("hide"), 500);
+		firstUpdate = false;
+	}
 
     GraphAssembly.update(mouseWorldPos, graphRenderer.grabbedNode, graphRenderer.cameraScale);
 

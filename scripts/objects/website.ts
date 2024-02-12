@@ -216,7 +216,8 @@ export class Website
 		this.downloads = this.downloads.filter(filterFunction);
 	}
 
-	public static async getTitleAndIcon(file: TAbstractFile): Promise<{ title: string; icon: string; isDefaultIcon: boolean; isDefaultTitle: boolean }>
+	// Seperate the icon and title into seperate functions
+	public static async getTitleAndIcon(file: TAbstractFile, skipIcon:boolean = false): Promise<{ title: string; icon: string; isDefaultIcon: boolean; isDefaultTitle: boolean }>
 	{
 		const { app } = HTMLExportPlugin.plugin;
 		const { titleProperty } = Settings;
@@ -234,7 +235,7 @@ export class Website
 			title = titleFromFrontmatter ?? file.basename;
 			if (title != file.basename) isDefaultTitle = false;
 			if (title.endsWith(".excalidraw")) title = title.substring(0, title.length - 11);
-
+			
 			iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support
 			if (!iconProperty && Settings.showDefaultTreeIcons) 
 			{
@@ -244,6 +245,8 @@ export class Website
 				if (file.extension == "canvas") iconProperty = "lucide//layout-dashboard";
 			}
 		}
+
+		if (skipIcon) return { title: title, icon: "", isDefaultIcon: true, isDefaultTitle: isDefaultTitle };
 
 		if (file instanceof TFolder && Settings.showDefaultTreeIcons)
 		{

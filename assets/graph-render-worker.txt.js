@@ -116,6 +116,8 @@ if( 'function' === typeof importScripts)
     function invertColor(hex, bw) 
     {
         hex = hex.toString(16); // force conversion
+		// fill extra space up to 6 characters with 0
+		while (hex.length < 6) hex = "0" + hex;
 
         if (hex.indexOf('#') === 0) {
             hex = hex.slice(1);
@@ -125,7 +127,7 @@ if( 'function' === typeof importScripts)
             hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
         }
         if (hex.length !== 6) {
-            throw new Error('Invalid HEX color.');
+            throw new Error('Invalid HEX color:' + hex);
         }
         var r = parseInt(hex.slice(0, 2), 16),
             g = parseInt(hex.slice(2, 4), 16),

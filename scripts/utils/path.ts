@@ -639,7 +639,7 @@ export class Path
 			}
 			catch (e)
 			{
-				this.log("Could not decode path:" + path, e, "error");
+				this.log("Could not decode path:" + path, e, "info");
 			}
 		}
 
@@ -703,7 +703,7 @@ export class Path
 		}
 		catch (e)
 		{
-			this.log("Could not decode joined paths: " + joined, e, "error");
+			this.log("Could not decode joined paths: " + joined, e, "info");
 			return joined;
 		}
 	}

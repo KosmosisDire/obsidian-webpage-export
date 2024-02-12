@@ -46,6 +46,7 @@ export class ThemeStyles extends Asset
         this.content = await ThemeStyles.getThemeContent(themeName);
 		this.modifiedTime = Date.now();
         this.lastThemeName = themeName;
+
         await super.load();
     }
 }

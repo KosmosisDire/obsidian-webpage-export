@@ -518,7 +518,7 @@ export class Webpage
 
 		let rootPath = this.pathToRoot.copy.makeWebStyle(Settings.makeNamesWebStyle).asString;
 
-		let titleInfo = await Website.getTitleAndIcon(this.source);
+		let titleInfo = await Website.getTitleAndIcon(this.source, true);
 
 		let head =
 		`
@@ -632,16 +632,16 @@ export class Webpage
 			}
 
 			exportLocation.makeWebStyle(Settings.makeNamesWebStyle);
-
-			
 			mediaEl.setAttribute("src", exportLocation.asString);
 
-			let data = await filePath.readFileBuffer() ?? Buffer.from([]);
-			let imageDownload = new Downloadable(exportLocation.fullName, data, exportLocation.directory.makeForceFolder());
-			let imageStat = filePath.stat;
-			if (imageStat) imageDownload.modifiedTime = imageStat.mtimeMs;
-			if (data.length == 0) RenderLog.log(filePath, "No data for file: ");
-			downloads.push(imageDownload);
+			let data = await filePath.readFileBuffer();
+			if (data)
+			{
+				let imageDownload = new Downloadable(exportLocation.fullName, data, exportLocation.directory.makeForceFolder());
+				let imageStat = filePath.stat;
+				if (imageStat) imageDownload.modifiedTime = imageStat.mtimeMs;
+				downloads.push(imageDownload);
+			}
 		};
 
 		return downloads;

@@ -56,7 +56,7 @@ export class GraphView
 			
 			if (file)
 			{
-				let titleInfo = await Website.getTitleAndIcon(file);
+				let titleInfo = await Website.getTitleAndIcon(file, true);
 				this.labels.push(titleInfo.title);
 			}
 

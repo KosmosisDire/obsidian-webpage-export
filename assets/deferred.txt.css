@@ -53,15 +53,12 @@ body.floating-sidebars .sidebar {
     padding-top: 4em;
     line-height: var(--line-height-tight);
     background-color: var(--background-secondary);
-    transition: background-color,border-right,border-left,outline-width;
+    transition: background-color,border-right,border-left,box-shadow;
     transition-duration: var(--color-fade-speed);
     transition-timing-function: ease-in-out;
     position: absolute;
     display: flex;
     flex-direction: column;
-    outline-width: 0;
-    outline-color: var(--divider-color-hover);
-    outline-style: solid;
 }
 
 /* If the sidebar isn't collapsed the content should have the same width as it */
@@ -73,7 +70,6 @@ body.floating-sidebars .sidebar {
 .sidebar-left .sidebar-content
 {
     left: 0;
-    border-right: 1px solid var(--divider-color);
     border-top-right-radius: var(--radius-l);
 	border-bottom-right-radius: var(--radius-l);
 }
@@ -81,7 +77,6 @@ body.floating-sidebars .sidebar {
 .sidebar-right .sidebar-content 
 {
     right: 0;
-    border-left: 1px solid var(--divider-color);
 	border-top-left-radius: var(--radius-l);
 	border-bottom-left-radius: var(--radius-l);
 }
@@ -187,27 +182,21 @@ body
     flex-direction: row;
     height: 100%;
     width: 100%;
-    position: fixed;
     align-items: stretch;
     justify-content: center;
 }
 
-.document-container {
+.document-container 
+{
 	opacity: 1;
     flex-basis: 100%;
+    max-width: 100%;
     width: 100%;
     height: 100%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1em;
-    max-width: 100%;
-	padding-bottom: 0;
 	transition: opacity 0.2s ease-in-out;
-}
-
-.document-container:has(>.view-content) {
-    padding: 0;
 }
 
 .hide
@@ -216,24 +205,28 @@ body
 	transition: opacity 0.2s ease-in-out;
 }
 
-.document-container>.markdown-preview-view {
-    padding: 1em!important;
-    padding-bottom: 30em;
+.document-container > .markdown-preview-view 
+{
+	margin: var(--sidebar-margin);
+	margin-bottom: 0;
+	width: 100%;
+	width: -webkit-fill-available;
+	width: -moz-available;
+	width: fill-available;
     background-color: var(--background-primary);
     transition: background-color var(--color-fade-speed) ease-in-out;
-    border-top-right-radius: var(--window-radius,var(--radius-m));
-    border-top-left-radius: var(--window-radius,var(--radius-m));
-    overflow-x: hidden!important;
-    overflow-y: auto!important;
-    scrollbar-gutter: auto!important;
+    border-top-right-radius: var(--window-radius, var(--radius-m));
+    border-top-left-radius: var(--window-radius, var(--radius-m));
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
 }
 
-.document-container>.markdown-preview-view>.markdown-preview-sizer {
-    padding: 1.5em !important;
-    padding-bottom: 50vh !important;
+.document-container>.markdown-preview-view>.markdown-preview-sizer 
+{
+    padding-bottom: 80vh !important;
     width: 100% !important;
     max-width: var(--line-width) !important;
     flex-basis: var(--line-width) !important;

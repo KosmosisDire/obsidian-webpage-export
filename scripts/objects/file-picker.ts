@@ -51,8 +51,6 @@ export class FilePickerTree extends FileTree
 					if(child.isFolder) 
 					{
 						child.href = section.path;
-						let titleInfo = await Website.getTitleAndIcon(section);
-						child.icon = titleInfo.icon;
 						child.itemClass = "mod-tree-folder"
 					}
 					else 
@@ -68,7 +66,7 @@ export class FilePickerTree extends FileTree
 			
 			if (parent instanceof FilePickerTreeItem)
 			{
-				let titleInfo = await Website.getTitleAndIcon(file);
+				let titleInfo = await Website.getTitleAndIcon(file, true);
 				let path = new Path(file.path).makeUnixStyle();
 
 				if (file instanceof TFolder) path.makeForceFolder();
@@ -79,7 +77,6 @@ export class FilePickerTree extends FileTree
 				}
 				parent.href = path.asString;
 				parent.title = path.basename == "." ? "" : titleInfo.title;
-				parent.icon = titleInfo.icon || "";
 			}
 		}
 

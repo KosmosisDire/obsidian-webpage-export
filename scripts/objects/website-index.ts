@@ -179,7 +179,7 @@ export class WebsiteIndex
 
 				this.index.add({
 					path: webpagePath,
-					title: (await Website.getTitleAndIcon(webpage.source)).title,
+					title: (await Website.getTitleAndIcon(webpage.source, true)).title,
 					content: content,
 					tags: webpage.getTags(),
 					headers: webpage.getHeadings().map((header) => header.heading),

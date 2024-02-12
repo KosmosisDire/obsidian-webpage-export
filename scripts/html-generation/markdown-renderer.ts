@@ -178,7 +178,7 @@ export namespace MarkdownRenderer
 		return html;
 	}
 
-	export async function renderMarkdownView(preview: MarkdownPreviewView, container: HTMLElement, addMarkdownContainer: boolean = true): Promise<HTMLElement | undefined>
+	async function renderMarkdownView(preview: MarkdownPreviewView, container: HTMLElement, addMarkdownContainer: boolean = true): Promise<HTMLElement | undefined>
 	{
 		preview.load();
 		// @ts-ignore
@@ -235,13 +235,21 @@ export namespace MarkdownRenderer
 
 			// @ts-ignore
 			await preview.postProcess(section, promises, renderer.frontmatter);
-			
-			await Utils.waitUntil(() => section.el.querySelectorAll(".block-language-dataview:empty").length == 0 || checkCancelled(), 4000, 5);
-			if (checkCancelled()) return undefined;
 
-			if (section.el.querySelectorAll(".block-language-dataview:empty").length > 0)
+			// dataview support
+			// @ts-ignore
+			let dataview = app.plugins.plugins["dataview"];
+			if (dataview)
 			{
-				RenderLog.warning(preview.file.name, "Failed to render dataviews in file: ");
+				let jsKeyword = dataview.settings?.dataviewJsKeyword ?? "dataviewjs";
+				let emptyDataviewSelector = `:is(.block-language-dataview, .block-language-${jsKeyword}):not(.node-insert-event), :is(.block-language-dataview, .block-language-${jsKeyword}):empty`
+				await Utils.waitUntil(() => !section.el.querySelector(emptyDataviewSelector) || checkCancelled(), 4000, 1);
+				if (checkCancelled()) return undefined;
+
+				if (section.el.querySelector(emptyDataviewSelector))
+				{
+					RenderLog.warning("Dataview plugin elements were not rendered correctly in file " + preview.file.name + "!");
+				}
 			}
 
 			// convert canvas elements into images here because otherwise they will lose their data when moved
@@ -267,11 +275,12 @@ export namespace MarkdownRenderer
 		// @ts-ignore
 		await Promise.all(promises);
 
+		newSizerEl.empty();
 		// move all of them back in since rendering can cause some sections to move themselves out of their container
 		for (let i = 0; i < sections.length; i++)
 		{
 			let section = sections[i];
-			newSizerEl.appendChild(section.el);
+			newSizerEl.appendChild(section.el.cloneNode(true));
 		}
 
 		// get banner plugin banner and insert it before the sizer element
@@ -283,9 +292,7 @@ export namespace MarkdownRenderer
 
 		if (addMarkdownContainer) 
 		{
-			container.appendChild(newMarkdownEl.cloneNode(true) as HTMLElement);
-			newMarkdownEl.remove();
-			newMarkdownEl = container.querySelector(".markdown-preview-view") as HTMLElement;
+			container.appendChild(newMarkdownEl);
 		}
 
 		return newMarkdownEl;
@@ -303,6 +310,12 @@ export namespace MarkdownRenderer
 		{
 			renderedEl.outerHTML = renderedEl.innerHTML; // remove the outer <p> tag
 		}
+
+		// remove tags
+		container.querySelectorAll("a.tag").forEach((element: HTMLAnchorElement) =>
+		{
+			element.remove();
+		});
 		
 		//remove rendered lists and replace them with plain text
 		container.querySelectorAll("ol").forEach((listEl: HTMLElement) =>
@@ -570,6 +583,7 @@ export namespace MarkdownRenderer
 		logShowing = false;
 
 		renderLeaf = TabManager.openNewTab("window", "vertical");
+
 		// @ts-ignore
 		let parentFound = await Utils.waitUntil(() => (renderLeaf && renderLeaf.parent) || checkCancelled(), 2000, 1);
 		if (!parentFound) 
@@ -592,6 +606,9 @@ export namespace MarkdownRenderer
 			return;
 		}
 
+		// @ts-ignore
+		let renderBrowserWindow = renderLeaf.view.containerEl.win.electronWindow;
+
 		// hide the leaf so we can render without intruding on the user
 		// @ts-ignore
 		renderLeaf.parent.containerEl.style.height = "0";
@@ -608,9 +625,6 @@ export namespace MarkdownRenderer
 		renderLeaf.view.containerEl.win.resizeTo(newSize.width, newSize.height);
 		let newPosition = {x: window.screen.width / 2 - 450, y: window.screen.height - 450 - 75};
 		renderLeaf.view.containerEl.win.moveTo(newPosition.x, newPosition.y);
-
-		// @ts-ignore
-		let renderBrowserWindow = renderLeaf.view.containerEl.win.electronWindow;
 
 		if (!renderBrowserWindow) 
 		{
@@ -670,7 +684,7 @@ export namespace MarkdownRenderer
 		batchStarted = false;
 	}
 
-	export function generateLogEl(title: string, message: any, textColor: string, backgroundColor: string): HTMLElement
+	function generateLogEl(title: string, message: any, textColor: string, backgroundColor: string): HTMLElement
 	{
 		let logEl = document.createElement("div");
 		logEl.className = "html-render-log-item";
