@@ -655,9 +655,9 @@ async function loadDocument(url, changeURL, showInTree)
 
 	if (response.ok)
 	{
-		console.log("load: " + changeURL)
 		setActiveDocument(loadedURL, showInTree, changeURL);
 		let extention = getURLExtention(url);
+		if (extention == "/") extention = "html"; // if no extention assume it is html
 
 		documentType = "none";
 		embedType = "none";
@@ -739,6 +739,8 @@ function setActiveDocument(url, showInTree, changeURL, animate = true)
 	let relativePath = getVaultRelativePath(url.href);
 	let decodedRelativePath = decodeURI(relativePath);
 	let searchlessHeaderlessPath = decodedRelativePath.split("#")[0].split("?")[0].replace("\"", "\\\"").replace("\'", "\\\'");
+	
+	if (searchlessHeaderlessPath == "/" || searchlessHeaderlessPath == "") searchlessHeaderlessPath = "index.html";
 
 	// switch active file in file tree
 	let oldActiveTreeItem = document.querySelector(".file-tree .tree-item.mod-active");

@@ -354,6 +354,17 @@ body .webpage-container .tree-container .tree-scroll-area
   width: fit-content;
 }
 
+body.show-inline-title .page-title
+{
+	font-weight: var(--inline-title-weight);
+    font-size: var(--inline-title-size);
+    font-style: var(--inline-title-style);
+    font-variant: var(--inline-title-variant);
+    font-family: var(--inline-title-font);
+    letter-spacing: -0.015em;
+    color: var(--inline-title-color);
+}
+
 .heading
 {
 	position: relative;
@@ -400,6 +411,7 @@ html > body > .webpage-container > .document-container > .markdown-preview-view 
 	transition-duration: 0.2s;
 	display: flow;
 	position: relative;
+	contain: inline-size;
 }
 
 .heading-children.is-collapsed

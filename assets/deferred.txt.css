@@ -26,6 +26,7 @@ body
 	
     transition: min-width ease-in-out, max-width ease-in-out;
 	transition-duration: .2s;
+	contain: size;
 }
 
 .sidebar-left {

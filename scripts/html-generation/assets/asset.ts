@@ -89,6 +89,9 @@ export class Asset extends Downloadable
         {
 			this.childAssets = [];
             this.content = await AssetHandler.getStyleChildAssets(this, false);
+			
+			// make .inline-title apply to .page-title instead
+			this.content = this.content.replace(/\.inline-title/g, ".page-title");
         }
 
         if (this.minify)
