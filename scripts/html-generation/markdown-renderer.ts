@@ -4,6 +4,7 @@ import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
 import { RenderLog } from "./render-log";
 import { HTMLGeneration } from "./html-generation-helpers";
+import HTMLExportPlugin from "scripts/main";
 
 export namespace MarkdownRenderer
 {
@@ -59,9 +60,11 @@ export namespace MarkdownRenderer
 
 		let success = await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 1);
 		if (!success || !renderLeaf) return failRender(file, "Failed to get leaf for rendering!");
+
 		
 		try
 		{ 
+			renderLeaf.view.unload();
 			await renderLeaf.openFile(file, { active: false});
 		}
 		catch (e)
@@ -205,6 +208,8 @@ export namespace MarkdownRenderer
 			newSizerEl = newMarkdownEl.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
 		}
 
+		preview.containerEl = newSizerEl;
+
 		// @ts-ignore
 		let promises: Promise<any>[] = [];
 		let foldedCallouts: HTMLElement[] = [];
@@ -269,6 +274,10 @@ export namespace MarkdownRenderer
 				RenderLog.warning("Transclusions were not rendered correctly in file " + preview.file.name + "!");
 			}
 
+			// wait for generic plugins
+			await Utils.waitUntil(() => !section.el.querySelector("[class^='block-language-']:empty") || checkCancelled(), 500, 1);
+			if (checkCancelled()) return undefined;
+
 			// convert canvas elements into images here because otherwise they will lose their data when moved
 			let canvases = Array.from(section.el.querySelectorAll("canvas:not(.pdf-embed canvas)")) as HTMLCanvasElement[];
 			for (let canvas of canvases)
@@ -276,7 +285,7 @@ export namespace MarkdownRenderer
 				let data = canvas.toDataURL();
 				if (data.length < 100) 
 				{
-					RenderLog.log(canvas.outerHTML, "Failed to render plugin element in file " + preview.file.name + ":");
+					RenderLog.log(canvas.outerHTML, "Failed to render canvas based plugin element in file " + preview.file.name + ":");
 					canvas.remove();
 					continue;
 				}
@@ -287,6 +296,12 @@ export namespace MarkdownRenderer
 				image.style.maxWidth = "100%";
 				canvas.replaceWith(image);
 			};
+			
+			let invalidPluginBlocks = Array.from(section.el.querySelectorAll("[class^='block-language-']:empty"));
+			for (let block of invalidPluginBlocks)
+			{
+				RenderLog.warning(`Plugin element ${block.className || block.parentElement?.className || "unknown"} from ${preview.file.name} not rendered correctly!`);
+			}
 		}
 
 		// @ts-ignore
