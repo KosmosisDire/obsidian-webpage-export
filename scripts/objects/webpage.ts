@@ -490,6 +490,7 @@ export class Webpage
 		// Create h1 inline title
 		let titleEl = this.document.createElement("h1");
 		titleEl.classList.add("page-title", "heading");
+		if (this.document?.body.classList.contains("show-inline-title")) titleEl.classList.add("inline-title");
 		titleEl.id = title;
 
 		let pageIcon = undefined;

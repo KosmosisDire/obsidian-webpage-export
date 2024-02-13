@@ -207,7 +207,7 @@ export namespace MarkdownRenderer
 
 		// @ts-ignore
 		let promises: Promise<any>[] = [];
-
+		let foldedCallouts: HTMLElement[] = [];
 		for (let i = 0; i < sections.length; i++)
 		{
 			let section = sections[i];
@@ -236,6 +236,14 @@ export namespace MarkdownRenderer
 			// @ts-ignore
 			await preview.postProcess(section, promises, renderer.frontmatter);
 
+			// unfold callouts
+			let folded = Array.from(section.el.querySelectorAll(".callout-content[style*='display: none']")) as HTMLElement[];
+			for (let callout of folded)
+			{
+				callout.style.display = "";
+			}
+			foldedCallouts.push(...folded);
+
 			// dataview support
 			// @ts-ignore
 			let dataview = app.plugins.plugins["dataview"];
@@ -250,6 +258,15 @@ export namespace MarkdownRenderer
 				{
 					RenderLog.warning("Dataview plugin elements were not rendered correctly in file " + preview.file.name + "!");
 				}
+			}
+
+			// wait for transclusions
+			await Utils.waitUntil(() => !section.el.querySelector(".markdown-preview-sizer:empty") || checkCancelled(), 500, 1);
+			if (checkCancelled()) return undefined;
+
+			if (section.el.querySelector(".markdown-preview-sizer:empty"))
+			{
+				RenderLog.warning("Transclusions were not rendered correctly in file " + preview.file.name + "!");
 			}
 
 			// convert canvas elements into images here because otherwise they will lose their data when moved
@@ -274,6 +291,12 @@ export namespace MarkdownRenderer
 
 		// @ts-ignore
 		await Promise.all(promises);
+
+		// refold callouts
+		for (let callout of foldedCallouts)
+		{
+			callout.style.display = "none";
+		}
 
 		newSizerEl.empty();
 		// move all of them back in since rendering can cause some sections to move themselves out of their container
@@ -463,6 +486,9 @@ export namespace MarkdownRenderer
 			let span = document.body.createEl("span");
 			span.innerHTML = element.innerHTML;
 			element.replaceWith(span);
+			span.style.display = "block";
+			span.style.marginBlockStart = "var(--p-spacing)";
+			span.style.marginBlockEnd = "var(--p-spacing)";
 		});
 
 		// encode all text input values into attributes

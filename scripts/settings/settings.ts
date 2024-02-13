@@ -331,7 +331,10 @@ export class SettingsPage extends PluginSettingTab
 
 			let iconTutorial = new Setting(section)
 			.setName('Custom icons')
-			.setDesc("Use the 'Iconize' plugin to add custom icons to your files and folders.\nOr set the 'icon' property of your file to an emoji or lucide icon name.\n This feature does not require \"File & folder icons\" to be enbaled.\n(Also supports MAKE.md plugin)");
+			.setDesc(
+`Use the 'Iconize' plugin to add custom icons to your files and folders.
+Or set the 'icon' property of your file to an emoji or lucide icon name.
+This feature does not require "File & folder icons" to be enbaled.`);
 			iconTutorial.infoEl.style.whiteSpace = "pre-wrap";
 
 			new Setting(section)

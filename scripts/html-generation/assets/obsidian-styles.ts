@@ -24,10 +24,23 @@ export class ObsidianStyles extends Asset
 	"progress", "native", "aria", "tooltip", 
 	"drop", "sidebar", "mod-windows", "is-frameless", 
 	"is-hidden-frameless", "obsidian-app", "show-view-header", 
-	"is-maximized", "is-translucent"];
+	"is-maximized", "is-translucent", "community"];
 
 	public static stylesKeep = ["scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager", "inline-embed", "background", "token"];
     
+	removeSelectors(css: string, containing: string): string
+	{
+		let regex = new RegExp(`([\w :*+~\\-\\.\\>\\[\\]()"=]*${containing}[\\w\\s:*+~\\-\\.\\>\\[\\]()"=]+)(,|{)`, "gm");
+		let toRemove = [...css.matchAll(regex)];
+		for (let match of toRemove)
+		{
+			css = css.replace(match[1], "");
+		}
+		css = css.trim();
+		return css;
+	}
+
+
     override async load()
     {
         this.content = "";
@@ -51,7 +64,8 @@ export class ObsidianStyles extends Asset
             if (rule)
             {
                 let skip = false;
-                let selector = rule.cssText.split("{")[0];
+				let cssText = rule.cssText;
+                let selector = cssText.split("{")[0];
 
                 for (let keep of ObsidianStyles.stylesKeep) 
                 {
@@ -75,10 +89,11 @@ export class ObsidianStyles extends Asset
                 }
 
                 if (skip) continue;
-                
-                let cssText = rule.cssText + "\n";
+				
+				cssText = this.removeSelectors(cssText, "\\.cm-");
+				if(cssText.startsWith("{")) continue; // skip empty rules
 
-                
+				cssText += "\n";
                 
                 this.content += cssText;
             }
