@@ -26,6 +26,16 @@ Install from Obsidian Community Plugins: [Open in Obsidian](https://obsidian.md/
 2. Unzip into: `{VaultFolder}/.obsidian/plugins/`
 3. Reload obsidian
 
+### Beta Installation
+
+Either follow the instructions above for a beta release, or:
+
+1. Install the [BRAT plugin](https://obsidian.md/plugins?id=obsidian42-brat)
+2. Open the brat settings
+3. Select add beta plugin
+4. Enter `https://github.com/KosmosisDire/obsidian-webpage-export` as the repository.
+5. Select Add Plugin
+
 ## Using the Plugin
 - To export a single file or folder, right click on the file or open the more-options menu for the file and select "Export to HTML".
 - If you are exporting to a website please choose the "Multi-File Website" preset.
