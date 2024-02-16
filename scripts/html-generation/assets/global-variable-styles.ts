@@ -1,3 +1,4 @@
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { Settings, SettingsPage } from "scripts/settings/settings";
 
@@ -10,7 +11,7 @@ export class GlobalVariableStyles extends Asset
         super("global-variable-styles.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 6);
     }
     
-    override async load()
+    override async load(options: MarkdownWebpageRendererAPIOptions)
     {
         let bodyStyle = (document.body.getAttribute("style") ?? "").replaceAll("\"", "'").replaceAll("; ", " !important;\n\t");
 		let lineWidth = Settings.documentWidth || "40em";
@@ -37,6 +38,6 @@ export class GlobalVariableStyles extends Asset
 
 		this.modifiedTime = Date.now();
 
-        await super.load();
+        await super.load(options);
     }
 }

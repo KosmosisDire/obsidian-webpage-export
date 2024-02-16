@@ -2,6 +2,7 @@ import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset"
 import { Path } from "scripts/utils/path";
 import { ExportLog } from "../render-log";
 import { AssetHandler } from "../asset-handler";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class ThemeStyles extends Asset
 {
@@ -35,7 +36,7 @@ export class ThemeStyles extends Asset
         return (themeName ?? "") == "" ? "Default" : themeName;
     }
     
-    override async load()
+    override async load(options: MarkdownWebpageRendererAPIOptions)
     {
         let themeName = ThemeStyles.getCurrentThemeName();
         if (themeName == this.lastThemeName) 
@@ -47,6 +48,6 @@ export class ThemeStyles extends Asset
 		this.modifiedTime = Date.now();
         this.lastThemeName = themeName;
 
-        await super.load();
+        await super.load(options);
     }
 }

@@ -5,6 +5,7 @@ import { RequestUrlResponse, requestUrl } from "obsidian";
 import { Utils } from "scripts/utils/utils";
 import { fileTypeFromBuffer } from "file-type";
 import { Settings } from "scripts/settings/settings";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class FetchBuffer extends Asset
 {
@@ -21,7 +22,7 @@ export class FetchBuffer extends Asset
 		if (stringURL.startsWith("http")) this.onlineURL = stringURL;
     }
     
-    override async load()
+    override async load(options: MarkdownWebpageRendererAPIOptions)
     {
 
 		if (this.url instanceof Path) 
@@ -34,7 +35,7 @@ export class FetchBuffer extends Asset
 			this.url = this.url.makeUnixStyle().asString;
 		}
 
-		if (!Settings.makeOfflineCompatible && this.url.startsWith("http")) return;
+		if (options.offlineResources === false && this.url.startsWith("http")) return;
 
 		if (this.url.startsWith("http") && (this.url.split(".").length <= 2 || this.url.split("/").length <= 2)) 
 		{
@@ -101,6 +102,6 @@ export class FetchBuffer extends Asset
 			}	
 		}
 
-        await super.load();
+        await super.load(options);
     }
 }

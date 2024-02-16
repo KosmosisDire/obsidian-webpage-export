@@ -1,6 +1,7 @@
 import { Settings, SettingsPage } from "scripts/settings/settings";
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { ExportLog } from "../render-log";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class SupportedPluginStyles extends Asset
 {
@@ -11,7 +12,7 @@ export class SupportedPluginStyles extends Asset
         super("supported-plugins.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 5);
     }
     
-    override async load()
+    override async load(options: MarkdownWebpageRendererAPIOptions)
     {
         this.content = "";
         let stylesheets = document.styleSheets;
@@ -45,7 +46,7 @@ export class SupportedPluginStyles extends Asset
         }
 
 		this.modifiedTime = Date.now();
-        await super.load();
+        await super.load(options);
     }
 
 	getStylesheetContent(stylesheet: CSSStyleSheet): string

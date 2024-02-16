@@ -1,6 +1,7 @@
 import { Settings, SettingsPage } from "scripts/settings/settings";
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { AssetHandler } from "../asset-handler";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class OtherPluginStyles extends Asset
 {
@@ -12,7 +13,7 @@ export class OtherPluginStyles extends Asset
         super("other-plugins.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 9);
     }
     
-    override async load()
+    override async load(options: MarkdownWebpageRendererAPIOptions)
     {
         if(this.lastEnabledPluginStyles == Settings.includePluginCSS) return;
 
@@ -35,6 +36,6 @@ export class OtherPluginStyles extends Asset
 
 		this.modifiedTime = Date.now();
         this.lastEnabledPluginStyles = Settings.includePluginCSS;
-        await super.load();
+        await super.load(options);
     }
 }

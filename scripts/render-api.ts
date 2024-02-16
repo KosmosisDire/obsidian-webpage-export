@@ -104,8 +104,8 @@ export namespace MarkdownRendererAPI
 		options = Object.assign(new MarkdownRendererAPIOptions(), options);
 		let html = await _MarkdownRendererInternal.renderMarkdown(markdown, options);
 		if (!html) return;
-		if(options.postProcess === true) await _MarkdownRendererInternal.postProcessHTML(html, options);
-		if (options.makeHeadersTrees === true) makeHeadingsTrees(html);
+		if(options.postProcess) await _MarkdownRendererInternal.postProcessHTML(html, options);
+		if (options.makeHeadersTrees) makeHeadingsTrees(html);
 		let text = html.innerHTML;
 		if (!options.container) html.remove();
 		return text;
@@ -116,8 +116,8 @@ export namespace MarkdownRendererAPI
 		options = Object.assign(new MarkdownRendererAPIOptions(), options);
 		let html = await _MarkdownRendererInternal.renderMarkdown(markdown, options);
 		if (!html) return;
-		if(options.postProcess === true) await _MarkdownRendererInternal.postProcessHTML(html, options);
-		if (options.makeHeadersTrees === true) makeHeadingsTrees(html);
+		if(options.postProcess) await _MarkdownRendererInternal.postProcessHTML(html, options);
+		if (options.makeHeadersTrees) makeHeadingsTrees(html);
 		return html;
 	}
 
@@ -146,8 +146,8 @@ export namespace MarkdownRendererAPI
 		if (!result) return;
 
 
-		if (options.postProcess === true) await _MarkdownRendererInternal.postProcessHTML(result.contentEl, options);
-		if (options.makeHeadersTrees === true) makeHeadingsTrees(result.contentEl);
+		if (options.postProcess) await _MarkdownRendererInternal.postProcessHTML(result.contentEl, options);
+		if (options.makeHeadersTrees) makeHeadingsTrees(result.contentEl);
 
 
 		return result;
@@ -801,7 +801,7 @@ export namespace _MarkdownRendererInternal
 		}
 	}
 
-    export async function beginBatch(options: MarkdownRendererAPIOptions)
+    export async function beginBatch(options: MarkdownRendererAPIOptions | MarkdownWebpageRendererAPIOptions)
 	{
 		if(batchStarted) return;
 

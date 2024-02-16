@@ -13,7 +13,7 @@ import { MarkdownRendererAPI } from "scripts/render-api";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 const { minify } = require('html-minifier-terser');
 
-export class Webpage
+export class Webpage extends Downloadable
 {
 	public website: Website | undefined;
 	
@@ -70,29 +70,35 @@ export class Webpage
 	{
 		if(destination && !destination.isAbsolute) throw new Error("exportToFolder must be an absolute path" + destination.asString);
 
+		let isConvertable = MarkdownRendererAPI.isConvertable(file.extension);
+		let name = fileName ?? file.basename;
+		name += isConvertable ? ".html" : "." + file.extension;
+		super(name, "", destination ?? Path.vaultPath.joinString("Export"));
+
+		this.isConvertable = isConvertable;
+		this.name = name;
+
 		options = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
 		this.exportOptions = options;
 		this.source = file;
 		this.website = website ?? undefined;
 		this.destinationFolder = destination?.directory ?? undefined;
 		this.sourceFolder = new Path(file.path).directory;
-		this.name = fileName ?? file.basename;
 
-		this.isConvertable = MarkdownRendererAPI.isConvertable(file.extension);
-		this.name += this.isConvertable ? ".html" : "." + file.extension;
 		if (this.isConvertable) this.document = document.implementation.createHTMLDocument(this.source.basename);
 
 		let parentPath = file.parent?.path ?? "/";
 		if (parentPath.trim() == "/" || parentPath.trim() == "\\") parentPath = "";
 		this.exportPath = Path.joinStrings(parentPath, this.name);
-		if (this.exportOptions.flattenExportPaths === true) this.exportPath.reparse(this.name);
+		if (this.exportOptions.flattenExportPaths) this.exportPath.reparse(this.name);
 		if (this.destinationFolder) this.exportPath.setWorkingDirectory(this.destinationFolder.asString);
 
-		if (this.exportOptions.webStylePaths === true)
+		if (this.exportOptions.webStylePaths)
 		{
 			this.name = Path.toWebStyle(this.name);
 			this.exportPath.makeWebStyle();
 		}
+
 	}
 
 	/**
@@ -203,13 +209,13 @@ export class Webpage
 			return;
 		}
 
-		if (this.exportOptions.addHeadTag === true) 
+		if (this.exportOptions.addHeadTag) 
 			await this.addHead();
 		
 		if (this.exportOptions.addTitle)
 			await this.addTitle();
 
-		if (this.exportOptions.addSidebars === true)
+		if (this.exportOptions.addSidebars)
 		{
 			let innerContent = this.document.body.innerHTML;
 			this.document.body.innerHTML = "";
@@ -219,13 +225,13 @@ export class Webpage
 			let leftSidebar = layout.left;
 
 			// inject graph view
-			if (this.exportOptions.addGraphView === true)
+			if (this.exportOptions.addGraphView)
 			{
 				GraphView.generateGraphEl(rightSidebar);
 			}
 
 			// inject outline
-			if (this.exportOptions.addOutline === true)
+			if (this.exportOptions.addOutline)
 			{
 				let headerTree = new OutlineTree(this, 1);
 				headerTree.class = "outline-tree";
@@ -237,26 +243,26 @@ export class Webpage
 			}
 
 			// inject darkmode toggle
-			if (this.exportOptions.addThemeToggle === true)
+			if (this.exportOptions.addThemeToggle)
 			{
 				HTMLGeneration.createThemeToggle(layout.leftBar);
 			}
 
 			// inject search bar
 			// TODO: don't hardcode searchbar html
-			if (this.exportOptions.addSearch === true)
+			if (this.exportOptions.addSearch)
 			{
 				let searchbarHTML = `<div class="search-input-container"><input enterkeyhint="search" type="search" spellcheck="false" placeholder="Search..."><div class="search-input-clear-button" aria-label="Clear search"></div></div>`;
 				leftSidebar.createDiv().outerHTML = searchbarHTML;
 			}
 
 			// inject file tree
-			if (this.website && this.exportOptions.addFileNavigation === true)
+			if (this.website && this.exportOptions.addFileNavigation)
 			{
-				leftSidebar.createDiv().outerHTML = this.website.fileTreeAsset.getHTML();
+				leftSidebar.createDiv().outerHTML = this.website.fileTreeAsset.getHTML(this.exportOptions);
 				
 				// if the file will be opened locally, un-collapse the tree containing this file
-				if (this.exportOptions.openNavFileLocation === true)
+				if (this.exportOptions.openNavFileLocation)
 				{
 					let sidebar = leftSidebar.querySelector(".file-tree");
 					let unixPath = this.exportPath.copy.makeUnixStyle().asString;
@@ -273,13 +279,15 @@ export class Webpage
 			}
 		}
 
-		if (this.exportOptions.includeJS === true)
+		if (this.exportOptions.includeJS)
 		{
 			let bodyScript = this.document.body.createEl("script");
 			bodyScript.setAttribute("defer", "");
 			bodyScript.innerText = AssetHandler.themeLoadJS.content.toString();
 			this.document.body.prepend(bodyScript);
 		}
+
+		this.content = this.html;
 
 		return this;
 	}
@@ -289,7 +297,7 @@ export class Webpage
 		if (!this.isConvertable || !this.document) return this;
 
 		let body = this.document.body;
-		if (this.exportOptions.addBodyClasses === true)
+		if (this.exportOptions.addBodyClasses)
 			body.setAttribute("class", Website.validBodyClasses || await HTMLGeneration.getValidBodyClasses(false));
 		
 		let options = {...this.exportOptions, container: body};
@@ -310,29 +318,29 @@ export class Webpage
 		if(this.sizerElement) this.sizerElement.style.paddingBottom = "";
 
 		// modify links to work outside of obsidian (including relative links)
-		if (this.exportOptions.fixLinks === true)
+		if (this.exportOptions.fixLinks)
 			this.convertLinks();
 		
 		// add math styles to the document. They are here and not in <head> because they are unique to each document
-		if (this.exportOptions.addMathjaxStyles === true)
+		if (this.exportOptions.addMathjaxStyles)
 		{
 			let mathStyleEl = document.createElement("style");
 			mathStyleEl.id = "MJX-CHTML-styles";
-			await AssetHandler.mathjaxStyles.load();
+			await AssetHandler.mathjaxStyles.load(this.exportOptions);
 			mathStyleEl.innerHTML = AssetHandler.mathjaxStyles.content;
 			this.viewElement.prepend(mathStyleEl);
 		}
 
 		// inline / outline images
 		let outlinedImages : Downloadable[] = [];
-		if (this.exportOptions.inlineMedia === true) 
+		if (this.exportOptions.inlineMedia) 
 			await this.inlineMedia();
 		else 
 			outlinedImages = await this.exportMedia();
 
 		this.dependencies.push(...outlinedImages);
 
-		if(this.exportOptions.webStylePaths === true)
+		if(this.exportOptions.webStylePaths)
 		{
 			this.dependencies.forEach((file) =>
 			{
@@ -393,7 +401,8 @@ export class Webpage
 		leftTopbarContent.setAttribute("class", "topbar-content");
 		leftCollapseIcon.setAttribute("class", "clickable-icon sidebar-collapse-icon");
 
-		documentContainer.setAttribute("class", "document-container markdown-reading-view hide");
+		documentContainer.setAttribute("class", "document-container markdown-reading-view");
+		if (this.exportOptions.includeJS) documentContainer.classList.add("hide"); // if js included, hide the content until the js is loaded
 
 		rightSidebar.setAttribute("class", "sidebar-right sidebar");
 		rightSidebarHandle.setAttribute("class", "sidebar-handle");
@@ -406,7 +415,7 @@ export class Webpage
 		pageContainer.appendChild(documentContainer);
 		pageContainer.appendChild(rightSidebar);
 
-		if (this.exportOptions.allowResizeSidebars) leftSidebar.appendChild(leftSidebarHandle);
+		if (this.exportOptions.allowResizeSidebars && this.exportOptions.includeJS) leftSidebar.appendChild(leftSidebarHandle);
 		leftSidebar.appendChild(leftTopbar);
 		leftSidebar.appendChild(leftContent);
 		leftTopbar.appendChild(leftTopbarContent);
@@ -415,7 +424,7 @@ export class Webpage
 
 		documentContainer.innerHTML += middleContent instanceof HTMLElement ? middleContent.outerHTML : middleContent.toString();
 
-		if (this.exportOptions.allowResizeSidebars) rightSidebar.appendChild(rightSidebarHandle);
+		if (this.exportOptions.allowResizeSidebars && this.exportOptions.includeJS) rightSidebar.appendChild(rightSidebarHandle);
 		rightSidebar.appendChild(rightTopbar);
 		rightSidebar.appendChild(rightContent);
 		rightTopbar.appendChild(rightTopbarContent);

@@ -86,7 +86,7 @@ export class Website
 
 		this.giveWarnings();
 
-		if (this.exportOptions.addGraphView === true)
+		if (this.exportOptions.addGraphView)
 		{
 			ExportLog.progress(0, 1, "Initialize Export", "Generating graph view", "var(--color-yellow)");
 			let convertableFiles = this.batchFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
@@ -94,7 +94,7 @@ export class Website
 			await this.globalGraph.init(convertableFiles, Settings.graphMinNodeSize, Settings.graphMaxNodeSize);
 		}
 		
-		if (this.exportOptions.addFileNavigation === true)
+		if (this.exportOptions.addFileNavigation)
 		{
 			ExportLog.progress(0, 1, "Initialize Export", "Generating file tree", "var(--color-yellow)");
 			this.fileTree = new FileTree(this.batchFiles, false, true);
@@ -118,18 +118,18 @@ export class Website
 
 		Website.validBodyClasses = await HTMLGeneration.getValidBodyClasses(true);
 
-		if (this.exportOptions.addGraphView === true)
+		if (this.exportOptions.addGraphView)
 		{
 			ExportLog.progress(1, 1, "Loading graph asset", "...", "var(--color-yellow)");
 			this.graphDataAsset = new Asset("graph-data.js", this.globalGraph.getExportData(), AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Temporary);
-			this.graphDataAsset.load();
+			this.graphDataAsset.load(this.exportOptions);
 		}
 
-		if (this.exportOptions.addFileNavigation === true)
+		if (this.exportOptions.addFileNavigation)
 		{
 			ExportLog.progress(1, 1, "Loading file tree asset", "...", "var(--color-yellow)");
 			this.fileTreeAsset = new Asset("file-tree.html", this.fileTreeHtml, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
-			this.fileTreeAsset.load();
+			this.fileTreeAsset.load(this.exportOptions);
 		}
 
 		ExportLog.progress(1, 1, "Initializing index", "...", "var(--color-yellow)");

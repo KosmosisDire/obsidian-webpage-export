@@ -1,3 +1,4 @@
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
 
 export class MathjaxStyles extends Asset
@@ -11,7 +12,7 @@ export class MathjaxStyles extends Asset
         super("mathjax.css", "", AssetType.Style, InlinePolicy.Inline, true, Mutability.Dynamic);
     }
     
-    override async load()
+    override async load(options: MarkdownWebpageRendererAPIOptions)
     {
         // @ts-ignore
         if (this.mathjaxStylesheet == undefined) this.mathjaxStylesheet = Array.from(document.styleSheets).find((sheet) => sheet.ownerNode.id == ("MJX-CHTML-styles"));
@@ -38,6 +39,6 @@ export class MathjaxStyles extends Asset
         }
 
         this.lastMathjaxChanged = changed;
-        await super.load();
+        await super.load(options);
     }
 }

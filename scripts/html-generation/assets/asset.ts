@@ -3,6 +3,7 @@ import { Downloadable } from "scripts/utils/downloadable";
 import { ExportLog } from "../render-log";
 import { Settings, SettingsPage } from "scripts/settings/settings";
 import { AssetHandler } from "../asset-handler";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 const { minify: runMinify } = require('html-minifier-terser');
 const mime = require('mime');
 
@@ -52,11 +53,13 @@ export class Asset extends Downloadable
 	public loadPriority: number = 100; // the priority of this asset when loading 
 	public onlineURL: string | undefined = undefined; // the link to the asset online
 	public childAssets: Asset[] = []; // assets that depend on this asset
+	public exportOptions: MarkdownWebpageRendererAPIOptions;
 
-	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async, loadPriority: number = 100, cdnPath: string | undefined = undefined)
+	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async, loadPriority: number = 100, cdnPath: string | undefined = undefined, options: MarkdownWebpageRendererAPIOptions = new MarkdownWebpageRendererAPIOptions())
     {
-		if(Settings.makeNamesWebStyle) filename = Path.toWebStyle(filename);
+		if(options.webStylePaths) filename = Path.toWebStyle(filename);
         super(filename, content, Asset.typeToPath(type));
+		this.exportOptions = options;
         this.type = type;
         this.inlinePolicy = inlinePolicy;
 		this.mutability = mutability;
@@ -83,8 +86,10 @@ export class Asset extends Downloadable
         if (mutability != Mutability.Child) AssetHandler.allAssets.push(this);
     }
 
-    public async load(): Promise<void>
+    public async load(options: MarkdownWebpageRendererAPIOptions): Promise<void>
     {
+		this.exportOptions = options;
+
         if (this.type == AssetType.Style && typeof this.content == "string")
         {
 			this.childAssets = [];
@@ -99,7 +104,7 @@ export class Asset extends Downloadable
 
     override async download(downloadDirectory: Path): Promise<void> 
     {
-        if (this.isInlineFormat()) return;
+        if (this.isInlineFormat(this.exportOptions)) return;
         await super.download(downloadDirectory);
     }
 
@@ -172,37 +177,50 @@ export class Asset extends Downloadable
 
 	public getAssetPath(relativeFrom: Path | undefined = undefined): Path
 	{
-		if (this.isInlineFormat()) return new Path("");
+		if (this.isInlineFormat(this.exportOptions)) return new Path("");
 		
 		if (relativeFrom == undefined) relativeFrom = Path.rootPath;
 		let toRoot = Path.getRelativePath(relativeFrom, Path.rootPath);
 		let newPath = toRoot.join(this.relativeDownloadPath).makeUnixStyle();
-		newPath.makeWebStyle(Settings.makeNamesWebStyle);
+		newPath.makeWebStyle(this.exportOptions.webStylePaths);
 		
 		return newPath;
 	}
 
-	protected isInlineFormat(): boolean
+	protected isInlineFormat(options: MarkdownWebpageRendererAPIOptions): boolean
 	{
 		let isInlineFormat = this.inlinePolicy == InlinePolicy.Inline || 
 							 this.inlinePolicy == InlinePolicy.InlineHead || 
-							 ((this.inlinePolicy == InlinePolicy.Auto || this.inlinePolicy == InlinePolicy.AutoHead) && Settings.inlineAssets);
+							 ((this.inlinePolicy == InlinePolicy.Auto || this.inlinePolicy == InlinePolicy.AutoHead) && 
+							 (
+							 (options.inlineCSS! && this.type == AssetType.Style) ||
+							 (options.inlineJS! && this.type == AssetType.Script) ||
+							 (options.inlineMedia! && this.type == AssetType.Media) ||
+							 (options.inlineHTML! && this.type == AssetType.HTML) ||
+							 (options.inlineFonts! && this.type == AssetType.Font)
+							 ));
 
         return isInlineFormat;
 	}
 
-	protected isRefFormat(): boolean
+	protected isRefFormat(options: MarkdownWebpageRendererAPIOptions): boolean
 	{
 		let isRefFormat = this.inlinePolicy == InlinePolicy.Download || 
 						  this.inlinePolicy == InlinePolicy.DownloadHead ||
-						  ((this.inlinePolicy == InlinePolicy.Auto || this.inlinePolicy == InlinePolicy.AutoHead) && !Settings.inlineAssets);
-
+						  ((this.inlinePolicy == InlinePolicy.Auto || this.inlinePolicy == InlinePolicy.AutoHead) && 
+						  !(
+						  (options.inlineCSS! && this.type == AssetType.Style) ||
+						  (options.inlineJS! && this.type == AssetType.Script) ||
+						  (options.inlineMedia! && this.type == AssetType.Media) ||
+						  (options.inlineHTML! && this.type == AssetType.HTML) ||
+						  (options.inlineFonts! && this.type == AssetType.Font)
+						  ));
 		return isRefFormat;
 	}
 
-    public getHTML(allowOnlineURLs: boolean = false): string
+    public getHTML(options: MarkdownWebpageRendererAPIOptions): string
     {
-        if(this.isInlineFormat())
+        if(this.isInlineFormat(options))
         {
             switch(this.type)
             {
@@ -221,10 +239,10 @@ export class Asset extends Downloadable
             }
         }
         
-        if (this.isRefFormat())
+        if (this.isRefFormat(options))
         {
-            let path = this.getAssetPath().asString;
-			if (allowOnlineURLs && this.onlineURL) path = this.onlineURL;
+            let path = this.getAssetPath(undefined).asString;
+			if (options.offlineResources === false && this.onlineURL) path = this.onlineURL;
 
 			let include = "";
 			let attr = "";

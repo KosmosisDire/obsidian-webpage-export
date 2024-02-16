@@ -130,7 +130,7 @@ export class AssetHandler
 		let loadPromises = []
 		for (let asset of this.allAssets)
 		{
-			loadPromises.push(asset.load());
+			loadPromises.push(asset.load(this.exportOptions));
 		}
 		await Promise.all(loadPromises);
 		
@@ -149,7 +149,7 @@ export class AssetHandler
 		let loadPromises = []
 		for (let asset of this.dynamicAssets)
 		{
-			let loadPromise = asset.load();
+			let loadPromise = asset.load(this.exportOptions);
 			loadPromise.then(() =>
 			{
 				i++;
@@ -176,22 +176,22 @@ export class AssetHandler
 
 	private static filterDownloads(downloads: Asset[], options: MarkdownWebpageRendererAPIOptions): Asset[]
 	{
-		if (this.exportOptions.addGraphView === false)
+		if (!options.addGraphView || !options.addSidebars)
 		{
 			downloads = downloads.filter(asset => ![this.graphViewJS, this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS, this.pixiJS].includes(asset));
 		}
 
-		if (this.exportOptions.addSearch === false)
+		if (!options.addSearch || !options.addSidebars)
 		{
 			downloads = downloads.filter(asset => ![this.minisearchJS].includes(asset));
 		}
 
-		if (options.includeCSS === false) 
+		if (!options.includeCSS) 
 		{
 			downloads = downloads.filter(asset => asset.type != AssetType.Style);
 		}
 
-		if (options.includeJS === false) 
+		if (!options.includeJS) 
 		{
 			downloads = downloads.filter(asset => asset.type != AssetType.Script);
 		}
@@ -210,7 +210,7 @@ export class AssetHandler
 		let downloads = this.getAssetsOfInlinePolicy(InlinePolicy.Download)
 						    .concat(this.getAssetsOfInlinePolicy(InlinePolicy.DownloadHead));
 
-		if (options.inlineMedia === false) 
+		if (!options.inlineMedia) 
 		{
 			downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.Auto));
 			downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.AutoHead));
@@ -235,7 +235,7 @@ export class AssetHandler
 
 		for (let asset of referenceAssets)
 		{
-			head += asset.getHTML(options.offlineResources === false);
+			head += asset.getHTML(options);
 		}
 
 		return head;
@@ -261,13 +261,13 @@ export class AssetHandler
 			url = url.trim();
 
 			// we don't need to download online assets if we are not making the page offline compatible
-			if (!Settings.makeOfflineCompatible && url.startsWith("http")) continue;
+			if (!this.exportOptions.offlineResources && url.startsWith("http")) continue;
 
 			if (url == "") continue;
 
 			if (url.startsWith("data:"))
 			{
-				if (!Settings.inlineAssets && makeBase64External)
+				if (!this.exportOptions.inlineMedia && makeBase64External)
 				{
 					// decode the base64 data and create an Asset from it
 					// then replace the url with the relative path to the asset
@@ -304,7 +304,7 @@ export class AssetHandler
 
 					let childAsset = new Asset(filename, buffer, type, InlinePolicy.Download, false, Mutability.Child);
 					asset.childAssets.push(childAsset);
-					let loadPromise = childAsset.load();
+					let loadPromise = childAsset.load(this.exportOptions);
 					promises.push(loadPromise);
 					loadPromise.then(() =>
 					{
@@ -325,7 +325,7 @@ export class AssetHandler
 			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.Download, false, Mutability.Child);
 			asset.childAssets.push(childAsset);
 
-			let loadPromise = childAsset.load();
+			let loadPromise = childAsset.load(this.exportOptions);
 			promises.push(loadPromise);
 			loadPromise.then(() => 
 			{
@@ -334,15 +334,15 @@ export class AssetHandler
 					return;
 				}
 
-				if (Settings.inlineAssets)
+				if (this.exportOptions.inlineMedia)
 				{
 					let base64 = childAsset.content.toString("base64");
 					content = content.replaceAll(url, `data:${mime.getType(url)};base64,${base64}`);
 				}
 				else
 				{
-					childAsset.setRelativeDownloadDirectory(childAsset.relativeDownloadDirectory.makeWebStyle(Settings.makeNamesWebStyle));
-					if (Settings.makeNamesWebStyle) childAsset.setFilename(Path.toWebStyle(childAsset.filename));
+					childAsset.setRelativeDownloadDirectory(childAsset.relativeDownloadDirectory.makeWebStyle(this.exportOptions.webStylePaths));
+					if (this.exportOptions.webStylePaths) childAsset.setFilename(Path.toWebStyle(childAsset.filename));
 
 					let newPath = childAsset.getAssetPath(asset.getAssetPath());
 					content = content.replaceAll(url, newPath.asString);

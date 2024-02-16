@@ -1,6 +1,7 @@
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { Path } from "scripts/utils/path";
 import { ExportLog } from "../render-log";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class SnippetStyles extends Asset
 {
@@ -30,7 +31,7 @@ export class SnippetStyles extends Asset
     }
 
     
-    override async load()
+    override async load(options: MarkdownWebpageRendererAPIOptions)
     {
         let snippetsList = await SnippetStyles.getStyleSnippetsContent();
         let snippets = "\n";
@@ -45,6 +46,6 @@ export class SnippetStyles extends Asset
         this.content = snippets;
 		this.modifiedTime = Date.now();
 
-        await super.load();
+        await super.load(options);
     }
 }

@@ -2,6 +2,7 @@ import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
 import { Settings, SettingsPage } from "scripts/settings/settings";
 import { Path } from "scripts/utils/path";
 import defaultIcon from "assets/icon.png";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class Favicon extends Asset
 {
@@ -12,7 +13,7 @@ export class Favicon extends Asset
         super("favicon.png", "", AssetType.Media, InlinePolicy.AutoHead, false, Mutability.Dynamic);
     }
     
-    override async load()
+    override async load(options: MarkdownWebpageRendererAPIOptions)
     {
         if (Settings.faviconPath == "") this.content = Buffer.from(defaultIcon);
 
@@ -25,7 +26,7 @@ export class Favicon extends Asset
 			this.modifiedTime = iconPath.stat?.mtimeMs ?? this.modifiedTime;
         }
 		
-        await super.load();
+        await super.load(options);
     }
 
     public override getHTML(): string

@@ -2,6 +2,7 @@ import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
 import { Path } from "scripts/utils/path";
 import { Settings, SettingsPage } from "scripts/settings/settings";
 import { ExportLog } from "../render-log";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class CustomHeadContent extends Asset
 {
@@ -12,7 +13,7 @@ export class CustomHeadContent extends Asset
         super("custom-head-content.html", "", AssetType.HTML, InlinePolicy.AutoHead, false, Mutability.Dynamic);
     }
     
-    override async load()
+    override async load(options: MarkdownWebpageRendererAPIOptions)
     {
 		if (!SettingsPage.loaded) return;
 
@@ -33,6 +34,6 @@ export class CustomHeadContent extends Asset
 
 		this.modifiedTime = customHeadPath.stat?.mtimeMs ?? this.modifiedTime;
         this.content = await customHeadPath.readFileString() ?? "";
-        await super.load();
+        await super.load(options);
     }
 }

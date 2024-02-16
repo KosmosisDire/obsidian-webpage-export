@@ -2,6 +2,7 @@ import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset"
 import { SettingsPage } from "scripts/settings/settings";
 import { ExportLog } from "../render-log";
 import obsidianStyleOverrides from "assets/obsidian-styles.txt.css";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class ObsidianStyles extends Asset
 {
@@ -41,7 +42,7 @@ export class ObsidianStyles extends Asset
 	}
 
 
-    override async load()
+    override async load(options: MarkdownWebpageRendererAPIOptions)
     {
         this.content = "";
 
@@ -100,6 +101,6 @@ export class ObsidianStyles extends Asset
         }
 
 		this.modifiedTime = Date.now();
-        await super.load();
+        await super.load(options);
     }
 }

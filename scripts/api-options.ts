@@ -1,3 +1,4 @@
+import { Setting } from "obsidian";
 import { ExportPreset, Settings } from "./settings/settings";
 
 export class MarkdownRendererAPIOptions
@@ -33,9 +34,13 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	
 	includeJS?: boolean = true;
 	includeCSS?: boolean = true;
-	inlineMedia?: boolean = Settings.exportPreset != ExportPreset.Website;
+	inlineMedia?: boolean = Settings.inlineAssets;
+	inlineCSS?: boolean = Settings.inlineAssets;
+	inlineJS?: boolean = Settings.inlineAssets;
+	inlineHTML?: boolean = Settings.inlineAssets;
+	inlineFonts?: boolean = Settings.inlineAssets;
 	offlineResources?: boolean = Settings.makeOfflineCompatible;
-	webStylePaths?: boolean = Settings.exportPreset == ExportPreset.Website;
+	webStylePaths?: boolean = Settings.makeNamesWebStyle;
 	flattenExportPaths?: boolean = false;
 	fixLinks?: boolean = true;
 }
