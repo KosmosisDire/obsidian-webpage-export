@@ -1,6 +1,6 @@
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { Path } from "scripts/utils/path";
-import { RenderLog } from "../render-log";
+import { ExportLog } from "../render-log";
 
 export class SnippetStyles extends Asset
 {

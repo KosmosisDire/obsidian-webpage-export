@@ -1,6 +1,6 @@
 import {  MarkdownView, PluginManifest, TextFileView } from 'obsidian';
 import { Path } from './path';
-import { RenderLog } from '../html-generation/render-log';
+import { ExportLog } from '../html-generation/render-log';
 import { Downloadable } from './downloadable';
 import { Settings, SettingsPage } from 'scripts/settings/settings';
 
@@ -108,7 +108,7 @@ export class Utils
 			properties: ["showOverwriteConfirmation"]
 		})
 
-		if (picker.canceled) return;
+		if (picker.canceled || !picker.filePath) return;
 		
 		let pickedPath = new Path(picker.filePath);
 		Settings.exportPath = pickedPath.asString;
@@ -168,7 +168,7 @@ export class Utils
 	{
 		if (!rootPath.isAbsolute) throw new Error("folderPath must be absolute: " + rootPath.asString);
 
-		RenderLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)");
+		ExportLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)");
 		
 		for (let i = 0; i < files.length; i++)
 		{
@@ -177,11 +177,11 @@ export class Utils
 			try
 			{
 				await file.download(rootPath.directory);
-				RenderLog.progress(i+1, files.length, "Saving HTML files to disk", "Saving: " + file.filename, "var(--color-green)");
+				ExportLog.progress(i+1, files.length, "Saving HTML files to disk", "Saving: " + file.filename, "var(--color-green)");
 			}
 			catch (e)
 			{
-				RenderLog.error(e.stack, "Could not save file: " + file.filename);
+				ExportLog.error(e.stack, "Could not save file: " + file.filename);
 				continue;
 			}
 		}

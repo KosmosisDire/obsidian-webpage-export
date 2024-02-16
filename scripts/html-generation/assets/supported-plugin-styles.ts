@@ -1,6 +1,6 @@
 import { Settings, SettingsPage } from "scripts/settings/settings";
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
-import { RenderLog } from "../render-log";
+import { ExportLog } from "../render-log";
 
 export class SupportedPluginStyles extends Asset
 {
@@ -28,7 +28,7 @@ export class SupportedPluginStyles extends Asset
 				(Settings.includeSvelteCSS && this.isSvelteStylesheet(stylesheets[i]))
 			)
             {
-                RenderLog.log("Including stylesheet: " + styleID);
+                ExportLog.log("Including stylesheet: " + styleID);
                 let style = stylesheets[i].cssRules;
 
                 for(let item in style) 

@@ -1,40 +1,248 @@
-import { Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, MarkdownPreviewView, loadMermaid, TFile, MarkdownView } from "obsidian";
+import { MarkdownRendererAPIOptions, MarkdownWebpageRendererAPIOptions } from "./api-options";
+import { Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, MarkdownPreviewView, loadMermaid, TFile, MarkdownView, View } from "obsidian";
 import { Utils } from "scripts/utils/utils";
-import { AssetHandler } from "./asset-handler";
 import { TabManager } from "scripts/utils/tab-manager";
-import { RenderLog } from "./render-log";
-import { HTMLGeneration } from "./html-generation-helpers";
-import HTMLExportPlugin from "scripts/main";
+import { Webpage } from "scripts/objects/webpage";
+import * as electron from 'electron';
+import { ExportLog } from "./html-generation/render-log";
+import { AssetHandler } from "./html-generation/asset-handler";
 
-export namespace MarkdownRenderer
+export namespace MarkdownRendererAPI
 {
 	export let convertableExtensions = ["md", "canvas", "drawing", "excalidraw"]; // drawing is an alias for excalidraw
+
+	function makeHeadingsTrees(html: HTMLElement)
+	{
+
+		// make headers into format:
+		/*
+		- .heading-wrapper
+			- h1.heading
+				- .heading-collapse-indicator.collapse-indicator.collapse-icon
+				- "Text"
+			- .heading-children
+		*/
+
+		function getHeaderEl(headingContainer: HTMLDivElement)
+		{
+			let first = headingContainer.firstElementChild;
+			if (first && /[Hh][1-6]/g.test(first.tagName)) return first;
+			else return;
+		}
+		
+		function makeHeaderTree(headerDiv: HTMLDivElement, childrenContainer: HTMLElement)
+		{
+			let headerEl = getHeaderEl(headerDiv);
+
+			if (!headerEl) return;
+
+			let possibleChild = headerDiv.nextElementSibling;
+
+			while (possibleChild != null)
+			{
+				let possibleChildHeader = getHeaderEl(possibleChild as HTMLDivElement);
+
+				if(possibleChildHeader)
+				{
+					// if header is a sibling of this header then break
+					if (possibleChildHeader.tagName <= headerEl.tagName)
+					{
+						break;
+					}
+
+					// if we reached the footer then break
+					if (possibleChildHeader.querySelector(":has(section.footnotes)") || possibleChildHeader.classList.contains("mod-footer"))
+					{
+						break;
+					}
+				}
+
+				let nextEl = possibleChild.nextElementSibling;
+				childrenContainer.appendChild(possibleChild);
+				possibleChild = nextEl;
+			}
+		}
+
+		html.querySelectorAll("div:has(> :is(h1, h2, h3, h4, h5, h6):not([class^='block-language-'] *)):not(.markdown-preview-sizer)").forEach(function (header: HTMLDivElement)
+		{
+			header.classList.add("heading-wrapper");
+
+			let hEl = getHeaderEl(header) as HTMLHeadingElement;
+
+			if (!hEl || hEl.classList.contains("heading")) return;
+
+			hEl.classList.add("heading");
+
+			let collapseIcon = hEl.querySelector(".heading-collapse-indicator");
+			if (!collapseIcon)
+			{
+				collapseIcon = hEl.createDiv({ cls: "heading-collapse-indicator collapse-indicator collapse-icon" });
+				collapseIcon.innerHTML = _MarkdownRendererInternal.arrowHTML;
+				hEl.prepend(collapseIcon);
+			}
+
+			let children = header.createDiv({ cls: "heading-children" });
+
+			makeHeaderTree(header, children);
+		});
+
+		// add "heading" class to all headers that don't have it
+		html.querySelectorAll(":is(h1, h2, h3, h4, h5, h6):not(.heading)").forEach((el) => el.classList.add("heading"));
+
+		// remove collapsible arrows from h1 and inline titles
+		html.querySelectorAll("div h1, div .inline-title").forEach((element) =>
+		{
+			element.querySelector(".heading-collapse-indicator")?.remove();
+		});
+
+		// remove all new lines from header elements which cause spacing issues
+		html.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((el) => el.innerHTML = el.innerHTML.replaceAll("\n", ""));
+	}
+
+	export async function renderMarkdownToString(markdown: string, options?: MarkdownRendererAPIOptions): Promise<string | undefined>
+	{
+		options = Object.assign(new MarkdownRendererAPIOptions(), options);
+		let html = await _MarkdownRendererInternal.renderMarkdown(markdown, options);
+		if (!html) return;
+		if(options.postProcess === true) await _MarkdownRendererInternal.postProcessHTML(html, options);
+		if (options.makeHeadersTrees === true) makeHeadingsTrees(html);
+		let text = html.innerHTML;
+		if (!options.container) html.remove();
+		return text;
+	}
+
+	export async function renderMarkdownToElement(markdown: string, options?: MarkdownRendererAPIOptions): Promise<HTMLElement | undefined>
+	{
+		options = Object.assign(new MarkdownRendererAPIOptions(), options);
+		let html = await _MarkdownRendererInternal.renderMarkdown(markdown, options);
+		if (!html) return;
+		if(options.postProcess === true) await _MarkdownRendererInternal.postProcessHTML(html, options);
+		if (options.makeHeadersTrees === true) makeHeadingsTrees(html);
+		return html;
+	}
+
+	// export async function renderMarkdownsToStrings(markdowns: string[], options?: MarkdownRendererAPIOptions): Promise<(string | undefined)[]>
+	// {
+	// 	options = Object.assign(new MarkdownRendererAPIOptions(), options);
+	// 	await _MarkdownRendererInternal.beginBatch(options);
+	// 	let results = await Promise.all(markdowns.map(markdown => this.renderMarkdownToString(markdown, options)));
+	// 	_MarkdownRendererInternal.endBatch();
+	// 	return results;
+	// }
+
+	// export async function renderMarkdownsToElements(markdowns: string[], options?: MarkdownRendererAPIOptions): Promise<(HTMLElement | undefined)[]>
+	// {
+	// 	options = Object.assign(new MarkdownRendererAPIOptions(), options);
+	// 	await _MarkdownRendererInternal.beginBatch(options);
+	// 	let results = await Promise.all(markdowns.map(markdown => this.renderMarkdownToElement(markdown, options)));
+	// 	_MarkdownRendererInternal.endBatch();
+	// 	return results;
+	// }
+
+	export async function renderFile(file: TFile, options?: MarkdownRendererAPIOptions): Promise<{contentEl: HTMLElement; viewType: string;} | undefined>
+	{
+		options = Object.assign(new MarkdownRendererAPIOptions(), options);
+		let result = await _MarkdownRendererInternal.renderFile(file, options);
+		if (!result) return;
+
+
+		if (options.postProcess === true) await _MarkdownRendererInternal.postProcessHTML(result.contentEl, options);
+		if (options.makeHeadersTrees === true) makeHeadingsTrees(result.contentEl);
+
+
+		return result;
+	}
+
+	export async function renderFileToString(file: TFile, options?: MarkdownRendererAPIOptions): Promise<string | undefined>
+	{
+		options = Object.assign(new MarkdownRendererAPIOptions(), options);
+		let result = await this.renderFile(file, options);
+		if (!result) return;
+		let text = result.contentEl.innerHTML;
+		if (!options.container) result.contentEl.remove();
+		return text;
+	}
+
+	export async function renderFileToWebpage(file: TFile, options?: MarkdownWebpageRendererAPIOptions): Promise<Webpage | undefined>
+	{
+		options = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
+		this.beginBatch(options);
+		let webpage : Webpage | undefined = new Webpage(file, undefined, undefined, file.basename, options);
+		webpage = await webpage.create();
+		
+		if (!webpage)
+		{
+			ExportLog.error("Failed to create webpage for file " + file.path);
+			return;
+		}
+
+		this.endBatch();
+
+		return webpage;
+	}
+
+	export async function renderMarkdownSimple(markdown: string): Promise<string | undefined>
+	{
+		let container = document.body.createDiv();
+		await _MarkdownRendererInternal.renderSimpleMarkdown(markdown, container);
+		let text = container.innerHTML;
+		container.remove();
+		return text;
+	}
+
+	export async function renderMarkdownSimpleEl(markdown: string, container: HTMLElement)
+	{
+		await _MarkdownRendererInternal.renderSimpleMarkdown(markdown, container);
+	}
+
+	export function isConvertable(extention: string)
+	{
+		if (extention.startsWith(".")) extention = extention.substring(1);
+		return this.convertableExtensions.contains(extention);
+	}
+
+	export function checkCancelled(): boolean
+	{
+		return _MarkdownRendererInternal.checkCancelled();
+	}
+
+	export async function beginBatch(options?: MarkdownRendererAPIOptions)
+	{
+		options = Object.assign(new MarkdownRendererAPIOptions(), options);
+		await _MarkdownRendererInternal.beginBatch(options);
+	}
+
+	export function endBatch()
+	{
+		_MarkdownRendererInternal.endBatch();
+	}
+
+}
+
+export namespace _MarkdownRendererInternal
+{
 	export let renderLeaf: WorkspaceLeaf | undefined;
+	export let electronWindow: electron.BrowserWindow | undefined;
     export let errorInBatch: boolean = false;
 	export let cancelled: boolean = false;
 	export let batchStarted: boolean = false;
 	let logContainer: HTMLElement | undefined;
 	let loadingContainer: HTMLElement | undefined;
 
-	let infoColor = "var(--text-normal)";
-	let warningColor = "var(--color-yellow)";
-	let errorColor = "var(--color-red)";
-	let infoBoxColor = "rgba(0,0,0,0.15)"
-	let warningBoxColor = "rgba(var(--color-yellow-rgb), 0.15)";
-	let errorBoxColor = "rgba(var(--color-red-rgb), 0.15)";
-
-	export function isConvertable(extention: string)
-	{
-		if (extention.startsWith(".")) extention = extention.substring(1);
-		return convertableExtensions.contains(extention);
-	}
+	const infoColor = "var(--text-normal)";
+	const warningColor = "var(--color-yellow)";
+	const errorColor = "var(--color-red)";
+	const infoBoxColor = "rgba(0,0,0,0.15)"
+	const warningBoxColor = "rgba(var(--color-yellow-rgb), 0.15)";
+	const errorBoxColor = "rgba(var(--color-red-rgb), 0.15)";
+	export const arrowHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' class='svg-icon right-triangle'><path d='M3 8L12 17L21 8'></path></svg>";
 
 	export function checkCancelled(): boolean
 	{
-		if (MarkdownRenderer.cancelled || !MarkdownRenderer.renderLeaf) 
+		if (_MarkdownRendererInternal.cancelled || !_MarkdownRendererInternal.renderLeaf) 
 		{
-			RenderLog.log("cancelled");
-			endBatch();
+			ExportLog.log("cancelled");
+			_MarkdownRendererInternal.endBatch();
 			return true;
 		}
 
@@ -45,17 +253,17 @@ export namespace MarkdownRenderer
 	{
 		if (checkCancelled()) return undefined;
 
-		RenderLog.error(message, `Rendering ${file?.path ?? " custom markdown "} failed: `);
+		ExportLog.error(message, `Rendering ${file?.path ?? " custom markdown "} failed: `);
 		return;
 	}
 
-	export async function renderFile(file: TFile, container: HTMLElement): Promise<{contentEl: HTMLElement, viewType: string} | undefined>
+	export async function renderFile(file: TFile, options: MarkdownRendererAPIOptions): Promise<{contentEl: HTMLElement, viewType: string} | undefined>
 	{
 		let loneFile = !batchStarted;
 		if (loneFile) 
 		{
-			RenderLog.log("Exporting single file, starting batch");
-			await MarkdownRenderer.beginBatch();
+			ExportLog.log("Exporting single file, starting batch");
+			await _MarkdownRendererInternal.beginBatch(options);
 		}
 
 		let success = await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 1);
@@ -64,7 +272,6 @@ export namespace MarkdownRenderer
 		
 		try
 		{ 
-			renderLeaf.view.unload();
 			await renderLeaf.openFile(file, { active: false});
 		}
 		catch (e)
@@ -82,39 +289,37 @@ export namespace MarkdownRenderer
 			case "markdown":
 				// @ts-ignore
 				let preview = view.previewMode;
-				html = await renderMarkdownView(preview, container);
+				html = await renderMarkdownView(preview, options);
 				break;
 			case "kanban":
-				html = await renderGeneric(view, container);
+				html = await renderGeneric(view, options);
 				break;
 			case "excalidraw":
-				html = await renderExcalidraw(view, container);
+				html = await renderExcalidraw(view, options);
 				break;
 			case "canvas":
-				html = await renderCanvas(view, container);
+				html = await renderCanvas(view, options);
 				break;
 			default:
-				html = await renderGeneric(view, container);
+				html = await renderGeneric(view, options);
 				break;
 		}
 
 		if(checkCancelled()) return undefined;
 		if (!html) return failRender(file, "Failed to render file!");
 
-		await postProcessHTML(html);
-
-		if (loneFile) MarkdownRenderer.endBatch();
+		if (loneFile) _MarkdownRendererInternal.endBatch();
 
 		return {contentEl: html, viewType: viewType};
 	}
 
-	async function renderMarkdownInsert(markdown: string, container: HTMLElement, addMarkdownContainer: boolean = true): Promise<HTMLElement | undefined>
+	export async function renderMarkdown(markdown: string, options: MarkdownRendererAPIOptions): Promise<HTMLElement | undefined>
 	{
 		let loneFile = !batchStarted;
 		if (loneFile) 
 		{
-			RenderLog.log("Exporting single file, starting batch");
-			await MarkdownRenderer.beginBatch();
+			ExportLog.log("Exporting single file, starting batch");
+			await _MarkdownRendererInternal.beginBatch(options);
 		}
 
 		let success = await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 1);
@@ -135,53 +340,20 @@ export namespace MarkdownRenderer
 
 
 		let html: HTMLElement | undefined;
-		let viewType = view.getViewType();
 
 		// @ts-ignore
 		let preview = view.previewMode;
-		html = await renderMarkdownView(preview, container, addMarkdownContainer);
+		html = await renderMarkdownView(preview, options);
 
 		if(checkCancelled()) return undefined;
 		if (!html) return failRender(undefined, "Failed to render file!");
 
-		await postProcessHTML(html);
-
-		if (loneFile) MarkdownRenderer.endBatch();
+		if (loneFile) _MarkdownRendererInternal.endBatch();
 
 		return html;
 	}
 
-	export async function renderMarkdown(markdown: string, options: {container: HTMLElement, addMarkdownContainer: boolean} | undefined): Promise<string | HTMLElement>
-	{
-		let container = options?.container;
-		let internalContainer = false;
-		if (!container)
-		{
-			container = document.createElement("div");
-			container.style.display = "none";
-			document.body.appendChild(container);
-			internalContainer = true;
-		}
-
-		let html = await renderMarkdownInsert(markdown, container, options?.addMarkdownContainer ?? false);
-		if (!html) return "";
-
-		if (!options?.addMarkdownContainer)
-		{
-			html.querySelectorAll(".mod-header, .mod-footer").forEach((e: HTMLElement) => e.remove());
-		}
-
-		if (internalContainer) 
-		{
-			let text = html.innerHTML;
-			container.remove();
-			return text;
-		}
-
-		return html;
-	}
-
-	async function renderMarkdownView(preview: MarkdownPreviewView, container: HTMLElement, addMarkdownContainer: boolean = true): Promise<HTMLElement | undefined>
+	export async function renderMarkdownView(preview: MarkdownPreviewView, options: MarkdownRendererAPIOptions): Promise<HTMLElement | undefined>
 	{
 		preview.load();
 		// @ts-ignore
@@ -198,15 +370,11 @@ export namespace MarkdownRenderer
 
 		let sections = renderer.sections as {"rendered": boolean, "height": number, "computed": boolean, "lines": number, "lineStart": number, "lineEnd": number, "used": boolean, "highlightRanges": number, "level": number, "headingCollapsed": boolean, "shown": boolean, "usesFrontMatter": boolean, "html": string, "el": HTMLElement}[];
 
-		
-		let newSizerEl = container;
-		let newMarkdownEl = container;
-		
-		if (addMarkdownContainer)
-		{
-			newMarkdownEl = document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
-			newSizerEl = newMarkdownEl.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
-		}
+
+		let newMarkdownEl = document.body.createDiv({ cls: "markdown-preview-view markdown-rendered" });
+		let newSizerEl = newMarkdownEl.createDiv({ cls: "markdown-preview-sizer markdown-preview-section" });
+
+		if (!newMarkdownEl || !newSizerEl) return failRender(preview.file, "Please specify a container element, or enable keepViewContainer!");
 
 		preview.containerEl = newSizerEl;
 
@@ -261,7 +429,7 @@ export namespace MarkdownRenderer
 
 				if (section.el.querySelector(emptyDataviewSelector))
 				{
-					RenderLog.warning("Dataview plugin elements were not rendered correctly in file " + preview.file.name + "!");
+					ExportLog.warning("Dataview plugin elements were not rendered correctly in file " + preview.file.name + "!");
 				}
 			}
 
@@ -271,7 +439,7 @@ export namespace MarkdownRenderer
 
 			if (section.el.querySelector(".markdown-preview-sizer:empty"))
 			{
-				RenderLog.warning("Transclusions were not rendered correctly in file " + preview.file.name + "!");
+				ExportLog.warning("Transclusions were not rendered correctly in file " + preview.file.name + "!");
 			}
 
 			// wait for generic plugins
@@ -285,7 +453,7 @@ export namespace MarkdownRenderer
 				let data = canvas.toDataURL();
 				if (data.length < 100) 
 				{
-					RenderLog.log(canvas.outerHTML, "Failed to render canvas based plugin element in file " + preview.file.name + ":");
+					ExportLog.log(canvas.outerHTML, "Failed to render canvas based plugin element in file " + preview.file.name + ":");
 					canvas.remove();
 					continue;
 				}
@@ -296,11 +464,13 @@ export namespace MarkdownRenderer
 				image.style.maxWidth = "100%";
 				canvas.replaceWith(image);
 			};
-			
+
+			console.debug(section.el.outerHTML); // for some reason adding this line here fixes an issue where some plugins wouldn't render
+
 			let invalidPluginBlocks = Array.from(section.el.querySelectorAll("[class^='block-language-']:empty"));
 			for (let block of invalidPluginBlocks)
 			{
-				RenderLog.warning(`Plugin element ${block.className || block.parentElement?.className || "unknown"} from ${preview.file.name} not rendered correctly!`);
+				ExportLog.warning(`Plugin element ${block.className || block.parentElement?.className || "unknown"} from ${preview.file.name} not rendered correctly!`);
 			}
 		}
 
@@ -328,15 +498,19 @@ export namespace MarkdownRenderer
 			newSizerEl.before(banner);
 		}
 
-		if (addMarkdownContainer) 
+		// if we aren't kepping the view element then only keep the content of the sizer element
+		if (options.keepViewContainer === false) 
 		{
-			container.appendChild(newMarkdownEl);
+			newMarkdownEl.outerHTML = newSizerEl.innerHTML;
+			console.log("keeping only sizer content");
 		}
+
+		options.container?.appendChild(newMarkdownEl);
 
 		return newMarkdownEl;
 	}
 
-	export async function renderSingleLineMarkdown(markdown: string, container: HTMLElement)
+	export async function renderSimpleMarkdown(markdown: string, container: HTMLElement)
 	{
 		let renderComp = new Component();
 		renderComp.load();
@@ -383,20 +557,20 @@ export namespace MarkdownRenderer
 		});
 	}
 
-	async function renderGeneric(view: any, container: HTMLElement): Promise<HTMLElement | undefined>
+	async function renderGeneric(view: View, options: MarkdownRendererAPIOptions): Promise<HTMLElement | undefined>
 	{
 		await Utils.delay(2000);
 
 		if (checkCancelled()) return undefined;
 
 		// @ts-ignore
-		let content = view.contentEl;
-		container.appendChild(content);
+		let contentEl = view.containerEl;
+		options.container?.appendChild(contentEl);
 
-		return content;
+		return contentEl;
 	}
 
-	async function renderExcalidraw(view: any, container: HTMLElement): Promise<HTMLElement | undefined>
+	async function renderExcalidraw(view: any, options: MarkdownRendererAPIOptions): Promise<HTMLElement | undefined>
 	{
 		await Utils.delay(500);
 
@@ -420,12 +594,17 @@ export namespace MarkdownRenderer
 
 		if (checkCancelled()) return undefined;
 
-		container.appendChild(contentEl);
+		if (options.keepViewContainer === false)
+		{
+			contentEl = svg;
+		}
+
+		options.container?.appendChild(contentEl);
 
 		return contentEl;
 	}
 
-	async function renderCanvas(view: any, container: HTMLElement): Promise<HTMLElement | undefined>
+	export async function renderCanvas(view: any, options: MarkdownRendererAPIOptions): Promise<HTMLElement | undefined>
 	{
 		if (checkCancelled()) return undefined;
 
@@ -464,7 +643,9 @@ export namespace MarkdownRenderer
 			{
 				node[1].render();
 				embedEl.innerHTML = "";
-				await renderMarkdownView(childPreview, embedEl);
+				let optionsCopy = Object.assign({}, options);
+				optionsCopy.container = embedEl;
+				await renderMarkdownView(childPreview, optionsCopy);
 			}
 			
 			canvasEl.appendChild(nodeEl);
@@ -486,14 +667,25 @@ export namespace MarkdownRenderer
 		}
 
 		if (checkCancelled()) return undefined;
+		
+		if (options.keepViewContainer === false)
+		{
+			contentEl = canvasEl;
+		}
 
-		container.appendChild(contentEl);
+		options.container?.appendChild(contentEl);
 
 		return contentEl;
 	}
 
-	async function postProcessHTML(html: HTMLElement)
+	export async function postProcessHTML(html: HTMLElement, options: MarkdownRendererAPIOptions)
 	{
+		// remove the extra elements if they are not wanted
+		if (options.keepViewContainer === false)
+		{
+			html.querySelectorAll(".mod-header, .mod-footer").forEach((e: HTMLElement) => e.remove());
+		}
+
 		// transclusions put a div inside a p tag, which is invalid html. Fix it here
 		html.querySelectorAll("p:has(div)").forEach((element) =>
 		{
@@ -592,7 +784,7 @@ export namespace MarkdownRenderer
 			if (!collapseIcon)
 			{
 				collapseIcon = item.createDiv({ cls: "list-collapse-indicator collapse-indicator collapse-icon" });
-				collapseIcon.innerHTML = HTMLGeneration.arrowHTML;
+				collapseIcon.innerHTML = this.arrowHTML;
 				item.prepend(collapseIcon);
 			}
 		}
@@ -603,18 +795,15 @@ export namespace MarkdownRenderer
 		for (const element of tocEls)
 		{
 			let renderEl = document.body.createDiv();
-			renderSingleLineMarkdown(element.textContent ?? "", renderEl);
+			renderSimpleMarkdown(element.textContent ?? "", renderEl);
 			element.textContent = renderEl.textContent;
 			renderEl.remove();
 		}
 	}
 
-    export async function beginBatch()
+    export async function beginBatch(options: MarkdownRendererAPIOptions)
 	{
-		if(batchStarted)
-		{
-			throw new Error("Cannot start a new batch while one is already running!");
-		}
+		if(batchStarted) return;
 
         errorInBatch = false;
 		cancelled = false;
@@ -622,6 +811,7 @@ export namespace MarkdownRenderer
 		loadingContainer = undefined;
 		logContainer = undefined;
 		logShowing = false;
+		AssetHandler.exportOptions = options;
 
 		renderLeaf = TabManager.openNewTab("window", "vertical");
 
@@ -635,7 +825,7 @@ export namespace MarkdownRenderer
 			}
 			catch (e)
 			{
-				RenderLog.error(e, "Failed to detach render leaf: ");
+				ExportLog.error(e, "Failed to detach render leaf: ");
 			}
 			
 			if (!checkCancelled())
@@ -647,52 +837,60 @@ export namespace MarkdownRenderer
 			return;
 		}
 
+		let obsidianWindow = renderLeaf.view.containerEl.win;
 		// @ts-ignore
-		let renderBrowserWindow = renderLeaf.view.containerEl.win.electronWindow;
+		electronWindow = obsidianWindow.electronWindow as electron.BrowserWindow;
 
-		// hide the leaf so we can render without intruding on the user
-		// @ts-ignore
-		renderLeaf.parent.containerEl.style.height = "0";
-		// @ts-ignore
-		renderLeaf.parent.parent.containerEl.querySelector(".clickable-icon, .workspace-tab-header-container-inner").style.display = "none";
-		// @ts-ignore
-		renderLeaf.parent.containerEl.style.maxHeight = "var(--header-height)";
-		// @ts-ignore
-		renderLeaf.parent.parent.containerEl.classList.remove("mod-vertical");
-		// @ts-ignore
-		renderLeaf.parent.parent.containerEl.classList.add("mod-horizontal");
-
-		let newSize = { width: 800, height: 400 };
-		renderLeaf.view.containerEl.win.resizeTo(newSize.width, newSize.height);
-		let newPosition = {x: window.screen.width / 2 - 450, y: window.screen.height - 450 - 75};
-		renderLeaf.view.containerEl.win.moveTo(newPosition.x, newPosition.y);
-
-		if (!renderBrowserWindow) 
+		if (!electronWindow) 
 		{
 			new Notice("Failed to get the render window, please try again.");
 			errorInBatch = false;
 			cancelled = false;
 			batchStarted = false;
 			renderLeaf = undefined;
+			electronWindow = undefined;
 			return;
 		}
 
-		renderBrowserWindow.setAlwaysOnTop(true, "floating", 1);
-		renderBrowserWindow.webContents.setFrameRate(120);
-		
-		renderBrowserWindow.on("close", () =>
+		if (options.displayProgress === false) 
+		{
+			let newPosition = {x: 0, y: window.screen.height};
+			obsidianWindow.moveTo(newPosition.x, newPosition.y);
+			electronWindow.hide();
+		}
+		else
+		{
+			// hide the leaf so we can render without intruding on the user
+			// @ts-ignore
+			renderLeaf.parent.containerEl.style.height = "0";
+			// @ts-ignore
+			renderLeaf.parent.parent.containerEl.querySelector(".clickable-icon, .workspace-tab-header-container-inner").style.display = "none";
+			// @ts-ignore
+			renderLeaf.parent.containerEl.style.maxHeight = "var(--header-height)";
+			// @ts-ignore
+			renderLeaf.parent.parent.containerEl.classList.remove("mod-vertical");
+			// @ts-ignore
+			renderLeaf.parent.parent.containerEl.classList.add("mod-horizontal");
+
+			let newSize = { width: 800, height: 400 };
+			obsidianWindow.resizeTo(newSize.width, newSize.height);
+			let newPosition = {x: window.screen.width / 2 - 450, y: window.screen.height - 450 - 75};
+			obsidianWindow.moveTo(newPosition.x, newPosition.y);
+		}
+
+		electronWindow.setAlwaysOnTop(true, "floating", 1);
+		electronWindow.webContents.setBackgroundThrottling(false);
+
+		function windowClosed()
 		{
 			if (cancelled) return;
 			endBatch();
 			cancelled = true;
-		}, { once: true });
-
-		// @ts-ignore
-		let allWindows = window.electron.remote.BrowserWindow.getAllWindows()
-		for (const win of allWindows)
-		{
-			win.webContents.setBackgroundThrottling(false);
+			electronWindow?.off("close", windowClosed);
 		}
+
+		electronWindow.on("close", windowClosed);
+
 
 		createLoadingContainer();
 	}
@@ -705,22 +903,18 @@ export namespace MarkdownRenderer
 		{
             if (!errorInBatch)
 			{
-				RenderLog.log("Closing render window");
+				ExportLog.log("Closing render window");
 			    renderLeaf.detach();
 			}
 			else
 			{
-				RenderLog.warning("Error in batch, leaving render window open");
+				ExportLog.warning("Error in batch, leaving render window open");
 				_reportProgress(1, 1, "Completed with errors", "Please see the log for more details.", errorColor);
 			}
 		}
 
-		// @ts-ignore
-		let allWindows = window.electron.remote.BrowserWindow.getAllWindows()
-		for (const win of allWindows)
-		{
-			win.webContents.setBackgroundThrottling(false);
-		}
+		electronWindow = undefined;
+		renderLeaf = undefined;
 
 		batchStarted = false;
 	}
@@ -835,6 +1029,8 @@ export namespace MarkdownRenderer
 		{
 			subMessageElement.innerText = subMessage;
 		}
+
+		electronWindow?.setProgressBar(progress);
 	}
 
 	export async function _reportError(messageTitle: string, message: any, fatal: boolean)

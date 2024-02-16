@@ -1,6 +1,6 @@
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { Path } from "scripts/utils/path";
-import { RenderLog } from "../render-log";
+import { ExportLog } from "../render-log";
 import { AssetHandler } from "../asset-handler";
 
 export class ThemeStyles extends Asset
@@ -20,7 +20,7 @@ export class ThemeStyles extends Asset
         let themePath = AssetHandler.vaultPluginsPath.joinString(`../themes/${themeName}/theme.css`).absolute();
         if (!themePath.exists)
         {
-            RenderLog.warning("Cannot find theme at path: \n\n" + themePath);
+            ExportLog.warning("Cannot find theme at path: \n\n" + themePath);
             return "";
         }
         let themeContent = await themePath.readFileString() ?? "";

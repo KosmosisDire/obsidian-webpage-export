@@ -1,6 +1,6 @@
 import HTMLExportPlugin from "scripts/main"
 import { DEFAULT_SETTINGS, Settings, SettingsPage } from "./settings"
-import { RenderLog } from "scripts/html-generation/render-log";
+import { ExportLog } from "scripts/html-generation/render-log";
 import { Notice } from "obsidian";
 
 
@@ -40,7 +40,7 @@ export async function migrateSettings()
 	}
 	catch (e)
 	{
-		RenderLog.error(e, "Failed to migrate settings, resetting to default settings.");
+		ExportLog.error(e, "Failed to migrate settings, resetting to default settings.");
 		Object.assign(Settings, DEFAULT_SETTINGS);
 	}
 

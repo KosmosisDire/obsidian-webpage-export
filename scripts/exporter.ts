@@ -1,15 +1,10 @@
 import { Notice, TFile, TFolder } from "obsidian";
-import { Webpage } from "./objects/webpage";
 import { Path } from "./utils/path";
 import { Settings, SettingsPage } from "./settings/settings";
-import { RenderLog } from "./html-generation/render-log";
-import { Downloadable } from "./utils/downloadable";
 import HTMLExportPlugin from "./main";
 import { Utils } from "./utils/utils";
-import { MarkdownRenderer } from "./html-generation/markdown-renderer";
-import { promises as fs } from 'fs';
 import { Website } from "./objects/website";
-import { Asset } from "./html-generation/assets/asset";
+import { MarkdownRendererAPI } from "./render-api";
 
 export class HTMLExporter
 {
@@ -45,7 +40,7 @@ export class HTMLExporter
 			await Utils.downloadFiles(website.downloads, destination);
 		}
 
-		MarkdownRenderer.endBatch();
+		MarkdownRendererAPI.endBatch();
 
 		return website;
 	}

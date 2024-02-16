@@ -1,7 +1,7 @@
 import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
 import { Path } from "scripts/utils/path";
 import { Settings, SettingsPage } from "scripts/settings/settings";
-import { RenderLog } from "../render-log";
+import { ExportLog } from "../render-log";
 
 export class CustomHeadContent extends Asset
 {
@@ -27,7 +27,7 @@ export class CustomHeadContent extends Asset
         if (!validation.valid)
         {
             this.content = "";
-            RenderLog.error(validation.error + customHeadPath.asString);
+            ExportLog.error(validation.error + customHeadPath.asString);
             return;
         }
 

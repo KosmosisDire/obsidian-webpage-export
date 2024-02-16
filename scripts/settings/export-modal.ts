@@ -1,4 +1,4 @@
-import { ButtonComponent, Modal, Setting, TFile, TextComponent } from 'obsidian';
+import { ButtonComponent, Modal, Setting, TFile } from 'obsidian';
 import { Utils } from '../utils/utils';
 import HTMLExportPlugin from '../main';
 import { ExportPreset, Settings, SettingsPage } from './settings';

@@ -1,6 +1,6 @@
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { SettingsPage } from "scripts/settings/settings";
-import { RenderLog } from "../render-log";
+import { ExportLog } from "../render-log";
 import obsidianStyleOverrides from "assets/obsidian-styles.txt.css";
 
 export class ObsidianStyles extends Asset

@@ -2,16 +2,17 @@ import { Downloadable } from "scripts/utils/downloadable";
 import { Webpage } from "./webpage";
 import { FileTree } from "./file-tree";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
-import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
-import { FileManager, TAbstractFile, TFile, TFolder, getIcon } from "obsidian";
-import { ExportPreset, Settings, SettingsPage } from "scripts/settings/settings";
+import {  TAbstractFile, TFile, TFolder } from "obsidian";
+import {  Settings } from "scripts/settings/settings";
 import { GraphView } from "./graph-view";
 import { Path } from "scripts/utils/path";
-import { RenderLog } from "scripts/html-generation/render-log";
+import { ExportLog } from "scripts/html-generation/render-log";
 import { Asset, AssetType, InlinePolicy, Mutability } from "scripts/html-generation/assets/asset";
 import HTMLExportPlugin from "scripts/main";
 import { WebsiteIndex } from "./website-index";
 import { HTMLGeneration } from "scripts/html-generation/html-generation-helpers";
+import { MarkdownRendererAPI } from "scripts/render-api";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class Website
 {
@@ -31,6 +32,7 @@ export class Website
 	public fileTreeAsset: Asset;
 	
 	public static validBodyClasses: string;
+	public exportOptions: MarkdownWebpageRendererAPIOptions;
 
 	private giveWarnings()
 	{
@@ -43,7 +45,7 @@ export class Website
 			let noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;
 			if (!noteIconsEnabled)
 			{
-				RenderLog.warning("For Iconize plugin support, enable \"Toggle icons while editing notes\" in the Iconize plugin settings.");
+				ExportLog.warning("For Iconize plugin support, enable \"Toggle icons while editing notes\" in the Iconize plugin settings.");
 			}
 		}
 
@@ -55,7 +57,7 @@ export class Website
 			let embedMode = app.plugins.plugins['obsidian-excalidraw-plugin']?.settings['previewImageType'] ?? "";		
 			if (embedMode != "SVG")
 			{
-				RenderLog.warning("For Excalidraw embed support, set the embed mode to \"Native SVG\" in the Excalidraw plugin settings.");
+				ExportLog.warning("For Excalidraw embed support, set the embed mode to \"Native SVG\" in the Excalidraw plugin settings.");
 			}
 		}
 
@@ -69,7 +71,7 @@ export class Website
 			version = version.substring(0, 5);
 			if (version < "2.0.5")
 			{
-				RenderLog.warning("The Banner plugin version 2.0.5 or higher is required for full support. You have version " + version + ".");
+				ExportLog.warning("The Banner plugin version 2.0.5 or higher is required for full support. You have version " + version + ".");
 			}
 		}
 
@@ -80,28 +82,28 @@ export class Website
 		this.progress = 0;
 		this.index = new WebsiteIndex(this);
 
-		await MarkdownRenderer.beginBatch();
+		await MarkdownRendererAPI.beginBatch();
 
 		this.giveWarnings();
 
-		if (Settings.includeGraphView)
+		if (this.exportOptions.addGraphView === true)
 		{
-			RenderLog.progress(0, 1, "Initialize Export", "Generating graph view", "var(--color-yellow)");
-			let convertableFiles = this.batchFiles.filter((file) => MarkdownRenderer.isConvertable(file.extension));
+			ExportLog.progress(0, 1, "Initialize Export", "Generating graph view", "var(--color-yellow)");
+			let convertableFiles = this.batchFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
 			this.globalGraph = new GraphView();
 			await this.globalGraph.init(convertableFiles, Settings.graphMinNodeSize, Settings.graphMaxNodeSize);
 		}
 		
-		if (Settings.includeFileTree)
+		if (this.exportOptions.addFileNavigation === true)
 		{
-			RenderLog.progress(0, 1, "Initialize Export", "Generating file tree", "var(--color-yellow)");
+			ExportLog.progress(0, 1, "Initialize Export", "Generating file tree", "var(--color-yellow)");
 			this.fileTree = new FileTree(this.batchFiles, false, true);
-			this.fileTree.makeLinksWebStyle = Settings.makeNamesWebStyle;
+			this.fileTree.makeLinksWebStyle = this.exportOptions.webStylePaths ?? true;
 			this.fileTree.showNestingIndicator = true;
 			this.fileTree.generateWithItemsClosed = true;
 			this.fileTree.showFileExtentionTags = true;
 			this.fileTree.hideFileExtentionTags = ["md"]
-			this.fileTree.title = app.vault.getName();
+			this.fileTree.title = this.exportOptions.vaultName ?? app.vault.getName();
 			this.fileTree.class = "file-tree";
 
 			let tempTreeContainer = document.body.createDiv();
@@ -111,31 +113,32 @@ export class Website
 		}
 
 		// wipe all temporary assets and reload dynamic assets
-		RenderLog.progress(0, 1, "Initialize Export", "loading assets", "var(--color-yellow)");
+		ExportLog.progress(0, 1, "Initialize Export", "loading assets", "var(--color-yellow)");
 		await AssetHandler.reloadAssets();
 
 		Website.validBodyClasses = await HTMLGeneration.getValidBodyClasses(true);
 
-		if (Settings.includeGraphView)
+		if (this.exportOptions.addGraphView === true)
 		{
-			RenderLog.progress(1, 1, "Loading graph asset", "...", "var(--color-yellow)");
+			ExportLog.progress(1, 1, "Loading graph asset", "...", "var(--color-yellow)");
 			this.graphDataAsset = new Asset("graph-data.js", this.globalGraph.getExportData(), AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Temporary);
 			this.graphDataAsset.load();
 		}
 
-		if (Settings.includeFileTree)
+		if (this.exportOptions.addFileNavigation === true)
 		{
-			RenderLog.progress(1, 1, "Loading file tree asset", "...", "var(--color-yellow)");
+			ExportLog.progress(1, 1, "Loading file tree asset", "...", "var(--color-yellow)");
 			this.fileTreeAsset = new Asset("file-tree.html", this.fileTreeHtml, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
 			this.fileTreeAsset.load();
 		}
 
-		RenderLog.progress(1, 1, "Initializing index", "...", "var(--color-yellow)");
+		ExportLog.progress(1, 1, "Initializing index", "...", "var(--color-yellow)");
 		await this.index.init();
 	}
 
-	public async createWithFiles(files: TFile[], destination: Path): Promise<Website | undefined>
+	public async createWithFiles(files: TFile[], destination: Path, options?: MarkdownWebpageRendererAPIOptions): Promise<Website | undefined>
 	{
+		this.exportOptions = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
 		this.batchFiles = files;
 		this.destination = destination;
 		await this.initExport();
@@ -146,12 +149,12 @@ export class Website
 
 		for (let file of files)
 		{			
-			if(MarkdownRenderer.checkCancelled()) return undefined;
-			RenderLog.progress(this.progress, this.batchFiles.length, "Generating HTML", "Exporting: " + file.path, "var(--interactive-accent)");
+			if(MarkdownRendererAPI.checkCancelled()) return;
+			ExportLog.progress(this.progress, this.batchFiles.length, "Generating HTML", "Exporting: " + file.path, "var(--interactive-accent)");
 			this.progress++;
 			
 			let filename = new Path(file.path).basename;
-			let webpage = new Webpage(file, this, destination, this.batchFiles.length > 1, filename, Settings.inlineAssets && this.batchFiles.length == 1);
+			let webpage = new Webpage(file, this, destination, filename, new MarkdownWebpageRendererAPIOptions());
 			let shouldExportPage = (useIncrementalExport && this.index.isFileChanged(file)) || !useIncrementalExport;
 			if (!shouldExportPage) continue;
 			
@@ -160,15 +163,15 @@ export class Website
 
 			this.webpages.push(webpage);
 			this.downloads.push(...webpage.dependencies);
-			this.downloads.push(await webpage.getSelfDownloadable());
+			this.downloads.push(await webpage.getSelfDownload());
 			this.dependencies.push(...webpage.dependencies);
 		}
 
-		this.dependencies.push(...AssetHandler.getDownloads());
-		this.downloads.push(...AssetHandler.getDownloads());
+		this.dependencies.push(...AssetHandler.getDownloads(this.exportOptions));
+		this.downloads.push(...AssetHandler.getDownloads(this.exportOptions));
 
 		this.filterDownloads(true);
-		this.index.build();
+		this.index.build(this.exportOptions);
 		this.filterDownloads();
 		
 		console.log("Website created: ", this);

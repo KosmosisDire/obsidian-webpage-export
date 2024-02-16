@@ -1,5 +1,4 @@
-import { Component } from "obsidian";
-import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
+import { MarkdownRendererAPI } from "scripts/render-api";
 import { Path } from "scripts/utils/path";
 
 export class Tree
@@ -264,7 +263,7 @@ export class TreeItem
 	protected async createItemTitle(container: HTMLElement): Promise<HTMLSpanElement>
 	{
 		let titleEl = container.createEl("span", { cls: "tree-item-title" });
-		if (this.tree.renderMarkdownTitles) MarkdownRenderer.renderSingleLineMarkdown(this.title, titleEl);
+		if (this.tree.renderMarkdownTitles) MarkdownRendererAPI.renderMarkdownSimpleEl(this.title, titleEl);
 		else titleEl.innerText = this.title;
 		return titleEl;
 	}
@@ -275,7 +274,7 @@ export class TreeItem
 		
 		let itemIconEl = container.createDiv("tree-item-icon");
 
-		if (this.tree.renderMarkdownTitles) MarkdownRenderer.renderSingleLineMarkdown(this.icon, itemIconEl);
+		if (this.tree.renderMarkdownTitles) MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, itemIconEl);
 		else itemIconEl.innerText = this.icon;
 
 		return itemIconEl;

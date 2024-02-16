@@ -24,10 +24,10 @@ import { Settings, SettingsPage } from "scripts/settings/settings.js";
 import { GlobalVariableStyles } from "./assets/global-variable-styles.js";
 import { Favicon } from "./assets/favicon.js";
 import { FetchBuffer } from "./assets/local-fetch-buffer.js";
-import { RenderLog } from "./render-log.js";
+import { ExportLog } from "./render-log.js";
 import { SupportedPluginStyles } from "./assets/supported-plugin-styles.js";
-import { Utils } from "scripts/utils/utils.js";
 import { fileTypeFromBuffer } from "file-type";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options.js";
 const mime = require('mime');
 
 
@@ -48,35 +48,37 @@ export class AssetHandler
 	private static fontFolder: Path;
 	private static htmlFolder: Path;
 
+	public static exportOptions: MarkdownWebpageRendererAPIOptions = new MarkdownWebpageRendererAPIOptions();
+
     public static get libraryPath(): Path
     {
 		if (!this.libraryFolder) this.initialize();
-        return AssetHandler.libraryFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
+        return AssetHandler.libraryFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
     }
     public static get mediaPath(): Path
     {
 		if (!this.mediaFolder) this.initialize();
-		return AssetHandler.mediaFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
+		return AssetHandler.mediaFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
     }
     public static get jsPath(): Path
     {
 		if (!this.jsFolder) this.initialize();
-        return AssetHandler.jsFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
+        return AssetHandler.jsFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
     }
     public static get cssPath(): Path
     {
 		if (!this.cssFolder) this.initialize();
-		return AssetHandler.cssFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
+		return AssetHandler.cssFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
     }
 	public static get fontPath(): Path
 	{
 		if (!this.fontFolder) this.initialize();
-		return AssetHandler.fontFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
+		return AssetHandler.fontFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
 	}
     public static get htmlPath(): Path
     {
 		if (!this.htmlFolder) this.initialize();
-		return AssetHandler.htmlFolder.copy.makeWebStyle(Settings.makeNamesWebStyle);
+		return AssetHandler.htmlFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
     }
 
 	// styles
@@ -151,7 +153,7 @@ export class AssetHandler
 			loadPromise.then(() =>
 			{
 				i++;
-				RenderLog.progress(i, this.dynamicAssets.length, "Initialize Export", "Loading asset: " + asset.filename, "var(--color-yellow)");
+				ExportLog.progress(i, this.dynamicAssets.length, "Initialize Export", "Loading asset: " + asset.filename, "var(--color-yellow)");
 			});
 			loadPromises.push(loadPromise);
 		}
@@ -172,16 +174,26 @@ export class AssetHandler
 		return assets;
 	}
 
-	private static filterDownloads(downloads: Asset[]): Asset[]
+	private static filterDownloads(downloads: Asset[], options: MarkdownWebpageRendererAPIOptions): Asset[]
 	{
-		if (!Settings.includeGraphView)
+		if (this.exportOptions.addGraphView === false)
 		{
 			downloads = downloads.filter(asset => ![this.graphViewJS, this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS, this.pixiJS].includes(asset));
 		}
 
-		if (!Settings.includeSearchBar)
+		if (this.exportOptions.addSearch === false)
 		{
 			downloads = downloads.filter(asset => ![this.minisearchJS].includes(asset));
+		}
+
+		if (options.includeCSS === false) 
+		{
+			downloads = downloads.filter(asset => asset.type != AssetType.Style);
+		}
+
+		if (options.includeJS === false) 
+		{
+			downloads = downloads.filter(asset => asset.type != AssetType.Script);
 		}
 
 		// remove duplicates
@@ -193,24 +205,24 @@ export class AssetHandler
 		return downloads;
 	}
 
-	public static getDownloads(): Asset[]
+	public static getDownloads(options: MarkdownWebpageRendererAPIOptions): Asset[]
 	{
 		let downloads = this.getAssetsOfInlinePolicy(InlinePolicy.Download)
 						    .concat(this.getAssetsOfInlinePolicy(InlinePolicy.DownloadHead));
 
-		if (!Settings.inlineAssets) 
+		if (options.inlineMedia === false) 
 		{
 			downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.Auto));
 			downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.AutoHead));
 		}
 
-		downloads = this.filterDownloads(downloads);
+		downloads = this.filterDownloads(downloads, options);
 		downloads.sort((a, b) => b.loadPriority - a.loadPriority);
 
 		return downloads;
 	}
 
-	public static getHeadReferences(): string
+	public static getHeadReferences(options: MarkdownWebpageRendererAPIOptions): string
 	{
 		let head = "";
 
@@ -218,12 +230,12 @@ export class AssetHandler
 								  .concat(this.getAssetsOfInlinePolicy(InlinePolicy.AutoHead))
 								  .concat(this.getAssetsOfInlinePolicy(InlinePolicy.InlineHead));
 
-		referenceAssets = this.filterDownloads(referenceAssets);
+		referenceAssets = this.filterDownloads(referenceAssets, options);
 		referenceAssets.sort((a, b) => b.loadPriority - a.loadPriority);
 
 		for (let asset of referenceAssets)
 		{
-			head += asset.getHTML(!Settings.makeOfflineCompatible);
+			head += asset.getHTML(options.offlineResources === false);
 		}
 
 		return head;

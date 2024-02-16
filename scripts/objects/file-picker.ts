@@ -1,10 +1,8 @@
 import { TAbstractFile, TFile, TFolder } from "obsidian";
 import { FileTree, FileTreeItem } from "./file-tree";
 import { Path } from "scripts/utils/path";
-import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { Website } from "./website";
-import { SettingsPage } from "scripts/settings/settings";
-import { HTMLGeneration } from "scripts/html-generation/html-generation-helpers";
+import { MarkdownRendererAPI } from "scripts/render-api";
 
 export class FilePickerTree extends FileTree
 {
@@ -73,7 +71,7 @@ export class FilePickerTree extends FileTree
 				else 
 				{
 					parent.originalExtension = path.extensionName;
-					if(!this.keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
+					if(!this.keepOriginalExtensions && MarkdownRendererAPI.isConvertable(path.extensionName)) path.setExtension("html");
 				}
 				parent.href = path.asString;
 				parent.title = path.basename == "." ? "" : titleInfo.title;

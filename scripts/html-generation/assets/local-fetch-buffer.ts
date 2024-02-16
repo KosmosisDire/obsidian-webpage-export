@@ -1,6 +1,6 @@
 import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
 import { Path } from "scripts/utils/path";
-import { RenderLog } from "../render-log";
+import { ExportLog } from "../render-log";
 import { RequestUrlResponse, requestUrl } from "obsidian";
 import { Utils } from "scripts/utils/utils";
 import { fileTypeFromBuffer } from "file-type";
@@ -54,7 +54,7 @@ export class FetchBuffer extends Asset
 					res = await requestUrl(this.url);
 				else
 				{
-					RenderLog.log(`Url ${this.url} is not available`);
+					ExportLog.log(`Url ${this.url} is not available`);
 					return;
 				}
 			}
@@ -66,13 +66,13 @@ export class FetchBuffer extends Asset
 		}
 		catch (e)
 		{
-			RenderLog.log(e, `Failed to fetch ${this.url}`);
+			ExportLog.log(e, `Failed to fetch ${this.url}`);
 			return;
 		}
 
         if (res.status != 200)
         {
-            RenderLog.log(`Failed to fetch ${this.url} with status ${res.status}`);
+            ExportLog.log(`Failed to fetch ${this.url} with status ${res.status}`);
             return;
         }
 

@@ -1,4 +1,4 @@
-import { HeadingCache, TFile } from "obsidian";
+import {  TFile } from "obsidian";
 import { Tree, TreeItem } from "./tree";
 import { Webpage } from "./webpage";
 
@@ -26,7 +26,7 @@ export class OutlineTree extends Tree
 		this.file = webpage.source;
 		this.minDepth = minDepth;
 
-		let headings = webpage.getHeadings();
+		let headings = webpage.headings;
 		this.depth = Math.min(...headings.map(h => h.level)) - 1;
 
 		let parent: OutlineTreeItem | OutlineTree = this;

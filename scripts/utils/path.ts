@@ -5,7 +5,7 @@ import { Utils } from './utils';
 import { promises as fs } from 'fs';
 import { statSync } from 'fs';
 import internal from 'stream'; 
-import { RenderLog } from 'scripts/html-generation/render-log';
+import { ExportLog } from 'scripts/html-generation/render-log';
 
 export class Path
 {
@@ -424,7 +424,7 @@ export class Path
 		if(!this.exists)
 		{
 			new Notice("Error: Path does not exist: \n\n" + this.asString, 5000);
-			RenderLog.error("Path does not exist: " + this.asString);
+			ExportLog.error("Path does not exist: " + this.asString);
 		}
 
 		return this.exists;
@@ -828,7 +828,7 @@ export class Path
 			let file = folderFiles[i];
 			let path = folder.joinString(file);
 
-			RenderLog.progress(i, folderFiles.length, "Finding Old Files", "Searching: " + folder.asString, "var(--color-yellow)");
+			ExportLog.progress(i, folderFiles.length, "Finding Old Files", "Searching: " + folder.asString, "var(--color-yellow)");
 
 			if ((await fs.stat(path.asString)).isDirectory())
 			{

@@ -1,10 +1,8 @@
 import { Path } from "scripts/utils/path";
-import { MarkdownRenderer } from "./markdown-renderer";
+import { _MarkdownRendererInternal } from "scripts/render-api";
 import { Settings, SettingsPage } from "scripts/settings/settings";
-import HTMLExportPlugin from "scripts/main";
-import { Plugin } from "obsidian";
 
-export namespace RenderLog
+export namespace ExportLog
 {
     export let fullLog: string = "";
 
@@ -46,7 +44,7 @@ export namespace RenderLog
 
         if (messageTitle != "") console.log(messageTitle + " ", message);
         else console.log(message);
-        MarkdownRenderer._reportInfo(messageTitle, message);
+        _MarkdownRendererInternal._reportInfo(messageTitle, message);
     }
 
     export function warning(message: any, messageTitle: string = "")
@@ -60,7 +58,7 @@ export namespace RenderLog
 
         if (messageTitle != "") console.warn(messageTitle + " ", message);
         else console.warn(message);
-        MarkdownRenderer._reportWarning(messageTitle, message);
+        _MarkdownRendererInternal._reportWarning(messageTitle, message);
     }
 
     export function error(message: any, messageTitle: string = "", fatal: boolean = false)
@@ -77,7 +75,7 @@ export namespace RenderLog
         if (messageTitle != "") console.error(messageTitle + " ", message);
         else console.error(message);
 
-        MarkdownRenderer._reportError(messageTitle, message, fatal);
+        _MarkdownRendererInternal._reportError(messageTitle, message, fatal);
     }
 
     export function progress(complete: number, total:number, message: string, subMessage: string, progressColor: string = "var(--interactive-accent)")
@@ -88,7 +86,7 @@ export namespace RenderLog
 			complete = 1;
 			total = 1;
 		}
-        MarkdownRenderer._reportProgress(complete, total, message, subMessage, progressColor);
+        _MarkdownRendererInternal._reportProgress(complete, total, message, subMessage, progressColor);
     }
 
     function pullPathLogs()

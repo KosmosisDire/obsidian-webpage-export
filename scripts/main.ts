@@ -6,16 +6,16 @@ import { AssetHandler } from './html-generation/asset-handler';
 import { Settings, SettingsPage } from './settings/settings';
 import { HTMLExporter } from './exporter';
 import { Path } from './utils/path';
-import { RenderLog } from './html-generation/render-log';
+import { ExportLog } from './html-generation/render-log';
 import { ExportModal } from './settings/export-modal';
-import { MarkdownRenderer } from './html-generation/markdown-renderer';
+import { MarkdownRendererAPI } from './render-api';
 
 export default class HTMLExportPlugin extends Plugin
 {
 	static plugin: HTMLExportPlugin;
 	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string} = {updateAvailable: false, latestVersion: "0", currentVersion: "0", updateNote: ""};
 	static pluginVersion: string = "0.0.0";
-	public markdownRenderer = MarkdownRenderer;
+	public api = MarkdownRendererAPI;
 	public settings = Settings;
 	public assetHandler = AssetHandler;
 
@@ -99,7 +99,7 @@ export default class HTMLExportPlugin extends Plugin
 						}
 						else
 						{
-							RenderLog.error("File is not a TFile or TFolder! Invalid type: " + typeof file + "");
+							ExportLog.error("File is not a TFile or TFolder! Invalid type: " + typeof file + "");
 							new Notice("File is not a File or Folder! Invalid type: " + typeof file + "", 5000);
 						}
 					});
@@ -125,13 +125,13 @@ export default class HTMLExportPlugin extends Plugin
 			
 			HTMLExportPlugin.updateInfo = {updateAvailable: updateAvailable, latestVersion: latestVersion, currentVersion: currentVersion, updateNote: updateNote};
 			
-			if(updateAvailable) RenderLog.log("Update available: " + latestVersion + " (current: " + currentVersion + ")");
+			if(updateAvailable) ExportLog.log("Update available: " + latestVersion + " (current: " + currentVersion + ")");
 			
 			return HTMLExportPlugin.updateInfo;
 		}
 		catch
 		{
-			RenderLog.log("Could not check for update");
+			ExportLog.log("Could not check for update");
 			HTMLExportPlugin.updateInfo = {updateAvailable: false, latestVersion: currentVersion, currentVersion: currentVersion, updateNote: ""};
 			return HTMLExportPlugin.updateInfo;
 		}
@@ -139,6 +139,6 @@ export default class HTMLExportPlugin extends Plugin
 
 	onunload()
 	{
-		RenderLog.log('unloading webpage-html-export plugin');
+		ExportLog.log('unloading webpage-html-export plugin');
 	}
 }

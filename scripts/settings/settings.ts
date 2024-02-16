@@ -5,8 +5,7 @@ import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
 import { FlowList } from './flow-list';
 import { ExportInfo, ExportModal } from './export-modal';
 import { migrateSettings } from './settings-migration';
-import { RenderLog } from 'scripts/html-generation/render-log';
-import HTMLExportPlugin from 'scripts/main';
+import { ExportLog } from 'scripts/html-generation/render-log';
 
 // #region Settings Definition
 
@@ -198,7 +197,7 @@ export class SettingsPage extends PluginSettingTab
 		debugHeader.style.display = 'block';
 		debugHeader.style.justifySelf = 'end';
 		debugInfoButton.addEventListener('click', () => {
-			navigator.clipboard.writeText(RenderLog.getDebugInfo());
+			navigator.clipboard.writeText(ExportLog.getDebugInfo());
 			new Notice("Debug info copied to clipboard!");
 		});
 		supportContainer.appendChild(debugInfoButton);
@@ -631,7 +630,7 @@ This feature does not require "File & folder icons" to be enbaled.`);
 	{
 		let files: TFile[] = [];
 
-		let allFiles = HTMLExportPlugin.plugin.app.vault.getFiles();
+		let allFiles = app.vault.getFiles();
 		let exportPaths = Settings.filesToExport[0];
 		if (!exportPaths) return [];
 

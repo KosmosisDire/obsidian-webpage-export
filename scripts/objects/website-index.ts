@@ -1,13 +1,14 @@
 import { Asset, AssetType, InlinePolicy, Mutability } from "scripts/html-generation/assets/asset";
 import { Website } from "./website";
 import Minisearch from 'minisearch';
-import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
-import { RenderLog } from "scripts/html-generation/render-log";
+import { ExportLog } from "scripts/html-generation/render-log";
 import { Path } from "scripts/utils/path";
 import { ExportPreset, Settings, SettingsPage } from "scripts/settings/settings";
 import HTMLExportPlugin from "scripts/main";
 import { TFile } from "obsidian";
 import { AssetHandler } from "scripts/html-generation/asset-handler";
+import { MarkdownRendererAPI } from "scripts/render-api";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class WebsiteIndex
 {
@@ -43,6 +44,7 @@ export class WebsiteIndex
 		processTerm: (term:any, _fieldName:any) =>
 			this.stopWords.includes(term) ? null : term.toLowerCase()
 	}
+	// public exportOptions: MarkdownWebpageRendererAPIOptions = new MarkdownWebpageRendererAPIOptions();
 	
 	private allFiles: string[] = []; // all files that are being exported
 	private removedFiles: string[] = []; // old files that are no longer being exported
@@ -63,7 +65,7 @@ export class WebsiteIndex
 		// if the plugin version changed notify the user that all files will be exported
 		if (!this.shouldApplyIncrementalExport() && Settings.onlyExportModified)
 		{
-			RenderLog.warning("Something changed which requires a full re-export of all files");
+			ExportLog.warning("Something changed which requires a full re-export of all files");
 		}
 
 		if (!this.previousMetadata) return false;
@@ -89,7 +91,7 @@ export class WebsiteIndex
 		}
 		catch (e)
 		{
-			RenderLog.warning(e, "Failed to parse metadata.json. Recreating metadata.");
+			ExportLog.warning(e, "Failed to parse metadata.json. Recreating metadata.");
 		}
 
 		return undefined;
@@ -111,7 +113,7 @@ export class WebsiteIndex
 		}
 		catch (e)
 		{
-			RenderLog.warning(e, "Failed to load search-index.json. Creating new index.");
+			ExportLog.warning(e, "Failed to load search-index.json. Creating new index.");
 			index = undefined;
 		}
 
@@ -155,7 +157,7 @@ export class WebsiteIndex
 			return content;
 		}
 
-		const htmlWebpages = this.web.webpages.filter(webpage => webpage.document && webpage.contentElement);
+		const htmlWebpages = this.web.webpages.filter(webpage => webpage.document && webpage.viewElement);
 
 		// progress counters
 		let progressCount = 0;
@@ -164,10 +166,10 @@ export class WebsiteIndex
 
 		for (const webpage of htmlWebpages) 
 		{
-			if(MarkdownRenderer.checkCancelled()) return undefined;
-			RenderLog.progress(progressCount, totalCount, "Indexing", "Adding: " + webpage.exportPath.asString, "var(--color-blue)");
+			if(MarkdownRendererAPI.checkCancelled()) return undefined;
+			ExportLog.progress(progressCount, totalCount, "Indexing", "Adding: " + webpage.exportPath.asString, "var(--color-blue)");
 
-			const content = preprocessContent(webpage.contentElement);
+			const content = preprocessContent(webpage.viewElement);
 
 			if (content) 
 			{
@@ -181,8 +183,8 @@ export class WebsiteIndex
 					path: webpagePath,
 					title: (await Website.getTitleAndIcon(webpage.source, true)).title,
 					content: content,
-					tags: webpage.getTags(),
-					headers: webpage.getHeadings().map((header) => header.heading),
+					tags: webpage.tags,
+					headers: webpage.headings.map((header) => header.heading),
 				});
 			}
 			else
@@ -195,7 +197,7 @@ export class WebsiteIndex
 		// add other files to search
 		for (const file of this.web.dependencies)
 		{
-			if(MarkdownRenderer.checkCancelled()) return undefined;
+			if(MarkdownRendererAPI.checkCancelled()) return undefined;
 			
 			const filePath = file.relativeDownloadPath.asString;
 			if (this.index.has(filePath)) 
@@ -203,7 +205,7 @@ export class WebsiteIndex
 				continue;
 			}
 
-			RenderLog.progress(progressCount, totalCount, "Indexing", "Adding: " + file.filename, "var(--color-blue)");
+			ExportLog.progress(progressCount, totalCount, "Indexing", "Adding: " + file.filename, "var(--color-blue)");
 			
 			this.index.add({
 				path: filePath,
@@ -219,8 +221,8 @@ export class WebsiteIndex
 		// remove old files
 		for (const oldFile of this.removedFiles)
 		{
-			if(MarkdownRenderer.checkCancelled()) return undefined;
-			RenderLog.progress(progressCount, totalCount, "Indexing", "Removing: " + oldFile, "var(--color-blue)");
+			if(MarkdownRendererAPI.checkCancelled()) return undefined;
+			ExportLog.progress(progressCount, totalCount, "Indexing", "Removing: " + oldFile, "var(--color-blue)");
 
 			if (this.index.has(oldFile))
 			this.index.discard(oldFile);
@@ -228,13 +230,13 @@ export class WebsiteIndex
 			progressCount++;
 		}
 
-		RenderLog.progress(totalCount, totalCount, "Indexing", "Cleanup index", "var(--color-blue)");
+		ExportLog.progress(totalCount, totalCount, "Indexing", "Cleanup index", "var(--color-blue)");
 		this.index.vacuum();
 
 		return new Asset("search-index.json", JSON.stringify(this.index), AssetType.Other, InlinePolicy.Download, false, Mutability.Temporary);
 	}
 
-	public async createMetadata(): Promise<Asset | undefined>
+	public async createMetadata(options: MarkdownWebpageRendererAPIOptions): Promise<Asset | undefined>
 	{
 		// metadata stores a list of files in the export, their relative paths, and modification times. 
 		// is also stores the vault name, the export time, and the plugin version
@@ -244,7 +246,7 @@ export class WebsiteIndex
 		metadata.pluginVersion = HTMLExportPlugin.plugin.manifest.version;
 		metadata.validBodyClasses = Website.validBodyClasses;
 		metadata.files = this.allFiles;
-		metadata.mainDependencies = AssetHandler.getDownloads().map((asset) => asset.relativeDownloadPath.copy.makeUnixStyle().asString);
+		metadata.mainDependencies = AssetHandler.getDownloads(options).map((asset) => asset.relativeDownloadPath.copy.makeUnixStyle().asString);
 		if (!metadata.fileInfo) metadata.fileInfo = {};
 
 		// progress counters
@@ -253,8 +255,8 @@ export class WebsiteIndex
 		
 		for (const page of this.web.webpages)
 		{
-			if(MarkdownRenderer.checkCancelled()) return undefined;
-			RenderLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + page.exportPath.asString, "var(--color-cyan)");
+			if(MarkdownRendererAPI.checkCancelled()) return undefined;
+			ExportLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + page.exportPath.asString, "var(--color-cyan)");
 
 			let fileInfo: any = {};
 			fileInfo.modifiedTime = this.exportTime;
@@ -269,8 +271,8 @@ export class WebsiteIndex
 
 		for (const file of this.web.dependencies)
 		{
-			if(MarkdownRenderer.checkCancelled()) return undefined;
-			RenderLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + file.relativeDownloadPath.asString, "var(--color-cyan)");
+			if(MarkdownRendererAPI.checkCancelled()) return undefined;
+			ExportLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + file.relativeDownloadPath.asString, "var(--color-cyan)");
 
 			let fileInfo: any = {};
 			fileInfo.modifiedTime = this.exportTime;
@@ -286,8 +288,8 @@ export class WebsiteIndex
 		// remove old files
 		for (const oldFile of this.removedFiles)
 		{
-			if(MarkdownRenderer.checkCancelled()) return undefined;
-			RenderLog.progress(progressCount, totalCount, "Creating Metadata", "Removing: " + oldFile, "var(--color-cyan)");
+			if(MarkdownRendererAPI.checkCancelled()) return undefined;
+			ExportLog.progress(progressCount, totalCount, "Creating Metadata", "Removing: " + oldFile, "var(--color-cyan)");
 			delete metadata.fileInfo[oldFile];
 			progressCount++;
 		}
@@ -300,13 +302,13 @@ export class WebsiteIndex
 		if (!this.previousMetadata) return;
 		if (this.removedFiles.length == 0)
 		{
-			RenderLog.log("No old files to delete");
+			ExportLog.log("No old files to delete");
 			return;
 		}
 
 		for (let i = 0; i < this.removedFiles.length; i++)
 		{
-			if(MarkdownRenderer.checkCancelled()) return;
+			if(MarkdownRendererAPI.checkCancelled()) return;
 			let removedPath = this.removedFiles[i];
 			console.log("Removing old file: ", this.previousMetadata.fileInfo);
 			let exportedPath = new Path(this.previousMetadata.fileInfo[removedPath].exportedPath);
@@ -315,19 +317,19 @@ export class WebsiteIndex
 			let deletePath = this.web.destination.join(exportedPath);
 			console.log("Deleting old file: " + deletePath.asString);
 			await deletePath.delete(true);
-			RenderLog.progress(i, this.removedFiles.length, "Deleting Old Files", "Deleting: " + deletePath.asString, "var(--color-orange)");
+			ExportLog.progress(i, this.removedFiles.length, "Deleting Old Files", "Deleting: " + deletePath.asString, "var(--color-orange)");
 		}
 
 		let folders = (await Path.getAllEmptyFoldersRecursive(this.web.destination));
-		if(MarkdownRenderer.checkCancelled()) return;
+		if(MarkdownRendererAPI.checkCancelled()) return;
 
 		// sort by depth so that the deepest folders are deleted first
 		folders.sort((a, b) => a.depth - b.depth);
 		for	(let i = 0; i < folders.length; i++)
 		{
-			if(MarkdownRenderer.checkCancelled()) return;
+			if(MarkdownRendererAPI.checkCancelled()) return;
 			let folder = folders[i];
-			RenderLog.progress(i, folders.length, "Deleting Empty Folders", "Deleting: " + folder.asString, "var(--color-orange)");
+			ExportLog.progress(i, folders.length, "Deleting Empty Folders", "Deleting: " + folder.asString, "var(--color-orange)");
 			await folder.directory.delete(true);
 		}
 	}
@@ -338,13 +340,13 @@ export class WebsiteIndex
 		if (this.previousMetadata.validBodyClasses == Website.validBodyClasses) return;
 		console.log("Updating body classes of previous export");
 
-		let convertableFiles = this.previousMetadata.files.filter((path) => MarkdownRenderer.isConvertable(path.split(".").pop() ?? ""));
+		let convertableFiles = this.previousMetadata.files.filter((path) => MarkdownRendererAPI.isConvertable(path.split(".").pop() ?? ""));
 		let exportedPaths = convertableFiles.map((path) => new Path(this.previousMetadata?.fileInfo[path]?.exportedPath ?? "", this.web.destination.asString));
 		exportedPaths = exportedPaths.filter((path) => !path.isEmpty);
 
 		for (let i = 0; i < exportedPaths.length; i++)
 		{
-			if(MarkdownRenderer.checkCancelled()) return;
+			if(MarkdownRendererAPI.checkCancelled()) return;
 			let exportedPath = exportedPaths[i];
 			let content = await exportedPath.readFileString();
 			if (!content) continue;
@@ -353,7 +355,7 @@ export class WebsiteIndex
 			if (!body) continue;
 			body.className = Website.validBodyClasses;
 			await exportedPath.writeFile(dom.documentElement.outerHTML);
-			RenderLog.progress(i, exportedPaths.length, "Updating Body Classes", "Updating: " + exportedPath.asString, "var(--color-yellow)");
+			ExportLog.progress(i, exportedPaths.length, "Updating Body Classes", "Updating: " + exportedPath.asString, "var(--color-yellow)");
 		}
 	}
 
@@ -456,7 +458,7 @@ export class WebsiteIndex
 		return this.keptDependencies;
 	}
 
-	public async build(): Promise<boolean>
+	public async build(options: MarkdownWebpageRendererAPIOptions): Promise<boolean>
 	{
 		this.getAllFiles();
 		this.getKeptDependencies();
@@ -464,7 +466,7 @@ export class WebsiteIndex
 		this.getAddedFiles();
 
 		// create website metadata and index
-		let metadataAsset = await this.createMetadata();
+		let metadataAsset = await this.createMetadata(options);
 		if (!metadataAsset) return false;
 		this.web.dependencies.push(metadataAsset);
 		this.web.downloads.push(metadataAsset);

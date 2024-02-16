@@ -1,6 +1,6 @@
 import { Path } from "scripts/utils/path";
 import { Downloadable } from "scripts/utils/downloadable";
-import { RenderLog } from "../render-log";
+import { ExportLog } from "../render-log";
 import { Settings, SettingsPage } from "scripts/settings/settings";
 import { AssetHandler } from "../asset-handler";
 const { minify: runMinify } = require('html-minifier-terser');
@@ -163,7 +163,7 @@ export class Asset extends Downloadable
 		}
 		catch (e)
 		{
-			RenderLog.warning("Unable to minify " + (isJS ? "JS" : "CSS") + " file.");
+			ExportLog.warning("Unable to minify " + (isJS ? "JS" : "CSS") + " file.");
 
 			// remove whitespace manually
 			this.content = this.content.replace(/[\n\r]+/g, "");
