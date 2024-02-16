@@ -48,20 +48,16 @@ Either follow the instructions above for a beta release, or:
 
 ## FAQ
 
-> Q: Can I run this from the command line?
->
+Q: Can I run this from the command line?
 > A: Not yet. However a command line / CLI feature is planned. Contribute to the disscussion [here](https://github.com/KosmosisDire/obsidian-webpage-export/issues/49)
 
-> Q: Why am I getting a fatal error that ":has" is not a valid selector?
-> 
+Q: Why am I getting a fatal error that ":has" is not a valid selector?
 > A: You need to update obsidian to the latest version by downloading the new installer from obsidian's website. Both the installer version and current version need to be updated, so you actually have to go to obsidian.md and download the installer from there again.
 
-> Q: Why won't the graph view load?
-> 
+Q: Why won't the graph view load?
 > A: The graph view does not work if you are opening the files locally, you must host them on a web server.
 
-> Q: Why are my pages loading so slow when hosted on a web server?
-> 
+Q: Why are my pages loading so slow when hosted on a web server?
 > A: Make sure you select the "Multi-file Website" preset, or disable all the media inlining options in the settings.
 
 ## Contributing
