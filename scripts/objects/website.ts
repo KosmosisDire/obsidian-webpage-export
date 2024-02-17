@@ -148,13 +148,13 @@ export class Website
 		let useIncrementalExport = this.index.shouldApplyIncrementalExport();
 
 		for (let file of files)
-		{			
+		{
 			if(MarkdownRendererAPI.checkCancelled()) return;
 			ExportLog.progress(this.progress, this.batchFiles.length, "Generating HTML", "Exporting: " + file.path, "var(--interactive-accent)");
 			this.progress++;
 			
 			let filename = new Path(file.path).basename;
-			let webpage = new Webpage(file, this, destination, filename, new MarkdownWebpageRendererAPIOptions());
+			let webpage = new Webpage(file, destination, filename, this, this.exportOptions);
 			let shouldExportPage = (useIncrementalExport && this.index.isFileChanged(file)) || !useIncrementalExport;
 			if (!shouldExportPage) continue;
 			
@@ -162,8 +162,8 @@ export class Website
 			if(!createdPage) continue;
 
 			this.webpages.push(webpage);
+			this.downloads.push(webpage);
 			this.downloads.push(...webpage.dependencies);
-			this.downloads.push(await webpage.getSelfDownload());
 			this.dependencies.push(...webpage.dependencies);
 		}
 
@@ -182,8 +182,8 @@ export class Website
 	private filterDownloads(onlyDuplicates: boolean = false)
 	{
 		// remove duplicates from the dependencies and downloads
-		this.dependencies = this.dependencies.filter((file, index) => this.dependencies.findIndex((f) => f.relativeDownloadPath.asString == file.relativeDownloadPath.asString) == index);
-		this.downloads = this.downloads.filter((file, index) => this.downloads.findIndex((f) => f.relativeDownloadPath.asString == file.relativeDownloadPath.asString) == index);
+		this.dependencies = this.dependencies.filter((file, index) => this.dependencies.findIndex((f) => f.relativePath.asString == file.relativePath.asString) == index);
+		this.downloads = this.downloads.filter((file, index) => this.downloads.findIndex((f) => f.relativePath.asString == file.relativePath.asString) == index);
 		
 		// remove files that have not been modified since last export
 		if (!this.index.shouldApplyIncrementalExport() || onlyDuplicates) return;
@@ -197,7 +197,7 @@ export class Website
 			// always exclude fonts if they exist
 			if 
 			(
-				localThis.index.hasFileByPath(file.relativeDownloadPath.asString) &&
+				localThis.index.hasFileByPath(file.relativePath.asString) &&
 				file.filename.endsWith(".woff") || 
 				file.filename.endsWith(".woff2") ||
 				file.filename.endsWith(".otf") ||
@@ -208,7 +208,7 @@ export class Website
 			}
 
 			// always include files that have been modified since last export
-			let metadata = localThis.index.getMetadataForPath(file.relativeDownloadPath.copy.makeUnixStyle().asString);
+			let metadata = localThis.index.getMetadataForPath(file.relativePath.copy.makeUnixStyle().asString);
 			if (metadata && (file.modifiedTime > metadata.modifiedTime || metadata.sourceSize != file.content.length)) 
 				return true;
 			

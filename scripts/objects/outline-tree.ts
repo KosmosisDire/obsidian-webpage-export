@@ -80,7 +80,7 @@ export class OutlineTreeItem extends TreeItem
 	{
 		super(tree, parent, heading.level);
 		this.heading = heading.heading;
-		this.href = tree.webpage.exportPath + "#" + heading.headingEl.id;
+		this.href = tree.webpage.relativePath + "#" + heading.headingEl.id;
 	}
 
 	public forAllChildren(func: (child: OutlineTreeItem) => void, recursive: boolean = true)

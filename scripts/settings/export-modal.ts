@@ -52,7 +52,7 @@ export class ExportModal extends Modal
 			this.containerEl.insertBefore(this.filePickerModalEl, this.modalEl);
 			this.filePickerModalEl.style.position = 'relative';
 			this.filePickerModalEl.style.zIndex = "1";
-			this.filePickerModalEl.style.width = "20em";
+			this.filePickerModalEl.style.width = "25em";
 			this.filePickerModalEl.style.padding = "0";
 			this.filePickerModalEl.style.margin = "10px";
 			this.filePickerModalEl.style.maxHeight = "80%";
@@ -232,59 +232,6 @@ export class ExportModal extends Modal
 				this.close();
 			});
 		});
-
-		// new Setting(contentEl)
-		// 	.setName('')
-		// 	.setHeading()
-		// 	.addText((text) => 
-		// 	{
-		// 		pathInput = text;
-		// 		text.inputEl.style.width = '100%';
-		// 		text.setPlaceholder('Enter an absolute export directory path')
-		// 			.setValue(Settings.exportPath)
-		// 			.onChange(async (value) => 
-		// 			{
-		// 				let path = new Path(value);
-		// 				if(!path.isDirectory) errorMessage.setText("Path must be a directory!");
-		// 				else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
-		// 				else if(!path.exists) errorMessage.setText("Path does not exist!");
-		// 				else
-		// 				{
-		// 					errorMessage.setText("");
-		// 					Settings.exportPath = value.replaceAll("\"", "");
-		// 					text.setValue(Settings.exportPath);
-		// 					this.validPath = true;
-		// 					await SettingsPage.saveSettings();
-		// 				}
-
-		// 				setExportDisabled(!path.isDirectory || !path.isAbsolute || !path.exists);
-		// 			});
-		// 	})
-		// 	.addButton((button) =>
-		// 	{
-		// 		button.setButtonText('Browse').onClick(async () => 
-		// 		{
-		// 			let ideal = Utils.idealDefaultPath();
-		// 			let path = (await Utils.showSelectFolderDialog(ideal))?.directory;
-		// 			if (path) 
-		// 			{
-		// 				Settings.exportPath = path.directory.asString;
-		// 				await SettingsPage.saveSettings();
-
-		// 				setExportDisabled(!path.isDirectory || !path.isAbsolute || !path.exists);
-
-		// 				if(!path.isDirectory) errorMessage.setText("Path must be a directory!");
-		// 				else if(!path.isAbsolute) errorMessage.setText("Path must be absolute!");
-		// 				else if(!path.exists) errorMessage.setText("Path does not exist!");
-		// 				else errorMessage.setText("");
-
-		// 				pathInput?.setValue(Settings.exportPath);
-		// 			}
-		// 		});
-		// 	})
-			
-
-		// contentEl.appendChild(errorMessage);
 
 		new Setting(contentEl)
 			.setDesc("More options located on the plugin settings page.")

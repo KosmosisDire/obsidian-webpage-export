@@ -62,23 +62,39 @@ export class WebsiteIndex
 		this.previousMetadata = await this.getExportMetadata();
 		this.index = await this.getExportIndex();
 
-		// if the plugin version changed notify the user that all files will be exported
-		if (!this.shouldApplyIncrementalExport() && Settings.onlyExportModified)
-		{
-			ExportLog.warning("Something changed which requires a full re-export of all files");
-		}
+		// Notify the user if all files will be exported
+		this.shouldApplyIncrementalExport(true);
 
 		if (!this.previousMetadata) return false;
 		return true;
 	}
 
-	public shouldApplyIncrementalExport(): boolean
+	public shouldApplyIncrementalExport(printWarning: boolean = false): boolean
 	{
-		return Settings.onlyExportModified && 
-			   !this.isVersionChanged() && 
-			   Settings.exportPreset == ExportPreset.Website
-			   && this.previousMetadata != undefined
-			   && this.index != undefined;
+		let result = true;
+
+		if (!Settings.onlyExportModified) result = false;
+		if (Settings.exportPreset != ExportPreset.Website) result = false;
+
+		if (this.isVersionChanged() && this.previousMetadata)
+		{
+			if (printWarning) ExportLog.warning("Plugin version changed. All files will be re-exported.");
+			result = false;
+		}
+		
+		if (this.previousMetadata == undefined)
+		{
+			if (printWarning) ExportLog.warning("No previous export metadata found. All files will be exported.");
+			result = false;
+		}
+		
+		if (this.index == undefined)
+		{
+			if (printWarning) ExportLog.warning("No search index found. All files will be exported.");
+			result = false;
+		}
+
+		return result;
 	}
 
 	private async getExportMetadata(): Promise<any>
@@ -167,13 +183,13 @@ export class WebsiteIndex
 		for (const webpage of htmlWebpages) 
 		{
 			if(MarkdownRendererAPI.checkCancelled()) return undefined;
-			ExportLog.progress(progressCount, totalCount, "Indexing", "Adding: " + webpage.exportPath.asString, "var(--color-blue)");
+			ExportLog.progress(progressCount, totalCount, "Indexing", "Adding: " + webpage.relativePath.asString, "var(--color-blue)");
 
 			const content = preprocessContent(webpage.viewElement);
 
 			if (content) 
 			{
-				const webpagePath = webpage.exportPath.copy.makeUnixStyle().asString;
+				const webpagePath = webpage.relativePath.copy.makeUnixStyle().asString;
 				if (this.index.has(webpagePath)) 
 				{
 					this.index.discard(webpagePath);
@@ -199,7 +215,7 @@ export class WebsiteIndex
 		{
 			if(MarkdownRendererAPI.checkCancelled()) return undefined;
 			
-			const filePath = file.relativeDownloadPath.asString;
+			const filePath = file.relativePath.asString;
 			if (this.index.has(filePath)) 
 			{
 				continue;
@@ -209,7 +225,7 @@ export class WebsiteIndex
 			
 			this.index.add({
 				path: filePath,
-				title: file.relativeDownloadPath.basename,
+				title: file.relativePath.basename,
 				content: "",
 				tags: [],
 				headers: [],
@@ -246,7 +262,7 @@ export class WebsiteIndex
 		metadata.pluginVersion = HTMLExportPlugin.plugin.manifest.version;
 		metadata.validBodyClasses = Website.validBodyClasses;
 		metadata.files = this.allFiles;
-		metadata.mainDependencies = AssetHandler.getDownloads(options).map((asset) => asset.relativeDownloadPath.copy.makeUnixStyle().asString);
+		metadata.mainDependencies = AssetHandler.getDownloads(options).map((asset) => asset.relativePath.copy.makeUnixStyle().asString);
 		if (!metadata.fileInfo) metadata.fileInfo = {};
 
 		// progress counters
@@ -256,13 +272,13 @@ export class WebsiteIndex
 		for (const page of this.web.webpages)
 		{
 			if(MarkdownRendererAPI.checkCancelled()) return undefined;
-			ExportLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + page.exportPath.asString, "var(--color-cyan)");
+			ExportLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + page.relativePath.asString, "var(--color-cyan)");
 
 			let fileInfo: any = {};
 			fileInfo.modifiedTime = this.exportTime;
 			fileInfo.sourceSize = page.source.stat.size;
-			fileInfo.exportedPath = page.exportPath.copy.makeUnixStyle().asString;
-			fileInfo.dependencies = page.dependencies.map((asset) => asset.relativeDownloadPath.copy.makeUnixStyle().asString);
+			fileInfo.exportedPath = page.relativePath.copy.makeUnixStyle().asString;
+			fileInfo.dependencies = page.dependencies.map((asset) => asset.relativePath.copy.makeUnixStyle().asString);
 			
 			let exportPath = new Path(page.source.path).makeUnixStyle().asString;
 			metadata.fileInfo[exportPath] = fileInfo;
@@ -272,15 +288,15 @@ export class WebsiteIndex
 		for (const file of this.web.dependencies)
 		{
 			if(MarkdownRendererAPI.checkCancelled()) return undefined;
-			ExportLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + file.relativeDownloadPath.asString, "var(--color-cyan)");
+			ExportLog.progress(progressCount, totalCount, "Creating Metadata", "Adding: " + file.relativePath.asString, "var(--color-cyan)");
 
 			let fileInfo: any = {};
 			fileInfo.modifiedTime = this.exportTime;
 			fileInfo.sourceSize = file.content.length;
-			fileInfo.exportedPath = file.relativeDownloadPath.copy.makeUnixStyle().asString;
+			fileInfo.exportedPath = file.relativePath.copy.makeUnixStyle().asString;
 			fileInfo.dependencies = [];
 
-			let exportPath = file.relativeDownloadPath.copy.makeUnixStyle().asString;
+			let exportPath = file.relativePath.copy.makeUnixStyle().asString;
 			metadata.fileInfo[exportPath] = fileInfo;
 			progressCount++;
 		}
@@ -405,9 +421,9 @@ export class WebsiteIndex
 
 		for (let asset of this.web.dependencies)
 		{
-			if (this.allFiles.some((path) => Path.equal(path, asset.relativeDownloadPath.asString))) continue;
+			if (this.allFiles.some((path) => Path.equal(path, asset.relativePath.asString))) continue;
 
-			this.allFiles.push(asset.relativeDownloadPath.copy.makeUnixStyle().asString);
+			this.allFiles.push(asset.relativePath.copy.makeUnixStyle().asString);
 		}
 
 		return this.allFiles;

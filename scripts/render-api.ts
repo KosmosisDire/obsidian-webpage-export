@@ -167,7 +167,7 @@ export namespace MarkdownRendererAPI
 	{
 		options = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
 		this.beginBatch(options);
-		let webpage : Webpage | undefined = new Webpage(file, undefined, undefined, file.basename, options);
+		let webpage : Webpage | undefined = new Webpage(file, undefined, file.basename, undefined, options);
 		webpage = await webpage.create();
 		
 		if (!webpage)

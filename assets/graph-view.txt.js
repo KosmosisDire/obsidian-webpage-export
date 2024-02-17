@@ -305,6 +305,11 @@ class GraphRenderWorker
 		this.cameraOffset = { x: (this.width / 2) - ((rect.minX + width / 2) * scale), y: (this.height / 2) - ((rect.minY + height / 2) * scale) };
 	}
 
+	fitToNodes()
+	{
+		this.fitToRect(startingCameraRect);
+	}
+
 	sampleColor(variable) 
 	{
 		let testEl = document.createElement('div');
@@ -1007,6 +1012,12 @@ function initializeGraphEvents()
 			}
 			scrollVelocity *= 1.4;
 		}
+	});
+
+	// recenter the graph on double click
+	graphContainer.addEventListener("dblclick", function(e)
+	{
+		graphRenderer.fitToNodes();
 	});
 
 	document.querySelector(".theme-toggle-input")?.addEventListener("change", event =>

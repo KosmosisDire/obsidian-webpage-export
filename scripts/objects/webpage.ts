@@ -15,37 +15,21 @@ const { minify } = require('html-minifier-terser');
 
 export class Webpage extends Downloadable
 {
-	public website: Website | undefined;
-	
 	/**
 	 * The original file this webpage was exported from
 	 */
 	public source: TFile;
-
-	/**
-	 * The absolute path to the FOLDER we are exporting to
-	 */
-	public destinationFolder: Path | undefined;
-
-	/**
-	 * The relative path from the vault root to the FOLDER this website's source file was in
-	 */
-	public sourceFolder: Path;
-
-	/**
-	 * The name of the source file, with the extension
-	 */
-	public name: string;
-
-	/**
-	 * The relative path from the destination folder to the exported file; includes the file name and extension.
-	 */
-	public exportPath: Path;
+	public website: Website | undefined;
 
 	/**
 	 * The document containing this webpage's HTML
 	 */
 	public document?: Document;
+
+	/**
+	 * The absolute path to the ROOT FOLDER of the export
+	 */
+	public destinationFolder: Path;
 
 	/**
 	 * The external files that need to be downloaded for this file to work NOT including the file itself.
@@ -61,44 +45,40 @@ export class Webpage extends Downloadable
 	/**
 	 * @param file The original markdown file to export
 	 * @param destination The absolute path to the FOLDER we are exporting to
-	 * @param source The relative path from the vault root to the FOLDER being exported
-	 * @param partOfBatch Is this file part of a batch export, or is it being exported independently?
-	 * @param fileName The name of the file being exported without the extension
-	 * @param forceExportToRoot Force the file to be saved directly int eh export folder rather than in it's subfolder.
+	 * @param name The name of the file being exported without the extension
+	 * @param website The website this file is part of
+	 * @param options The options for exporting this file
 	 */
-	constructor(file: TFile, website?: Website, destination?: Path, fileName?: string, options?: MarkdownWebpageRendererAPIOptions)
+	constructor(file: TFile, destination?: Path, name?: string, website?: Website, options?: MarkdownWebpageRendererAPIOptions)
 	{
-		if(destination && !destination.isAbsolute) throw new Error("exportToFolder must be an absolute path" + destination.asString);
+		if(destination && (!destination.isAbsolute || !destination.isDirectory)) throw new Error("destination must be an absolute directory path: " + destination?.asString);
+
+		super(file.basename, "", Path.emptyPath);
+		 
+		options = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
 
 		let isConvertable = MarkdownRendererAPI.isConvertable(file.extension);
-		let name = fileName ?? file.basename;
-		name += isConvertable ? ".html" : "." + file.extension;
-		super(name, "", destination ?? Path.vaultPath.joinString("Export"));
-
+		this.filename = name ?? file.basename;
+		this.filename += isConvertable ? ".html" : "." + file.extension;
 		this.isConvertable = isConvertable;
-		this.name = name;
-
-		options = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
 		this.exportOptions = options;
 		this.source = file;
 		this.website = website ?? undefined;
-		this.destinationFolder = destination?.directory ?? undefined;
-		this.sourceFolder = new Path(file.path).directory;
+		this.destinationFolder = destination ?? Path.vaultPath.joinString("Export");
 
 		if (this.isConvertable) this.document = document.implementation.createHTMLDocument(this.source.basename);
 
-		let parentPath = file.parent?.path ?? "/";
-		if (parentPath.trim() == "/" || parentPath.trim() == "\\") parentPath = "";
-		this.exportPath = Path.joinStrings(parentPath, this.name);
-		if (this.exportOptions.flattenExportPaths) this.exportPath.reparse(this.name);
-		if (this.destinationFolder) this.exportPath.setWorkingDirectory(this.destinationFolder.asString);
+		let sourcePath = new Path(file.path);
+		this.relativeDirectory = sourcePath.directory;
+
+		if (this.exportOptions.flattenExportPaths) 
+			this.relativeDirectory = Path.emptyPath;
 
 		if (this.exportOptions.webStylePaths)
 		{
-			this.name = Path.toWebStyle(this.name);
-			this.exportPath.makeWebStyle();
+			this.filename = Path.toWebStyle(this.filename);
+			this.relativeDirectory.makeWebStyle();
 		}
-
 	}
 
 	/**
@@ -145,9 +125,9 @@ export class Webpage extends Downloadable
 	/**
 	 * The absolute path that the file will be saved to
 	 */
-	get exportPathAbsolute(): Path
+	get exportPath(): Path
 	{
-		return this.destinationFolder?.join(this.exportPath) ?? Path.vaultPath.join(this.exportPath);
+		return this.destinationFolder?.join(this.relativePath) ?? Path.vaultPath.join(this.relativePath);
 	}
 
 	/**
@@ -155,7 +135,7 @@ export class Webpage extends Downloadable
 	 */
 	get pathToRoot(): Path
 	{
-		return Path.getRelativePath(this.exportPath, new Path(this.exportPath.workingDirectory), true).makeUnixStyle();
+		return Path.getRelativePath(this.relativePath, new Path(this.relativePath.workingDirectory), true).makeUnixStyle();
 	}
 
 	get tags(): string[]
@@ -187,20 +167,16 @@ export class Webpage extends Downloadable
 		return headers;
 	}
 
-	/**
-	 * Returns a downloadable object to download the .html file to the current path with the current html contents.
-	 */
-	public async getSelfDownload(): Promise<Downloadable>
-	{
-		let content = (this.isConvertable ? this.html : await new Path(this.source.path).readFileBuffer()) ?? "";
-		let downloadable = new Downloadable(this.name, content, this.exportPath.directory.makeForceFolder());
-		downloadable.modifiedTime = this.source.stat.mtime;
-		return downloadable;
-	}
-
 	public async create(): Promise<Webpage | undefined>
 	{
-		if (!this.isConvertable || !this.document) return this;
+		if (!this.isConvertable)
+		{
+			this.content = await new Path(this.source.path).readFileBuffer() ?? "";
+			this.modifiedTime = this.source.stat.mtime;
+			return this;
+		}
+
+		if (!this.document) return this;
 
 		let webpageWithContent = await this.populateDocument();
 		if(!webpageWithContent)
@@ -265,7 +241,7 @@ export class Webpage extends Downloadable
 				if (this.exportOptions.openNavFileLocation)
 				{
 					let sidebar = leftSidebar.querySelector(".file-tree");
-					let unixPath = this.exportPath.copy.makeUnixStyle().asString;
+					let unixPath = this.relativePath.copy.makeUnixStyle().asString;
 					let fileElement: HTMLElement = sidebar?.querySelector(`[href="${unixPath}"]`) as HTMLElement;
 					fileElement = fileElement?.closest(".tree-item") as HTMLElement;
 					while (fileElement)
@@ -345,7 +321,7 @@ export class Webpage extends Downloadable
 			this.dependencies.forEach((file) =>
 			{
 				file.filename = Path.toWebStyle(file.filename);
-				file.relativeDownloadDirectory = file.relativeDownloadDirectory?.makeWebStyle();
+				file.relativeDirectory = file.relativeDirectory?.makeWebStyle();
 			});
 		}
 
@@ -554,7 +530,7 @@ export class Webpage extends Downloadable
 		<meta id="root-path" root-path="${rootPath}/">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
 		<meta charset="UTF-8">
-		<meta name="description" content="${app.vault.getName() + " - " + titleInfo.title}">
+		<meta name="description" content="${this.exportOptions.vaultName + " - " + titleInfo.title}">
 		`;
 
 		head += AssetHandler.getHeadReferences(this.exportOptions);
@@ -651,7 +627,8 @@ export class Webpage extends Downloadable
 
 
 			// if the media is inside the exported folder then keep it in the same place
-			let mediaPathInExport = Path.getRelativePath(this.sourceFolder, filePath);
+			let sourceFolder = new Path(this.source.path).directory;
+			let mediaPathInExport = Path.getRelativePath(sourceFolder, filePath);
 			if (mediaPathInExport.asString.startsWith(".."))
 			{
 				// if path is outside of the vault, outline it into the media folder

@@ -4,7 +4,6 @@ import { ExportLog } from "../render-log";
 import { RequestUrlResponse, requestUrl } from "obsidian";
 import { Utils } from "scripts/utils/utils";
 import { fileTypeFromBuffer } from "file-type";
-import { Settings } from "scripts/settings/settings";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class FetchBuffer extends Asset
@@ -90,15 +89,15 @@ export class FetchBuffer extends Asset
         this.content = Buffer.from(data);
 		this.modifiedTime = Date.now();
 
-		if (this.relativeDownloadPath.extension == '')
+		if (this.relativePath.extension == '')
 		{
 			let type = await fileTypeFromBuffer(this.content);
 			if (type)
 			{
-				this.relativeDownloadPath.setExtension(type.ext);
-				this.filename = this.relativeDownloadPath.fullName;
+				this.relativePath.setExtension(type.ext);
+				this.filename = this.relativePath.fullName;
 				this.type = Asset.extentionToType(type.ext);
-				this.setRelativeDownloadDirectory(Asset.typeToPath(this.type));
+				this.relativeDirectory = Asset.typeToPath(this.type);
 			}	
 		}
 

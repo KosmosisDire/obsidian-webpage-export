@@ -22,7 +22,7 @@ export class Favicon extends Asset
         if (icon) 
         {
             this.content = icon;
-            this.setFilename("favicon" + iconPath.extension);
+            this.filename = "favicon" + iconPath.extension;
 			this.modifiedTime = iconPath.stat?.mtimeMs ?? this.modifiedTime;
         }
 		

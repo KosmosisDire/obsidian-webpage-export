@@ -256,7 +256,8 @@ if( 'function' === typeof importScripts)
 			{
 				if (screenRadius > 2)
 				{
-					let labelFade = lerp(0, (screenRadius - 4) / 10 - (1/cameraScaleRoot)/6 * 0.9, Math.max(1 - hoverFade, 0.2));
+					
+					let labelFade = lerp(0, (screenRadius - 4) / 8 - (1/cameraScaleRoot)/6 * 0.9, Math.max(1 - hoverFade, 0.2));
 					showLabel(i, labelFade);
 				}
 				else 

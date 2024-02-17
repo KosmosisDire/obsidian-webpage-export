@@ -1552,9 +1552,12 @@ function setupCanvas(setupOnNode)
 	// make canvas draggable / panable
 	canvasWrapper.addEventListener("mousedown", canvasWrapperMouseDownHandler);
 	canvasWrapper.addEventListener("touchstart", canvasWrapperMouseDownHandler);
+	let scrollInterferance = false;
 	function canvasWrapperMouseDownHandler(mouseDownEv)
 	{
 		let touchesDown = mouseDownEv.touches ?? [];
+
+		scrollInterferance = false;
 
 		// if there is already one tough down we don't want to start another mouse down event
 		// extra fingers are already being handled in the move event below
@@ -1582,7 +1585,6 @@ function setupCanvas(setupOnNode)
 				let deltaX = pointer.x - lastPointerPos.x;
 				let deltaY = pointer.y - lastPointerPos.y;
 
-				let scrollInterferance = false;
 				if ((mouseDownEv.button == 1 || touchesMove.length == 1) && focusedCanvasNode)
 				{
 					let mouseHoriz = Math.abs(deltaX) > Math.abs(deltaY * 1.5);
@@ -1595,9 +1597,13 @@ function setupCanvas(setupOnNode)
 						let scrollableVert = sizer.scrollHeight > sizer.parentElement.clientHeight + 1;
 						let scrollableHoriz = sizer.scrollWidth > sizer.parentElement.clientWidth + 1;
 
-						if ((mouseHoriz && scrollableHoriz) || (mouseVert && scrollableVert))
+						if (((mouseHoriz && scrollableHoriz) || (mouseVert && scrollableVert)) && (window?.navigator?.platform?.startsWith("Win") ?? true))
 						{
 							scrollInterferance = true;
+						}
+						else
+						{
+							scrollInterferance = false;
 						}
 					}
 				}
@@ -1647,6 +1653,7 @@ function setupCanvas(setupOnNode)
 				document.body.removeEventListener("touchmove", mouseMoveHandler);
 				document.body.removeEventListener("touchend", mouseUpHandler);
 				document.body.removeEventListener("touchcancel", mouseUpHandler);
+				scrollInterferance = false;
 			};
 
 			let mouseEnterHandler = function (mouseEnterEv)

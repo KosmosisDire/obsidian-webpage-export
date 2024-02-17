@@ -197,7 +197,7 @@ export class AssetHandler
 		}
 
 		// remove duplicates
-		downloads = downloads.filter((asset, index, self) => self.findIndex((t) => t.relativeDownloadPath.asString == asset.relativeDownloadPath.asString) === index);
+		downloads = downloads.filter((asset, index, self) => self.findIndex((t) => t.relativePath.asString == asset.relativePath.asString) === index);
 
 		// remove assets with no content
 		downloads = downloads.filter(asset => asset.content && asset.content.length > 0);
@@ -341,8 +341,8 @@ export class AssetHandler
 				}
 				else
 				{
-					childAsset.setRelativeDownloadDirectory(childAsset.relativeDownloadDirectory.makeWebStyle(this.exportOptions.webStylePaths));
-					if (this.exportOptions.webStylePaths) childAsset.setFilename(Path.toWebStyle(childAsset.filename));
+					childAsset.relativeDirectory.makeWebStyle(this.exportOptions.webStylePaths);
+					if (this.exportOptions.webStylePaths) childAsset.filename = Path.toWebStyle(childAsset.filename);
 
 					let newPath = childAsset.getAssetPath(asset.getAssetPath());
 					content = content.replaceAll(url, newPath.asString);

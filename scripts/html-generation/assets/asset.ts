@@ -181,7 +181,7 @@ export class Asset extends Downloadable
 		
 		if (relativeFrom == undefined) relativeFrom = Path.rootPath;
 		let toRoot = Path.getRelativePath(relativeFrom, Path.rootPath);
-		let newPath = toRoot.join(this.relativeDownloadPath).makeUnixStyle();
+		let newPath = toRoot.join(this.relativePath).makeUnixStyle();
 		newPath.makeWebStyle(this.exportOptions.webStylePaths);
 		
 		return newPath;
@@ -256,7 +256,7 @@ export class Asset extends Downloadable
 					}
                     return include;
                 case AssetType.Script:
-					include = `<script ${this.loadMethod} id="${this.relativeDownloadPath.basename + "-script"}" src="${path}" onload='this.onload=null;this.setAttribute(\"loaded\", \"true\")'></script>`;
+					include = `<script ${this.loadMethod} id="${this.relativePath.basename + "-script"}" src="${path}" onload='this.onload=null;this.setAttribute(\"loaded\", \"true\")'></script>`;
                     return include;
                 case AssetType.Media:
 					attr = this.loadMethod == LoadMethod.Defer ? "loading='eager'" : "loading='lazy'";
