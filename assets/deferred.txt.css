@@ -260,6 +260,10 @@ body
 	object-fit: contain;
 }
 
+*:has(> :is(.math, table)) {
+    overflow-x: auto !important;
+}
+
 /* For custom view exports */
 .document-container > .view-content
 {

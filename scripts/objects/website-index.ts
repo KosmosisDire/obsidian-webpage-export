@@ -21,6 +21,8 @@ export class WebsiteIndex
 		lastExport: number,
 		pluginVersion: string,
 		validBodyClasses: string,
+		useCustomHeadContent: boolean,
+		useCustomFavicon: boolean,
 		mainDependencies: string[],
 		files: string[],
 		fileInfo: 
@@ -47,8 +49,8 @@ export class WebsiteIndex
 	// public exportOptions: MarkdownWebpageRendererAPIOptions = new MarkdownWebpageRendererAPIOptions();
 	
 	private allFiles: string[] = []; // all files that are being exported
-	private removedFiles: string[] = []; // old files that are no longer being exported
-	private addedFiles: string[] = []; // new files that are being exported
+	public removedFiles: string[] = []; // old files that are no longer being exported
+	public addedFiles: string[] = []; // new files that are being exported
 	private keptDependencies: string[] = []; // dependencies that are being kept
 
 	constructor(website: Website)
@@ -84,13 +86,34 @@ export class WebsiteIndex
 		
 		if (this.previousMetadata == undefined)
 		{
-			if (printWarning) ExportLog.warning("No previous export metadata found. All files will be exported.");
+			if (printWarning) ExportLog.warning("No existing export metadata found. All files will be exported.");
 			result = false;
 		}
 		
 		if (this.index == undefined)
 		{
-			if (printWarning) ExportLog.warning("No search index found. All files will be exported.");
+			if (printWarning) ExportLog.warning("No existing search index found. All files will be exported.");
+			result = false;
+		}
+
+		let rssAbsoultePath = this.web.destination.joinString(this.web.rssPath);
+		if (!rssAbsoultePath.exists && this.web.exportOptions.addRSS)
+		{
+			if (printWarning) ExportLog.warning("No existing RSS feed found. All files will be exported.");
+			result = false;
+		}
+
+		let customHeadChanged = this.previousMetadata && (this.previousMetadata?.useCustomHeadContent != (Settings.customHeadContentPath != ""));
+		if (customHeadChanged)
+		{
+			if (printWarning) ExportLog.warning(`${Settings.customHeadContentPath != "" ? "Added" : "Removed"} custom head content. All files will be re-exported.`);
+			result = false;
+		}
+
+		let customFaviconChanged = this.previousMetadata && (this.previousMetadata?.useCustomFavicon != (Settings.faviconPath != ""));
+		if (customFaviconChanged)
+		{
+			if (printWarning) ExportLog.warning(`${Settings.faviconPath != "" ? "Added" : "Removed"} custom favicon. All files will be re-exported.`);
 			result = false;
 		}
 
@@ -257,10 +280,12 @@ export class WebsiteIndex
 		// metadata stores a list of files in the export, their relative paths, and modification times. 
 		// is also stores the vault name, the export time, and the plugin version
 		let metadata: any = this.previousMetadata ? JSON.parse(JSON.stringify(this.previousMetadata)) : {};
-		metadata.vaultName = app.vault.getName();
+		metadata.vaultName = this.web.exportOptions.siteName;
 		metadata.lastExport = this.exportTime;
 		metadata.pluginVersion = HTMLExportPlugin.plugin.manifest.version;
 		metadata.validBodyClasses = Website.validBodyClasses;
+		metadata.useCustomHeadContent = Settings.customHeadContentPath != "";
+		metadata.useCustomFavicon = Settings.faviconPath != "";
 		metadata.files = this.allFiles;
 		metadata.mainDependencies = AssetHandler.getDownloads(options).map((asset) => asset.relativePath.copy.makeUnixStyle().asString);
 		if (!metadata.fileInfo) metadata.fileInfo = {};

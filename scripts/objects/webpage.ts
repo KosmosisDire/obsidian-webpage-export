@@ -176,6 +176,16 @@ export class Webpage extends Downloadable
 		return aliases;
 	}
 
+	get description(): string
+	{
+		return this.frontmatter["description"] || this.frontmatter["summary"] || "";
+	}
+
+	get author(): string
+	{
+		return this.frontmatter["author"] || this.exportOptions.authorName || "";
+	}
+
 	get frontmatter(): FrontMatterCache
 	{
 		let frontmatter = app.metadataCache.getFileCache(this.source)?.frontmatter ?? {};
@@ -582,7 +592,7 @@ export class Webpage extends Downloadable
 		if (!this.document) return;
 
 		let rootPath = this.pathToRoot.copy.makeWebStyle(this.exportOptions.webStylePaths).asString;
-
+		let description = this.description || (this.exportOptions.siteName + " - " + this.titleInfo.title);
 		let head =
 		`
 		<title>${this.titleInfo.title}</title>
@@ -590,8 +600,13 @@ export class Webpage extends Downloadable
 		<meta id="root-path" root-path="${rootPath}/">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
 		<meta charset="UTF-8">
-		<meta name="description" content="${this.exportOptions.vaultName + " - " + this.titleInfo.title}">
+		<meta name="description" content="${description}">
 		`;
+
+		if (this.author && this.author != "")
+		{
+			head += `<meta name="author" content="${this.author}">`;
+		}
 
 		if (this.exportOptions.addRSS)
 		{

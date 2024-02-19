@@ -139,11 +139,6 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	minOutlineCollapsibleLevel?: number = Settings.minOutlineCollapse;
 
 	/**
-	 * The name of the vault displayed above the file navigation.
-	 */
-	vaultName?: string = app.vault.getName();
-	
-	/**
 	 * Include javascript in the export (both inline or external)
 	 */
 	includeJS?: boolean = true;
@@ -203,4 +198,14 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	 * The url that this site will be hosted at. This is used for the rss feed data.
 	 */
 	siteURL?: string = Settings.siteURL;
+
+	/**
+	 * The name of the vault displayed above the file navigation.
+	 */
+	siteName?: string = Settings.vaultTitle || app.vault.getName();
+	
+	/**
+	 * The name of the author of the site.
+	 */
+	authorName?: string = Settings.authorName;
 }

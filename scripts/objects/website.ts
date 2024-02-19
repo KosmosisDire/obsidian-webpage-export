@@ -25,7 +25,7 @@ export class Website
 	public destination: Path;
 	public index: WebsiteIndex;
 	public rss: RSS;
-	public rssPath = AssetHandler.libraryPath.joinString("rss.xml").makeUnixStyle().makeRootAbsolute().asString;
+	public rssPath = AssetHandler.libraryPath.joinString("rss.xml").makeUnixStyle().asString;
 
 	private globalGraph: GraphView;
 	private fileTree: FileTree;
@@ -76,7 +76,6 @@ export class Website
 			this.dependencies.push(...webpage.dependencies);
 		}
 
-		this.createRSS();
 
 		this.dependencies.push(...AssetHandler.getDownloads(this.exportOptions));
 		this.downloads.push(...AssetHandler.getDownloads(this.exportOptions));
@@ -84,6 +83,11 @@ export class Website
 		this.filterDownloads(true);
 		this.index.build(this.exportOptions);
 		this.filterDownloads();
+
+		if (this.exportOptions.addRSS)
+		{
+			this.createRSS();
+		}
 		
 		console.log("Website created: ", this);
 			
@@ -131,6 +135,12 @@ export class Website
 			}
 		}
 
+		// warn the user if they are trying to create an rss feed without a site url
+		if (this.exportOptions.addRSS && (this.exportOptions.siteURL == "" || this.exportOptions.siteURL == undefined))
+		{
+			ExportLog.warning("Creating an RSS feed requires a site url to be set in the export settings.");
+		}
+
 	}
 
 	private async initExport()
@@ -159,7 +169,7 @@ export class Website
 			this.fileTree.generateWithItemsClosed = true;
 			this.fileTree.showFileExtentionTags = true;
 			this.fileTree.hideFileExtentionTags = ["md"]
-			this.fileTree.title = this.exportOptions.vaultName ?? app.vault.getName();
+			this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
 			this.fileTree.class = "file-tree";
 
 			let tempTreeContainer = document.body.createDiv();
@@ -194,15 +204,24 @@ export class Website
 
 	private async createRSS()
 	{
+		let author = this.exportOptions.authorName ||  undefined;
+
 		this.rss = new RSS(
 		{
-			title: this.exportOptions.vaultName ?? app.vault.getName(),
+			title: this.exportOptions.siteName ?? app.vault.getName(),
 			description: "Obsidian digital garden",
 			generator: "Webpage HTML Export plugin for Obsidian",
 			feed_url: Path.joinStrings(this.exportOptions.siteURL ?? "", this.rssPath).asString,
 			site_url: this.exportOptions.siteURL ?? "",
 			image_url: Path.joinStrings(this.exportOptions.siteURL ?? "", AssetHandler.favicon.relativePath.asString).asString,
-			pubDate: new Date(this.index.exportTime)
+			pubDate: new Date(this.index.exportTime),
+			copyright: author,
+			ttl: 60,
+			custom_elements:
+			[
+				{ "dc:creator": author },
+				
+			]
 		});
 
 		for (let page of this.webpages)
@@ -212,22 +231,23 @@ export class Website
 
 			let title = page.title;
 			let url = Path.joinStrings(this.exportOptions.siteURL ?? "", page.relativePath.asString).asString;
-			let guid = page.relativePath.asString;
-			let date = new Date(page.source.stat.ctime);
+			let guid = page.source.path;
+			let date = new Date(page.source.stat.mtime);
+			author = page.author ?? author;
 			let mediaPathStr = page.viewElement.querySelector("img")?.getAttribute("src") ?? "";
 			let hasMedia = mediaPathStr.length > 0;
 			let mediaPath = Path.joinStrings(this.exportOptions.siteURL ?? "", mediaPathStr);
 			mediaPathStr = mediaPath.asString;
 			let content = page.getCompatibilityContent();
 
-			let description = page.frontmatter["description"];
+			let description = page.description;
 
 			if (!description)
 			{
 				let descDoc = new DOMParser().parseFromString(content, "text/html");
 				descDoc.querySelectorAll("h1, h2, h3, h4, h5, h6, .mjx-container, table, a.tag, img").forEach((item) => item.remove());
-				// make ul and ol lists into paragraphs
-				descDoc.querySelectorAll("ul, ol").forEach((list) => 
+				// make lists into paragraphs
+				descDoc.querySelectorAll("ul, ol, li").forEach((list) => 
 				{
 					let p = document.createElement("p");
 					p.innerHTML = list.innerHTML;
@@ -265,14 +285,43 @@ export class Website
 				guid: guid,
 				date: date,
 				enclosure: hasMedia ? { url: mediaPathStr } : undefined,
+				author: author,
 				custom_elements: 
 				[
-					hasMedia ? { "content:encoded": `<figure><img src="${mediaPathStr}"></figure>` } : undefined
+					hasMedia ? { "content:encoded": `<figure><img src="${mediaPathStr}"></figure>` } : undefined,
 				]
 			});
 		}
 
-		new Asset("rss.xml", this.rss.xml(), AssetType.Other, InlinePolicy.Download, false, Mutability.Temporary);
+		let result = this.rss.xml();
+
+		let rssAbsoultePath = this.destination.joinString(this.rssPath);
+		let rssFileOld = await rssAbsoultePath.readFileString();
+		if (rssFileOld)
+		{
+			let rssDocOld = new DOMParser().parseFromString(rssFileOld, "text/xml");
+			let rssDocNew = new DOMParser().parseFromString(result, "text/xml");
+
+			// insert old items into new rss and remove duplicates
+			let oldItems = Array.from(rssDocOld.querySelectorAll("item")) as HTMLElement[];
+			let newItems = Array.from(rssDocNew.querySelectorAll("item")) as HTMLElement[];
+
+			oldItems = oldItems.filter((oldItem) => !newItems.find((newItem) => newItem.querySelector("guid")?.textContent == oldItem.querySelector("guid")?.textContent));
+			oldItems = oldItems.filter((oldItem) => !this.index.removedFiles.contains(oldItem.querySelector("guid")?.textContent ?? ""));
+			newItems = newItems.concat(oldItems);
+
+			// remove all items from new rss
+			newItems.forEach((item) => item.remove());
+
+			// add items back to new rss
+			let channel = rssDocNew.querySelector("channel");
+			newItems.forEach((item) => channel?.appendChild(item));
+
+			result = rssDocNew.documentElement.outerHTML;
+		}
+
+		let rss = new Asset("rss.xml", result, AssetType.Other, InlinePolicy.Download, false, Mutability.Temporary);
+		rss.download(this.destination);
 	}
 	
 	private filterDownloads(onlyDuplicates: boolean = false)
@@ -308,6 +357,7 @@ export class Website
 			if (metadata && (file.modifiedTime > metadata.modifiedTime || metadata.sourceSize != file.content.length)) 
 				return true;
 			
+			console.log("Excluding: " + file.relativePath.asString);
 			return false;
 		}
 
