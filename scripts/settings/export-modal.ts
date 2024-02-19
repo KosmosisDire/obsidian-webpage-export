@@ -163,27 +163,27 @@ export class ExportModal extends Modal
 						case 'website':
 							Settings.inlineAssets = false;
 							Settings.makeNamesWebStyle = true;
-							Settings.includeGraphView = true;
-							Settings.includeFileTree = true;
-							Settings.includeSearchBar = true;
+							Settings.addGraphView = true;
+							Settings.addFileNav = true;
+							Settings.addSearchBar = true;
 							await SettingsPage.saveSettings();
 
 							break;
 						case 'documents':
 							Settings.inlineAssets = true;
 							Settings.makeNamesWebStyle = false;
-							Settings.includeFileTree = true;
-							Settings.includeGraphView = false;
-							Settings.includeSearchBar = false;
+							Settings.addFileNav = true;
+							Settings.addGraphView = false;
+							Settings.addSearchBar = false;
 							await SettingsPage.saveSettings();
 
 							break;
 						case 'raw-documents':
 							Settings.inlineAssets = true;
 							Settings.makeNamesWebStyle = false;
-							Settings.includeGraphView = false;
-							Settings.includeFileTree = false;
-							Settings.includeSearchBar = false;
+							Settings.addGraphView = false;
+							Settings.addFileNav = false;
+							Settings.addSearchBar = false;
 							await SettingsPage.saveSettings();
 
 							break;

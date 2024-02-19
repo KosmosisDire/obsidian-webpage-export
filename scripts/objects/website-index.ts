@@ -197,7 +197,7 @@ export class WebsiteIndex
 
 				this.index.add({
 					path: webpagePath,
-					title: (await Website.getTitleAndIcon(webpage.source, true)).title,
+					title: webpage.title,
 					content: content,
 					tags: webpage.tags,
 					headers: webpage.headings.map((header) => header.heading),
@@ -313,8 +313,9 @@ export class WebsiteIndex
 		return new Asset("metadata.json", JSON.stringify(metadata, null, 2), AssetType.Other, InlinePolicy.Download, false, Mutability.Temporary);
 	}
 
-	public async deleteOldFiles()
+	public async deleteOldFiles(options?: MarkdownWebpageRendererAPIOptions)
 	{
+		options = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
 		if (!this.previousMetadata) return;
 		if (this.removedFiles.length == 0)
 		{
@@ -328,7 +329,7 @@ export class WebsiteIndex
 			let removedPath = this.removedFiles[i];
 			console.log("Removing old file: ", this.previousMetadata.fileInfo);
 			let exportedPath = new Path(this.previousMetadata.fileInfo[removedPath].exportedPath);
-			exportedPath.makeWebStyle(Settings.makeNamesWebStyle);
+			exportedPath.makeWebStyle(options.webStylePaths);
 
 			let deletePath = this.web.destination.join(exportedPath);
 			console.log("Deleting old file: " + deletePath.asString);
@@ -487,7 +488,7 @@ export class WebsiteIndex
 		this.web.dependencies.push(metadataAsset);
 		this.web.downloads.push(metadataAsset);
 
-		if (Settings.includeSearchBar) // only create index if search bar is enabled
+		if (options.addSearch) // only create index if search bar is enabled
 		{
 			let index = await this.createIndex();
 			if (!index) return false;

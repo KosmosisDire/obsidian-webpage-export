@@ -33,18 +33,18 @@ class GraphAssembly
     static minRadius = 0;
 
     /**  
-     * @param {{nodeCount: number, linkCount:number, radii: number[], labels: string[], paths: string[], linkSources: number[], linkTargets: number[], linkCounts: number[]}} nodes
+     * @param {{graphOptions: {attractionForce: number, linkLength: number, repulsionForce: number, centralForce: number, edgePruning: number, minNodeRadius: number, maxNodeRadius: number}, nodeCount: number, linkCount:number, radii: number[], labels: string[], paths: string[], linkSources: number[], linkTargets: number[], linkCounts: number[]}} graphData
     */
-    static init(nodes)
+    static init(graphData)
     {
-        GraphAssembly.nodeCount = nodes.nodeCount;
-        GraphAssembly.linkCount = nodes.linkCount;
+        GraphAssembly.nodeCount = graphData.nodeCount;
+        GraphAssembly.linkCount = graphData.linkCount;
 
         // create arrays for the data
         let positions = new Float32Array(GraphAssembly.nodeCount * 2);
-        GraphAssembly.radii = new Float32Array(nodes.radii);
-        GraphAssembly.linkSources = new Int32Array(nodes.linkSources);
-        GraphAssembly.linkTargets = new Int32Array(nodes.linkTargets);
+        GraphAssembly.radii = new Float32Array(graphData.radii);
+        GraphAssembly.linkSources = new Int32Array(graphData.linkSources);
+        GraphAssembly.linkTargets = new Int32Array(graphData.linkTargets);
 
         // allocate memory on the heap
         GraphAssembly.#positionsPtr = Module._malloc(positions.byteLength);
@@ -74,10 +74,10 @@ class GraphAssembly
             GraphAssembly.linkCount, 
             batchFraction, 
             dt, 
-            attractionForce, 
-            linkLength, 
-            repulsionForce, 
-            centralForce
+            graphData.graphOptions.attractionForce, 
+            graphData.graphOptions.linkLength, 
+            graphData.graphOptions.repulsionForce,
+            graphData.graphOptions.centralForce,
         );
     }
 
@@ -284,9 +284,9 @@ class GraphRenderWorker
             linkTargets: GraphAssembly.linkTargets,
             nodeCount: GraphAssembly.nodeCount,
             radii: GraphAssembly.radii,
-            labels: nodes.labels,
-            linkLength: linkLength,
-            edgePruning: edgePruning,
+            labels: graphData.labels,
+            linkLength: graphData.graphOptions.linkLength,
+            edgePruning: graphData.graphOptions.edgePruning,
             options: { width: width, height: height, view: this.view },
         }, [this.view]);
     }
@@ -586,11 +586,11 @@ async function initializeGraphView()
     if(running) return;
 	running = true;
 
-	repulsionForce /= batchFraction; // compensate for batch fraction
+	graphData.graphOptions.repulsionForce /= batchFraction; // compensate for batch fraction
 	pixiApp = new PIXI.Application();
 
     console.log("Module Ready");
-    GraphAssembly.init(nodes);
+    GraphAssembly.init(graphData); // graphData is a global variable set in another script
 
     graphRenderer = new GraphRenderWorker();
     window.graphRenderer = graphRenderer;
@@ -662,14 +662,14 @@ function updateGraph()
     {
         batchFraction = Math.max(batchFraction - 0.5 * 1/targetFPS, minBatchFraction);
         GraphAssembly.batchFraction = batchFraction;
-        GraphAssembly.repulsionForce = repulsionForce / batchFraction;
+        GraphAssembly.repulsionForce = graphData.graphOptions.repulsionForce / batchFraction;
     }
 
 	if (averageFPS > targetFPS * 1.2 && batchFraction < 1)
 	{
 		batchFraction = Math.min(batchFraction + 0.5 * 1/targetFPS, 1);
 		GraphAssembly.batchFraction = batchFraction;
-		GraphAssembly.repulsionForce = repulsionForce / batchFraction;
+		GraphAssembly.repulsionForce = graphData.graphOptions.repulsionForce / batchFraction;
 	}
 
     if (scrollVelocity != 0)
@@ -796,8 +796,8 @@ function initializeGraphEvents()
 	{
 		if (!graphExpanded) GraphAssembly.saveState(graphRenderer);
 		else toggleExpandedGraph();
-		let url = nodes.paths[nodeIndex];
-		if(window.location.pathname.endsWith(nodes.paths[nodeIndex])) return;
+		let url = graphData.paths[nodeIndex];
+		if(window.location.pathname.endsWith(graphData.paths[nodeIndex])) return;
 		await loadDocument(url, true, true);
 	}
 

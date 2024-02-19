@@ -13,6 +13,7 @@
 	"license": "GPL-3.0",
 	"devDependencies": {
 		"@types/node": "^16.11.6",
+		"@types/rss": "^0.0.32",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",
@@ -27,6 +28,7 @@
 		"html-minifier-terser": "^7.2.0",
 		"mime": "^3.0.0",
 		"minisearch": "^6.3.0",
+		"rss": "^1.2.2",
 		"upath": "^2.0.1"
 	}
 }

@@ -1,7 +1,8 @@
 import { TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
-import { Settings, SettingsPage } from "scripts/settings/settings";
+import { Settings } from "scripts/settings/settings";
 import { Website } from "./website";
+import { GraphViewOptions, MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
 
 export class GraphView
 {
@@ -13,7 +14,9 @@ export class GraphView
 	public linkSources: number[];
 	public linkTargets: number[];
 
+	public graphOptions: GraphViewOptions = new GraphViewOptions();
 	private isInitialized: boolean = false;
+
 
 	static InOutQuadBlend(start: number, end: number, t: number): number
 	{
@@ -24,13 +27,13 @@ export class GraphView
 		return start + (end - start) * t2;
 	}
 
-	public async init(files: TFile[], minRadius: number, maxRadius: number, extraDepth: number = 0)
+	public async init(files: TFile[], options: MarkdownWebpageRendererAPIOptions)
 	{
 		if (this.isInitialized) return;
 
+		Object.assign(this.graphOptions, options.graphViewOptions);
+
 		this.paths = files.map(f => f.path);
-
-
 		this.nodeCount = this.paths.length;
 		this.linkSources = [];
 		this.linkTargets = [];
@@ -89,13 +92,8 @@ export class GraphView
 
 		let maxLinks = Math.max(...linkCounts);
 
-		this.radii = linkCounts.map(l => GraphView.InOutQuadBlend(minRadius, maxRadius, Math.min(l / (maxLinks * 0.8), 1.0)));
-		this.paths = this.paths.map(p => 
-			{
-				let path = new Path(p).setExtension(".html").makeUnixStyle().asString;
-				if (Settings.makeNamesWebStyle) path = Path.toWebStyle(path);
-				return path;
-			});
+		this.radii = linkCounts.map(l => GraphView.InOutQuadBlend(this.graphOptions.minNodeRadius, this.graphOptions.maxNodeRadius, Math.min(l / (maxLinks * 0.8), 1.0)));
+		this.paths = this.paths.map(p => new Path(p).setExtension(".html").makeUnixStyle().makeWebStyle(options.webStylePaths).asString);
 
 		this.linkCount = this.linkSources.length;
 
@@ -126,14 +124,6 @@ export class GraphView
 	public getExportData(): string
 	{
 		if (!this.isInitialized) throw new Error("Graph not initialized");
-
-		return `
-let nodes=\n${JSON.stringify(this)};
-let attractionForce = ${Settings.graphAttractionForce};
-let linkLength = ${Settings.graphLinkLength};
-let repulsionForce = ${Settings.graphRepulsionForce};
-let centralForce = ${Settings.graphCentralForce};
-let edgePruning = ${Settings.graphEdgePruning};
-`;
+		return `let graphData=\n${JSON.stringify(this)};`;
 	}
 }

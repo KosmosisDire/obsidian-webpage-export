@@ -57,14 +57,17 @@ export class Settings
 	public static deleteOldFiles: boolean;
 
 	// Page Features
-	public static includeThemeToggle: boolean;
-	public static includeOutline: boolean;
-	public static includeFileTree: boolean;
-	public static includeSearchBar: boolean;
-	public static includeGraphView: boolean;
-	public static addFilenameTitle: boolean;
+	public static addThemeToggle: boolean;
+	public static addOutline: boolean;
+	public static addFileNav: boolean;
+	public static addSearchBar: boolean;
+	public static addGraphView: boolean;
+	public static addTitle: boolean;
+	public static addRSSFeed: boolean;
 
 	// Main Export Options
+	public static siteURL: string;
+	public static authorName: string;
 	public static exportPreset: ExportPreset;
 	public static openAfterExport: boolean;
 
@@ -121,14 +124,17 @@ export const DEFAULT_SETTINGS: Settings =
 	deleteOldFiles: true,
 	
 	// Page Features
-	includeThemeToggle: true,
-	includeOutline: true,
-	includeFileTree: true,
-	includeSearchBar: true,
-	includeGraphView: true,
-	addFilenameTitle: true,
+	addThemeToggle: true,
+	addOutline: true,
+	addFileNav: true,
+	addSearchBar: true,
+	addGraphView: true,
+	addTitle: true,
+	addRSSFeed: true,
 
 	// Main Export Options
+	siteURL: '',
+	authorName: '',
 	exportPreset: ExportPreset.Website,
 	openAfterExport: false,
 
@@ -214,14 +220,14 @@ export class SettingsPage extends PluginSettingTab
 			SettingsPage.createDivider(contentEl);
 			let section = SettingsPage.createSection(contentEl, 'Page Features', 'Control the visibility of different page features');
 
-			SettingsPage.createToggle(section, 'Theme toggle', () => Settings.includeThemeToggle, (value) => Settings.includeThemeToggle = value);
-			SettingsPage.createToggle(section, 'Document outline / table of contents', () => Settings.includeOutline, (value) => Settings.includeOutline = value);
-			SettingsPage.createToggle(section, 'File navigation tree', () => Settings.includeFileTree, (value) => Settings.includeFileTree = value);
+			SettingsPage.createToggle(section, 'Theme toggle', () => Settings.addThemeToggle, (value) => Settings.addThemeToggle = value);
+			SettingsPage.createToggle(section, 'Document outline / table of contents', () => Settings.addOutline, (value) => Settings.addOutline = value);
+			SettingsPage.createToggle(section, 'File navigation tree', () => Settings.addFileNav, (value) => Settings.addFileNav = value);
 			SettingsPage.createToggle(section, 'File & folder icons', () => Settings.showDefaultTreeIcons, (value) => Settings.showDefaultTreeIcons = value);
 			if (Settings.exportPreset == ExportPreset.Website)
 			{
-				SettingsPage.createToggle(section, 'Search bar', () => Settings.includeSearchBar, (value) => Settings.includeSearchBar = value);
-				SettingsPage.createToggle(section, 'Graph view', () => Settings.includeGraphView, (value) => Settings.includeGraphView = value);
+				SettingsPage.createToggle(section, 'Search bar', () => Settings.addSearchBar, (value) => Settings.addSearchBar = value);
+				SettingsPage.createToggle(section, 'Graph view', () => Settings.addGraphView, (value) => Settings.addGraphView = value);
 				let graphViewSection = SettingsPage.createSection(section, 'Graph View Settings', 'Control the behavior of the graph view simulation');
 
 				new Setting(graphViewSection)
@@ -525,6 +531,22 @@ This feature does not require "File & folder icons" to be enbaled.`);
 
 		//#endregion
 
+		//#region Advanced
+
+		SettingsPage.createDivider(contentEl);
+		section = SettingsPage.createSection(contentEl, 'Advanced', 'Control niche or advanced features of the website like adding an RSS Feed.');
+
+		SettingsPage.createToggle(section, 'Create RSS feed', () => Settings.addRSSFeed, (value) => Settings.addRSSFeed = value,
+					'Create an RSS feed for the website.');
+
+		SettingsPage.createText(section, 'Public site URL', () => Settings.siteURL, (value) => Settings.siteURL = value.endsWith("/") ? value : value + "/",
+					'The url that this site will be hosted at. This is used to create the rss feed links, and will be stored in plain text.', 
+					(value) => value.startsWith("http://") || value.startsWith("https://") ? "" : "URL must start with 'http://' or 'https://'");	
+		
+
+
+		//#endregion
+
 		//#region Experimental
 		
 
@@ -673,16 +695,28 @@ This feature does not require "File & folder icons" to be enbaled.`);
 		return setting;
 	}
 
-	public static createText(container: HTMLElement, name: string, get: () => string, set: (value: string) => void, desc: string = ""): Setting
+	public static createText(container: HTMLElement, name: string, get: () => string, set: (value: string) => void, desc: string = "", validation?: (value: string) => string): Setting
 	{
 		let setting = new Setting(container);
+		let errorText = this.createError(container);
+
+		let value = get();
+		if (value != "") errorText.setText(validation ? validation(value) : "");
+		
 		setting.setName(name)
 		if (desc != "") setting.setDesc(desc);
 		setting.addText((text) => text
-			.setValue(get())
-			.onChange(async (value) => {
-				set(value);
-				await SettingsPage.saveSettings();
+			.setValue(value)
+			.onChange(async (value) => 
+			{
+				let error = validation ? validation(value) : "";
+				if (error == "")
+				{
+					set(value);
+					await SettingsPage.saveSettings();
+				}
+
+				errorText.setText(error);
 			}));
 
 		return setting;

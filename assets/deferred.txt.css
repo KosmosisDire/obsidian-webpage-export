@@ -198,6 +198,7 @@ body
     flex-direction: column;
     align-items: center;
 	transition: opacity 0.2s ease-in-out;
+	contain: inline-size;
 }
 
 .hide
@@ -223,6 +224,7 @@ body
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
+	contain: inline-size;
 }
 
 .document-container>.markdown-preview-view>.markdown-preview-sizer 
@@ -232,6 +234,7 @@ body
     max-width: var(--line-width) !important;
     flex-basis: var(--line-width) !important;
     transition: background-color var(--color-fade-speed) ease-in-out;
+	contain: inline-size;
 }
 
 .view-content img:not([width]), .markdown-rendered img:not([width]) 

@@ -753,9 +753,9 @@ function setActiveDocument(url, showInTree, changeURL, animate = true)
 	}
 
 	// set the active file in the graph view
-	if(typeof nodes != 'undefined' && window.graphRenderer)
+	if(typeof graphData != 'undefined' && window.graphRenderer)
 	{
-		let activeNode = nodes?.paths.findIndex(function(item) { return item.endsWith(searchlessHeaderlessPath); }) ?? -1;
+		let activeNode = graphData?.paths.findIndex(function(item) { return item.endsWith(searchlessHeaderlessPath); }) ?? -1;
 		
 		if(activeNode >= 0) 
 		{

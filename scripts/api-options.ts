@@ -1,4 +1,3 @@
-import { Setting } from "obsidian";
 import { ExportPreset, Settings } from "./settings/settings";
 
 /**
@@ -32,6 +31,17 @@ export class MarkdownRendererAPIOptions
 	displayProgress?: boolean = true;
 }
 
+export class GraphViewOptions
+{
+	attractionForce = 1;
+	linkLength = 10;
+	repulsionForce = 150;
+	centralForce = 3;
+	edgePruning = 100;
+	minNodeRadius = 3;
+	maxNodeRadius = 7;
+}
+
 /**
  * Options for the MarkdownWebpageRendererAPI when export a webpage object.
  */
@@ -45,27 +55,27 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	/**
 	 * Add a theme toggle to the left sidebar.
 	 */
-	addThemeToggle?: boolean = Settings.includeThemeToggle;
+	addThemeToggle?: boolean = Settings.addThemeToggle;
 
 	/**
 	 * Add a file navigation tree to the left sidebar.
 	 */
-	addFileNavigation?: boolean = Settings.includeFileTree;
+	addFileNavigation?: boolean = Settings.addFileNav;
 
 	/**
 	 * Add a document outline to the right sidebar
 	 */
-	addOutline?: boolean = Settings.includeOutline;
+	addOutline?: boolean = Settings.addOutline;
 
 	/**
 	 * Add a search bar to the left sidebar.
 	 */
-	addSearch?: boolean = Settings.includeSearchBar;
+	addSearch?: boolean = Settings.addSearchBar;
 
 	/**
 	 * Add the global graph view to the right sidebar.
 	 */
-	addGraphView?: boolean = Settings.includeGraphView;
+	addGraphView?: boolean = Settings.addGraphView;
 
 	/**
 	 * Transfer body classes from obsidian to the exported document.
@@ -83,10 +93,19 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	addHeadTag?: boolean = true;
 
 	/**
+	 * Create an RSS feed for the site
+	 */
+	addRSS?: boolean = Settings.addRSSFeed;
+
+	/**
 	 * Add a title to the top of each page. (Makes sure there are no duplicate titles)
 	 */
-	addTitle?: boolean = true;
+	addTitle?: boolean = Settings.addTitle;
 
+	/**
+	 * The options controlling the behavior of the gaph view.
+	 */
+	graphViewOptions?: GraphViewOptions = new GraphViewOptions();
 	
 	/**
 	 * Allows lists with sub-items to be folded / collpased.
@@ -179,4 +198,9 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	 * Fix all links to be relative and direct to other files or media included in the export.
 	 */
 	fixLinks?: boolean = true;
+
+	/**
+	 * The url that this site will be hosted at. This is used for the rss feed data.
+	 */
+	siteURL?: string = Settings.siteURL;
 }

@@ -6,6 +6,7 @@ import { promises as fs } from 'fs';
 import { statSync } from 'fs';
 import internal from 'stream'; 
 import { ExportLog } from 'scripts/html-generation/render-log';
+import { join } from 'path';
 
 export class Path
 {
@@ -64,7 +65,8 @@ export class Path
 		{
 			if (this._root.startsWith("http:") || this._root.startsWith("https:"))
 			{
-				this.makeUnixStyle();
+				this._isWindows = false;
+				this.reparse(this._fullPath.replaceAll("\\", "/"));
 			}
 			else
 			{
@@ -345,6 +347,8 @@ export class Path
 	 * "/home/john doe/Documents/file.txt"
 	 * "C:/Users/John Doe/Documents/Documents"
 	 * "/home/john doe/Documents/Documents"
+	 * "relative/path/to/example.txt"
+	 * "relative/path/to/folder"
 	 */
 	get asString(): string
 	{
@@ -682,9 +686,9 @@ export class Path
 		else if(fullPath.startsWith("https:")) parsed.root = "https://"; 
 
 		// make sure that protocols and windows drives use two slashes
-		parsed.dir = parsed.dir.replace(/[:][\\](?![\\])/g, "://");
+		parsed.dir = parsed.dir.replace(/[:][\\/](?![\\/])/g, "://");
 		parent = parsed.dir;
-		fullPath = fullPath.replace(/[:][\\](?![\\])/g, "://");
+		fullPath = fullPath.replace(/[:][\\/](?![\\/])/g, "://");
 
 		return { root: parsed.root, dir: parsed.dir, parent: parent, base: parsed.base, ext: parsed.ext, name: parsed.name, fullPath: fullPath };
 	}
@@ -697,6 +701,12 @@ export class Path
 	private static joinStringPaths(...paths: string[]): string
 	{
 		let joined = pathTools.join(...paths);
+
+		if (joined.startsWith("http")) 
+		{
+			joined = joined.replaceAll(":/", "://");
+		}
+
 		try
 		{
 			return decodeURI(joined);

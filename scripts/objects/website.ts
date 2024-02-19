@@ -13,6 +13,7 @@ import { WebsiteIndex } from "./website-index";
 import { HTMLGeneration } from "scripts/html-generation/html-generation-helpers";
 import { MarkdownRendererAPI } from "scripts/render-api";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options";
+import RSS from 'rss';
 
 export class Website
 {
@@ -23,16 +24,71 @@ export class Website
 	public progress: number = 0;
 	public destination: Path;
 	public index: WebsiteIndex;
+	public rss: RSS;
+	public rssPath = AssetHandler.libraryPath.joinString("rss.xml").makeUnixStyle().makeRootAbsolute().asString;
 
 	private globalGraph: GraphView;
 	private fileTree: FileTree;
 	private fileTreeHtml: string = "";
-
+	
 	public graphDataAsset: Asset;
 	public fileTreeAsset: Asset;
 	
+	
 	public static validBodyClasses: string;
 	public exportOptions: MarkdownWebpageRendererAPIOptions;
+	
+	/**
+	 * Create a new website with the given files and options.
+	 * @param files The files to include in the website.
+	 * @param destination The folder to export the website to.
+	 * @param options The api options to use for the export.
+	 * @returns The website object.
+	 */
+	public async createWithFiles(files: TFile[], destination: Path, options?: MarkdownWebpageRendererAPIOptions): Promise<Website | undefined>
+	{
+		this.exportOptions = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
+		this.batchFiles = files;
+		this.destination = destination;
+		await this.initExport();
+
+		console.log("Creating website with files: ", files);
+
+		let useIncrementalExport = this.index.shouldApplyIncrementalExport();
+
+		for (let file of files)
+		{
+			if(MarkdownRendererAPI.checkCancelled()) return;
+			ExportLog.progress(this.progress, this.batchFiles.length, "Generating HTML", "Exporting: " + file.path, "var(--interactive-accent)");
+			this.progress++;
+			
+			let filename = new Path(file.path).basename;
+			let webpage = new Webpage(file, destination, filename, this, this.exportOptions);
+			let shouldExportPage = (useIncrementalExport && this.index.isFileChanged(file)) || !useIncrementalExport;
+			if (!shouldExportPage) continue;
+			
+			let createdPage = await webpage.create();
+			if(!createdPage) continue;
+
+			this.webpages.push(webpage);
+			this.downloads.push(webpage);
+			this.downloads.push(...webpage.dependencies);
+			this.dependencies.push(...webpage.dependencies);
+		}
+
+		this.createRSS();
+
+		this.dependencies.push(...AssetHandler.getDownloads(this.exportOptions));
+		this.downloads.push(...AssetHandler.getDownloads(this.exportOptions));
+
+		this.filterDownloads(true);
+		this.index.build(this.exportOptions);
+		this.filterDownloads();
+		
+		console.log("Website created: ", this);
+			
+		return this;
+	}
 
 	private giveWarnings()
 	{
@@ -91,7 +147,7 @@ export class Website
 			ExportLog.progress(0, 1, "Initialize Export", "Generating graph view", "var(--color-yellow)");
 			let convertableFiles = this.batchFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
 			this.globalGraph = new GraphView();
-			await this.globalGraph.init(convertableFiles, Settings.graphMinNodeSize, Settings.graphMaxNodeSize);
+			await this.globalGraph.init(convertableFiles, this.exportOptions);
 		}
 		
 		if (this.exportOptions.addFileNavigation)
@@ -136,47 +192,87 @@ export class Website
 		await this.index.init();
 	}
 
-	public async createWithFiles(files: TFile[], destination: Path, options?: MarkdownWebpageRendererAPIOptions): Promise<Website | undefined>
+	private async createRSS()
 	{
-		this.exportOptions = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
-		this.batchFiles = files;
-		this.destination = destination;
-		await this.initExport();
-
-		console.log("Creating website with files: ", files);
-
-		let useIncrementalExport = this.index.shouldApplyIncrementalExport();
-
-		for (let file of files)
+		this.rss = new RSS(
 		{
-			if(MarkdownRendererAPI.checkCancelled()) return;
-			ExportLog.progress(this.progress, this.batchFiles.length, "Generating HTML", "Exporting: " + file.path, "var(--interactive-accent)");
-			this.progress++;
-			
-			let filename = new Path(file.path).basename;
-			let webpage = new Webpage(file, destination, filename, this, this.exportOptions);
-			let shouldExportPage = (useIncrementalExport && this.index.isFileChanged(file)) || !useIncrementalExport;
-			if (!shouldExportPage) continue;
-			
-			let createdPage = await webpage.create();
-			if(!createdPage) continue;
+			title: this.exportOptions.vaultName ?? app.vault.getName(),
+			description: "Obsidian digital garden",
+			generator: "Webpage HTML Export plugin for Obsidian",
+			feed_url: Path.joinStrings(this.exportOptions.siteURL ?? "", this.rssPath).asString,
+			site_url: this.exportOptions.siteURL ?? "",
+			image_url: Path.joinStrings(this.exportOptions.siteURL ?? "", AssetHandler.favicon.relativePath.asString).asString,
+			pubDate: new Date(this.index.exportTime)
+		});
 
-			this.webpages.push(webpage);
-			this.downloads.push(webpage);
-			this.downloads.push(...webpage.dependencies);
-			this.dependencies.push(...webpage.dependencies);
+		for (let page of this.webpages)
+		{
+			// only include convertable pages with content
+			if (!page.isConvertable || page.sizerElement.innerText.length < 5) continue;
+
+			let title = page.title;
+			let url = Path.joinStrings(this.exportOptions.siteURL ?? "", page.relativePath.asString).asString;
+			let guid = page.relativePath.asString;
+			let date = new Date(page.source.stat.ctime);
+			let mediaPathStr = page.viewElement.querySelector("img")?.getAttribute("src") ?? "";
+			let hasMedia = mediaPathStr.length > 0;
+			let mediaPath = Path.joinStrings(this.exportOptions.siteURL ?? "", mediaPathStr);
+			mediaPathStr = mediaPath.asString;
+			let content = page.getCompatibilityContent();
+
+			let description = page.frontmatter["description"];
+
+			if (!description)
+			{
+				let descDoc = new DOMParser().parseFromString(content, "text/html");
+				descDoc.querySelectorAll("h1, h2, h3, h4, h5, h6, .mjx-container, table, a.tag, img").forEach((item) => item.remove());
+				// make ul and ol lists into paragraphs
+				descDoc.querySelectorAll("ul, ol").forEach((list) => 
+				{
+					let p = document.createElement("p");
+					p.innerHTML = list.innerHTML;
+					list.replaceWith(p);
+				});
+				description = descDoc.body.innerHTML;
+				descDoc.body.innerHTML = "";
+			}
+			
+			// add tags to top of description
+			let tags = page.tags.map((t) => t).map((tag) => `<a class="tag" href="${this.exportOptions.siteURL}?query=tag:${tag.replace("#", "")}">${tag}</a>`).join(" ");
+			let tagContainer = document.body.createDiv();
+			tagContainer.innerHTML = tags;
+			tagContainer.style.display = "flex";
+			tagContainer.style.gap = "0.4em";
+
+			tagContainer.querySelectorAll("a.tag").forEach((tag: HTMLElement) => 
+			{
+				tag.style.backgroundColor = "#046c74";
+				tag.style.color = "white";
+				tag.style.fontWeight = "700";
+				tag.style.border = "none";
+				tag.style.borderRadius = "1em";
+				tag.style.padding = "0.2em 0.5em";
+			});
+
+			description = tagContainer.innerHTML + " \n " + description;
+			tagContainer.remove();
+
+			this.rss.item(
+			{ 
+				title: title,
+				description: description,
+				url: url,
+				guid: guid,
+				date: date,
+				enclosure: hasMedia ? { url: mediaPathStr } : undefined,
+				custom_elements: 
+				[
+					hasMedia ? { "content:encoded": `<figure><img src="${mediaPathStr}"></figure>` } : undefined
+				]
+			});
 		}
 
-		this.dependencies.push(...AssetHandler.getDownloads(this.exportOptions));
-		this.downloads.push(...AssetHandler.getDownloads(this.exportOptions));
-
-		this.filterDownloads(true);
-		this.index.build(this.exportOptions);
-		this.filterDownloads();
-		
-		console.log("Website created: ", this);
-		 
-		return this;
+		new Asset("rss.xml", this.rss.xml(), AssetType.Other, InlinePolicy.Download, false, Mutability.Temporary);
 	}
 	
 	private filterDownloads(onlyDuplicates: boolean = false)
@@ -219,7 +315,7 @@ export class Website
 		this.downloads = this.downloads.filter(filterFunction);
 	}
 
-	// Seperate the icon and title into seperate functions
+	// TODO: Seperate the icon and title into seperate functions
 	public static async getTitleAndIcon(file: TAbstractFile, skipIcon:boolean = false): Promise<{ title: string; icon: string; isDefaultIcon: boolean; isDefaultTitle: boolean }>
 	{
 		const { app } = HTMLExportPlugin.plugin;

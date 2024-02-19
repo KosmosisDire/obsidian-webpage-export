@@ -18,6 +18,7 @@ export default class HTMLExportPlugin extends Plugin
 	public api = MarkdownRendererAPI;
 	public settings = Settings;
 	public assetHandler = AssetHandler;
+	public Path = Path;
 
 	async onload()
 	{

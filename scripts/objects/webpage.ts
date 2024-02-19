@@ -1,7 +1,6 @@
-import { TFile } from "obsidian";
+import { FrontMatterCache, TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
 import { Downloadable } from "scripts/utils/downloadable";
-import { ExportPreset, Settings, SettingsPage } from "scripts/settings/settings";
 import { OutlineTree } from "./outline-tree";
 import { GraphView } from "./graph-view";
 import { Website } from "./website";
@@ -41,6 +40,10 @@ export class Webpage extends Downloadable
 	public isConvertable: boolean = false;
 
 	public exportOptions: MarkdownWebpageRendererAPIOptions;
+
+	public title: string = "";
+	public icon: string = "";
+	public titleInfo: {title: string, icon: string, isDefaultTitle: boolean, isDefaultIcon: boolean} = {title: "", icon: "", isDefaultTitle: true, isDefaultIcon: true};
 
 	/**
 	 * @param file The original markdown file to export
@@ -167,8 +170,69 @@ export class Webpage extends Downloadable
 		return headers;
 	}
 
+	get aliases(): string[]
+	{
+		let aliases = this.frontmatter?.aliases ?? [];
+		return aliases;
+	}
+
+	get frontmatter(): FrontMatterCache
+	{
+		let frontmatter = app.metadataCache.getFileCache(this.source)?.frontmatter ?? {};
+		return frontmatter;
+	}
+
+	public getCompatibilityContent(): string
+	{
+		let oldContent = this.sizerElement.outerHTML;
+		let compatContent = this.sizerElement;
+
+		compatContent.querySelectorAll("script, style, .collapse-indicator, .callout-icon, .icon, a.tag").forEach((script) => script.remove());
+		
+		function moveChildrenOut(element: HTMLElement)
+		{
+			let children = Array.from(element.children);
+			element.parentElement?.append(...children);
+			element.remove();
+		}
+
+		let headingTreeElements = Array.from(compatContent.querySelectorAll(".heading-wrapper"));
+		headingTreeElements.forEach(moveChildrenOut);
+		headingTreeElements = Array.from(compatContent.querySelectorAll(".heading-children"));
+		headingTreeElements.forEach(moveChildrenOut);
+		let lowDivs = Array.from(compatContent.children).filter((el) => el.tagName == "DIV" && el.childElementCount == 1);
+		lowDivs.forEach(moveChildrenOut);
+
+		let all = Array.from(compatContent.querySelectorAll("*"));
+		all.forEach((el: HTMLElement) => 
+		{
+			// give default var values
+			let fillDefault = el.tagName == "text" ? "#181818" : "white";
+			el.style.fill = el.style.fill.replace(/var\(([\w -]+)\)/g, `var($1, ${fillDefault})`);
+			el.style.stroke = el.style.stroke.replace(/var\(([\w -]+)\)/g, "var($1, #181818)");
+			el.style.backgroundColor = el.style.backgroundColor.replace(/var\(([\w -]+)\)/g, "var($1, white)");
+			el.style.color = el.style.color.replace(/var\(([\w -]+)\)/g, "var($1, #181818)");
+
+			el.removeAttribute("id");
+			el.removeAttribute("class");
+			el.removeAttribute("font-family");
+		});
+
+		let result = compatContent.innerHTML;
+		compatContent.innerHTML = oldContent;
+
+		result = result.replaceAll("<", " <");
+
+		return result;
+	}
+
 	public async create(): Promise<Webpage | undefined>
 	{
+		this.titleInfo = await Website.getTitleAndIcon(this.source);
+		this.title = this.titleInfo.title;
+		this.icon = this.titleInfo.icon;
+
+
 		if (!this.isConvertable)
 		{
 			this.content = await new Path(this.source.path).readFileBuffer() ?? "";
@@ -433,25 +497,22 @@ export class Webpage extends Downloadable
 		let modHeader = this.document.querySelector(".mod-header");
 		modHeader?.remove();
 
-		let titleInfo = await Website.getTitleAndIcon(this.source);
-		let title = titleInfo.title;
-		let icon = titleInfo.icon;
-
 		// if the first header element is basically the same as the title, use it's text and remove it
 		let firstHeader = this.document.querySelector(":is(h1, h2, h3, h4, h5, h6):not(.markdown-embed-content *)");
 		if (firstHeader)
 		{
 			let firstHeaderText = (firstHeader.getAttribute("data-heading") ?? firstHeader.textContent)?.toLowerCase() ?? "";
-			let lowerTitle = title.toLowerCase();
+			let lowerTitle = this.title.toLowerCase();
 			let titleDiff = Utils.levenshteinDistance(firstHeaderText, lowerTitle) / lowerTitle.length;
 			let basenameDiff = Utils.levenshteinDistance(firstHeaderText, this.source.basename.toLowerCase()) / this.source.basename.length;
 			let difference = Math.min(titleDiff, basenameDiff);
 
 			if ((firstHeader.tagName == "H1" && difference < 0.2) || (firstHeader.tagName == "H2" && difference < 0.1))
 			{
-				if(titleInfo.isDefaultTitle) 
+				if(this.titleInfo.isDefaultTitle) 
 				{
-					title = firstHeader.innerHTML;
+					firstHeader.querySelector(".heading-collapse-indicator")?.remove();
+					this.title = firstHeader.innerHTML;
 					ExportLog.log(`Using "${firstHeaderText}" header because it was very similar to the file's title.`);
 				}
 				else
@@ -470,9 +531,10 @@ export class Webpage extends Downloadable
 					let childPosition = Array.from(headerParent.children).indexOf(headerEl);
 					if (childPosition <= 2)
 					{
-						if(titleInfo.isDefaultTitle) 
+						if(this.titleInfo.isDefaultTitle) 
 						{
-							title = firstHeader.innerHTML;
+							firstHeader.querySelector(".heading-collapse-indicator")?.remove();
+							this.title = firstHeader.innerHTML;
 							ExportLog.log(`Using "${firstHeaderText}" header as title because it was H1 at the top of the page`);
 						}
 						else
@@ -493,21 +555,21 @@ export class Webpage extends Downloadable
 		let titleEl = this.document.createElement("h1");
 		titleEl.classList.add("page-title", "heading");
 		if (this.document?.body.classList.contains("show-inline-title")) titleEl.classList.add("inline-title");
-		titleEl.id = title;
+		titleEl.id = this.title;
 
 		let pageIcon = undefined;
 		// Create a div with icon
-		if ((icon != "" && !titleInfo.isDefaultIcon))
+		if ((this.icon != "" && !this.titleInfo.isDefaultIcon))
 		{
 			pageIcon = this.document.createElement("div");
 			pageIcon.id = "webpage-icon";
 		}
 		
 		// Insert title into the title element
-		MarkdownRendererAPI.renderMarkdownSimpleEl(title, titleEl);
+		MarkdownRendererAPI.renderMarkdownSimpleEl(this.title, titleEl);
 		if (pageIcon) 
 		{
-			MarkdownRendererAPI.renderMarkdownSimpleEl(icon, pageIcon);
+			MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, pageIcon);
 			titleEl.prepend(pageIcon);
 		}
 
@@ -521,17 +583,21 @@ export class Webpage extends Downloadable
 
 		let rootPath = this.pathToRoot.copy.makeWebStyle(this.exportOptions.webStylePaths).asString;
 
-		let titleInfo = await Website.getTitleAndIcon(this.source, true);
-
 		let head =
 		`
-		<title>${titleInfo.title}</title>
+		<title>${this.titleInfo.title}</title>
 		<base href="${rootPath}/">
 		<meta id="root-path" root-path="${rootPath}/">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
 		<meta charset="UTF-8">
-		<meta name="description" content="${this.exportOptions.vaultName + " - " + titleInfo.title}">
+		<meta name="description" content="${this.exportOptions.vaultName + " - " + this.titleInfo.title}">
 		`;
+
+		if (this.exportOptions.addRSS)
+		{
+			let rssURL = Path.joinStrings(this.exportOptions.siteURL ?? "", this.website?.rssPath ?? "").makeUnixStyle().asString;
+			head += `<link rel="alternate" type="application/rss+xml" title="RSS Feed" href="${rssURL}">`;
+		}
 
 		head += AssetHandler.getHeadReferences(this.exportOptions);
 
@@ -635,7 +701,7 @@ export class Webpage extends Downloadable
 				exportLocation = AssetHandler.mediaPath.joinString(filePath.fullName);
 			}
 
-			exportLocation.makeWebStyle(this.exportOptions.webStylePaths);
+			exportLocation = exportLocation.makeWebStyle(this.exportOptions.webStylePaths).makeUnixStyle();
 			mediaEl.setAttribute("src", exportLocation.asString);
 
 			let data = await filePath.readFileBuffer();
