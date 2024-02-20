@@ -1221,6 +1221,20 @@ input[type=search] {
 	fill: transparent;
 }
 
+/** Preserve mask fill **/
+.excalidraw-plugin mask rect[fill="#fff"],
+.excalidraw-svg mask rect[fill="#fff"],
+.excalidraw-plugin mask rect[fill="#ffffff"],
+.excalidraw-svg mask rect[fill="#ffffff"]{
+    fill: #ffffff;
+}
+.excalidraw-plugin mask rect[fill="#000"],
+.excalidraw-svg mask rect[fill="#000"],
+.excalidraw-plugin mask rect[fill="#000000"],
+.excalidraw-svg mask rect[fill="#000000"]{
+    fill: #000000;
+}
+
 body.theme-dark .excalidraw-svg svg.dark, body.theme-dark .excalidraw-plugin svg.dark,
 body.theme-light .excalidraw-svg svg.light, body.theme-light .excalidraw-plugin svg.light
 {
