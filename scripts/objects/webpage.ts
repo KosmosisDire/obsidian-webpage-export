@@ -186,6 +186,27 @@ export class Webpage extends Downloadable
 		return this.frontmatter["author"] || this.exportOptions.authorName || "";
 	}
 
+	get fullURL(): string
+	{
+		let url = Path.joinStrings(this.exportOptions.siteURL ?? "", this.relativePath.asString).makeUnixStyle().asString;
+		return url;
+	}
+
+	get metadataImageURL(): string | undefined
+	{
+		let mediaPathStr = this.viewElement.querySelector("img")?.getAttribute("src") ?? "";
+		let hasMedia = mediaPathStr.length > 0;
+		if (!hasMedia) return undefined;
+
+		if (!mediaPathStr.startsWith("http") && !mediaPathStr.startsWith("data:"))
+		{
+			let mediaPath = Path.joinStrings(this.exportOptions.siteURL ?? "", mediaPathStr);
+			mediaPathStr = mediaPath.asString;
+		}
+
+		return mediaPathStr;
+	}
+
 	get frontmatter(): FrontMatterCache
 	{
 		let frontmatter = app.metadataCache.getFileCache(this.source)?.frontmatter ?? {};
@@ -601,6 +622,12 @@ export class Webpage extends Downloadable
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
 		<meta charset="UTF-8">
 		<meta name="description" content="${description}">
+		<meta property="og:title" content="${this.titleInfo.title}">
+		<meta property="og:description" content="${description}">
+		<meta property="og:type" content="website">
+		<meta property="og:url" content="${this.fullURL}">
+		<meta property="og:image" content="${this.metadataImageURL}">
+		<meta property="og:site_name" content="${this.exportOptions.siteName}">
 		`;
 
 		if (this.author && this.author != "")

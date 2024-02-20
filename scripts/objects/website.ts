@@ -234,13 +234,8 @@ export class Website
 			let guid = page.source.path;
 			let date = new Date(page.source.stat.mtime);
 			author = page.author ?? author;
-			let mediaPathStr = page.viewElement.querySelector("img")?.getAttribute("src") ?? "";
-			let hasMedia = mediaPathStr.length > 0;
-			if (hasMedia && !mediaPathStr.startsWith("http") && !mediaPathStr.startsWith("data:"))
-			{
-				let mediaPath = Path.joinStrings(this.exportOptions.siteURL ?? "", mediaPathStr);
-				mediaPathStr = mediaPath.asString;
-			}
+			let media = page.metadataImageURL ?? "";
+			let hasMedia = media != "";
 
 			let description = page.description;
 
@@ -348,11 +343,11 @@ export class Website
 				url: url,
 				guid: guid,
 				date: date,
-				enclosure: hasMedia ? { url: mediaPathStr } : undefined,
+				enclosure: hasMedia ? { url: media } : undefined,
 				author: author,
 				custom_elements: 
 				[
-					hasMedia ? { "content:encoded": `<figure><img src="${mediaPathStr}"></figure>` } : undefined,
+					hasMedia ? { "content:encoded": `<figure><img src="${media}"></figure>` } : undefined,
 				]
 			});
 		}
