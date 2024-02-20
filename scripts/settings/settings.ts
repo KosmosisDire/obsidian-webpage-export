@@ -538,26 +538,27 @@ This feature does not require "File & folder icons" to be enbaled.`);
 		SettingsPage.createDivider(contentEl);
 		section = SettingsPage.createSection(contentEl, 'Metadata', 'Control general site data and RSS feed creation');
 
+		SettingsPage.createText(section, 'Public site URL', () => Settings.siteURL, (value) => Settings.siteURL = ((value.endsWith("/") || value == "") ? value : value + "/").trim(),
+					'The url that this site will be hosted at. This is needed to reference links and images in metadata and RSS. (Because these links cannot be relative)', 
+					(value) => (value.startsWith("http://") || value.startsWith("https://") || value.trim() == "") ? "" : "URL must start with 'http://' or 'https://'");	
+		
+		SettingsPage.createText(section, 'Author Name', () => Settings.authorName, (value) => Settings.authorName = value,
+					'The default name of the author of the site');
+
+		SettingsPage.createText(section, 'Vault Title', () => Settings.vaultTitle, (value) => Settings.vaultTitle = value,
+					'The title of the vault');
+
 		SettingsPage.createToggle(section, 'Create RSS feed', () => Settings.addRSSFeed, (value) => Settings.addRSSFeed = value,
 					`Create an RSS feed for the website located at ${Settings.siteURL}lib/rss.xml`);
 
-		SettingsPage.createText(section, 'Public site URL', () => Settings.siteURL, (value) => Settings.siteURL = ((value.endsWith("/") || value == "") ? value : value + "/").trim(),
-					'The url that this site will be hosted at. This is used to create the rss feed links, and will be stored in plain text.', 
-					(value) => (value.startsWith("http://") || value.startsWith("https://") || value.trim() == "") ? "" : "URL must start with 'http://' or 'https://'");	
-		
 		let summaryTutorial = new Setting(section)
-		.setName('RSS Properties')
+		.setName('Metadata Properties')
 		.setDesc(
 `Use the 'description' or 'summary' property to set a custom summary of a page.
 Use the 'author' property to set the author of a specific page.`);
 		summaryTutorial.infoEl.style.whiteSpace = "pre-wrap";
 
-		SettingsPage.createText(section, 'Author Name', () => Settings.authorName, (value) => Settings.authorName = value,
-					'The name of the author of the site. This will be used in the RSS feed.');
-
-		SettingsPage.createText(section, 'Vault Title', () => Settings.vaultTitle, (value) => Settings.vaultTitle = value,
-					'The title of the vault. This will be used in the RSS feed and the website title.');
-
+		
 		//#endregion
 
 		//#region Experimental
