@@ -17,19 +17,29 @@ export class FlowList {
 		checkbox.checked = value;
 		if (checkbox.checked) this.checkedList.push(key)
 
-		checkbox.addEventListener('change', (evt) => {
-			if (checkbox.checked) {
+		item.addEventListener('click', (evt) => 
+		{
+			if (!checkbox.checked) 
+			{
+				checkbox.checked = true;
 				if (!this.checkedList.includes(key))
 					this.checkedList.push(key)
 			}
-			else {
+			else 
+			{
+				checkbox.checked = false;
 				if (this.checkedList.includes(key))
 					this.checkedList.remove(key)
 			}
+
+			onChange(checkbox.checked);
 		});
 
-		checkbox.addEventListener('change', (evt) => onChange(checkbox.checked));
-
+		// override the default checkbox behavior
+		checkbox.onclick = (evt) =>
+		{
+			checkbox.checked = !checkbox.checked;
+		}
 
 		let label = item.createDiv({ cls: 'flow-label' });
 		label.setText(name);

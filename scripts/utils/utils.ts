@@ -1,8 +1,8 @@
 import {  MarkdownView, PluginManifest, TextFileView } from 'obsidian';
 import { Path } from './path';
-import { RenderLog } from '../html-generation/render-log';
+import { ExportLog } from '../html-generation/render-log';
 import { Downloadable } from './downloadable';
-import { MainSettings } from 'scripts/settings/main-settings';
+import { Settings, SettingsPage } from 'scripts/settings/settings';
 
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;
@@ -17,6 +17,27 @@ export class Utils
 	static padStringBeggining(str: string, length: number, char: string)
 	{
 		return char.repeat(length - str.length) + str;
+	}
+
+	static includesAny(str: string, substrings: string[]): boolean
+	{
+		for (let substring of substrings)
+		{
+			if (str.includes(substring)) return true;
+		}
+
+		return false;
+	}
+
+	static async urlAvailable(url: RequestInfo | URL) 
+	{
+		const controller = new AbortController();
+		const id = setTimeout(() => controller.abort(), 4000);
+		
+		const response = await fetch(url, {signal: controller.signal, mode: "no-cors"});
+		clearTimeout(id);
+	  
+		return response;
 	}
 
 	static sampleCSSColorHex(variable: string, testParentEl: HTMLElement): { a: number, hex: string }
@@ -87,11 +108,11 @@ export class Utils
 			properties: ["showOverwriteConfirmation"]
 		})
 
-		if (picker.canceled) return;
+		if (picker.canceled || !picker.filePath) return;
 		
 		let pickedPath = new Path(picker.filePath);
-		MainSettings.settings.exportPath = pickedPath.asString;
-		MainSettings.saveSettings();
+		Settings.exportPath = pickedPath.asString;
+		SettingsPage.saveSettings();
 		
 		return pickedPath;
 	}
@@ -109,8 +130,8 @@ export class Utils
 		if (picker.canceled) return;
 
 		let path = new Path(picker.filePaths[0]);
-		MainSettings.settings.exportPath = path.directory.asString;
-		MainSettings.saveSettings();
+		Settings.exportPath = path.directory.asString;
+		SettingsPage.saveSettings();
 
 		return path;
 	}
@@ -133,7 +154,7 @@ export class Utils
 
 	static idealDefaultPath() : Path
 	{
-		let lastPath = new Path(MainSettings.settings.exportPath);
+		let lastPath = new Path(Settings.exportPath);
 
 		if (lastPath.asString != "" && lastPath.exists)
 		{
@@ -147,7 +168,7 @@ export class Utils
 	{
 		if (!rootPath.isAbsolute) throw new Error("folderPath must be absolute: " + rootPath.asString);
 
-		RenderLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)")
+		ExportLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)");
 		
 		for (let i = 0; i < files.length; i++)
 		{
@@ -156,20 +177,21 @@ export class Utils
 			try
 			{
 				await file.download(rootPath.directory);
-				RenderLog.progress(i+1, files.length, "Saving HTML files to disk", "Saving: " + file.filename, "var(--color-green)");
+				ExportLog.progress(i+1, files.length, "Saving HTML files to disk", "Saving: " + file.filename, "var(--color-green)");
 			}
 			catch (e)
 			{
-				RenderLog.error("Could not save file: " + file.filename, e.stack);
+				ExportLog.error(e.stack, "Could not save file: " + file.filename);
 				continue;
 			}
 		}
-		
 	}
 
 	//async function that awaits until a condition is met
 	static async waitUntil(condition: () => boolean, timeout: number = 1000, interval: number = 100): Promise<boolean>
 	{
+		if (condition()) return true;
+		
 		return new Promise((resolve, reject) => {
 			let timer = 0;
 			let intervalId = setInterval(() => {

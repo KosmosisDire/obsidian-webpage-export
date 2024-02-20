@@ -1,29 +1,32 @@
-import { HeadingCache, TFile } from "obsidian";
+import {  TFile } from "obsidian";
 import { Tree, TreeItem } from "./tree";
+import { Webpage } from "./webpage";
 
 
 export class OutlineTree extends Tree
 {
+	public file: TFile;
+	public webpage: Webpage;
 	public children: OutlineTreeItem[];
 	public minDepth: number = 1;
 	public depth: number = 0;
 
-	private createTreeItem(heading: HeadingCache, parent: OutlineTreeItem | OutlineTree, depth: number): OutlineTreeItem
+	private createTreeItem(heading: {heading: string, level: number, headingEl: HTMLElement}, parent: OutlineTreeItem | OutlineTree): OutlineTreeItem
 	{
-		let item = new OutlineTreeItem(this, parent, depth);
+		let item = new OutlineTreeItem(this, parent, heading);
 		item.title = heading.heading;
-		item.href = "#" + heading.heading.replaceAll(" ", "_");
 		return item;
 	}
 
-	public constructor(file: TFile, minDepth = 1)
+	public constructor(webpage: Webpage, minDepth = 1)
 	{
 		super();
 
+		this.webpage = webpage;
+		this.file = webpage.source;
 		this.minDepth = minDepth;
 
-		let headings = app.metadataCache.getFileCache(file)?.headings ?? [];
-		if(headings.length > 0 && (headings[0].level != 1 && minDepth <= 1 && headings[0].heading != file.basename)) headings.unshift({heading: file.basename, level: 1, position: {start: {col: 0, line: 0, offset: 0}, end: {col: 0, line: 0, offset: 0}}});
+		let headings = webpage.headings;
 		this.depth = Math.min(...headings.map(h => h.level)) - 1;
 
 		let parent: OutlineTreeItem | OutlineTree = this;
@@ -33,7 +36,7 @@ export class OutlineTree extends Tree
 			
 			if (heading.level > parent.depth)
 			{
-				let child = this.createTreeItem(heading, parent, heading.level);
+				let child = this.createTreeItem(heading, parent);
 				parent.children.push(child);
 				if(heading.level == parent.depth + 1) parent = child;
 			}
@@ -41,7 +44,7 @@ export class OutlineTree extends Tree
 			{
 				if(parent instanceof OutlineTreeItem) 
 				{
-					let child = this.createTreeItem(heading, parent.parent, heading.level);
+					let child = this.createTreeItem(heading, parent.parent);
 					parent.parent.children.push(child);
 					parent = child;
 				}
@@ -57,7 +60,7 @@ export class OutlineTree extends Tree
 						if (backParent instanceof OutlineTreeItem) backParent = (backParent.parent as OutlineTreeItem | OutlineTree) ?? backParent;
 					}
 					
-					let child = this.createTreeItem(heading, backParent, heading.level);
+					let child = this.createTreeItem(heading, backParent);
 					backParent.children.push(child);
 					parent = child;
 				}
@@ -71,10 +74,13 @@ export class OutlineTreeItem extends TreeItem
 {
 	public children: OutlineTreeItem[] = [];
 	public parent: OutlineTreeItem | OutlineTree;
+	public heading: string;
 
-	public constructor(tree: OutlineTree, parent: OutlineTreeItem | OutlineTree, depth: number)
+	public constructor(tree: OutlineTree, parent: OutlineTreeItem | OutlineTree, heading: {heading: string, level: number, headingEl: HTMLElement})
 	{
-		super(tree, parent, depth);
+		super(tree, parent, heading.level);
+		this.heading = heading.heading;
+		this.href = tree.webpage.relativePath + "#" + heading.headingEl.id;
 	}
 
 	public forAllChildren(func: (child: OutlineTreeItem) => void, recursive: boolean = true)
@@ -82,8 +88,12 @@ export class OutlineTreeItem extends TreeItem
 		super.forAllChildren(func, recursive);
 	}
 
-	protected isCollapsible(): boolean 
+	protected override async createItemContents(container: HTMLElement): Promise<HTMLDivElement> 
 	{
-		return super.isCollapsible() && this.depth > 1;
+		let linkEl = await super.createItemContents(container);
+		linkEl?.setAttribute("heading-name", this.heading);
+		linkEl.classList.add("heading-link");
+
+		return linkEl;
 	}
 }

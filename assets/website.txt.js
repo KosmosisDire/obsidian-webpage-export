@@ -1,5 +1,10 @@
 //#region -----------------   Initializations   ----------------- 
 
+let loadedURL = new URL(window.location.href);
+let absoluteBasePath = undefined;
+let relativeBasePath = undefined;
+let relativePathname = undefined;
+
 let webpageContainer;
 let documentContainer;
 let viewContent;
@@ -9,10 +14,17 @@ let rightSidebar;
 let sidebarCollapseIcons;
 let sidebarGutters;
 let sidebars;
+let sidebarDefaultWidth;
 let sidebarTargetWidth;
 let contentTargetWidth;
 
 let themeToggle;
+let searchInput;
+
+let fileTree;
+let outlineTree;
+let fileTreeItems;
+let outlineTreeItems;
 
 let canvasWrapper;
 let canvas;
@@ -24,8 +36,8 @@ let focusedCanvasNode;
 let loadingIcon;
 let isOffline = false;
 
-let collapseIconUp = ["m7 15 5 5 5-5", "m7 9 5-5 5 5"]; // path 1, path 2
-let collapseIconDown = ["m7 20 5-5 5 5", "m7 4 5 5 5-5"]; // path 1, path 2
+let collapseIconUp = ["m7 15 5 5 5-5", "m7 9 5-5 5 5"]; // path 1, path 2 - svg paths
+let collapseIconDown = ["m7 20 5-5 5 5", "m7 4 5 5 5-5"]; // path 1, path 2 - svg paths
 
 let isTouchDevice = isTouchCapable();
 
@@ -36,8 +48,15 @@ let deviceSize; // "large-screen" | "small screen" | "tablet" | "phone"
 
 let fullyInitialized = false;
 
-function initGlobalObjects()
+async function initGlobalObjects()
 {
+	if(window.location.protocol != "file:") 
+	{
+		await loadIncludes();
+	}
+
+
+
 	loadingIcon = document.createElement("div");
 	loadingIcon.classList.add("loading-icon");
 	document.body.appendChild(loadingIcon);
@@ -47,6 +66,10 @@ function initGlobalObjects()
 	documentContainer = document.querySelector(".document-container");
 	leftSidebar = document.querySelector(".sidebar-left");
 	rightSidebar = document.querySelector(".sidebar-right");
+
+	fileTree = document.querySelector(".file-tree");
+	outlineTree = document.querySelector(".outline-tree");
+	fileTreeItems = Array.from(document.querySelectorAll(".tree-container.file-tree .tree-item"));
 
 	sidebars = []
 	sidebarGutters = []
@@ -73,29 +96,26 @@ async function initializePage()
 	canvasBackground = document.querySelector(".canvas-background") ?? canvasBackground;
 	canvasBackgroundPattern = document.querySelector(".canvas-background pattern") ?? canvasBackgroundPattern;
 	viewContent = document.querySelector(".document-container > .view-content") ?? document.querySelector(".document-container > .markdown-preview-view") ?? viewContent;
+	outlineTreeItems = Array.from(document.querySelectorAll(".tree-container.outline-tree .tree-item"));
 
 	if(!fullyInitialized)
 	{	
-		initGlobalObjects();
-		initializeDocumentTypes();
+		if (window.location.protocol == "file:") initializeForFileProtocol();
+		await initGlobalObjects();
+		initializeDocumentTypes(document);
 		setupSidebars();
 		setupThemeToggle();
+		await setupSearch();
+		setupRootPath(document);
 
-		sidebarTargetWidth = await getComputedPixelValue("--sidebar-width");
+		sidebarDefaultWidth = await getComputedPixelValue("--sidebar-width");
 		contentTargetWidth = await getComputedPixelValue("--line-width") * 0.9;
 
 		window.addEventListener('resize', () => onResize());
 		onResize();
-		document.body.classList.toggle("post-load", true);
-		document.body.classList.toggle("loading", false);
-		setTimeout(function() 
-		{ 
-			document.body.classList.toggle("loaded", true);
-			document.body.classList.toggle("post-load", false); 
-		}, 2000);
-
-		fullyInitialized = true;
 	}
+
+	setTimeout(() => documentContainer.classList.remove("hide"));
 
 	// hide the right sidebar when viewing specific file types
 	if (rightSidebar && (embedType == "video" || embedType == "embed" || customType == "excalidraw" || customType == "kanban" || documentType == "canvas")) 
@@ -114,12 +134,17 @@ async function initializePage()
 			rightSidebar.temporarilyCollapsed = false;
 		}
 	}
+
+	parseURLParams();
+	relativePathname = getVaultRelativePath(loadedURL.href);
 }
 
 function initializePageEvents(setupOnNode)
 {
+	if (!setupOnNode) return;
     setupHeaders(setupOnNode);
     setupTrees(setupOnNode);
+	setupLists(setupOnNode);
 	setupCallouts(setupOnNode);
 	setupCheckboxes(setupOnNode);
 	setupCanvas(setupOnNode);
@@ -128,15 +153,15 @@ function initializePageEvents(setupOnNode)
 	setupScroll(setupOnNode);
 }
 
-function initializeDocumentTypes()
+function initializeDocumentTypes(fromDocument)
 {
-	if (document.querySelector(".document-container > .markdown-preview-view")) documentType = "markdown";
-	else if (document.querySelector(".canvas-wrapper")) documentType = "canvas";
+	if (fromDocument.querySelector(".document-container > .markdown-preview-view")) documentType = "markdown";
+	else if (fromDocument.querySelector(".canvas-wrapper")) documentType = "canvas";
 	else 
 	{
 		documentType = "custom";
-		if (document.querySelector(".kanban-plugin")) customType = "kanban";
-		else if (document.querySelector(".excalidraw-plugin")) customType = "excalidraw";
+		if (fromDocument.querySelector(".kanban-plugin")) customType = "kanban";
+		else if (fromDocument.querySelector(".excalidraw-plugin")) customType = "excalidraw";
 	}
 }
 
@@ -151,22 +176,13 @@ function initializeForFileProtocol()
 	}
 }
 
-function onOffline(event)
-{
-	event.preventDefault();
-	event.stopPropagation();
-	console.log("Offline");
-	isOffline = true;
-}
-
 window.onload = async function()
 {
-	if (window.location.protocol == "file:") initializeForFileProtocol();
 	await initializePage();
 	initializePageEvents(document);
-}
-
-window.addEventListener('offline', onOffline);
+	setActiveDocument(loadedURL, true, false, false);
+	fullyInitialized = true;
+};
 
 window.onpopstate = function(event)
 {
@@ -180,9 +196,9 @@ window.onpopstate = function(event)
 		return;
 	}
 
-	loadDocument(getURLPath(), false);
+	loadDocument(getURLPath(), false, true);
+	console.log("Popped state: " + getURLPath());
 }
-
 
 //#endregion
 
@@ -227,7 +243,7 @@ function onResize(isInitial = false)
 		return (w < value && lastScreenWidth == undefined) || (w < value && lastScreenWidth > value);
 	}
 
-	if (widthNowGreaterThan(contentTargetWidth + sidebarTargetWidth * 2))
+	if (widthNowGreaterThan(contentTargetWidth + sidebarDefaultWidth * 2) || widthNowGreaterThan(1025))
 	{
 		deviceSize = "large-screen";
 		document.body.classList.toggle("floating-sidebars", false);
@@ -236,12 +252,9 @@ function onResize(isInitial = false)
 		document.body.classList.toggle("is-tablet", false);
 		document.body.classList.toggle("is-phone", false);
 		sidebars.forEach(function (sidebar) { sidebar.collapse(false) });
-		
-		if(document.body.classList.contains("sidebars-always-collapsible")) sidebarGutters.forEach(function (gutter) { gutter.collapse(false) });
-		else sidebarGutters.forEach(function (gutter) { gutter.collapse(true) });
-
+		sidebarGutters.forEach(function (gutter) { gutter.collapse(false) });
 	}
-	else if (widthNowInRange(contentTargetWidth + sidebarTargetWidth, contentTargetWidth + sidebarTargetWidth * 2))
+	else if (widthNowInRange((contentTargetWidth + sidebarDefaultWidth) * 1, contentTargetWidth + sidebarDefaultWidth * 2) || widthNowInRange(769, 1024))
 	{
 		deviceSize = "small screen";
 		document.body.classList.toggle("floating-sidebars", false);
@@ -256,7 +269,7 @@ function onResize(isInitial = false)
 			rightSidebar.collapse(true);
 		}
 	}
-	else if (widthNowInRange(sidebarTargetWidth * 1.5, contentTargetWidth + sidebarTargetWidth))
+	else if (widthNowInRange(sidebarDefaultWidth * 2, (contentTargetWidth + sidebarDefaultWidth) * 1) || widthNowInRange(481, 768))
 	{
 		deviceSize = "tablet";
 		document.body.classList.toggle("floating-sidebars", true);
@@ -273,7 +286,7 @@ function onResize(isInitial = false)
 
 		if(leftSidebar && !fullyInitialized) leftSidebar.collapse(true);
 	}
-	else if (widthNowLessThan(sidebarTargetWidth * 1.5))
+	else if (widthNowLessThan(sidebarDefaultWidth * 2) || widthNowLessThan(480))
 	{
 		deviceSize = "phone";
 		document.body.classList.toggle("floating-sidebars", true);
@@ -310,6 +323,35 @@ function onResize(isInitial = false)
 function clamp(value, min, max)
 {
 	return Math.min(Math.max(value, min), max);
+}
+
+async function delay(ms)
+{
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function waitUntil(condition, interval = 100, timeout = 2000)
+{
+	return new Promise(resolve =>
+	{
+		let intervalId = 0;
+
+		let timeoutId = setTimeout(() =>
+		{
+			clearInterval(intervalId);
+			resolve();
+		}, timeout);
+
+		intervalId = setInterval(() =>
+		{
+			if (condition())
+			{
+				clearInterval(intervalId);
+				clearTimeout(timeoutId);
+				resolve();
+			}
+		}, interval);
+	});
 }
 
 /**Gets the bounding rect of a given element*/
@@ -421,7 +463,6 @@ function extentionToTag(extention)
 	return;
 }
 
-
 let slideUp = (target, duration=500) => {
 
 	target.style.transitionProperty = 'height, margin, padding';
@@ -451,6 +492,7 @@ let slideUp = (target, duration=500) => {
 let slideUpAll = (targets, duration=500) => {
 
 	targets.forEach(async target => {
+		if (!target) return;
 		target.style.transitionProperty = 'height, margin, padding';
 		target.style.transitionDuration = duration + 'ms';
 		target.style.boxSizing = 'border-box';
@@ -466,6 +508,7 @@ let slideUpAll = (targets, duration=500) => {
 
 	window.setTimeout(async () => {
 		targets.forEach(async target => {
+			if (!target) return;
 			target.style.display = 'none';
 			target.style.removeProperty('height');
 			target.style.removeProperty('padding-top');
@@ -480,7 +523,6 @@ let slideUpAll = (targets, duration=500) => {
 }
 
 let slideDown = (target, duration=500) => {
-
 	target.style.removeProperty('display');
 	let display = window.getComputedStyle(target).display;
 	if (display === 'none') display = 'block';
@@ -512,6 +554,7 @@ let slideDown = (target, duration=500) => {
 let slideDownAll = (targets, duration=500) => {
 
 	targets.forEach(async target => {
+		if (!target) return;
 		target.style.removeProperty('display');
 		let display = window.getComputedStyle(target).display;
 		if (display === 'none') display = 'block';
@@ -536,6 +579,7 @@ let slideDownAll = (targets, duration=500) => {
 
 	window.setTimeout( async () => {
 		targets.forEach(async target => {
+			if (!target) return;
 			target.style.removeProperty('height');
 			target.style.removeProperty('overflow');
 			target.style.removeProperty('transition-duration');
@@ -560,79 +604,60 @@ var slideToggleAll = (targets, duration = 500) => {
 	}
 }
 
+function getURLExtention(url)
+{
+	return url.split(".").pop().split("?")[0].split("#")[0].toLowerCase().trim();
+}
 
 //#endregion
 
 //#region -----------------   Loading & Paths   ----------------- 
 
 let transferDocument = document.implementation.createHTMLDocument();
-
-async function loadDocument(url, pushHistory = true, scrollTo = true)
+let loading = false;
+async function loadDocument(url, changeURL, showInTree)
 {
-	let splitURL = url.split("#");
-	let pathnameTarget = splitURL[0] ?? url;
-	console.log("Loading document: " + pathnameTarget);
-
-	// display loading icon
-	loadingIcon.classList.toggle("shown", true);
-	let viewBounds = getViewBounds();
-	loadingIcon.style.left = (viewBounds.centerX - loadingIcon.offsetWidth / 2) + "px";
-	loadingIcon.style.top = (viewBounds.centerY - loadingIcon.offsetHeight / 2) + "px";
-
-	// hide document container
-	documentContainer.classList.toggle("hide", true);
-	documentContainer.classList.toggle("show", false);
-
-	// hide the left sidebar if on phone
-	if (deviceSize == "phone") leftSidebar.collapse(true);
-
-	if(isOffline)
+	url = decodeURI(url);
+	if (loading)
 	{
-		setTimeout(function()
-		{
-			// if the page is offline instead add a header saying so
-			viewContent.innerHTML = `
-<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
-	<h1>You appear to be offline. Check your internet connection and then try reloading the page.</h1>
-</center>`;
-
-			document.querySelector(".outline-tree").innerHTML = "";
-
-			console.log("Page offline: " + getAbsoluteRootPath() + url);
-			let newRootPath = getURLRootPath(getAbsoluteRootPath() + url);
-			rootPath = newRootPath;
-			document.querySelector("base").href = newRootPath;
-
-			document.title = "Page Offline";
-
-			// hide document container
-			documentContainer.classList.toggle("hide", false);
-			documentContainer.classList.toggle("show", true);
-			loadingIcon.classList.toggle("shown", false);
-		}, 1000);
-
+		console.log("Already loading document.");
 		return;
 	}
 
-	let response;
+	loading = true;
+	let newLoadedURL = new URL(url, absoluteBasePath);
+	relativePathname = getVaultRelativePath(newLoadedURL.href);
+	console.log("Loading document: ", newLoadedURL.pathname);
 
-	try
+	if (newLoadedURL.pathname == loadedURL?.pathname ?? "")
 	{
-		response = await fetch(pathnameTarget);
+		console.log("Document already loaded.");
+		loadedURL = newLoadedURL;
+		setActiveDocument(loadedURL, false, false);
+		await initializePage();
+		loading = false;
+		return;
 	}
+
+	loadedURL = newLoadedURL;
+	let pathname = loadedURL.pathname;
+
+	await showLoading(true);
+
+	let response;
+	try { response = await fetch(pathname); }
 	catch (error)
 	{
-		console.log("Cannot use fetch API (likely due to CORS), just loading the page normally.");
-		window.location.assign(pathnameTarget);
+		window.location.assign(pathname);
+		loading = false;
 		return;
 	}
 
 	if (response.ok)
 	{
-		// change the active file
-		setActiveDocument(pathnameTarget, scrollTo, pushHistory);
-
-		let extention = url.split(".").pop().split("?")[0].split("#")[0].toLowerCase().trim();
+		setActiveDocument(loadedURL, showInTree, changeURL);
+		let extention = getURLExtention(url);
+		if (extention == "/") extention = "html"; // if no extention assume it is html
 
 		documentType = "none";
 		embedType = "none";
@@ -643,33 +668,17 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 			let html = (await response.text()).replaceAll("<!DOCTYPE html>", "").replaceAll("<html>", "").replaceAll("</html>", "");
 			transferDocument.write(html);
 
-			// copy document content and outline tree
-			let newDocContainer = document.importNode(transferDocument.querySelector(".document-container"), true);
-			documentContainer.remove();
-			documentContainer = newDocContainer;
-
-			// insert document as the second item under the webpage container
-			webpageContainer.insertBefore(documentContainer, webpageContainer.children[1]);
-
-			document.querySelector(".outline-tree").innerHTML = transferDocument.querySelector(".outline-tree").innerHTML;
-		
-			// if the url has a heading, scroll to it
-			let headingTarget = splitURL.length > 1 ? splitURL[1] : null;
-			if (headingTarget) document.getElementById(headingTarget).scrollIntoView();
-
-			// Change the root path to match the match from the new page
 			setupRootPath(transferDocument);
+			initializeDocumentTypes(transferDocument);
 
-			// set document types
-			initializeDocumentTypes();
-
-			// initialize events on the new page, but wait for the page to finish loading
-			setTimeout(function() 
-			{
-				initializePageEvents(documentContainer);
-				initializePageEvents(document.querySelector(".outline-tree"));
-			}, 0);
-
+			// copy document content into DOM
+			let newDocumentEl = transferDocument.querySelector(".document-container");
+			documentContainer.innerHTML = newDocumentEl.innerHTML;
+			
+			// copy the outline tree into the DOM
+			let newOutline = transferDocument.querySelector(".outline-tree");
+			if (outlineTree && newOutline) outlineTree.innerHTML = newOutline.innerHTML;
+		
 			document.title = transferDocument.title;
 			transferDocument.close();
 		}
@@ -698,7 +707,8 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 				viewContent.setAttribute("class", "view-content embed");
 				viewContent.appendChild(media);
 
-				document.querySelector(".outline-tree").innerHTML = "";
+				if (document.querySelector(".outline-tree")) 
+					document.querySelector(".outline-tree").innerHTML = "";
 
 				document.title = url.split("/").pop();
 			}
@@ -710,105 +720,147 @@ async function loadDocument(url, pushHistory = true, scrollTo = true)
 		}
 
 		await initializePage();
+		initializePageEvents(documentContainer);
+		initializePageEvents(outlineTree);
 	}
 	else
 	{
-		setTimeout(function()
-		{
-			// if the page is not able to load instead add a header saying the page doesn't exist
-			viewContent.innerHTML = 
-			`
-			<div>
-				<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
-					<h1 style>Page Not Found</h1>
-				</center>
-			</div>
-			`;
-
-			document.querySelector(".outline-tree").innerHTML = "";
-
-			console.log("Page not found: " + getAbsoluteRootPath() + url);
-			let newRootPath = getURLRootPath(getAbsoluteRootPath() + url);
-			rootPath = newRootPath;
-			document.querySelector("base").href = newRootPath;
-
-			document.title = "Page Not Found";
-		}, 1000);
+		pageNotFound(viewContent);
 	}
 
-	// hide loading icon
-	loadingIcon.classList.toggle("shown", false);
+	await showLoading(false);
+	loading = false;
 
-	// show document container
-	documentContainer.style.transitionDuration = "";
-	documentContainer.classList.toggle("hide", false);
-	documentContainer.classList.toggle("show", true);
-
-	return transferDocument;
+	return;
 }
 
-
-function setActiveDocument(url, scrollTo = true, pushHistory = true)
+function setActiveDocument(url, showInTree, changeURL, animate = true)
 {
-	let pathnameTarget = url.split("#")[0] ?? url; // path with no header
+	let relativePath = getVaultRelativePath(url.href);
+	let decodedRelativePath = decodeURI(relativePath);
+	let searchlessHeaderlessPath = decodedRelativePath.split("#")[0].split("?")[0].replace("\"", "\\\"").replace("\'", "\\\'");
+	
+	if (searchlessHeaderlessPath == "/" || searchlessHeaderlessPath == "") searchlessHeaderlessPath = "index.html";
 
 	// switch active file in file tree
-	document.querySelector(".tree-item.mod-active")?.classList.remove("mod-active");
-	let treeItems = Array.from(document.querySelectorAll(".tree-item > .tree-item-contents > .tree-item-link"));
-	let treeItem = undefined;
-	for (let item of treeItems) 
+	let oldActiveTreeItem = document.querySelector(".file-tree .tree-item.mod-active");
+	let newActiveTreeItem = document.querySelector(`.file-tree .tree-item:has(>.tree-link[href^="${searchlessHeaderlessPath}"])`);
+	if(newActiveTreeItem && !newActiveTreeItem.isEqualNode(oldActiveTreeItem)) 
 	{
-		if (item.getAttribute("href") == decodeURI(url))
-		{
-			let parent = item.parentElement.parentElement;
-
-			parent.classList.add("mod-active");
-			treeItem = parent;
-			
-			while (parent.hasAttribute("data-depth"))
-			{
-				setTreeCollapsed(parent, false, false);
-				parent = parent.parentElement.parentElement;
-			}
-
-			break;
-		}
+		oldActiveTreeItem?.classList.remove("mod-active");
+		newActiveTreeItem.classList.add("mod-active");
+		if(showInTree) scrollIntoView(newActiveTreeItem, {block: "center", inline: "nearest"}, animate);
 	}
 
-	if(scrollTo) treeItem?.scrollIntoView({block: "center", inline: "nearest"});
-
-	// set the active file in th graph view
-	if(typeof nodes != 'undefined' && window.renderWorker)
+	// set the active file in the graph view
+	if(typeof graphData != 'undefined' && window.graphRenderer)
 	{
-		let activeNode = nodes?.paths.findIndex(function(item) { return item.endsWith(pathnameTarget); }) ?? -1;
+		let activeNode = graphData?.paths.findIndex(function(item) { return item.endsWith(searchlessHeaderlessPath); }) ?? -1;
 		
 		if(activeNode >= 0) 
 		{
-			window.renderWorker.activeNode = activeNode;
+			window.graphRenderer.activeNode = activeNode;
 		}
 	}
 
-	if(pushHistory && window.location.protocol != "file:") window.history.pushState({ path: pathnameTarget }, '', pathnameTarget);
+	console.log("Active document: " + changeURL);
+
+	if(changeURL && window.location.protocol != "file:") 
+	{
+		window.history.pushState({ path: relativePath }, '', relativePath);
+		console.log("Pushed state: " + relativePath);
+	}
+}
+
+function parseURLParams()
+{
+	const highlightParam = loadedURL.searchParams.get('mark');
+	const searchParam = loadedURL.searchParams.get('query');
+	const hashParam = decodeURI(loadedURL.hash);
+	
+	if (highlightParam) 
+	{
+		searchCurrentDocument(highlightParam);
+	}
+
+	if (searchParam) 
+	{
+		search(searchParam);
+	}
+
+	if (hashParam)
+	{
+		const headingTarget = document.getElementById(hashParam.substring(1));
+		if (headingTarget)
+		{
+			scrollIntoView(headingTarget, { behavior: "smooth", block: "start"});
+		}
+		else
+		{
+			console.log("Heading not found: " + hashParam);
+		}
+	}
+}
+
+async function showLoading(loading)
+{
+	documentContainer.style.transitionDuration = "";
+	loadingIcon.classList.toggle("show", loading);
+	documentContainer.classList.toggle("hide", loading);
+	if(loading)
+	{
+		// position loading icon in the center of the screen
+		let viewBounds = getViewBounds();
+		loadingIcon.style.left = (viewBounds.centerX - loadingIcon.offsetWidth / 2) + "px";
+		loadingIcon.style.top = (viewBounds.centerY - loadingIcon.offsetHeight / 2) + "px";
+
+		// hide the left sidebar if on phone
+		if (deviceSize == "phone") leftSidebar.collapse(true);
+	}
+
+	await delay(200);
+}
+
+function pageNotFound(viewContent)
+{
+	viewContent.innerHTML = 
+	`
+	<div>
+		<center style='position: relative; transform: translateY(20vh); width: 100%; text-align: center;'>
+			<h1 style>Page Not Found</h1>
+		</center>
+	</div>
+	`;
+
+	if (document.querySelector(".outline-tree"))
+		document.querySelector(".outline-tree").innerHTML = "";
+
+	console.log("Page not found: " + absoluteBasePath + loadedURL.pathname);
+	let newRootPath = getURLRootPath(absoluteBasePath + loadedURL.pathname);
+	relativeBasePath = newRootPath;
+	document.querySelector("base").href = newRootPath;
+
+	document.title = "Page Not Found";
 }
 
 function setupRootPath(fromDocument)
 {
-	let basePath = fromDocument.querySelector("#root-path").getAttribute("root-path");
-	document.querySelector("base").href = basePath;
+	let rootEl = fromDocument.getElementById("root-path");
+	if (!rootEl) return;
+	let basePath = rootEl.getAttribute("root-path");
+	let newBase = document.createElement("base");
+	newBase.href = basePath;
+	console.log("Setting root path: " + basePath);
+	document.querySelector("base").replaceWith(newBase);
 	document.querySelector("#root-path").setAttribute("root-path", basePath);
-	rootPath = basePath;
-}
-
-function getAbsoluteRootPath()
-{
-	if (typeof rootPath == 'undefined') setupRootPath(document);
-	return new URL(window.location.href + "/../" + rootPath).pathname;
+	relativeBasePath = basePath;
+	absoluteBasePath = new URL(basePath, window.location.href).href;
 }
 
 function getURLPath(url = window.location.pathname)
 {
-	let absoluteRoot = getAbsoluteRootPath();
-	let pathname = url.substring(absoluteRoot.length);
+	if (absoluteBasePath == undefined) setupRootPath(document);
+	let pathname = url.replace(absoluteBasePath, "");
 	return pathname;
 }
 
@@ -824,6 +876,10 @@ function getURLRootPath(url = window.location.pathname)
 	return rootPath;
 }
 
+function getVaultRelativePath(absolutePath)
+{
+	return absolutePath.replace(absoluteBasePath, "")
+}
 
 //#endregion
 
@@ -933,17 +989,23 @@ async function collapseHeader(headingWrapper, collapse, openParents = true, inst
 
 	headingWrapper.collapsed = collapse;
 
+	function adjustSizerHeight(customHeight = undefined)
+	{
+		if (customHeight != undefined) headingWrapper.markdownPreviewSizer.style.minHeight = customHeight + "px";
+		else
+		{
+			let newTotalHeight = Array.from(headingWrapper.markdownPreviewSizer.children).reduce((acc, cur) => acc + cur.offsetHeight, 0);
+			headingWrapper.markdownPreviewSizer.style.minHeight = newTotalHeight + "px";
+		}
+	}
+
 	if (instant)
 	{
-		console.log("instant");
 		collapseContainer.style.transitionDuration = "0s";
 		headingWrapper.classList.toggle("is-collapsed", collapse);
 		collapseContainer.style.height = "";
 		collapseContainer.style.transitionDuration = "";
-
-		let newTotalHeight = Array.from(headingWrapper.markdownPreviewSizer.children).reduce((acc, cur) => acc + cur.offsetHeight, 0);
-		headingWrapper.markdownPreviewSizer.style.minHeight = newTotalHeight + "px";
-
+		adjustSizerHeight()
 		return;
 	}
 
@@ -962,7 +1024,11 @@ async function collapseHeader(headingWrapper, collapse, openParents = true, inst
 	else collapseContainer.style.height = height + "px";
 	headingWrapper.classList.toggle("is-animating", true);
 	headingWrapper.classList.toggle("is-collapsed", collapse);
-	
+
+	if (headingWrapper.markdownPreviewSizer.closest(".markdown-embed")) // dont change the size of transcluded docments
+	{
+		adjustSizerHeight(collapse ? 0 : undefined);
+	}
 
 	setTimeout(function()
 	{
@@ -970,8 +1036,7 @@ async function collapseHeader(headingWrapper, collapse, openParents = true, inst
 		if(!collapse) collapseContainer.style.height = "";
 		headingWrapper.classList.toggle("is-animating", false);
 
-		let newTotalHeight = Array.from(headingWrapper.markdownPreviewSizer.children).reduce((acc, cur) => acc + cur.offsetHeight, 0);
-		headingWrapper.markdownPreviewSizer.style.minHeight = newTotalHeight + "px";
+		adjustSizerHeight()
 
 	}, transitionDurationMod * 1000);
 }
@@ -1025,28 +1090,13 @@ function showHeader(headingWrapper, showParents = true, showChildren = false, fo
 
 function setupTrees(setupOnNode) 
 {
-	const fileTreeItems = Array.from(setupOnNode.querySelectorAll(".tree-container.file-tree .tree-item"));
-	const outlineTreeItems = Array.from(setupOnNode.querySelectorAll(".tree-container.outline-tree .tree-item"));
-
-	setupOnNode.querySelectorAll(".tree-item-link > .collapse-icon").forEach(function(item)
-	{
-		item.addEventListener("click", function(event)
-		{
-			event.preventDefault();
-			event.stopPropagation();
-			toggleTreeCollapsed(item.parentElement.parentElement.parentElement);
-			return false;
-		});
-	});
 
 	setupOnNode.querySelectorAll(".collapse-tree-button").forEach(function(button)
 	{
-		button.treeRoot = button.parentElement.parentElement;
+		button.treeRoot = button.closest(".tree-container");
 		button.icon = button.firstChild;
 		button.icon.innerHTML = "<path d></path><path d></path>";
-
-		let treeItems = button.treeRoot.classList.contains("file-tree") ? fileTreeItems : outlineTreeItems;
-
+		
 		button.setIcon = function(collapse)
 		{
 			button.icon.children[0].setAttribute("d", collapse ? collapseIconUp[0] : collapseIconDown[0]);
@@ -1054,14 +1104,18 @@ function setupTrees(setupOnNode)
 		}
 		button.collapse = function(collapse) 
 		{ 
+			let treeItems = button.treeRoot.classList.contains("file-tree") ? fileTreeItems : outlineTreeItems;
 			setTreeCollapsedAll(treeItems, collapse);
 			button.setIcon(collapse);
 			button.collapsed = collapse;
 		};
 		button.toggleCollapse = function() { button.collapse(!button.collapsed); };
-
-		button.collapsed = button.treeRoot.querySelectorAll(".tree-scroll-area + .tree-item.mod-collapsible.is-collapsed") != 0;
-		button.setIcon(button.collapsed);
+		button.toggleState = function(state) 
+		{ 
+			if (state === undefined) state = !button.collapsed;
+			button.collapsed = state;
+			button.setIcon(state); 
+		};
 
 		button.addEventListener("click", function(event)
 		{
@@ -1070,45 +1124,52 @@ function setupTrees(setupOnNode)
 			button.toggleCollapse();
 			return false;
 		});
+
+		// if any outline items are unncollapsed, toggle collapse all button state
+		let treeItems = button.treeRoot.classList.contains("file-tree") ? fileTreeItems : outlineTreeItems;
+		if (treeItems.some(item => !item.classList.contains("is-collapsed") && item.classList.contains("mod-collapsible")))
+		{
+			button.toggleState(false);
+		}
 	});
 
-	fileTreeItems.forEach(function(treeItem)
+	let fileTreeClick = Array.from(setupOnNode.querySelectorAll(".tree-container.file-tree .tree-item:has(.collapse-icon) > .tree-link"));
+	let outlineTreeClick = Array.from(setupOnNode.querySelectorAll(".tree-container.outline-tree .tree-item:has(.collapse-icon) > .tree-link .collapse-icon"));
+	let collapsable = Array.from(fileTreeClick).concat(Array.from(outlineTreeClick));
+	
+	for (let item of collapsable)
 	{
-		let link = treeItem.querySelector(".tree-item-link");
-		let icon = treeItem.querySelector(".collapse-icon");
-
-		if(icon)
+		let closestItem = item?.closest(".tree-item");
+		if (closestItem && item) item?.addEventListener("click", function(event)
 		{
-			link?.addEventListener("click", function(event)
-			{
-				event.preventDefault();
-				event.stopPropagation();
-				let parent = this.parentElement?.parentElement;
-				if (parent) 
-				{
-					toggleTreeCollapsed(parent);
-				}
-			});
-		}
-		else
-		{
-			let ext = link.getAttribute("href").split(".").pop();
-
-			if (!ext.includes(" ") && ext != "html")
-			{
-				let tag = document.createElement("div");
-				tag.classList.add("nav-file-tag");
-				tag.textContent = ext.toUpperCase();
-				treeItem.querySelector(".tree-item-contents").appendChild(tag);
-			}
-		}
-	});
+			event.preventDefault();
+			event.stopPropagation();
+			toggleTreeCollapsed(closestItem);
+		});
+	}
 	
 }
 
-async function setTreeCollapsed(element, collapsed, animate = true)
+async function setTreeCollapsed(element, collapsed, animate = true, openParents = true)
 {
-	if (!element || !element.classList.contains("mod-collapsible")) return;
+	if (!element.classList.contains("mod-collapsible"))
+		element = element.closest(".mod-collapsible");
+
+	if (!element || !element.classList.contains("mod-collapsible"))
+	{
+		return;
+	}
+
+	if (element.classList.contains("is-collapsed") == collapsed)
+	{
+		return;
+	}
+
+	if (openParents)
+	{
+		let parent = element.parentElement.closest(".mod-collapsible");
+		if (parent) await setTreeCollapsed(parent, false, animate, openParents);
+	}
 
 	let children = element.querySelector(".tree-item-children");
 
@@ -1122,8 +1183,17 @@ async function setTreeCollapsed(element, collapsed, animate = true)
 	{
 		element.classList.remove("is-collapsed");
 		if(animate) slideDown(children, 100);
-		else children.style.removeProperty("display");
+		else children.style.display = "";
+
+		// make close all button collapse the tree instead of opening it if it's already open
+		let treeContainer = element.closest(".tree-container");
+		if (treeContainer)
+		{
+			let collapseButton = treeContainer.querySelector(".collapse-tree-button");
+			if (collapseButton) collapseButton.toggleState(false);
+		}
 	}
+
 }
 
 async function setTreeCollapsedAll(elements, collapsed, animate = true)
@@ -1150,17 +1220,24 @@ async function setTreeCollapsedAll(elements, collapsed, animate = true)
 	if (collapsed)
 	{
 		if(animate) slideUpAll(childrenList, 100);
-		else childrenList.forEach(async children => children.style.display = "none");
+		else childrenList.forEach(async (children) => 
+		{
+			if(children) children.style.display = "none";
+		});
 	}
 	else
 	{
 		if(animate) slideDownAll(childrenList, 100);
-		else childrenList.forEach(async children => children.style.removeProperty("display"));
+		else childrenList.forEach(async (children) => 
+		{
+			if(children) children.style.display = "";
+		});
 	}
 }
 
 function toggleTreeCollapsed(element)
 {
+	element = element.closest(".tree-item");
 	if (!element) return;
 	setTreeCollapsed(element, !element.classList.contains("is-collapsed"));
 }
@@ -1169,6 +1246,237 @@ function toggleTreeCollapsedAll(elements)
 {
 	if (!elements) return;
 	setTreeCollapsedAll(elements, !elements[0].classList.contains("is-collapsed"));
+}
+
+function getFileTreeItemFromPath(path)
+{
+	return document.querySelector(`.file-tree .tree-item:has(> .tree-link[href^="${path}"])`);
+}
+
+// hide all files and folder except the ones in the list (show parents of shown files)
+async function filterFileTree(showPathList, hintLabelLists, query, openFileTree = true)
+{
+	if (openFileTree) await setTreeCollapsedAll(fileTreeItems, false, false);
+	// hide all files and folders
+	let allItems = Array.from(document.querySelectorAll(".file-tree .tree-item:not(.filtered-out)"));
+	for await (let item of allItems)
+	{
+		item.classList.add("filtered-out");
+	}
+
+	await removeTreeHintLabels();
+
+	for (let i = 0; i < showPathList.length; i++)
+	{
+		let path = showPathList[i];
+		let hintLabels = hintLabelLists[i];
+
+		let treeItem = getFileTreeItemFromPath(path);
+		if (treeItem)
+		{
+			// show the file and it's parent tree items
+			treeItem.classList.remove("filtered-out");
+			let itemLink = treeItem.querySelector(".tree-link");
+			if(itemLink) itemLink.href = path + "?mark=" + query;
+			let parent = treeItem.parentElement.closest(".tree-item");
+
+			while (parent)
+			{
+				parent.classList.remove("filtered-out");
+				parent = parent.parentElement.closest(".tree-item");
+			}
+
+			if (hintLabels.length > 0)
+			{
+				let treeLink = treeItem.querySelector(".tree-link");
+				let hintContainer = treeLink.appendChild(document.createElement("div"));
+				hintContainer.classList.add("tree-hint-container");
+
+				function createHintLabel(text, link)
+				{
+					text = text.trim();
+					if (text == "") return;
+
+					let hintLabelEl = document.createElement("a");
+					hintLabelEl.classList.add("tree-hint-label");
+					hintLabelEl.classList.add("internal-link");
+					hintLabelEl.textContent = text;
+					hintLabelEl.href = decodeURI(link).replaceAll(" ", "_");
+					hintContainer.appendChild(hintLabelEl);
+				}
+
+				// create the hint labels
+				for (let label of hintLabels)
+				{
+					createHintLabel(label, path + "#" + label);
+				}
+
+				setupLinks(hintContainer);
+			}
+		}
+	}
+}
+
+async function clearFileTreeFilter(closeFileTree = true)
+{
+	await removeTreeHintLabels();
+
+	let filteredItems = document.querySelectorAll(".file-tree .filtered-out");
+	for await (let item of filteredItems)
+	{
+		item.classList.remove("filtered-out");
+	}
+
+	let markItems = document.querySelectorAll(".file-tree .tree-link[href*='?mark=']");
+	for await (let item of markItems)
+	{
+		let href = item.href.split("?")[0];
+		href = getVaultRelativePath(href);
+		item.href = href;
+	}
+
+	if (closeFileTree) await setTreeCollapsedAll(fileTreeItems, true, false);
+}
+
+async function removeTreeHintLabels()
+{
+	let hintLabels = document.querySelectorAll(".tree-hint-container");
+	for await (let item of hintLabels)
+	{
+		item.remove();
+	}
+}
+
+function sortFileTreeDocuments(sortByFunction)
+{
+	let treeItems = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-file:not(.filtered-out)"));
+	treeItems.sort(sortByFunction);
+
+	// sort the files within their parent folders
+	for (let i = 1; i < treeItems.length; i++)
+	{
+		let item = treeItems[i];
+		let lastItem = treeItems[i - 1];
+		if (item.parentElement == lastItem.parentElement)
+		{
+			lastItem.after(item);
+		}
+	}
+
+	// sort the folders using their contents
+	let folders = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-folder:not(.filtered-out)"));
+	folders.sort(function (a, b)
+	{
+		let aFirst = a.querySelector(".tree-item.mod-tree-file:not(.filtered-out)");
+		let bFirst = b.querySelector(".tree-item.mod-tree-file:not(.filtered-out)");
+		return treeItems.indexOf(aFirst) - treeItems.indexOf(bFirst);
+	});
+
+	// sort the folders within their parent folders
+	for (let i = 1; i < folders.length; i++)
+	{
+		let item = folders[i];
+
+		let foundPlace = false;
+		// iterate backwards until we find an item with the same parent
+		for (let j = i - 1; j >= 0; j--)
+		{
+			let lastItem = folders[j];
+			if (item.parentElement == lastItem.parentElement)
+			{
+				lastItem.after(item);
+				foundPlace = true;
+				break;
+			}
+		}
+
+		// if we didn't find an item with the same parent, move it to the top
+		if (!foundPlace)
+		{
+			item.parentElement.prepend(item);
+		}
+	}
+}
+
+function sortFileTree(sortByFunction)
+{
+	let treeItems = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-file:not(.filtered-out)"));
+	treeItems.sort(sortByFunction);
+
+	// sort the files within their parent folders
+	for (let i = 1; i < treeItems.length; i++)
+	{
+		let item = treeItems[i];
+		let lastItem = treeItems[i - 1];
+		if (item.parentElement == lastItem.parentElement)
+		{
+			lastItem.after(item);
+		}
+	}
+
+	// sort the folders using their contents
+	let folders = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-folder:not(.filtered-out)"));
+	folders.sort(sortByFunction);
+
+	// sort the folders within their parent folders
+	for (let i = 1; i < folders.length; i++)
+	{
+		let item = folders[i];
+
+		let foundPlace = false;
+		// iterate backwards until we find an item with the same parent
+		for (let j = i - 1; j >= 0; j--)
+		{
+			let lastItem = folders[j];
+			if (item.parentElement == lastItem.parentElement)
+			{
+				lastItem.after(item);
+				foundPlace = true;
+				break;
+			}
+		}
+
+		// if we didn't find an item with the same parent, move it to the top
+		if (!foundPlace)
+		{
+			item.parentElement.prepend(item);
+		}
+	}
+}
+
+function sortFileTreeAlphabetically(reverse = false)
+{
+	sortFileTree(function (a, b)
+	{
+		const aTitle = a.querySelector(".tree-item-title");
+		const bTitle = b.querySelector(".tree-item-title");
+		if (!aTitle || !bTitle) return 0;
+		const aName = aTitle.textContent.toLowerCase();
+		const bName = bTitle.textContent.toLowerCase();
+		return aName.localeCompare(bName, undefined, { numeric: true }) * (reverse ? -1 : 1);
+	});
+}
+
+//#endregion
+
+//#region ----------------- 	   Lists        -----------------
+
+function setupLists(setupOnNode)
+{
+	let listCollpaseIcons = Array.from(setupOnNode.querySelectorAll(".list-collapse-indicator"));
+	for (let i = 0; i < listCollpaseIcons.length; i++)
+	{
+		let icon = listCollpaseIcons[i];
+		icon.addEventListener("click", function (event)
+		{
+			let listItem = icon.closest("li");
+			if (listItem) 
+			{
+				listItem.classList.toggle("is-collapsed");
+				icon.classList.toggle("is-collapsed");
+			}
+		});
+	}
 }
 
 //#endregion
@@ -1244,9 +1552,12 @@ function setupCanvas(setupOnNode)
 	// make canvas draggable / panable
 	canvasWrapper.addEventListener("mousedown", canvasWrapperMouseDownHandler);
 	canvasWrapper.addEventListener("touchstart", canvasWrapperMouseDownHandler);
+	let scrollInterferance = false;
 	function canvasWrapperMouseDownHandler(mouseDownEv)
 	{
 		let touchesDown = mouseDownEv.touches ?? [];
+
+		scrollInterferance = false;
 
 		// if there is already one tough down we don't want to start another mouse down event
 		// extra fingers are already being handled in the move event below
@@ -1274,7 +1585,6 @@ function setupCanvas(setupOnNode)
 				let deltaX = pointer.x - lastPointerPos.x;
 				let deltaY = pointer.y - lastPointerPos.y;
 
-				let scrollInterferance = false;
 				if ((mouseDownEv.button == 1 || touchesMove.length == 1) && focusedCanvasNode)
 				{
 					let mouseHoriz = Math.abs(deltaX) > Math.abs(deltaY * 1.5);
@@ -1287,13 +1597,26 @@ function setupCanvas(setupOnNode)
 						let scrollableVert = sizer.scrollHeight > sizer.parentElement.clientHeight + 1;
 						let scrollableHoriz = sizer.scrollWidth > sizer.parentElement.clientWidth + 1;
 
-						if ((mouseHoriz && scrollableHoriz) || (mouseVert && scrollableVert))
+						if (((mouseHoriz && scrollableHoriz) || (mouseVert && scrollableVert)) && (window?.navigator?.platform?.startsWith("Win") ?? true))
 						{
 							scrollInterferance = true;
 						}
+						else
+						{
+							scrollInterferance = false;
+						}
+					}
+				}
+				
+				if (mouseDownEv.button == 0 && focusedCanvasNode)
+				{
+					if (focusedCanvasNode.querySelector(".canvas-node-content").textContent.trim() != "") 
+					{
+						scrollInterferance = true;
 					}
 				}
 
+				
 				if (!scrollInterferance)
 				{
 					translateCanvas(deltaX, deltaY);
@@ -1330,6 +1653,7 @@ function setupCanvas(setupOnNode)
 				document.body.removeEventListener("touchmove", mouseMoveHandler);
 				document.body.removeEventListener("touchend", mouseUpHandler);
 				document.body.removeEventListener("touchcancel", mouseUpHandler);
+				scrollInterferance = false;
 			};
 
 			let mouseEnterHandler = function (mouseEnterEv)
@@ -1427,7 +1751,8 @@ function setupCanvas(setupOnNode)
 	}
 
 	// fit all nodes to view on initialization after centering the camera
-	fitViewToCanvas();
+	// after any animations have possibly played
+	setTimeout(fitViewToCanvas, 300);
 }
 
 /**Gets the bounding rect of the voew-content or markdown-preview-sizer*/
@@ -1710,42 +2035,26 @@ function setupCodeblocks(setupOnNode)
 
 function setupLinks(setupOnNode)
 {
-	setupOnNode.querySelectorAll(".internal-link, .footnote-link, .tree-item:not(.mod-tree-folder) > .tree-item-contents > .tree-item-link").forEach(function(link)
+	setupOnNode.querySelectorAll(".internal-link, a.tag, .tree-link, .footnote-link").forEach(function(link)
 	{
 		link.addEventListener("click", function(event)
 		{
 			let target = link.getAttribute("href");
+
 			event.preventDefault();
+			event.stopPropagation();
 
-			if(!target) return;
-
-			// this is linking to a different page
-			if (!target.startsWith("#"))
+			if(!target)
 			{
-				// load doc, if it is a tree link then don't scroll to the active doc in the file tree
-				loadDocument(target, true, !link.classList.contains("tree-item-link"));
+				console.log("No target found for link");
 				return;
 			}
-			else
-			{
-				let targetEl = document.getElementById(target.substring(1));
-				
-				if (targetEl)
-				{
-					targetEl.headingWrapper?.collapse(false, true, true);
-					setTimeout(function()
-					{
-						if(targetEl.classList.contains(".heading")) targetEl.headingWrapper?.scrollIntoView({ behavior: "smooth", block: "start"});
-						else targetEl.scrollIntoView({ behavior: "smooth", block: "start"});
+			
+			let relativePathnameStrip = relativePathname.split("#")[0].split("?")[0];
 
-						if (deviceSize == "phone") rightSidebar.collapse(true);
-					}, 0);
-				}
-				else
-				{
-					console.log("No element found with id: " + target.substring(1));
-				}
-			}
+			if(target.startsWith("#") || target.startsWith("?")) target = relativePathnameStrip + target;
+
+			loadDocument(target, true, !link.classList.contains("tree-link"));
 		});
 	});
 }
@@ -1787,6 +2096,9 @@ function setupSidebars()
 			{
 				function clickOutsideCollapse(event)
 				{
+					// don't allow bubbling into sidebar
+					if (event.target.closest(".sidebar")) return;
+
 					sidebar.collapse(true);
 					document.body.removeEventListener("click", clickOutsideCollapse);
 				}
@@ -1837,7 +2149,7 @@ function setupSidebars()
 		gutter.collapsed = gutter.classList.contains("is-collapsed");
 		gutter.collapse = function (collapsed, force = false)
 		{
-			if(!force && document.body.classList.contains("sidebars-always-collapsible")) return;
+			if(!force) return;
 
 			this.classList.toggle("is-collapsed", collapsed);
 			this.collapsed = collapsed;
@@ -1856,14 +2168,81 @@ function setupSidebars()
 			icon.sidebar.toggleCollapse();
 		});
 	});
+	
+	if (!isMobile()) setupSidebarResize();
+}
 
-	document.querySelectorAll(".sidebar-container").forEach(function (sidebarContainer)
+function setupSidebarResize()
+{
+	let leftHandle = document.querySelector('.sidebar-left .sidebar-handle');
+	let rightHandle = document.querySelector('.sidebar-right .sidebar-handle');
+	if (!leftHandle || !rightHandle) return;
+	let resizingSidebar = null;
+
+	let minResizeWidth = parseFloat(getComputedStyle(leftHandle.parentElement).fontSize) * 15;
+	let collapseWidth = minResizeWidth / 4.0;
+
+	let rightWidth = localStorage.getItem('sidebar-right-width');
+	let leftWidth = localStorage.getItem('sidebar-left-width');
+	if (rightWidth) document.querySelector('.sidebar-right').style.setProperty('--sidebar-width', rightWidth);
+	if (leftWidth) document.querySelector('.sidebar-left').style.setProperty('--sidebar-width', leftWidth);
+
+	function resizeMove(e)
 	{
-		sidebarContainer.addEventListener("click", function (event)
+		if (!resizingSidebar) return;
+		
+		let isLeft = resizingSidebar.classList.contains("sidebar-left");
+		var distance = isLeft ? e.clientX : window.innerWidth - e.clientX;
+		var newWidth = `min(max(${distance}px, 15em), 40vw)`; // 15em is minResizeWidth
+
+		if (distance < collapseWidth)
 		{
-			event.stopPropagation();
+			resizingSidebar.collapse(true);
+			resizingSidebar.style.removeProperty('transition-duration');
+		} 
+		else 
+		{
+			resizingSidebar.collapse(false);
+			resizingSidebar.style.setProperty('--sidebar-width', newWidth);
+			if (distance > minResizeWidth) resizingSidebar.style.transitionDuration = "0s";
+		}
+	}
+
+	function handleClick(e) 
+	{
+		resizingSidebar = e.target.closest('.sidebar');
+		resizingSidebar.classList.add('is-resizing');
+		document.addEventListener('pointermove', resizeMove);
+		document.addEventListener('pointerup', function () 
+		{
+			document.removeEventListener('pointermove', resizeMove);
+			var finalWidth = getComputedStyle(resizingSidebar).getPropertyValue('--sidebar-width');
+
+			let isLeft = resizingSidebar.classList.contains("sidebar-left");
+			localStorage.setItem(isLeft ? 'sidebar-left-width' : 'sidebar-right-width', finalWidth);
+			resizingSidebar.classList.remove('is-resizing');
+			resizingSidebar.style.removeProperty('transition-duration');
 		});
-	});
+	}
+
+	leftHandle.addEventListener('pointerdown', handleClick);
+	rightHandle.addEventListener('pointerdown', handleClick);
+
+	// reset sidebar width on double click
+	function resetSidebarEvent(e)
+	{
+		let sidebar = e.target.closest('.sidebar');
+		if (sidebar) 
+		{
+			sidebar.style.removeProperty('transition-duration');
+			sidebar.style.removeProperty('--sidebar-width');
+			let isLeft = sidebar.classList.contains("sidebar-left");
+			localStorage.removeItem(isLeft ? 'sidebar-left-width' : 'sidebar-right-width');
+		}
+	}
+
+	leftHandle.addEventListener('dblclick', resetSidebarEvent);
+	rightHandle.addEventListener('dblclick', resetSidebarEvent);
 }
 
 /**Get the computed target sidebar width in px*/
@@ -1880,9 +2259,9 @@ function setupThemeToggle()
 {
 	if (!themeToggle) return;
 
-	if (localStorage.getItem("theme_toggle") != null)
+	if (localStorage.getItem("theme") != null)
     {
-        setThemeToggle(localStorage.getItem("theme_toggle") == "true");
+        setThemeToggle(localStorage.getItem("theme") == "light");
     }
 
 	// set initial toggle state based on body theme class
@@ -1948,19 +2327,68 @@ function setupThemeToggle()
 			}, 100);
 		}
 
-		localStorage.setItem("theme_toggle", state ? "true" : "false");
+		localStorage.setItem("theme", state ? "light" : "dark");
 	}
 
     document.querySelector(".theme-toggle-input")?.addEventListener("change", event =>
 	{
-		console.log("Theme toggle changed to: " + !(localStorage.getItem("theme_toggle") == "true"));
-		setThemeToggle(!(localStorage.getItem("theme_toggle") == "true"));
+		let newVal = !(localStorage.getItem("theme") == "light");
+		console.log("Theme toggle changed to: " + newVal);
+		setThemeToggle(newVal);
 	});
 }
 
 //#endregion
 
 //#region -----------------        Scroll       -----------------
+
+let flashElement = null;
+let flashAnimation = null;
+function scrollIntoView(element, options, animate = true)
+{
+	setTreeCollapsed(element, false, animate);
+    
+	const flashTiming = 
+	{
+		duration: 1500,
+		iterations: 1,
+		delay: 300,
+	};
+
+	const flashAnimationData =
+	[
+		{ opacity: 0 },
+		{ opacity: 0.8 },
+		{ opacity: 0.8 },
+		{ opacity: 0.8 },
+		{ opacity: 0.8 },
+		{ opacity: 0.8 },
+		{ opacity: 0 },
+	];
+
+	if(flashElement) 
+	{
+		flashElement.remove();
+		flashAnimation.cancel();
+	}
+
+	flashElement = document.createElement("div");
+	flashElement.classList.add("scroll-highlight");
+	element.appendChild(flashElement);
+
+	if(options) flashElement.scrollIntoView({ behavior: animate ? "smooth" : "auto", ...options });
+	else flashElement.scrollIntoView({ behavior: animate ? "smooth" : "auto" });
+
+	var savePos = element.style.position;
+	element.style.position = "relative";
+
+	flashAnimation = flashElement.animate(flashAnimationData, flashTiming);
+	flashAnimation.onfinish = function()
+	{
+		flashElement.remove();
+		element.style.position = savePos;
+	}
+}
 
 function setupScroll(setupOnNode)
 {
@@ -2033,7 +2461,7 @@ function setupScroll(setupOnNode)
 	}
 	
 	setInterval(periodicUpdate, 200);
-}
+} 
 
 //#endregion
 
@@ -2054,64 +2482,228 @@ function setupExcalidraw(setupOnNode)
 
 //#region -----------------        Search      -----------------
 
-(async () => {
-            await import('https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js');
-            
-            const searchIndex = await fetch('lib/searchIndex.json').then(response => response.text());
-            const index = MiniSearch.loadJSON(searchIndex, { fields: ['title', 'content'] });
+// search box
+let index;
+let searchResults;
 
-            const input_parent = document.querySelector('.search-input-container');
-            const input = document.querySelector('input[type="search"]');
-			const inputClear = document.querySelector('.search-input-clear-button');
-			
-            inputClear.addEventListener('click', (event) => {
-				input.value = '';
-				search("");
-			});
+async function setupSearch() 
+{
+	if (isFileProtocol) return;
+	searchInput = document.querySelector('input[type="search"]');
+	if (!searchInput) return;
 
-			input.addEventListener('input', (event) => {
-				const query = event.target.value ?? "";
-				search(query);
-			});
+	const indexResp = await fetch('lib/search-index.json');
+	const indexJSON = await indexResp.text();
+	index = MiniSearch.loadJSON(indexJSON, { fields: ['title', 'path', 'tags', 'headers'] });
 
-            const container = document.createElement('div');
-			container.setAttribute('id', 'search-results');
+	const inputClear = document.querySelector('.search-input-clear-button');
 
-			const search = query => {
-				if (query.length >= 1) 
-                {
-					const results = index.search(query, { prefix: true, fuzzy: 0.3 });
-					const list = document.createElement('div');
-					results.slice(0, 10).forEach(result => {
+	inputClear.addEventListener('click', (event) => 
+	{
+		search("");
+	});
 
-						const item = document.createElement('div');
-						item.classList.add('search-result');
-                        
-						const link = document.createElement('a');
-						link.classList.add('internal-link');
+	searchInput.addEventListener('input', (event) => 
+	{
+		const query = event.target.value ?? "";
 
-                        const icon = document.createElement('span');
-						icon.classList.add('icon');
-						icon.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="var(--icon-color)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>`
-						link.appendChild(icon);
+		if (startsWithAny(query, ["#", "tag:", "title:", "name:", "header:", "H:"]))
+		{
+			searchInput.style.color = "var(--text-accent)";
+		}
+		else
+		{
+			searchInput.style.color = "";
+		}
+		
+		search(query);
+	});
 
-						link.setAttribute('href', result.path);
-						link.appendChild(document.createTextNode(result.title));
-						item.appendChild(link);
-						list.append(item);
-					});
-					
-					container.replaceChildren(list);
-					input_parent.after(container);
-				
-					setupLinks(container);
-				} 
-                else
-                {
-					if (container && container.parentElement) container.parentNode.removeChild(container);
+	searchResults = document.createElement('div');
+	searchResults.setAttribute('id', 'search-results');
+}
+
+async function search(query)
+{
+	searchInput.value = query;
+
+	// parse special query filters
+	let searchFields = ['title', 'content', 'tags', 'headers', 'path'];
+	if (query.startsWith("#")) searchFields = ['tags', 'headers'];
+	if (query.startsWith("tag:"))
+	{
+		query = query.substring(query.indexOf(":") + 1);
+		searchFields = ['tags'];
+	}
+	if (startsWithAny(query, ["title:", "name:"])) 
+	{
+		query = query.substring(query.indexOf(":") + 1);
+		searchFields = ['title'];
+	}
+	if (startsWithAny(query, ["header:", "H:"]))
+	{
+		query = query.substring(query.indexOf(":") + 1);
+		searchFields = ['headers'];
+	}
+	if (startsWithAny(query, ["path:"]))
+	{
+		query = query.substring(query.indexOf(":") + 1);
+		searchFields = ['path'];
+	}
+
+	if (query.length >= 1)
+	{
+		const results = index.search(query, { prefix: true, fuzzy: 0.3, boost: { title: 4, headers: 3, tags: 2, path: 1 }, fields: searchFields });
+		// search through the file tree and hide documents that don't match the search
+		let showPaths = [];
+		let hintLabels = [];
+		for (let result of results)
+		{
+			// only show the most relevant results
+			if (((result.score < results[0].score * 0.33 || showPaths.length > 12) && showPaths.length > 3) || result.score < results[0].score * 0.1) break;
+			showPaths.push(result.path);
+
+			let hints = [];
+			let breakEarly = false;
+			for (match in result.match)
+			{
+				if (result.match[match].includes("headers"))
+				{
+					for (let header of result.headers)
+					{
+						if (header.toLowerCase().includes(match.toLowerCase()))
+						{
+							hints.push(header);
+							if (query.toLowerCase() != match.toLowerCase()) 
+							{
+								breakEarly = true;
+								break;
+							}
+						}
+					}
 				}
-			};
 
-            })();
+				if (breakEarly) break;
+			}
+
+			hintLabels.push(hints);
+		}
+
+		let fileTree = document.querySelector(".file-tree");
+		if (fileTree)
+		{
+			// filter the file tree and sort it by the order of the search results
+			filterFileTree(showPaths, hintLabels, query).then(() =>
+			sortFileTreeDocuments((a, b) => 
+			{
+				if (!a || !b) return 0;
+				let aPath = getVaultRelativePath(a.firstChild.href);
+				let bPath = getVaultRelativePath(b.firstChild.href);
+				return showPaths.findIndex((path) => aPath.startsWith(path)) - showPaths.findIndex((path) => bPath.startsWith(path));
+			}));
+		}
+		else
+		{
+			const list = document.createElement('div');
+			results.slice(0, 10).forEach(result => {
+
+				const item = document.createElement('div');
+				item.classList.add('search-result');
+
+				const link = document.createElement('a');
+				link.classList.add('tree-link');
+
+				const searchURL = result.path + '?mark=' + encodeURIComponent(query);
+				link.setAttribute('href', searchURL);
+				link.appendChild(document.createTextNode(result.title));
+				item.appendChild(link);
+				list.append(item);
+			});
+
+			searchResults.replaceChildren(list);
+			searchInput.parentElement.after(searchResults);
+			initializePageEvents(searchResults);
+		}
+
+	}
+	else
+	{
+		if (searchResults && searchResults.parentElement) searchResults.parentNode.removeChild(searchResults);
+		clearCurrentDocumentSearch();
+		if (fileTree) clearFileTreeFilter().then(() => sortFileTreeAlphabetically());
+	}
+
+}
+
+function startsWithAny(string, prefixes)
+{
+	for (let i = 0; i < prefixes.length; i++)
+	{
+		if (string.startsWith(prefixes[i])) return true;
+	}
+
+	return false;
+}
+
+async function searchCurrentDocument(query)
+{
+	clearCurrentDocumentSearch();
+	const textNodes = getTextNodes(document.querySelector(".markdown-preview-sizer") ?? documentContainer);
+
+	textNodes.forEach(async node =>
+	{
+		const content = node.nodeValue;
+		const newContent = content.replace(new RegExp(query, 'gi'), match => `<mark>${match}</mark>`);
+
+		if (newContent !== content) 
+		{
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = newContent;
+	
+			const newNodes = Array.from(tempDiv.childNodes);
+	
+			newNodes.forEach(newNode => 
+			{
+				if (newNode.nodeType != Node.TEXT_NODE)
+				{
+					newNode.setAttribute('class', 'search-mark');
+					
+				}
+				node.parentNode.insertBefore(newNode, node);
+			});
+	
+			node.parentNode.removeChild(node);
+		}
+	});
+
+	let firstMark = document.querySelector(".search-mark");
+
+	// wait for page to fade in
+	setTimeout(() => 
+	{
+		if(firstMark) scrollIntoView(firstMark, { behavior: "smooth", block: "start" });
+	}, 500);
+}
+
+function clearCurrentDocumentSearch()
+{
+	document.querySelectorAll(".search-mark").forEach(node => 
+	{
+		node.outerHTML = node.innerHTML;
+	});
+}
+  
+function getTextNodes(element) 
+{
+	const textNodes = [];
+	const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null, false);
+
+	let node;
+	while (node = walker.nextNode()) {
+		textNodes.push(node);
+	}
+
+	return textNodes;
+}
 
 //#endregion

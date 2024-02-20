@@ -1,20 +1,32 @@
 import { TAbstractFile, TFile, TFolder } from "obsidian";
 import { Tree, TreeItem } from "./tree";
 import { Path } from "scripts/utils/path";
-import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
 import { Website } from "./website";
+import { MarkdownRendererAPI } from "scripts/render-api";
 
 export class FileTree extends Tree
 {
 	public children: FileTreeItem[] = [];
+	public showFileExtentionTags: boolean = true;
+	/** File extentions matching this will not show extention tags */
+	public hideFileExtentionTags: string[] = [];
+
+	public files: TFile[];
+	public keepOriginalExtensions: boolean;
+	public sort: boolean;
 
 	public constructor(files: TFile[], keepOriginalExtensions: boolean = false, sort = true)
 	{
 		super();
-
+		this.files = files;
+		this.keepOriginalExtensions = keepOriginalExtensions;
+		this.sort = sort;
 		this.renderMarkdownTitles = true;
+	}
 
-		for (let file of files)
+	protected async populateTree()
+	{
+		for (let file of this.files)
 		{
 			let pathSections: TAbstractFile[] = [];
 
@@ -22,6 +34,7 @@ export class FileTree extends Tree
 			while (parentFile != undefined)
 			{
 				pathSections.push(parentFile);
+				// @ts-ignore
 				parentFile = parentFile.parent;
 			}
 
@@ -42,8 +55,13 @@ export class FileTree extends Tree
 					child.title = section.name;
 					child.isFolder = isFolder;
 
-					if(child.isFolder) child.itemClass = "mod-tree-folder"
-					else child.itemClass = "mod-tree-file"
+					if(child.isFolder) 
+					{
+						child.itemClass = "mod-tree-folder nav-folder";
+						let titleInfo = await Website.getTitleAndIcon(section);
+						child.icon = titleInfo.icon;
+					}
+					else child.itemClass = "mod-tree-file nav-file"
 
 					parent.children.push(child);
 				}
@@ -53,11 +71,16 @@ export class FileTree extends Tree
 			
 			if (parent instanceof FileTreeItem)
 			{
-				let titleInfo = Website.getTitle(file);
+				let titleInfo = await Website.getTitleAndIcon(file);
 				let path = new Path(file.path).makeUnixStyle();
 
 				if (file instanceof TFolder) path.makeForceFolder();
-				else if(!keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
+				else 
+				{
+					if (path.asString.endsWith(".excalidraw.md")) path.setExtension("drawing");
+					parent.originalExtension = path.extensionName;
+					if(!this.keepOriginalExtensions && MarkdownRendererAPI.isConvertable(path.extensionName)) path.setExtension("html");
+				}
 
 				parent.href = path.asString;	
 				parent.title = path.basename == "." ? "" : titleInfo.title;
@@ -65,11 +88,17 @@ export class FileTree extends Tree
 			}
 		}
 
-		if (sort) 
+		if (this.sort) 
 		{
 			this.sortAlphabetically();
 			this.sortByIsFolder();
 		}
+	}
+
+	public override async generateTree(container: HTMLElement): Promise<void> 
+	{
+		await this.populateTree();
+		await super.generateTree(container);
 	}
 
 	public sortByIsFolder(reverse: boolean = false)
@@ -93,9 +122,11 @@ export class FileTree extends Tree
 
 export class FileTreeItem extends TreeItem
 {
+	public tree: FileTree;
 	public children: FileTreeItem[] = [];
 	public parent: FileTreeItem | FileTree;
 	public isFolder = false;
+	public originalExtension: string = "";
 
 	public forAllChildren(func: (child: FileTreeItem) => void, recursive: boolean = true)
 	{
@@ -109,5 +140,28 @@ export class FileTreeItem extends TreeItem
 		{
 			child.sortByIsFolder(reverse);
 		}
+	}
+
+	protected override async createItemContents(container: HTMLElement): Promise<HTMLDivElement> 
+	{
+		let containerEl = await super.createItemContents(container);
+		if (this.isFolder) containerEl.addClass("nav-folder-title");
+		else containerEl.addClass("nav-file-title");
+
+		if (!this.isFolder && this.tree.showFileExtentionTags && !this.tree.hideFileExtentionTags.contains(this.originalExtension))
+		{
+			let tag = containerEl.createDiv({ cls: "nav-file-tag" });
+			tag.textContent = this.originalExtension.toUpperCase();
+		}
+
+		return containerEl;
+	}
+
+	protected override async createItemTitle(container: HTMLElement): Promise<HTMLSpanElement>
+	{
+		let titleEl = await super.createItemTitle(container);
+		if (this.isFolder) titleEl.addClass("nav-folder-title-content", "tree-item-inner");
+		else titleEl.addClass("nav-file-title-content", "tree-item-inner");
+		return titleEl; 
 	}
 }

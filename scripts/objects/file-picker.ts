@@ -1,10 +1,8 @@
 import { TAbstractFile, TFile, TFolder } from "obsidian";
 import { FileTree, FileTreeItem } from "./file-tree";
 import { Path } from "scripts/utils/path";
-import { MarkdownRenderer } from "scripts/html-generation/markdown-renderer";
-import { Tree } from "./tree";
-import { Utils } from "scripts/utils/utils";
 import { Website } from "./website";
+import { MarkdownRendererAPI } from "scripts/render-api";
 
 export class FilePickerTree extends FileTree
 {
@@ -14,10 +12,12 @@ export class FilePickerTree extends FileTree
 	public constructor(files: TFile[], keepOriginalExtensions: boolean = false, sort = true)
 	{
 		super(files, keepOriginalExtensions, sort);
+	}
 
-		this.renderMarkdownTitles = true;
-		
-		for (let file of files)
+	protected override async populateTree(): Promise<void> 
+	{
+
+		for (let file of this.files)
 		{
 			let pathSections: TAbstractFile[] = [];
 
@@ -25,6 +25,7 @@ export class FilePickerTree extends FileTree
 			while (parentFile != undefined)
 			{
 				pathSections.push(parentFile);
+				// @ts-ignore
 				parentFile = parentFile.parent;
 			}
 
@@ -45,10 +46,16 @@ export class FilePickerTree extends FileTree
 					child.title = section.name;
 					child.isFolder = isFolder;
 
-					if(!child.isFolder) child.file = file;
-
-					if(child.isFolder) child.itemClass = "mod-tree-folder"
-					else child.itemClass = "mod-tree-file"
+					if(child.isFolder) 
+					{
+						child.href = section.path;
+						child.itemClass = "mod-tree-folder"
+					}
+					else 
+					{
+						child.file = file;
+						child.itemClass = "mod-tree-file"
+					}
 
 					parent.children.push(child);
 				}
@@ -57,19 +64,21 @@ export class FilePickerTree extends FileTree
 			
 			if (parent instanceof FilePickerTreeItem)
 			{
-				let titleInfo = Website.getTitle(file);
+				let titleInfo = await Website.getTitleAndIcon(file, true);
 				let path = new Path(file.path).makeUnixStyle();
 
 				if (file instanceof TFolder) path.makeForceFolder();
-				else if(!keepOriginalExtensions && MarkdownRenderer.isConvertable(path.extensionName)) path.setExtension("html");
-
+				else 
+				{
+					parent.originalExtension = path.extensionName;
+					if(!this.keepOriginalExtensions && MarkdownRendererAPI.isConvertable(path.extensionName)) path.setExtension("html");
+				}
 				parent.href = path.asString;
 				parent.title = path.basename == "." ? "" : titleInfo.title;
-				parent.icon = titleInfo.icon || "";
 			}
 		}
 
-		if (sort) 
+		if (this.sort) 
 		{
 			this.sortAlphabetically();
 			this.sortByIsFolder();
@@ -81,17 +90,17 @@ export class FilePickerTree extends FileTree
 		await super.generateTree(container);
 
 		// add a select all button at the top
-		let item = new FilePickerTreeItem(this, this, 0);
-		item.title = "Select All";
-		item.itemClass = "mod-tree-control";
-		let itemEl = await item.generateItemHTML(container);
+		let selectAllButton = new FilePickerTreeItem(this, this, 0);
+		selectAllButton.title = "Select All";
+		selectAllButton.itemClass = "mod-tree-control";
+		let itemEl = await selectAllButton.generateItemHTML(container);
 
 		// remove all event listeners from the select all button
 		let oldItemEl = itemEl;
 		itemEl = itemEl.cloneNode(true) as HTMLDivElement;
-		item.checkbox = itemEl.querySelector("input") as HTMLInputElement;
-		item.itemEl = itemEl;
-		item.childContainer = itemEl.querySelector(".tree-item-children") as HTMLDivElement;
+		selectAllButton.checkbox = itemEl.querySelector("input") as HTMLInputElement;
+		selectAllButton.itemEl = itemEl;
+		selectAllButton.childContainer = itemEl.querySelector(".tree-item-children") as HTMLDivElement;
 
 		container.prepend(itemEl);
 
@@ -101,24 +110,24 @@ export class FilePickerTree extends FileTree
 		let localThis = this;
 		function selectAll()
 		{
-			let checked = item.checkbox.checked;
-			item.check(!checked);
+			let checked = selectAllButton.checkbox.checked;
+			selectAllButton.check(!checked);
 			localThis.forAllChildren((child) => child.check(!checked));
 		}
 
-		item.checkbox.addEventListener("click", (event) =>
+		selectAllButton.checkbox.addEventListener("click", (event) =>
 		{
-			item.checkbox.checked = !item.checkbox.checked;
+			selectAllButton.checkbox.checked = !selectAllButton.checkbox.checked;
 			selectAll();
 			event.stopPropagation();
 		});
 
-		item.itemEl.addEventListener("click", () =>
+		selectAllButton.itemEl.addEventListener("click", () =>
 		{
 			selectAll();
 		});
 
-		this.selectAllItem = item;
+		this.selectAllItem = selectAllButton;
 	}
 	
 	public getSelectedFiles(): TFile[]
@@ -133,13 +142,37 @@ export class FilePickerTree extends FileTree
 		return selectedFiles;
 	}
 
-	public setSelectedFiles(files: Path[])
+	public getSelectedFilesSavePaths(): string[]
 	{
-		let stringfiles = files.map(f => f.makeUnixStyle().asString);
+		let selectedFiles: string[] = [];
+
+		if (this.selectAllItem?.checked) 
+		{
+			selectedFiles = ["all"];
+			return selectedFiles;
+		}
+		
+		this.forAllChildren((child) =>
+		{
+			selectedFiles.push(...child.getSelectedFilesSavePaths());
+		}, false);
+
+
+		return selectedFiles;
+	}
+
+	public setSelectedFiles(files: string[])
+	{
+		if (files.includes("all"))
+		{
+			this.selectAllItem?.check(true, false, true);
+			this.forAllChildren((child) => child.check(true));
+			return;
+		}
 
 		this.forAllChildren((child) =>
 		{
-			if(stringfiles.includes(new Path(child.href ?? "").makeUnixStyle().asString))
+			if(files.includes(child.href ?? ""))
 			{
 				child.check(true);
 			}
@@ -163,11 +196,11 @@ export class FilePickerTree extends FileTree
 
 				if (!child.checked && uncheckedChildren?.length == 0)
 				{
-					child.check(true);
+					child.check(true, false, true);
 				}
 				else if (uncheckedChildren?.length ?? 0 > 0)
 				{
-					child.check(false);
+					child.check(false, false, true);
 				}
 			}
 		});	
@@ -175,11 +208,11 @@ export class FilePickerTree extends FileTree
 		// if all folders are checked, check the select all button, otherwise uncheck it
 		if (this.children.reduce((acc, child) => acc && child.checked, true))
 		{
-			this.selectAllItem?.check(true);
+			this.selectAllItem?.check(true, false, true);
 		}
 		else
 		{
-			this.selectAllItem?.check(false);
+			this.selectAllItem?.check(false, false, true);
 		}
 	}
 }
@@ -191,11 +224,12 @@ export class FilePickerTreeItem extends FileTreeItem
 	public tree: FilePickerTree;
 	public checked: boolean = false;
 
-	protected createItemLink(container: HTMLElement): HTMLAnchorElement
+	protected async createItemContents(container: HTMLElement): Promise<HTMLDivElement>
 	{
-		let linkEl = super.createItemLink(container);
+		let linkEl = await super.createItemContents(container);
 
 		this.checkbox = linkEl.createEl("input");
+		linkEl.prepend(this.checkbox);
 		this.checkbox.classList.add("file-checkbox");
 		this.checkbox.setAttribute("type", "checkbox");
 		this.checkbox.addEventListener("click", (event) =>
@@ -203,7 +237,6 @@ export class FilePickerTreeItem extends FileTreeItem
 			event.stopPropagation();
 
 			this.check(this.checkbox.checked, false);
-			this.checkAllChildren(this.checkbox.checked);
 			this.tree.evaluateFolderChecks();
 		});
 
@@ -217,11 +250,12 @@ export class FilePickerTreeItem extends FileTreeItem
 		return linkEl;
 	}
 
-	public check(checked: boolean, evaluate: boolean = false)
+	public check(checked: boolean, evaluate: boolean = false, skipChildren: boolean = false)
 	{
 		this.checked = checked;
 		this.checkbox.checked = checked;
 		this.checkbox.classList.toggle("checked", checked);
+		if (!skipChildren) this.checkAllChildren(checked);
 		if(evaluate) this.tree.evaluateFolderChecks();
 	}
 
@@ -238,6 +272,25 @@ export class FilePickerTreeItem extends FileTreeItem
 	public forAllChildren(func: (child: FilePickerTreeItem) => void, recursive?: boolean): void 
 	{
 		super.forAllChildren(func, recursive);
+	}
+
+	public getSelectedFilesSavePaths(): string[]
+	{
+		let selectedFiles: string[] = [];
+
+		if (this.checked) 
+		{
+			selectedFiles.push(this.href ?? "");
+		}
+		else if (this.isFolder)
+		{
+			this.forAllChildren((child) =>
+			{
+				selectedFiles.push(...child.getSelectedFilesSavePaths());
+			}, false);
+		}
+		
+		return selectedFiles;
 	}
 
 }

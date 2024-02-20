@@ -1,416 +1,357 @@
-import graphViewJS from "assets/graph_view.txt.js";
-import graphWASMJS from "assets/graph_wasm.txt.js";
+import graphViewJS from "assets/graph-view.txt.js";
+import graphWASMJS from "assets/graph-wasm.txt.js";
 import renderWorkerJS from "assets/graph-render-worker.txt.js";
-import graphWASM from "assets/graph_wasm.wasm";
-import tinyColorJS from "assets/tinycolor.txt.js";
-import webpageJS from "assets/webpage.txt.js";
-import appStyles from "assets/obsidian-styles.txt.css";
+import graphWASM from "assets/graph-wasm.wasm";
+import websiteJS from "assets/website.txt.js";
 import webpageStyles from "assets/plugin-styles.txt.css";
+import deferredJS from "assets/deferred.txt.js";
+import deferredCSS from "assets/deferred.txt.css";
+import themeLoadJS from "assets/theme-load.txt.js";
+
+import tinyColorJS from "assets/tinycolor.txt.js";
+import pixiJS from "assets/pixi.txt.js";
+import minisearchJS from "assets/minisearch.txt.js";
 
 import { Path } from "scripts/utils/path.js";
-import { Downloadable } from "scripts/utils/downloadable.js";
-import { RenderLog } from "./render-log.js";
-import { MainSettings } from "scripts/settings/main-settings.js";
-import { Website } from "scripts/objects/website.js";
-const { minify } = require('html-minifier-terser');
+import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./assets/asset.js";
+import { ObsidianStyles } from "./assets/obsidian-styles.js";
+import { OtherPluginStyles } from "./assets/other-plugin-styles.js";
+import { ThemeStyles } from "./assets/theme-styles.js";
+import { SnippetStyles } from "./assets/snippet-styles.js";
+import { MathjaxStyles } from "./assets/mathjax-styles.js";
+import { CustomHeadContent } from "./assets/custom-head-content.js";
+import { Settings, SettingsPage } from "scripts/settings/settings.js";
+import { GlobalVariableStyles } from "./assets/global-variable-styles.js";
+import { Favicon } from "./assets/favicon.js";
+import { FetchBuffer } from "./assets/local-fetch-buffer.js";
+import { ExportLog } from "./render-log.js";
+import { SupportedPluginStyles } from "./assets/supported-plugin-styles.js";
+import { fileTypeFromBuffer } from "file-type";
+import { MarkdownWebpageRendererAPIOptions } from "scripts/api-options.js";
+const mime = require('mime');
 
 
 export class AssetHandler
 {
-	private static vaultPluginsPath: Path;
+	public static vaultPluginsPath: Path;
 
-	private static obsidianStylesFilter = 
-	["workspace-", "cm-", "ghost", "leaf", "CodeMirror", 
-	"@media", "pdf", "xfa", "annotation", "@keyframes", 
-	"load", "@-webkit", "setting", "filter", "decorator", 
-	"dictionary", "status", "windows", "titlebar", "source",
-	"menu", "message", "popover", "suggestion", "prompt", 
-	"tab", "HyperMD", "workspace", "publish", 
-	"backlink", "sync", "vault", "mobile", "tablet", "phone", 
-	"textLayer", "header", "linux", "macos", "rename", "edit",
-	"progress", "native", "aria", "tooltip", 
-	"drop", "sidebar"];
-
-	private static obsidianStylesKeep = 
-	["scrollbar", "input[type"];
+	public static staticAssets: Asset[] = [];
+	public static dynamicAssets: Asset[] = [];
+	public static allAssets: Asset[] = [];
+	public static temporaryAssets: Asset[] = [];
 
 	// this path is used to generate the relative path to the images folder, likewise for the other paths
-	public static readonly mediaFolderName: Path = new Path("lib/media");
-	public static readonly jsFolderName: Path = new Path("lib/scripts");
-	public static readonly cssFolderName: Path = new Path("lib/styles");
+    private static libraryFolder: Path;
+	private static mediaFolder: Path;
+	private static jsFolder: Path;
+	private static cssFolder: Path;
+	private static fontFolder: Path;
+	private static htmlFolder: Path;
 
-	public static appStyles: string = "";
-	public static mathStyles: string = "";
-	public static webpageStyles: string = "";
-	public static themeStyles: string = "";
-	public static snippetStyles: string = "";
-	public static pluginStyles: string = "";
-	public static generatedStyles: string = "";
+	public static exportOptions: MarkdownWebpageRendererAPIOptions = new MarkdownWebpageRendererAPIOptions();
 
-	private static lastEnabledPluginStyles: string = "";
-	private static lastEnabledSnippets: string[] = [];
-	private static lastEnabledTheme: string = "";
-	private static lastMathjaxChanged: number = -1;
-	private static mathjaxStylesheet: CSSStyleSheet | undefined = undefined;
-
-	public static webpageJS: string = "";
-	public static graphViewJS: string = "";
-	public static graphWASMJS: string = "";
-	public static graphWASM: Buffer;
-	public static renderWorkerJS: string = "";
-	public static tinyColorJS: string = "";
-	public static generatedJS: string = "";
-
-	public static customHeadContent: string = "";
-
-	public static async initialize(pluginID: string)
+    public static get libraryPath(): Path
+    {
+		if (!this.libraryFolder) this.initialize();
+        return AssetHandler.libraryFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
+    }
+    public static get mediaPath(): Path
+    {
+		if (!this.mediaFolder) this.initialize();
+		return AssetHandler.mediaFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
+    }
+    public static get jsPath(): Path
+    {
+		if (!this.jsFolder) this.initialize();
+        return AssetHandler.jsFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
+    }
+    public static get cssPath(): Path
+    {
+		if (!this.cssFolder) this.initialize();
+		return AssetHandler.cssFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
+    }
+	public static get fontPath(): Path
 	{
+		if (!this.fontFolder) this.initialize();
+		return AssetHandler.fontFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
+	}
+    public static get htmlPath(): Path
+    {
+		if (!this.htmlFolder) this.initialize();
+		return AssetHandler.htmlFolder.copy.makeWebStyle(this.exportOptions.webStylePaths);
+    }
+
+	// styles
+	public static obsidianStyles: ObsidianStyles = new ObsidianStyles();
+	public static otherPluginStyles: OtherPluginStyles = new OtherPluginStyles();
+	public static themeStyles: ThemeStyles = new ThemeStyles();
+	public static snippetStyles: SnippetStyles = new SnippetStyles();
+	public static mathjaxStyles: MathjaxStyles = new MathjaxStyles();
+	public static globalDataStyles: GlobalVariableStyles = new GlobalVariableStyles();
+	public static supportedPluginStyles: SupportedPluginStyles = new SupportedPluginStyles();
+	public static websiteStyles: Asset = new Asset("main-styles.css", webpageStyles, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 4);
+	public static deferredCSS: Asset = new Asset("deferred.css", deferredCSS, AssetType.Style, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer);
+
+	// scripts
+	public static websiteJS: Asset = new Asset("webpage.js", websiteJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async);
+	public static graphViewJS: Asset = new Asset("graph-view.js", graphViewJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+	public static graphWASMJS: Asset = new Asset("graph-wasm.js", graphWASMJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+	public static graphWASM: Asset = new Asset("graph-wasm.wasm", Buffer.from(graphWASM), AssetType.Script, InlinePolicy.Download, false, Mutability.Static);
+	public static renderWorkerJS: Asset = new Asset("graph-render-worker.js", renderWorkerJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+	public static deferredJS: Asset = new Asset("deferred.js", deferredJS, AssetType.Script, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer);
+	public static themeLoadJS: Asset = new Asset("theme-load.js", themeLoadJS, AssetType.Script, InlinePolicy.Inline, true, Mutability.Static, LoadMethod.Defer);
+
+	public static tinyColorJS: Asset = new Asset("tinycolor.js", tinyColorJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+	public static pixiJS: Asset = new Asset("pixi.js", pixiJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js");
+	public static minisearchJS: Asset = new Asset("minisearch.js", minisearchJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js");
+	 
+	// other
+	public static favicon: Favicon = new Favicon();
+	public static externalLinkIcon: Asset;
+	public static customHeadContent: CustomHeadContent = new CustomHeadContent();
+	public static mainJsModTime: number = 0;
+
+	public static async initialize()
+	{
+		this.libraryFolder = new Path("lib").makeUnixStyle();
+		this.mediaFolder = this.libraryFolder.joinString("media").makeUnixStyle();
+		this.jsFolder = this.libraryFolder.joinString("scripts").makeUnixStyle(); 
+		this.cssFolder = this.libraryFolder.joinString("styles").makeUnixStyle();
+		this.fontFolder = this.libraryFolder.joinString("fonts").makeUnixStyle();
+		this.htmlFolder = this.libraryFolder.joinString("html").makeUnixStyle();
 		this.vaultPluginsPath = Path.vaultPath.joinString(app.vault.configDir, "plugins/").makeAbsolute();
+		
+		// by default all static assets have a modified time the same as main.js
+		this.mainJsModTime = this.vaultPluginsPath.joinString("webpage-html-export/main.js").stat?.mtimeMs ?? 0;
+		this.staticAssets.forEach(asset => asset.modifiedTime = this.mainJsModTime);
 
-		await this.loadAppStyles();
-		this.webpageStyles = await AssetHandler.minifyJSorCSS(webpageStyles, false);
-		this.webpageJS = await AssetHandler.minifyJSorCSS(webpageJS, true);
-		this.graphViewJS = await AssetHandler.minifyJSorCSS(graphViewJS, true);
-		this.graphWASMJS = await AssetHandler.minifyJSorCSS(graphWASMJS, true);
-		this.renderWorkerJS = await AssetHandler.minifyJSorCSS(renderWorkerJS, true);
-		// @ts-ignore
-		this.tinyColorJS = await AssetHandler.minifyJSorCSS(tinyColorJS, true);
-		this.graphWASM = Buffer.from(graphWASM);
-
-		this.updateAssetCache();
+		this.allAssets.sort((a, b) => a.loadPriority - b.loadPriority);
+		
+		let loadPromises = []
+		for (let asset of this.allAssets)
+		{
+			loadPromises.push(asset.load(this.exportOptions));
+		}
+		await Promise.all(loadPromises);
+		
+		let graphViewJSPath = this.graphViewJS.getAssetPath();
+		this.graphViewJS.getHTML = () => `<script type="module" async id="graph-view-script" src="${graphViewJSPath}"></script>`;
 	}
 
-	static async minifyJSorCSS(content: string, isJSNotCSS: boolean) : Promise<string>
+	public static async reloadAssets()
 	{
-		// for now this is disabled because I don't have time to make it clean
-		// return content;
+		// remove all temporary assets from allAssets
+		this.allAssets = this.allAssets.filter(asset => asset.mutability != Mutability.Temporary);
+		this.temporaryAssets = [];
 
-		let tempContent = content;
+		let i = 0;
 
-		try
+		let loadPromises = []
+		for (let asset of this.dynamicAssets)
 		{
-			// add script or style tags so that minifier can minify it as html
-			if (isJSNotCSS)
+			let loadPromise = asset.load(this.exportOptions);
+			loadPromise.then(() =>
 			{
-				content = `
-				<script>
-				${content}
-				</script>`;
-			}
-			else
-			{
-				content = `
-				<style>
-				${content}
-				</style>`;
-			}
-
-			content = await minify(content, { collapseBooleanAttributes: true, collapseWhitespace: true, minifyCSS: true, minifyJS: true, removeComments: true, removeEmptyAttributes: true, removeRedundantAttributes: true, removeScriptTypeAttributes: true, removeStyleLinkTypeAttributes: true, useShortDoctype: true});
-
-			// remove the <script> or <style> tags
-			content = content.replace("<script>", "").replace("</script>", "").replace("<style>", "").replace("</style>", "");
+				i++;
+				ExportLog.progress(i, this.dynamicAssets.length, "Initialize Export", "Loading asset: " + asset.filename, "var(--color-yellow)");
+			});
+			loadPromises.push(loadPromise);
 		}
-		catch (e)
+		await Promise.all(loadPromises);
+	}
+
+	public static getAssetsOfType(type: AssetType): Asset[]
+	{
+		let assets = this.allAssets.filter(asset => asset.type == type);
+		assets = assets.concat(this.allAssets.map(asset => asset.childAssets).flat().filter(asset => asset.type == type));
+		return assets;
+	}
+
+	public static getAssetsOfInlinePolicy(inlinePolicy: InlinePolicy): Asset[]
+	{
+		let assets = this.allAssets.filter(asset => asset.inlinePolicy == inlinePolicy);
+		assets = assets.concat(this.allAssets.map(asset => asset.childAssets).flat().filter(asset => asset.inlinePolicy == inlinePolicy));
+		return assets;
+	}
+
+	private static filterDownloads(downloads: Asset[], options: MarkdownWebpageRendererAPIOptions): Asset[]
+	{
+		if (!options.addGraphView || !options.addSidebars)
 		{
-			RenderLog.error("Error while minifying " + (isJSNotCSS ? "JS" : "CSS") + " file.", e.stack);
-			content = tempContent;
+			downloads = downloads.filter(asset => ![this.graphViewJS, this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS, this.pixiJS].includes(asset));
 		}
 
-		if (content == "") content = " ";
+		if (!options.addSearch || !options.addSidebars)
+		{
+			downloads = downloads.filter(asset => ![this.minisearchJS].includes(asset));
+		}
+
+		if (!options.includeCSS) 
+		{
+			downloads = downloads.filter(asset => asset.type != AssetType.Style);
+		}
+
+		if (!options.includeJS) 
+		{
+			downloads = downloads.filter(asset => asset.type != AssetType.Script);
+		}
+
+		// remove duplicates
+		downloads = downloads.filter((asset, index, self) => self.findIndex((t) => t.relativePath.asString == asset.relativePath.asString) === index);
+
+		// remove assets with no content
+		downloads = downloads.filter(asset => asset.content && asset.content.length > 0);
+
+		return downloads;
+	}
+
+	public static getDownloads(options: MarkdownWebpageRendererAPIOptions): Asset[]
+	{
+		let downloads = this.getAssetsOfInlinePolicy(InlinePolicy.Download)
+						    .concat(this.getAssetsOfInlinePolicy(InlinePolicy.DownloadHead));
+
+		if (!options.inlineMedia) 
+		{
+			downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.Auto));
+			downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.AutoHead));
+		}
+
+		downloads = this.filterDownloads(downloads, options);
+		downloads.sort((a, b) => b.loadPriority - a.loadPriority);
+
+		return downloads;
+	}
+
+	public static getHeadReferences(options: MarkdownWebpageRendererAPIOptions): string
+	{
+		let head = "";
+
+		let referenceAssets = this.getAssetsOfInlinePolicy(InlinePolicy.DownloadHead)
+								  .concat(this.getAssetsOfInlinePolicy(InlinePolicy.AutoHead))
+								  .concat(this.getAssetsOfInlinePolicy(InlinePolicy.InlineHead));
+
+		referenceAssets = this.filterDownloads(referenceAssets, options);
+		referenceAssets.sort((a, b) => b.loadPriority - a.loadPriority);
+
+		for (let asset of referenceAssets)
+		{
+			head += asset.getHTML(options);
+		}
+
+		return head;
+	}
+
+	/*Takes a style sheet string and creates assets from every font or image url embedded in it*/
+	public static async getStyleChildAssets(asset: Asset, makeBase64External: boolean = false): Promise<string>
+	{
+		if (typeof asset.content != "string") throw new Error("Asset content is not a string");
+
+		let content = asset.content.replaceAll("app://obsidian.md/", "");
+
+		let urls = Array.from(content.matchAll(/url\("([^"]+)"\)|url\('([^']+)'\)/g));
+
+		// remove duplicates
+		urls = urls.filter((url, index, self) => self.findIndex((t) => t[0] === url[0]) === index);
+
+		// use this mutability for child assets
+        let promises = [];
+		for (let urlObj of urls)
+		{
+			let url = urlObj[1] || urlObj[2];
+			url = url.trim();
+
+			// we don't need to download online assets if we are not making the page offline compatible
+			if (!this.exportOptions.offlineResources && url.startsWith("http")) continue;
+
+			if (url == "") continue;
+
+			if (url.startsWith("data:"))
+			{
+				if (!this.exportOptions.inlineMedia && makeBase64External)
+				{
+					// decode the base64 data and create an Asset from it
+					// then replace the url with the relative path to the asset
+
+					function hash(str:string, seed = 0) // taken from https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript
+					{
+						let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+						for(let i = 0, ch; i < str.length; i++) {
+							ch = str.charCodeAt(i);
+							h1 = Math.imul(h1 ^ ch, 2654435761);
+							h2 = Math.imul(h2 ^ ch, 1597334677);
+						}
+						h1  = Math.imul(h1 ^ (h1 >>> 16), 2246822507);
+						h1 ^= Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+						h2  = Math.imul(h2 ^ (h2 >>> 16), 2246822507);
+						h2 ^= Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+						
+						return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+					}
+
+					let splitData = url.split(",")
+					let data = splitData.slice(1).join(",");
+					let extension = Asset.mimeToExtention(splitData[0].split(":")[1].split(";")[0]);
+					let buffer = Buffer.from(data, "base64");
+					let dataHash = hash(data);
+					let filename = `${dataHash}.${extension}`;
+					if (extension == '') 
+					{
+						let type = await fileTypeFromBuffer(buffer);
+						if (type) extension = type.ext;
+						filename = `${dataHash}.${extension}`;						
+					}
+					let type = Asset.extentionToType(extension);
+
+					let childAsset = new Asset(filename, buffer, type, InlinePolicy.Download, false, Mutability.Child);
+					asset.childAssets.push(childAsset);
+					let loadPromise = childAsset.load(this.exportOptions);
+					promises.push(loadPromise);
+					loadPromise.then(() =>
+					{
+						if (childAsset.content == undefined || childAsset.content == null || childAsset.content.length == 0)
+						{
+							return;
+						}
+
+						let newPath = childAsset.getAssetPath(asset.getAssetPath());
+						content = content.replaceAll(url, newPath.asString);
+					});
+				}
+				continue;
+			} 
+
+			let path = new Path(url);
+			let type = Asset.extentionToType(path.extension);
+			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.Download, false, Mutability.Child);
+			asset.childAssets.push(childAsset);
+
+			let loadPromise = childAsset.load(this.exportOptions);
+			promises.push(loadPromise);
+			loadPromise.then(() => 
+			{
+				if (childAsset.content == undefined || childAsset.content == null || childAsset.content.length == 0)
+				{
+					return;
+				}
+
+				if (this.exportOptions.inlineMedia)
+				{
+					let base64 = childAsset.content.toString("base64");
+					content = content.replaceAll(url, `data:${mime.getType(url)};base64,${base64}`);
+				}
+				else
+				{
+					childAsset.relativeDirectory.makeWebStyle(this.exportOptions.webStylePaths);
+					if (this.exportOptions.webStylePaths) childAsset.filename = Path.toWebStyle(childAsset.filename);
+
+					let newPath = childAsset.getAssetPath(asset.getAssetPath());
+					content = content.replaceAll(url, newPath.asString);
+				}
+			});
+		}
+
+		await Promise.all(promises);
 
 		return content;
 	}
-
-	public static async getDownloads() : Promise<Downloadable[]>
-	{
-		let toDownload: Downloadable[] = [];
-		if (!MainSettings.settings.inlineCSS)
-		{
-			let pluginCSS = this.webpageStyles;
-			let thirdPartyPluginCSS = await this.minifyJSorCSS(await this.getPluginStyles(), false);
-			pluginCSS += "\n" + thirdPartyPluginCSS + "\n";
-			let appcssDownload = new Downloadable("obsidian-styles.css", this.appStyles, this.cssFolderName);
-			let plugincssDownload = new Downloadable("plugin-styles.css", pluginCSS, this.cssFolderName);
-			let themecssDownload = new Downloadable("theme.css", this.themeStyles, this.cssFolderName);
-			let snippetsDownload = new Downloadable("snippets.css", this.snippetStyles, this.cssFolderName);
-			toDownload.push(appcssDownload);
-			toDownload.push(plugincssDownload);
-			toDownload.push(themecssDownload);
-			toDownload.push(snippetsDownload);
-			toDownload.push(new Downloadable("generated-styles.css", this.generatedStyles, this.cssFolderName));
-		}
-		if (!MainSettings.settings.inlineJS)
-		{
-			let webpagejsDownload = new Downloadable("webpage.js", this.webpageJS, this.jsFolderName);
-			toDownload.push(webpagejsDownload);
-			if (this.generatedJS != "")
-			{
-				let generatedjsDownload = new Downloadable("generated.js", this.generatedJS, this.jsFolderName);
-				toDownload.push(generatedjsDownload);
-			}
-		}
-		if(MainSettings.settings.includeGraphView)
-		{
-			let graphWASMDownload = new Downloadable("graph_wasm.wasm", this.graphWASM, this.jsFolderName); // MIGHT NEED TO SPECIFY ENCODING
-			let renderWorkerJSDownload = new Downloadable("graph-render-worker.js", this.renderWorkerJS, this.jsFolderName);
-			let graphWASMJSDownload = new Downloadable("graph_wasm.js", this.graphWASMJS, this.jsFolderName);
-			let graphViewJSDownload = new Downloadable("graph_view.js", this.graphViewJS, this.jsFolderName);
-			let tinyColorJS = new Downloadable("tinycolor.js", this.tinyColorJS, this.jsFolderName);
-			
-			toDownload.push(renderWorkerJSDownload);
-			toDownload.push(graphWASMDownload);
-			toDownload.push(graphWASMJSDownload);
-			toDownload.push(graphViewJSDownload);
-			toDownload.push(tinyColorJS);
-		}
-
-		return toDownload;
-	}
-
-	public static async updateAssetCache()
-	{
-		let snippetsNames = this.getEnabledSnippets();
-		let themeName = this.getCurrentThemeName();
-		let enabledPluginStyles = MainSettings.settings.includePluginCSS;
-		if (snippetsNames != this.lastEnabledSnippets)
-		{
-			this.lastEnabledSnippets = snippetsNames;
-			this.snippetStyles = await this.minifyJSorCSS(await this.getSnippetsCSS(snippetsNames), false);
-		}
-		if (themeName != this.lastEnabledTheme)
-		{
-			this.lastEnabledTheme = themeName;
-			this.themeStyles = await this.minifyJSorCSS(await this.getThemeContent(themeName), false);
-		}
-		if (enabledPluginStyles != this.lastEnabledPluginStyles)
-		{
-			this.lastEnabledPluginStyles = enabledPluginStyles;
-			this.pluginStyles = await this.minifyJSorCSS(await this.getPluginStyles(), false);
-		}
-		
-		let bodyStyle = (document.body.getAttribute("style") ?? "").replaceAll("\"", "'").replaceAll("; ", " !important;\n\t");
-		let lineWidth = MainSettings.settings.customLineWidth || "50em";
-		let contentWidth = MainSettings.settings.contentWidth || "500em";
-		let sidebarWidth = MainSettings.settings.sidebarWidth || "25em";
-		if (!isNaN(Number(lineWidth))) lineWidth += "px";
-		if (!isNaN(Number(contentWidth))) contentWidth += "px";
-		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
-
-		let customHeadPath = new Path(MainSettings.settings.customHeadContentPath);
-		this.customHeadContent = await customHeadPath.readFileString() ?? "";
-
-		this.generatedStyles = 
-`
-body
-{
-	--line-width: ${lineWidth};
-	--line-width-adaptive: ${lineWidth};
-	--file-line-width: ${lineWidth};
-	--content-width: ${contentWidth};
-	--sidebar-width: calc(min(${sidebarWidth}, 80vw));
-	--collapse-arrow-size: 0.35em;
-	--tree-horizontal-spacing: 0.6em;
-	--tree-vertical-spacing: 0.6em;
-	--sidebar-margin: 24px;
-}
-
-body
-{
-	${bodyStyle}
-}
-`
-
-		this.generatedJS = "";
-		if (MainSettings.settings.includeGraphView)
-		{
-			this.generatedJS += 
-			`
-			let nodes=\n${JSON.stringify(Website.globalGraph)};
-			let attractionForce = ${MainSettings.settings.graphAttractionForce};
-			let linkLength = ${MainSettings.settings.graphLinkLength};
-			let repulsionForce = ${MainSettings.settings.graphRepulsionForce};
-			let centralForce = ${MainSettings.settings.graphCentralForce};
-			let edgePruning = ${MainSettings.settings.graphEdgePruning};
-			`
-		}
-
-		this.generatedJS = await this.minifyJSorCSS(this.generatedJS, true);
-		this.generatedStyles = await this.minifyJSorCSS(this.generatedStyles, false);
-
-		this.lastMathjaxChanged = -1;
-	}
-
-	public static async loadMathjaxStyles()
-	{
-		// @ts-ignore
-		if (this.mathjaxStylesheet == undefined) this.mathjaxStylesheet = Array.from(document.styleSheets).find((sheet) => sheet.ownerNode.id == ("MJX-CHTML-styles"));
-		if (this.mathjaxStylesheet == undefined) return;
-
-		// @ts-ignore
-		let changed = this.mathjaxStylesheet?.ownerNode.getAttribute("data-change");
-		if (changed != this.lastMathjaxChanged)
-		{
-			AssetHandler.mathStyles = "";
-			for (let i = 0; i < this.mathjaxStylesheet.cssRules.length; i++)
-			{
-				AssetHandler.mathStyles += this.mathjaxStylesheet.cssRules[i].cssText + "\n";
-			}
-
-
-			AssetHandler.mathStyles = await this.minifyJSorCSS(AssetHandler.mathStyles.replaceAll("app://obsidian.md/", "https://publish.obsidian.md/"), false);
-		}
-		else
-		{
-			return;
-		}
-
-		this.lastMathjaxChanged = changed;
-	}
-
-	private static async loadAppStyles()
-	{
-		let appSheet = document.styleSheets[1];
-		let stylesheets = document.styleSheets;
-		for (let i = 0; i < stylesheets.length; i++)
-		{
-			if (stylesheets[i].href && stylesheets[i].href?.includes("app.css"))
-			{
-				appSheet = stylesheets[i];
-				break;
-			}
-		}
-
-		this.appStyles += appStyles;
-
-		for (let i = 0; i < appSheet.cssRules.length; i++)
-		{
-			let rule = appSheet.cssRules[i];
-			if (rule)
-			{
-				let skip = false;
-				let selector = rule.cssText.split("{")[0];
-
-				for (let keep of this.obsidianStylesKeep) 
-				{
-					if (!selector.includes(keep)) 
-					{
-						for (let filter of this.obsidianStylesFilter) 
-						{
-							if (selector.includes(filter)) 
-							{
-								skip = true;
-								break;
-							}
-						}
-					}
-					else
-					{
-						skip = false;
-						break;
-					}
-				}
-
-				if (skip) continue;
-				
-				let cssText = rule.cssText + "\n";
-				cssText = cssText.replaceAll("public/", "https://publish.obsidian.md/public/");
-				cssText = cssText.replaceAll("lib/", "https://publish.obsidian.md/lib/")
-				
-				this.appStyles += cssText;
-			}
-		}
-
-		for(let i = 1; i < stylesheets.length; i++) 
-		{
-			// @ts-ignore
-			let styleID = stylesheets[i].ownerNode?.id;
-			if (styleID.startsWith("svelte") && MainSettings.settings.includeSvelteCSS || styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET")
-			{
-				let style = stylesheets[i].cssRules;
-
-				for(let item in style) 
-				{
-					if(style[item].cssText != undefined)
-					{
-						
-						this.appStyles += "\n" + style[item].cssText;
-					}
-				}
-			}
-		}
-
-		this.appStyles = await this.minifyJSorCSS(this.appStyles, false);
-	}
-
-	private static async getPluginStyles() : Promise<string>
-	{
-		// load 3rd party plugin css
-		let pluginCSS = "";
-		let thirdPartyPluginStyleNames = MainSettings.settings.includePluginCSS.split("\n");
-		for (let i = 0; i < thirdPartyPluginStyleNames.length; i++)
-		{
-			if (!thirdPartyPluginStyleNames[i] || (thirdPartyPluginStyleNames[i] && !(/\S/.test(thirdPartyPluginStyleNames[i])))) continue;
-			
-			let path = this.vaultPluginsPath.joinString(thirdPartyPluginStyleNames[i].replace("\n", ""), "styles.css");
-			if (!path.exists) continue;
-			
-			let style = await path.readFileString();
-			if (style)
-			{
-				pluginCSS += style;
-			}
-		}
-		return pluginCSS;
-	}
-
-	private static async getThemeContent(themeName: string): Promise<string>
-	{
-		if (themeName == "Default") return "/* Using default theme. */";
-		// MIGHT NEED TO FORCE A RELATIVE PATH HERE IDKK
-		let themePath = new Path(`.obsidian/themes/${themeName}/theme.css`).absolute();
-		if (!themePath.exists)
-		{
-			RenderLog.warning("Warning: could not load theme.", "Cannot find theme at path: \n\n" + themePath);
-			return "";
-		}
-		let themeContent = await themePath.readFileString() ?? "";
-		return themeContent;
-	}
-	
-	private static getCurrentThemeName(): string
-	{
-		/*@ts-ignore*/
-		let themeName = app.vault.config?.cssTheme;
-		return (themeName ?? "") == "" ? "Default" : themeName;
-	}
-
-	private static async getSnippetsCSS(snippetNames: string[]) : Promise<string>
-	{
-		let snippetsList = await this.getStyleSnippetsContent();
-		let snippets = "\n";
-		for (let i = 0; i < snippetsList.length; i++)
-		{
-			snippets += `/* --- ${snippetNames[i]}.css --- */  \n ${snippetsList[i]}  \n\n\n`;
-		}
-		return snippets;
-	}
-
-	private static getEnabledSnippets(): string[]
-	{
-		/*@ts-ignore*/
-		return app.vault.config?.enabledCssSnippets ?? [];
-	}
-
-	private static async getStyleSnippetsContent(): Promise<string[]>
-	{
-		let snippetContents : string[] = [];
-		let enabledSnippets = this.getEnabledSnippets();
-		for (let i = 0; i < enabledSnippets.length; i++)
-		{
-			let path = new Path(`.obsidian/snippets/${enabledSnippets[i]}.css`).absolute();
-			if (path.exists) snippetContents.push(await path.readFileString() ?? "\n");
-		}
-		return snippetContents;
-	}
-
 }

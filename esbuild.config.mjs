@@ -15,7 +15,8 @@ esbuild.build({
 	loader: {
 		'.txt.js': 'text',
 		'.txt.css': 'text',
-		'.wasm': 'binary'
+		'.wasm': 'binary',
+		'.png': 'binary',
 	},
 	banner: {
 		js: banner,
@@ -36,6 +37,8 @@ esbuild.build({
 		'@lezer/common',
 		'@lezer/highlight',
 		'@lezer/lr',
+		'node:buffer',
+		'node:stream',
 		...builtins],
 	format: 'cjs',
 	watch: !prod,

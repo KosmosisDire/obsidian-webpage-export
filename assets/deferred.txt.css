@@ -1,0 +1,296 @@
+/* Define default values for variables */
+body
+{
+	--line-width: 40em;
+	--line-width-adaptive: 40em;
+	--file-line-width: 40em;
+	--sidebar-width: min(20em, 80vw);
+	--collapse-arrow-size: 11px;
+	--tree-horizontal-spacing: 0.6em;
+	--tree-vertical-spacing: 0.6em;
+	--sidebar-margin: 12px;
+}
+
+/*#region Sidebars */
+
+.sidebar {
+    height: 100%;
+    min-width: calc(var(--sidebar-width) + var(--divider-width-hover));
+    max-width: calc(var(--sidebar-width) + var(--divider-width-hover));
+    font-size: 14px;
+    z-index: 10;
+
+    position: relative;
+    overflow: hidden;
+    /* overflow: clip; */
+	
+    transition: min-width ease-in-out, max-width ease-in-out;
+	transition-duration: .2s;
+	contain: size;
+}
+
+.sidebar-left {
+    left: 0;
+}
+
+.sidebar-right {
+    right: 0;
+}
+
+.sidebar.is-collapsed {
+    min-width: 0;
+    max-width: 0;
+}
+
+body.floating-sidebars .sidebar {
+	position: absolute;
+}
+
+.sidebar-content {
+    height: 100%;
+    min-width: calc(var(--sidebar-width) - var(--divider-width-hover));
+    top: 0;
+    padding: var(--sidebar-margin);
+    padding-top: 4em;
+    line-height: var(--line-height-tight);
+    background-color: var(--background-secondary);
+    transition: background-color,border-right,border-left,box-shadow;
+    transition-duration: var(--color-fade-speed);
+    transition-timing-function: ease-in-out;
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+}
+
+/* If the sidebar isn't collapsed the content should have the same width as it */
+.sidebar:not(.is-collapsed) .sidebar-content {
+    min-width: calc(max(100%,var(--sidebar-width)) - 3px);
+    max-width: calc(max(100%,var(--sidebar-width)) - 3px);
+}
+
+.sidebar-left .sidebar-content
+{
+    left: 0;
+    border-top-right-radius: var(--radius-l);
+	border-bottom-right-radius: var(--radius-l);
+}
+
+.sidebar-right .sidebar-content 
+{
+    right: 0;
+	border-top-left-radius: var(--radius-l);
+	border-bottom-left-radius: var(--radius-l);
+}
+
+/* Hide empty sidebars */
+.sidebar:has(.sidebar-content:empty):has(.topbar-content:empty)
+{
+	display: none;
+}
+
+.sidebar-topbar {
+    height: 2em;
+    width: var(--sidebar-width);
+    top: var(--sidebar-margin);
+    padding-inline: var(--sidebar-margin);
+    z-index: 1;
+
+    position: fixed;
+    display: flex;
+    align-items: center;
+
+    transition: width ease-in-out;
+    transition-duration: inherit;
+}
+
+.sidebar.is-collapsed .sidebar-topbar {
+    width: calc(2.3em + var(--sidebar-margin) * 2);
+}
+
+.sidebar .sidebar-topbar.is-collapsed
+{
+	width: 0;
+}
+
+.sidebar-left .sidebar-topbar {
+	left: 0;
+}
+
+.sidebar-right .sidebar-topbar {
+	right: 0;
+}
+
+.topbar-content {
+    overflow: hidden;
+    overflow: clip;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    transition: inherit;
+}
+
+.sidebar.is-collapsed .topbar-content {
+	width: 0;
+	transition: inherit;
+}
+
+.clickable-icon.sidebar-collapse-icon {
+    background-color: transparent;
+    color: var(--icon-color-focused);
+    padding: 0!important;
+    margin: 0!important;
+    height: 100%!important;
+	width: 2.3em !important;
+    margin-inline: 0.14em!important;
+    position: absolute;
+}
+
+.sidebar-left .clickable-icon.sidebar-collapse-icon {
+    transform: rotateY(180deg);
+	right: var(--sidebar-margin);
+}
+
+.sidebar-right .clickable-icon.sidebar-collapse-icon {
+    transform: rotateY(180deg);
+	left: var(--sidebar-margin);
+}
+
+.clickable-icon.sidebar-collapse-icon svg.svg-icon {
+    width: 100%;
+	height: 100%;
+}
+
+.sidebar-section-header
+{
+  margin: 0 0 1em 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+/*#endregion */
+
+/*#region Content / Markdown Preview View */
+
+body
+{
+	transition: background-color var(--color-fade-speed) ease-in-out;
+}
+
+.webpage-container {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    width: 100%;
+    align-items: stretch;
+    justify-content: center;
+}
+
+.document-container 
+{
+	opacity: 1;
+    flex-basis: 100%;
+    max-width: 100%;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+	transition: opacity 0.2s ease-in-out;
+	contain: inline-size;
+}
+
+.hide
+{
+	opacity: 0;
+	transition: opacity 0.2s ease-in-out;
+}
+
+.document-container > .markdown-preview-view 
+{
+	margin: var(--sidebar-margin);
+	margin-bottom: 0;
+	width: 100%;
+	width: -webkit-fill-available;
+	width: -moz-available;
+	width: fill-available;
+    background-color: var(--background-primary);
+    transition: background-color var(--color-fade-speed) ease-in-out;
+    border-top-right-radius: var(--window-radius, var(--radius-m));
+    border-top-left-radius: var(--window-radius, var(--radius-m));
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+	contain: inline-size;
+}
+
+.document-container>.markdown-preview-view>.markdown-preview-sizer 
+{
+    padding-bottom: 80vh !important;
+    width: 100% !important;
+    max-width: var(--line-width) !important;
+    flex-basis: var(--line-width) !important;
+    transition: background-color var(--color-fade-speed) ease-in-out;
+	contain: inline-size;
+}
+
+.view-content img:not([width]), .markdown-rendered img:not([width]) 
+{
+    max-width: 100%;
+    outline: none;
+}
+
+/* If the markdown view is displaying a raw file or embed then increase it's size to make everything as large as possible */
+.document-container > .view-content.embed {
+    display: flex;
+    padding: 1em;
+    height: 100%;
+    width: 100%;
+    align-items: center;
+    justify-content: center;
+}
+
+.document-container > .view-content.embed > *
+{
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+}
+
+*:has(> :is(.math, table)) {
+    overflow-x: auto !important;
+}
+
+/* For custom view exports */
+.document-container > .view-content
+{
+	overflow-x: auto;
+	contain: content;
+	padding: 0;
+	margin: 0;
+	height: 100%;
+}
+
+/*#endregion */
+
+/*#region Loading */
+
+.scroll-highlight 
+{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    background-color: hsla(var(--color-accent-hsl),.25);
+    opacity: 0;
+    padding: 1em;
+    inset: 50%;
+    translate: -50% -50%;
+    border-radius: var(--radius-s);
+}
+
+/*#endregion */

@@ -116,6 +116,8 @@ if( 'function' === typeof importScripts)
     function invertColor(hex, bw) 
     {
         hex = hex.toString(16); // force conversion
+		// fill extra space up to 6 characters with 0
+		while (hex.length < 6) hex = "0" + hex;
 
         if (hex.indexOf('#') === 0) {
             hex = hex.slice(1);
@@ -125,7 +127,7 @@ if( 'function' === typeof importScripts)
             hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
         }
         if (hex.length !== 6) {
-            throw new Error('Invalid HEX color.');
+            throw new Error('Invalid HEX color:' + hex);
         }
         var r = parseInt(hex.slice(0, 2), 16),
             g = parseInt(hex.slice(2, 4), 16),
@@ -163,6 +165,7 @@ if( 'function' === typeof importScripts)
 	function showLabel(index, fade, hovered = false)
 	{
 		let label = pixiLabels[index];
+		if (!label) return;
 		labelFade[index] = fade;
 
 		if(fade > 0.01) label.visible = true;
@@ -253,7 +256,8 @@ if( 'function' === typeof importScripts)
 			{
 				if (screenRadius > 2)
 				{
-					let labelFade = lerp(0, (screenRadius - 4) / 10 - (1/cameraScaleRoot)/6 * 0.9, Math.max(1 - hoverFade, 0.2));
+					
+					let labelFade = lerp(0, (screenRadius - 4) / 8 - (1/cameraScaleRoot)/6 * 0.9, Math.max(1 - hoverFade, 0.2));
 					showLabel(i, labelFade);
 				}
 				else 

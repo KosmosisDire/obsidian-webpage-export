@@ -32,3 +32,5 @@ obsidian-banners
 obsidian-charts
 obsidian-excalidraw-plugin
 obsidian42-brat
+obsidian-icon-folder
+vscode-editor
