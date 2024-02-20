@@ -236,25 +236,89 @@ export class Website
 			author = page.author ?? author;
 			let mediaPathStr = page.viewElement.querySelector("img")?.getAttribute("src") ?? "";
 			let hasMedia = mediaPathStr.length > 0;
-			let mediaPath = Path.joinStrings(this.exportOptions.siteURL ?? "", mediaPathStr);
-			mediaPathStr = mediaPath.asString;
-			let content = page.getCompatibilityContent();
+			if (hasMedia && !mediaPathStr.startsWith("http") && !mediaPathStr.startsWith("data:"))
+			{
+				let mediaPath = Path.joinStrings(this.exportOptions.siteURL ?? "", mediaPathStr);
+				mediaPathStr = mediaPath.asString;
+			}
 
 			let description = page.description;
 
 			if (!description)
 			{
-				let descDoc = new DOMParser().parseFromString(content, "text/html");
-				descDoc.querySelectorAll("h1, h2, h3, h4, h5, h6, .mjx-container, table, a.tag, img").forEach((item) => item.remove());
-				// make lists into paragraphs
-				descDoc.querySelectorAll("ul, ol, li").forEach((list) => 
+				let content = page.viewElement.cloneNode(true) as HTMLElement;
+				content.querySelectorAll(`h1, h2, h3, h4, h5, h6, .mermaid, table, mjx-container, style, script, 
+.mod-header, .mod-footer, .metadata-container, .frontmatter, img[src^="data:"]`).forEach((heading) => heading.remove());
+
+				// update image links
+				content.querySelectorAll("[src]").forEach((el: HTMLImageElement) => 
 				{
-					let p = document.createElement("p");
-					p.innerHTML = list.innerHTML;
-					list.replaceWith(p);
+					let src = el.src;
+					if (!src) return;
+					if (src.startsWith("http") || src.startsWith("data:")) return;
+					src = src.replace("app://obsidian", "");
+					src = src.replace(".md", "");
+					let path = Path.joinStrings(this.exportOptions.siteURL ?? "", src);
+					el.src = path.asString;
 				});
-				description = descDoc.body.innerHTML;
-				descDoc.body.innerHTML = "";
+
+				// update normal links
+				content.querySelectorAll("[href]").forEach((el: HTMLAnchorElement) => 
+				{
+					let href = el.href;
+					if (!href) return;
+					if (href.startsWith("http") || href.startsWith("data:")) return;
+					href = href.replace("app://obsidian", "");
+					href = href.replace(".md", "");
+					let path = Path.joinStrings(this.exportOptions.siteURL ?? "", href);
+					el.href = path.asString;
+				});
+
+				// console.log("Content: ", content.outerHTML);
+
+				function keepTextLinksImages(element: HTMLElement) 
+				{
+					let walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+					let node;
+					let nodes = [];
+					while (node = walker.nextNode()) 
+					{
+						if (node.nodeType == Node.ELEMENT_NODE)
+						{
+							let element = node as HTMLElement;
+							if (element.tagName == "A" || element.tagName == "IMG" || element.tagName == "BR")
+							{
+								nodes.push(element);
+							}
+
+							if (element.tagName == "DIV")
+							{
+								let classes = element.parentElement?.classList;
+								if (classes?.contains("heading-children") || classes?.contains("markdown-preview-sizer"))
+								{
+									nodes.push(document.createElement("br"));
+								}
+							}
+
+							if (element.tagName == "LI") 
+							{
+								nodes.push(document.createElement("br"));
+							}
+						}
+						else
+						{
+							if (node.parentElement?.tagName != "A" && node.parentElement?.tagName != "IMG")
+								nodes.push(node);
+						}
+					}
+
+					element.innerHTML = "";
+					element.append(...nodes);
+				}
+
+				keepTextLinksImages(content);
+				description = content.innerHTML;
+				content.remove();
 			}
 			
 			// add tags to top of description
