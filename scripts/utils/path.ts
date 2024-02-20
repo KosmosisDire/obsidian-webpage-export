@@ -7,6 +7,7 @@ import { statSync } from 'fs';
 import internal from 'stream'; 
 import { ExportLog } from 'scripts/html-generation/render-log';
 import { join } from 'path';
+import { homedir } from 'os';
 
 export class Path
 {
@@ -472,52 +473,57 @@ export class Path
 		return this.copy.makeAbsolute(workingDirectory);
 	}
 
-	validate(allowEmpty: boolean = false, requireExists: boolean = false, requireAbsolute: boolean = false, requireRelative: boolean = false, requireIsFile: boolean = false, requireIsDirectory: boolean = false, requireExtention: string[] = []): {valid: boolean, isEmpty: boolean, error: string}
+	validate(options: {allowEmpty?: boolean, requireExists?: boolean, allowAbsolute?: boolean, allowRelative?: boolean, allowTildeHomeDirectory?: boolean, allowFiles?: boolean, allowDirectories?: boolean, requireExtentions?: string[]}): {valid: boolean, isEmpty: boolean, error: string}
 	{
 		let error = "";
 		let valid = true;
 		let isEmpty = this.rawString.trim() == "";
 
 		// remove dots from requireExtention
-		requireExtention = requireExtention.map(e => e.replace(".", ""));
-		let dottedExtention = requireExtention.map(e => "." + e);
+		options.requireExtentions = options.requireExtentions?.map(e => e.replace(".", "")) ?? [];
+		let dottedExtention = options.requireExtentions.map(e => "." + e);
 
-		if (!allowEmpty && isEmpty)
+		if (!options.allowEmpty && isEmpty)
 		{
-			error += "Path cannot be empty";
+			error += "Path cannot be empty\n";
 			valid = false;
 		}
-		else if (allowEmpty && isEmpty)
+		else if (options.allowEmpty && isEmpty)
 		{
 			return { valid: true, isEmpty: isEmpty, error: "" };
 		}
 		
-		if (requireExists && !this.exists)
+		if (options.requireExists && !this.exists)
 		{
 			error += "Path does not exist";
 			valid = false;
 		}
-		else if (requireAbsolute && !this.isAbsolute)
+		else if (!options.allowTildeHomeDirectory && this.asString.startsWith("~"))
 		{
-			error += "Path must be absolute";
+			error += "Home directory with tilde (~) is not allowed";
 			valid = false;
 		}
-		else if (requireRelative && !this.isRelative)
+		else if (!options.allowAbsolute && this.isAbsolute)
 		{
-			error += "Path must be relative";
+			error += "Path cannot be absolute";
 			valid = false;
 		}
-		else if (requireIsFile && !this.isFile && !isEmpty)
+		else if (!options.allowRelative && this.isRelative)
 		{
-			error += "Path must be a file";
+			error += "Path cannot be relative";
 			valid = false;
 		}
-		else if (requireIsDirectory && !this.isDirectory && !isEmpty)
+		else if (!options.allowFiles && this.isFile)
 		{
-			error += "Path must be a directory";
+			error += "Path cannot be a file";
 			valid = false;
 		}
-		else if (requireExtention.length > 0 && !requireExtention.includes(this.extensionName) && !isEmpty)
+		else if (!options.allowDirectories && this.isDirectory)
+		{
+			error += "Path cannot be a directory";
+			valid = false;
+		}
+		else if (options.requireExtentions.length > 0 && !options.requireExtentions.includes(this.extensionName) && !isEmpty)
 		{
 			error += "Path must be: " + dottedExtention.join(", ");
 			valid = false;
@@ -630,6 +636,14 @@ export class Path
 	{
 		let args = path.split("?")[1] ?? "";
 		path = path.split("?")[0];
+
+		if (process.platform === "win32")
+		{
+			if (path.startsWith("~"))
+			{
+				path = path.replace("~", homedir());
+			}
+		}
 
 		try
 		{

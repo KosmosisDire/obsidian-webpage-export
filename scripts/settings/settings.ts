@@ -365,7 +365,15 @@ This feature does not require "File & folder icons" to be enbaled.`);
 				description: 'Custom scripts, styles, or anything else (html file)',
 				placeholder: 'Path to html formatted file...',
 				defaultPath: Path.vaultPath,
-				validation: (path) => path.validate(true, true, true, false, true, false, ["html", "htm", "txt"]),
+				validation: (path) => path.validate(
+					{
+						allowEmpty: true,
+						allowAbsolute: true,
+						allowRelative: true,
+						allowFiles: true,
+						requireExists: true,
+						requireExtentions: ["html, htm, txt"]
+					}),
 			});
 
 			SettingsPage.createFileInput(section, () => Settings.faviconPath, (value) => Settings.faviconPath = value,
@@ -374,7 +382,15 @@ This feature does not require "File & folder icons" to be enbaled.`);
 				description: 'Add a custom favicon image to the website',
 				placeholder: 'Path to image file...',
 				defaultPath: Path.vaultPath,
-				validation: (path) => path.validate(true, true, true, false, true, false, ["png", "ico", "jpg", "jpeg", "svg"]),
+				validation: (path) => path.validate(
+					{
+						allowEmpty: true,
+						allowAbsolute: true,
+						allowRelative: true,
+						allowFiles: true,
+						requireExists: true,
+						requireExtentions: ["png", "ico", "jpg", "jpeg", "svg"]
+					}),
 			});
 
 			

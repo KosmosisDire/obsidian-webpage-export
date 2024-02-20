@@ -208,7 +208,15 @@ export class ExportModal extends Modal
 			}
 		}
 
-		let validatePath = (path: Path) => path.validate(false, true, false, false, false, true);
+		let validatePath = (path: Path) => path.validate(
+			{
+				allowEmpty: false,
+				allowRelative: false,
+				allowAbsolute: true,
+				allowDirectories: true,
+				allowTildeHomeDirectory: true,
+				requireExists: true
+			});
 
 		let exportPathInput = SettingsPage.createFileInput(contentEl, () => Settings.exportPath, (value) => Settings.exportPath = value,
 		{
