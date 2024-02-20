@@ -1,11 +1,11 @@
 # Webpage HTML Export
 
 Export html from single files, canvas pages, or whole vaults. Direct access to the exported HTML files allows you to publish your digital garden anywhere. Focuses on flexibility, features, and style parity.
+Demo / docs: https://docs.obsidianweb.net/
 
-![image](https://github.com/KosmosisDire/obsidian-webpage-export/assets/39423700/bbb97fda-7a11-4b47-9e54-efc5e907d51f)
+![image](https://github.com/KosmosisDire/obsidian-webpage-export/assets/39423700/b8e227e4-b12c-47fb-b341-5c5c2f092ffa)
 
-![image](https://github.com/KosmosisDire/obsidian-webpage-export/assets/39423700/0079b11a-45c1-4c36-a6d5-bad5bc229905)
-
+![image](https://github.com/KosmosisDire/obsidian-webpage-export/assets/39423700/06f29e1a-c067-45e7-9882-f9d6aa83776f)
 
 ## Features:
 - Export files, folders, or the whole vault as html
