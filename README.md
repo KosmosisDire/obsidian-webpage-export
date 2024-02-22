@@ -59,5 +59,5 @@ or if you prefer paypal:
 ## BrowserStack
 
 This project is tested with BrowserStack.
-Browser stack offers free web testing to open source projects.
+[BroswerStack](https://www.browserstack.com/open-source) offers free web testing to open source projects.
 
