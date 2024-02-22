@@ -55,3 +55,9 @@ This plugin takes a lot of work to maintain and continue adding features. If you
 or if you prefer paypal: 
 
 <a href="https://www.paypal.com/donate/?business=HHQBAXQQXT84Q&no_recurring=0&item_name=Hey+%F0%9F%91%8B+I+am+a+Computer+Science+student+working+on+obsidian+plugins.+Thanks+for+your+support%21&currency_code=USD"><img src="https://pics.paypal.com/00/s/MGNjZDA4MDItYzk3MC00NTQ1LTg4ZDAtMzM5MTc4ZmFlMGIy/file.PNG" style="width: 150px;"></a>
+
+## BrowserStack
+
+This project is tested with BrowserStack.
+Browser stack offers free web testing to open source projects.
+
