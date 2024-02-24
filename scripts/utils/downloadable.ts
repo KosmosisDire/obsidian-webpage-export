@@ -12,13 +12,16 @@ export class Downloadable
 	 */
 	public content: string | Buffer;
 
+	/**
+	 * The directory this file will be saved in, relative to the destination root
+	 */
 	public relativeDirectory: Path;
 	public encoding: BufferEncoding | undefined;
 	public modifiedTime: number = 0; // when was the source file last modified
 
 	constructor(filename: string, content: string | Buffer, vaultRelativeDestination: Path, encoding: BufferEncoding | undefined = "utf8")
 	{
-		if(vaultRelativeDestination.isFile) throw new Error("vaultRelativeDestination must be a folder: " + vaultRelativeDestination.asString);
+		if(vaultRelativeDestination.isFile) throw new Error("vaultRelativeDestination must be a folder: " + vaultRelativeDestination.stringify);
 
 		this.filename = filename;
 		this.content = content;
@@ -26,6 +29,9 @@ export class Downloadable
 		this.encoding = encoding;
 	}
 
+	/**
+	 * The path relative to the destination root
+	 */
 	public get relativePath(): Path
 	{
 		return this.relativeDirectory.joinString(this.filename);
@@ -35,16 +41,16 @@ export class Downloadable
 	{
 		let data = this.content instanceof Buffer ? this.content : Buffer.from(this.content.toString(), this.encoding);
 		let writePath = this.getAbsoluteDownloadDirectory(downloadDirectory).joinString(this.filename);
-		await writePath.writeFile(data, this.encoding);
+		await writePath.write(data, this.encoding);
 	}
 
 	public getAbsoluteDownloadPath(downloadDirectory: Path): Path
 	{
-		return this.relativeDirectory.absolute(downloadDirectory).joinString(this.filename);
+		return this.relativeDirectory.absoluted(downloadDirectory).joinString(this.filename);
 	}
 
 	public getAbsoluteDownloadDirectory(downloadDirectory: Path): Path
 	{
-		return this.relativeDirectory.absolute(downloadDirectory);
+		return this.relativeDirectory.absoluted(downloadDirectory);
 	}
 }

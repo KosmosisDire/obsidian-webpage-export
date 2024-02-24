@@ -2,13 +2,17 @@
 import { Notice, Plugin, TFile, TFolder, requestUrl} from 'obsidian';
 
 // modules that are part of the plugin
-import { AssetHandler } from './html-generation/asset-handler';
-import { Settings, SettingsPage } from './settings/settings';
-import { HTMLExporter } from './exporter';
-import { Path } from './utils/path';
-import { ExportLog } from './html-generation/render-log';
-import { ExportModal } from './settings/export-modal';
-import { MarkdownRendererAPI } from './render-api';
+import { AssetHandler } from 'scripts/assets-system/asset-handler';
+import { Settings, SettingsPage } from 'scripts/settings/settings';
+import { HTMLExporter } from 'scripts/plugin/exporter';
+import { Path } from 'scripts/utils/path';
+import { ExportLog } from 'scripts/utils/export-log';
+import { ExportModal } from 'scripts/settings/export-modal';
+import { MarkdownRendererAPI } from 'scripts/render-api/render-api';
+import { BrowserWindow } from 'electron';
+import { DataviewGenerator } from './component-generators/dataview-generator';
+const querystring = require('querystring');
+const https = require("https");
 
 export default class HTMLExportPlugin extends Plugin
 {
@@ -19,10 +23,12 @@ export default class HTMLExportPlugin extends Plugin
 	public settings = Settings;
 	public assetHandler = AssetHandler;
 	public Path = Path;
+	public dv = DataviewGenerator;
 
 	async onload()
 	{
 		console.log("Loading webpage-html-export plugin");
+
 		HTMLExportPlugin.plugin = this;
 		this.checkForUpdates();
 		HTMLExportPlugin.pluginVersion = this.manifest.version;
@@ -95,7 +101,7 @@ export default class HTMLExportPlugin extends Plugin
 						}
 						else if(file instanceof TFolder)
 						{
-							let filesInFolder = this.app.vault.getFiles().filter((f) => new Path(f.path).directory.asString.startsWith(file.path));
+							let filesInFolder = this.app.vault.getFiles().filter((f) => new Path(f.path).directory.stringify.startsWith(file.path));
 							HTMLExporter.export(false, filesInFolder);
 						}
 						else

@@ -12,26 +12,29 @@ body
 
 .tree-container 
 {
-	position: relative;
 	height: 100%;
 	width: auto;
-	margin-top: 3em;
-    margin-bottom: 0;
+    margin: 0;
+	overflow: hidden;
 }
 
-.tree-container .tree-header 
+.tree-header 
 {
 	display: flex;
 	flex-direction: row;
 	align-items: center;
-	position: absolute;
-	top: -3em;
 }
 
-.tree-container .tree-header .sidebar-section-header 
+.tree-header .sidebar-section-header 
 {
     margin-block: 1em;
     white-space: nowrap;
+}
+
+.collapse-tree-button
+{
+	margin-inline: 0.5em;
+	aspect-ratio: 1;
 }
 
 .tree-container:has(.tree-scroll-area:empty) 
@@ -46,7 +49,6 @@ body .webpage-container .tree-container .tree-scroll-area
 	max-height: 100%;
 	overflow-y: auto;
 	border-radius: 0;
-	position: absolute;
 	margin: 0;
 	background-color: transparent;
 }
@@ -107,6 +109,11 @@ body .webpage-container .tree-container .tree-scroll-area
 	display: flex;
 	align-items: center;
 	justify-content: flex-start;
+}
+
+.tree-container.filtered .tree-item-icon
+{
+	display: none;
 }
 
 .tree-container .tree-item.mod-active > .tree-link > .tree-item-contents
@@ -309,7 +316,7 @@ body .webpage-container .tree-container .tree-scroll-area
 	margin-right: 1em;
 }
 
-.nav-file-title-content, .nav-folder-title-content
+/* .nav-file-title-content, .nav-folder-title-content
 {
     margin-bottom: unset !important;
     display: unset !important;
@@ -319,7 +326,7 @@ body .webpage-container .tree-container .tree-scroll-area
     font-weight: unset !important;
     line-height: unset !important;
 	padding: unset !important;
-}
+} */
 
 /*#endregion */
 
@@ -365,6 +372,10 @@ body.show-inline-title .page-title
     color: var(--inline-title-color);
 }
 
+h1 li {
+    translate: calc(0px - var(--list-indent)) 0;
+}
+
 .heading
 {
 	position: relative;
@@ -385,8 +396,7 @@ body.show-inline-title .page-title
 {
     transition: height ease-in-out, margin-bottom ease-in-out;
     transition-duration: 0.2s;
-    display: flex;
-	flex-direction: column;
+    display: flow;
 	position: relative;
 }
 
@@ -991,6 +1001,29 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 
 /*#region Search */
 
+#search-results {
+    padding: 1em;
+}
+
+.search-result
+{
+	display: flex;
+}
+
+.search-result a {
+    padding: calc(var(--tree-vertical-spacing) / 2);
+    border-radius: var(--radius-s);
+    width: 100%;
+    color: var(--nav-item-color);
+    text-decoration: none;
+}
+
+.search-result a:hover {
+    background-color: var(--nav-item-background-hover);
+    text-decoration: underline;
+    color: var(--nav-item-color-active);
+}
+
 .tree-hint-label
 {
 	font-size: var(--font-smallest);
@@ -999,8 +1032,21 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 	width: -webkit-fill-available;
 	width: -moz-available;
 	width: fill-available;
-	white-space: pre-wrap;
 	text-decoration-line: none;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tree-hint-label.internal-link::before {
+    content: "H";
+    font-size: 1.2em;
+    font-weight: 700;
+    position: relative;
+    display: inline-block;
+    margin-right: 0.5em;
+    translate: 0 0.05em;
+    color: var(--nav-item-color);
 }
 
 .tree-hint-label:hover
@@ -1021,11 +1067,6 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 .tree-container .mod-tree-folder:not(:has(.mod-tree-folder)) .mod-tree-file > .tree-link > .tree-hint-container
 {
 	padding-left: calc(var(--tree-horizontal-spacing) * 2);
-}
-
-.tree-item-contents:has(.tree-item-icon) + .tree-hint-container
-{
-	margin-left: calc(1.6em + 2px);
 }
 
 a.tree-hint-label:hover
@@ -1058,14 +1099,22 @@ input[type=search] {
 .search-input-container
 {
 	width: 100% !important;
+	display: flex !important;
 }
- 
+
+.search-input-wrapper
+{
+	position: relative;
+	width: 100%;
+}
+
 .search-input-container::before 
 {
     mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'></circle><line x1='21' y1='21' x2='16.65' y2='16.65'></line></svg>");
     mask-repeat: no-repeat;
     top: 50%;
     transform: translateY(-50%);
+	z-index: 1;
 }
 
 /*#endregion */

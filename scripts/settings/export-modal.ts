@@ -2,7 +2,7 @@ import { ButtonComponent, Modal, Setting, TFile } from 'obsidian';
 import { Utils } from '../utils/utils';
 import HTMLExportPlugin from '../main';
 import { ExportPreset, Settings, SettingsPage } from './settings';
-import { FilePickerTree } from '../objects/file-picker';
+import { FilePickerTree } from '../component-generators/file-picker';
 import { Path } from 'scripts/utils/path';
 
 export interface ExportInfo
@@ -76,10 +76,14 @@ export class ExportModal extends Modal
 			scrollArea.style.boxShadow = "0 0 7px 1px inset #00000060";
 
 			this.filePicker = new FilePickerTree(app.vault.getFiles(), true, true);
+			this.filePicker.regexBlacklist.push(...Settings.filePickerBlacklist);
+			this.filePicker.regexBlacklist.push(...[Settings.customHeadContentPath, Settings.faviconPath]);
+			this.filePicker.regexWhitelist.push(...Settings.filePickerWhitelist);
+			
 			this.filePicker.generateWithItemsClosed = true;
 			this.filePicker.showFileExtentionTags = true;
 			this.filePicker.hideFileExtentionTags = ["md"];
-			await this.filePicker.generateTree(scrollArea);
+			await this.filePicker.insert(scrollArea);
 			
 			if((this.pickedFiles?.length ?? 0 > 0) || Settings.filesToExport[0].length > 0) 
 			{
@@ -166,6 +170,7 @@ export class ExportModal extends Modal
 							Settings.addGraphView = true;
 							Settings.addFileNav = true;
 							Settings.addSearchBar = true;
+							Settings.addRSSFeed = true;
 							await SettingsPage.saveSettings();
 
 							break;
@@ -175,6 +180,7 @@ export class ExportModal extends Modal
 							Settings.addFileNav = true;
 							Settings.addGraphView = false;
 							Settings.addSearchBar = false;
+							Settings.addRSSFeed = false;
 							await SettingsPage.saveSettings();
 
 							break;
@@ -184,6 +190,7 @@ export class ExportModal extends Modal
 							Settings.addGraphView = false;
 							Settings.addFileNav = false;
 							Settings.addSearchBar = false;
+							Settings.addRSSFeed = false;
 							await SettingsPage.saveSettings();
 
 							break;

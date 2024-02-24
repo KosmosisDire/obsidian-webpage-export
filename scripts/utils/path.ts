@@ -5,7 +5,7 @@ import { Utils } from './utils';
 import { promises as fs } from 'fs';
 import { statSync } from 'fs';
 import internal from 'stream'; 
-import { ExportLog } from 'scripts/html-generation/render-log';
+import { ExportLog } from 'scripts/utils/export-log';
 import { join } from 'path';
 import { homedir } from 'os';
 
@@ -34,11 +34,11 @@ export class Path
 	private _isFile: boolean = false;
 	private _exists: boolean | undefined = undefined;
 	private _workingDirectory: string;
-	private _rawString: string = "";
+	private _sourceString: string = "";
 
 	private _isWindows: boolean = process.platform === "win32";
 
-	constructor(path: string, workingDirectory: string = Path.vaultPath.asString)
+	constructor(path: string, workingDirectory: string = Path.vaultPath.stringify)
 	{
 		this._workingDirectory = Path.parsePath(workingDirectory).fullPath;
 
@@ -47,7 +47,7 @@ export class Path
 		if (this.isAbsolute) this._workingDirectory = "";
 	}
 
-	reparse(path: string): Path
+	private reparse(path: string): Path
 	{
 		let parsed = Path.parsePath(path);
 		this._root = parsed.root;
@@ -60,7 +60,7 @@ export class Path
 		this._isDirectory = this._ext == "";
 		this._isFile = this._ext != "";
 		this._exists = undefined;
-		this._rawString = path;
+		this._sourceString = path;
 
 		if (this._isWindows)
 		{
@@ -83,43 +83,78 @@ export class Path
 		return this;
 	}
 
-	joinString(...paths: string[]): Path
+	/**
+	 * Joins the path with other paths formatted as strings. (returns copy).
+	 * Accepts multiple arguments.
+	 */
+	public joinString(...paths: string[]): Path
 	{
-		return this.copy.reparse(Path.joinStringPaths(this.asString, ...paths));
+		return this.copy.reparse(Path.joinStringPaths(this.stringify, ...paths));
 	}
 
-	join(...paths: Path[]): Path
+	/**
+	 * Joins the path with other path objects. (returns copy).
+	 * Accepts multiple arguments.
+	 */
+	public join(...paths: Path[]): Path
 	{
-		return new Path(Path.joinStringPaths(this.asString, ...paths.map(p => p.asString)), this._workingDirectory);
+		return new Path(Path.joinStringPaths(this.stringify, ...paths.map(p => p.stringify)), this._workingDirectory);
 	}
 
-	makeAbsolute(workingDirectory: string | Path = this._workingDirectory): Path
+	/**
+	 * Makes the path absolute using the working directory. (in-place).
+	 * @param workingDirectory (optional) The working directory to use. If not provided the path's normal working directory will be used.
+	 */
+	absolute(workingDirectory: string | Path = this._workingDirectory): Path
 	{
-		if(workingDirectory instanceof Path && !workingDirectory.isAbsolute) throw new Error("workingDirectory must be an absolute path: " + workingDirectory.asString);
+		if(workingDirectory instanceof Path && !workingDirectory.isAbsolute) throw new Error("workingDirectory must be an absolute path: " + workingDirectory.stringify);
 
 		if (!this.isAbsolute)
 		{
-			this._fullPath = Path.joinStringPaths(workingDirectory.toString(), this.asString);
+			this._fullPath = Path.joinStringPaths(workingDirectory.toString(), this.stringify);
 			this._workingDirectory = "";
-			this.reparse(this.asString);
+			this.reparse(this.stringify);
 		}
 
 		return this;
 	}
 
-	makeForceFolder(): Path
+	/**
+	 * Returns a copy of the path made absolute using the working directory. (returns copy).
+	 * @param workingDirectory (optional) The working directory to use. If not provided the path's normal working directory will be used.
+	 */
+	absoluted(workingDirectory: string | Path = this._workingDirectory): Path
+	{
+		return this.copy.absolute(workingDirectory);
+	}
+
+	/**
+	 * Forces the path to be a directory. (in-place).
+	 */
+	folderize(): Path
 	{
 		if (!this.isDirectory)
 		{
-			this.reparse(this.asString + "/");
+			this.reparse(this.stringify + "/");
 		}
 
 		return this;
 	}
 
-	makeNormalized(): Path
+	/**
+	 * Returns a copy of the path forced to be a directory. (returns copy).
+	 */
+	folderized(): Path
 	{
-		let fullPath = pathTools.normalizeSafe(this.absolute().asString);
+		return this.copy.folderize();
+	}
+
+	/**
+	 * Normalizes the path to remove any redundant parts. (in-place).
+	 */
+	normalize(): Path
+	{
+		let fullPath = pathTools.normalizeSafe(this.absoluted().stringify);
 		let newWorkingDir = "";
 		let newFullPath = "";
 		let reachedEndOfWorkingDir = false;
@@ -143,88 +178,63 @@ export class Path
 		return this;
 	}
 
+	/**
+	 * Returns a normalized copy of the path. (returns copy).
+	 */
 	normalized(): Path
 	{
-		return this.copy.makeNormalized();
+		return this.copy.normalize();
 	}
 
-	makeRootAbsolute(): Path
+	/**
+	 * Sluggifies the path to make it web friendly. (in-place).
+	 */
+	slugify(makeWebStyle: boolean = true): Path
 	{
-		if (!this.isAbsolute)
-		{
-			if (this._isWindows)
-			{
-				if(this._fullPath.contains(":"))
-				{
-					this._fullPath = this.asString.substring(this._fullPath.indexOf(":") - 1);
-				}
-				else
-				{
-					this._fullPath = "\\" + this.asString;
-				}
-			}
-			else
-			{
-				this._fullPath = "/" + this.asString;
-			}
-
-			this.reparse(this.asString);
-		}
-
+		if (!makeWebStyle) return this;
+		this._fullPath = Path.slugify(this.stringify);
+		this.reparse(this.stringify);
 		return this;
 	}
 
-	setWorkingDirectory(workingDirectory: string): Path
+	/**
+	 * Returns a sluggified copy of the path. (returns copy).
+	 */
+	slugified(makeWebStyle: boolean = true): Path
 	{
+		return this.copy.slugify(makeWebStyle);
+	}
+
+	/**
+	 * Makes the path use unix file path conventions / formatting. (in-place).
+	 */
+	unixify(): Path
+	{
+		this._isWindows = false;
+		this._fullPath = this.stringify.replaceAll("\\", "/").replace(/^.:\/\//i, "/");
+		this.reparse(this.stringify);
+		return this;
+	}
+
+	/**
+	 * Returns a copy of the path using unix file path conventions / formatting. (returns copy).
+	 */
+	unixified(): Path
+	{
+		return this.copy.unixify();
+	}
+
+	/**
+	 * Sets the working directory of the path. (in-place).
+	 */
+	setWorkingDirectory(workingDirectory: string): Path {
 		this._workingDirectory = workingDirectory;
 		return this;
 	}
 
-	makeRootRelative(): Path
-	{
-		if (this.isAbsolute)
-		{
-			if (this._isWindows)
-			{
-				// replace the drive letter and colon with nothing
-				this._fullPath = this.asString.replace(/^.:\/\//i, "").replace(/^.:\//i, "");
-				this._fullPath = Utils.trimStart(this._fullPath, "\\");
-			}
-			else
-			{
-				this._fullPath = Utils.trimStart(this._fullPath, "/");
-			}
-
-			this.reparse(this.asString);
-		}
-
-		return this;
-	}
-
-	makeWebStyle(makeWebStyle: boolean = true): Path
-	{
-		if (!makeWebStyle) return this;
-		this._fullPath = Path.toWebStyle(this.asString);
-		this.reparse(this.asString);
-		return this;
-	}
-
-	makeWindowsStyle(): Path
-	{
-		this._isWindows = true;
-		this._fullPath = this.asString.replaceAll("/", "\\");
-		this.reparse(this.asString);
-		return this;
-	}
-
-	makeUnixStyle(): Path
-	{
-		this._isWindows = false;
-		this._fullPath = this.asString.replaceAll("\\", "/").replace(/^.:\/\//i, "/");
-		this.reparse(this.asString);
-		return this;
-	}
-
+	/**
+	 * Sets the extension of the file (accepts with or without the dot). (in-place).
+	 */
 	setExtension(extension: string): Path
 	{
 		if (!extension.contains(".")) extension = "." + extension;
@@ -237,6 +247,9 @@ export class Path
 		return this;
 	}
 
+	/**
+	 * Replaces the extension with a new one if it matches the search extension. (in-place).
+	 */
 	replaceExtension(searchExt: string, replaceExt: string): Path
 	{
 		if (!searchExt.contains(".")) searchExt = "." + searchExt;
@@ -253,7 +266,7 @@ export class Path
 	// overide the default toString() method
 	toString(): string
 	{
-		return this.asString;
+		return this.stringify;
 	}
 
 	/**
@@ -304,6 +317,9 @@ export class Path
 		return this._ext;
 	}
 
+	/**
+	 * The extension of the file or folder without the dot.
+	 */
 	get extensionName(): string
 	{
 		return this._ext.replace(".", "");
@@ -328,7 +344,7 @@ export class Path
 	 */
 	get depth(): number
 	{
-		return this.asString.replaceAll("\\", "/").replaceAll("//", "/").split("/").length - 1;
+		return this.stringify.replaceAll("\\", "/").replaceAll("//", "/").split("/").length - 1;
 	}
 
 	/**
@@ -336,9 +352,9 @@ export class Path
 	 * @example
 	 * Can be any string: "C:/Users//John Doe/../Documents\file.txt " or ""
 	 */
-	get rawString(): string
+	get sourceString(): string
 	{
-		return this._rawString;
+		return this._sourceString;
 	}
 
 	/**
@@ -351,7 +367,7 @@ export class Path
 	 * "relative/path/to/example.txt"
 	 * "relative/path/to/folder"
 	 */
-	get asString(): string
+	get stringify(): string
 	{
 		return this._fullPath;
 	}
@@ -370,7 +386,7 @@ export class Path
 	 */
 	get isEmpty(): boolean
 	{
-		return this.asString == ".";
+		return this.stringify == ".";
 	}
 
 	/**
@@ -395,49 +411,44 @@ export class Path
 		{
 			try
 			{
-				this._exists = Path.pathExists(this.absolute().asString);
+				this._exists = Path.pathExists(this.absoluted().stringify);
 			}
 			catch (error)
 			{
 				this._exists = false;
-				Path.log("Error checking if path exists: " + this.asString, error, "error");
+				Path.log("Error checking if path exists: " + this.stringify, error, "error");
 			}
 		}
 
 		return this._exists;
 	}
 
-	get stat(): Stats|undefined
+	/**
+	 * The fs stats of the file or folder.
+	 */
+	get stat(): Stats | undefined
 	{
 		if(!this.exists) return;
 
 		try
 		{
 		
-			let stat = statSync(this.absolute().asString);
+			let stat = statSync(this.absoluted().stringify);
 			return stat;
 		}
 		catch (error)
 		{
-			Path.log("Error getting stat: " + this.asString, error, "error");
+			Path.log("Error getting stat: " + this.stringify, error, "error");
 			return;
 		}
 	}
 
-	assertExists(): boolean
-	{
-		if(!this.exists)
-		{
-			new Notice("Error: Path does not exist: \n\n" + this.asString, 5000);
-			ExportLog.error("Path does not exist: " + this.asString);
-		}
-
-		return this.exists;
-	}
-
+	/**
+	 * True if the path is an absolute path.
+	 */
 	get isAbsolute(): boolean
 	{
-		let asString = this.asString;
+		let asString = this.stringify;
 		if (asString.startsWith("http:") || asString.startsWith("https:")) return true;
 
 		if(this._isWindows)
@@ -453,31 +464,27 @@ export class Path
 		}
 	}
 
+	/**
+	 * True if the path is a relative path.
+	 */
 	get isRelative(): boolean
 	{
 		return !this.isAbsolute;
 	}
 
+	/**
+	 * Returns a copy of the path so you can modify it without changing the original.
+	 */
 	get copy(): Path
 	{
-		return new Path(this.asString, this._workingDirectory);
-	}
-
-	getDepth(): number
-	{
-		return this.asString.split("/").length - 1;
-	}
-
-	absolute(workingDirectory: string | Path = this._workingDirectory): Path
-	{
-		return this.copy.makeAbsolute(workingDirectory);
+		return new Path(this.stringify, this._workingDirectory);
 	}
 
 	validate(options: {allowEmpty?: boolean, requireExists?: boolean, allowAbsolute?: boolean, allowRelative?: boolean, allowTildeHomeDirectory?: boolean, allowFiles?: boolean, allowDirectories?: boolean, requireExtentions?: string[]}): {valid: boolean, isEmpty: boolean, error: string}
 	{
 		let error = "";
 		let valid = true;
-		let isEmpty = this.rawString.trim() == "";
+		let isEmpty = this.sourceString.trim() == "";
 
 		// remove dots from requireExtention
 		options.requireExtentions = options.requireExtentions?.map(e => e.replace(".", "")) ?? [];
@@ -498,7 +505,7 @@ export class Path
 			error += "Path does not exist";
 			valid = false;
 		}
-		else if (!options.allowTildeHomeDirectory && this.asString.startsWith("~"))
+		else if (!options.allowTildeHomeDirectory && this.stringify.startsWith("~"))
 		{
 			error += "Home directory with tilde (~) is not allowed";
 			valid = false;
@@ -536,7 +543,7 @@ export class Path
 	{
 		if (!this.exists)
 		{
-			let path = this.absolute().directory.asString;
+			let path = this.absoluted().directory.stringify;
 
 			try
 			{
@@ -552,45 +559,45 @@ export class Path
 		return true;
 	}
 
-	async readFileString(encoding: "ascii" | "utf8" | "utf-8" | "utf16le" | "ucs2" | "ucs-2" | "base64" | "base64url" | "latin1" | "binary" | "hex" = "utf-8"): Promise<string|undefined>
+	async readAsString(encoding: "ascii" | "utf8" | "utf-8" | "utf16le" | "ucs2" | "ucs-2" | "base64" | "base64url" | "latin1" | "binary" | "hex" = "utf-8"): Promise<string|undefined>
 	{
 		if(!this.exists || this.isDirectory) return;
 
 		try
 		{
-			let data = await fs.readFile(this.absolute().asString, { encoding: encoding });
+			let data = await fs.readFile(this.absoluted().stringify, { encoding: encoding });
 			return data;
 		}
 		catch (error)
 		{
-			Path.log("Error reading file: " + this.asString, error, "error");
+			Path.log("Error reading file: " + this.stringify, error, "error");
 			return;
 		}
 	}
 
-	async readFileBuffer(): Promise<Buffer|undefined>
+	async readAsBuffer(): Promise<Buffer|undefined>
 	{
 		if(!this.exists || this.isDirectory) return;
 
 		try
 		{
-			let data = await fs.readFile(this.absolute().asString);
+			let data = await fs.readFile(this.absoluted().stringify);
 			return data;
 		}
 		catch (error)
 		{
-			Path.log("Error reading file buffer: " + this.asString, error, "error");
+			Path.log("Error reading file buffer: " + this.stringify, error, "error");
 			return;
 		}
 	}
 
-	async writeFile(data: string | NodeJS.ArrayBufferView | Iterable<string | NodeJS.ArrayBufferView> | AsyncIterable<string | NodeJS.ArrayBufferView> | internal.Stream, encoding: "ascii" | "utf8" | "utf-8" | "utf16le" | "ucs2" | "ucs-2" | "base64" | "base64url" | "latin1" | "binary" | "hex" = "utf-8"): Promise<boolean>
+	async write(data: string | NodeJS.ArrayBufferView | Iterable<string | NodeJS.ArrayBufferView> | AsyncIterable<string | NodeJS.ArrayBufferView> | internal.Stream, encoding: "ascii" | "utf8" | "utf-8" | "utf16le" | "ucs2" | "ucs-2" | "base64" | "base64url" | "latin1" | "binary" | "hex" = "utf-8"): Promise<boolean>
 	{
 		if (this.isDirectory) return false;
 
 		try
 		{
-			await fs.writeFile(this.absolute().asString, data, { encoding: encoding });
+			await fs.writeFile(this.absoluted().stringify, data, { encoding: encoding });
 			return true;
 		}
 		catch (error)
@@ -600,12 +607,12 @@ export class Path
 
 			try
 			{
-				await fs.writeFile(this.absolute().asString, data, { encoding: encoding });
+				await fs.writeFile(this.absoluted().stringify, data, { encoding: encoding });
 				return true;
 			}
 			catch (error)
 			{
-				Path.log("Error writing file: " + this.asString, error, "error");
+				Path.log("Error writing file: " + this.stringify, error, "error");
 				return false;
 			}
 		}
@@ -617,19 +624,14 @@ export class Path
 
 		try
 		{
-			await fs.rm(this.absolute().asString, { recursive: recursive });
+			await fs.rm(this.absoluted().stringify, { recursive: recursive });
 			return true;
 		}
 		catch (error)
 		{
-			Path.log("Error deleting file: " + this.asString, error, "error");
+			Path.log("Error deleting file: " + this.stringify, error, "error");
 			return false;
 		}
-	}
-
-	public static fromString(path: string): Path
-	{
-		return new Path(path);
 	}
 
 	private static parsePath(path: string): { root: string, dir: string, parent: string, base: string, ext: string, name: string, fullPath: string }
@@ -700,9 +702,9 @@ export class Path
 		else if(fullPath.startsWith("https:")) parsed.root = "https://"; 
 
 		// make sure that protocols and windows drives use two slashes
-		parsed.dir = parsed.dir.replace(/[:][\\/](?![\\/])/g, "://");
+		parsed.dir = parsed.dir.replace(/(https?)[:][\\/](?![\\/])/g, "$1://");
 		parent = parsed.dir;
-		fullPath = fullPath.replace(/[:][\\/](?![\\/])/g, "://");
+		fullPath = fullPath.replace(/(https?)[:][\\/](?![\\/])/g, "$1://");
 
 		return { root: parsed.root, dir: parsed.dir, parent: parent, base: parsed.base, ext: parsed.ext, name: parsed.name, fullPath: fullPath };
 	}
@@ -734,7 +736,7 @@ export class Path
 
 	public static joinPath(...paths: Path[]): Path
 	{
-		return new Path(Path.joinStringPaths(...paths.map(p => p.asString)), paths[0]._workingDirectory);
+		return new Path(Path.joinStringPaths(...paths.map(p => p.stringify)), paths[0]._workingDirectory);
 	}
 
 	public static joinStrings(...paths: string[]): Path
@@ -749,10 +751,10 @@ export class Path
 	 */
 	public static getRelativePath(from: Path, to: Path, useAbsolute: boolean = false): Path
 	{
-		let fromUse = useAbsolute ? from.absolute() : from;
-		let toUse = useAbsolute ? to.absolute() : to;
-		let relative = pathTools.relative(fromUse.directory.asString, toUse.asString);
-		let workingDir = from.absolute().directory.asString;
+		let fromUse = useAbsolute ? from.absoluted() : from;
+		let toUse = useAbsolute ? to.absoluted() : to;
+		let relative = pathTools.relative(fromUse.directory.stringify, toUse.stringify);
+		let workingDir = from.absoluted().directory.stringify;
 		return new Path(relative, workingDir);
 	}
 
@@ -798,36 +800,36 @@ export class Path
 		return new Path("/", "");
 	}
 	
-	static toWebStyle(path: string): string
+	static slugify(path: string): string
 	{
 		return path.replaceAll(" ", "-").replaceAll(/-{2,}/g, "-").toLowerCase();
 	}
 
 	static equal(path1: string, path2: string): boolean
 	{
-		let path1Parsed = new Path(path1).makeUnixStyle().makeWebStyle().asString;
-		let path2Parsed = new Path(path2).makeUnixStyle().makeWebStyle().asString;
+		let path1Parsed = new Path(path1).unixify().slugify().stringify;
+		let path2Parsed = new Path(path2).unixify().slugify().stringify;
 		return path1Parsed == path2Parsed;
 	}
 
 	public static async getAllEmptyFoldersRecursive(folder: Path): Promise<Path[]>
 	{
-		if (!folder.isDirectory) throw new Error("folder must be a directory: " + folder.asString);
+		if (!folder.isDirectory) throw new Error("folder must be a directory: " + folder.stringify);
 
 		let folders: Path[] = [];
 
-		let folderFiles = await fs.readdir(folder.asString);
+		let folderFiles = await fs.readdir(folder.stringify);
 		for (let i = 0; i < folderFiles.length; i++)
 		{
 			let file = folderFiles[i];
 			let path = folder.joinString(file);
 
-			if ((await fs.stat(path.asString)).isDirectory())
+			if ((await fs.stat(path.stringify)).isDirectory())
 			{
 				let subFolders = await this.getAllEmptyFoldersRecursive(path);
 				if (subFolders.length == 0)
 				{
-					let subFiles = await fs.readdir(path.asString);
+					let subFiles = await fs.readdir(path.stringify);
 					if (subFiles.length == 0) folders.push(path);
 				}
 				else
@@ -842,19 +844,19 @@ export class Path
 
 	public static async getAllFilesInFolderRecursive(folder: Path): Promise<Path[]>
 	{
-		if (!folder.isDirectory) throw new Error("folder must be a directory: " + folder.asString);
+		if (!folder.isDirectory) throw new Error("folder must be a directory: " + folder.stringify);
 
 		let files: Path[] = [];
 
-		let folderFiles = await fs.readdir(folder.asString);
+		let folderFiles = await fs.readdir(folder.stringify);
 		for (let i = 0; i < folderFiles.length; i++)
 		{
 			let file = folderFiles[i];
 			let path = folder.joinString(file);
 
-			ExportLog.progress(i, folderFiles.length, "Finding Old Files", "Searching: " + folder.asString, "var(--color-yellow)");
+			ExportLog.progress(i, folderFiles.length, "Finding Old Files", "Searching: " + folder.stringify, "var(--color-yellow)");
 
-			if ((await fs.stat(path.asString)).isDirectory())
+			if ((await fs.stat(path.stringify)).isDirectory())
 			{
 				files.push(...await this.getAllFilesInFolderRecursive(path));
 			}

@@ -1,6 +1,6 @@
 import {  MarkdownView, PluginManifest, TextFileView } from 'obsidian';
 import { Path } from './path';
-import { ExportLog } from '../html-generation/render-log';
+import { ExportLog } from './export-log';
 import { Downloadable } from './downloadable';
 import { Settings, SettingsPage } from 'scripts/settings/settings';
 
@@ -85,7 +85,7 @@ export class Utils
 	static async showSaveDialog(defaultPath: Path, defaultFileName: string, showAllFilesOption: boolean = true): Promise<Path | undefined>
 	{
 		// get paths
-		let absoluteDefaultPath = defaultPath.directory.absolute().joinString(defaultFileName);
+		let absoluteDefaultPath = defaultPath.directory.absoluted().joinString(defaultFileName);
 		
 		// add filters
 		let filters = [{
@@ -103,7 +103,7 @@ export class Utils
 
 		// show picker
 		let picker = await dialog.showSaveDialog({
-			defaultPath: absoluteDefaultPath.asString,
+			defaultPath: absoluteDefaultPath.stringify,
 			filters: filters,
 			properties: ["showOverwriteConfirmation"]
 		})
@@ -111,7 +111,7 @@ export class Utils
 		if (picker.canceled || !picker.filePath) return;
 		
 		let pickedPath = new Path(picker.filePath);
-		Settings.exportPath = pickedPath.asString;
+		Settings.exportPath = pickedPath.stringify;
 		SettingsPage.saveSettings();
 		
 		return pickedPath;
@@ -123,14 +123,14 @@ export class Utils
 
 		// show picker
 		let picker = await dialog.showOpenDialog({
-			defaultPath: defaultPath.directory.asString,
+			defaultPath: defaultPath.directory.stringify,
 			properties: ["openDirectory"]
 		});
 
 		if (picker.canceled) return;
 
 		let path = new Path(picker.filePaths[0]);
-		Settings.exportPath = path.directory.asString;
+		Settings.exportPath = path.directory.stringify;
 		SettingsPage.saveSettings();
 
 		return path;
@@ -142,7 +142,7 @@ export class Utils
 
 		// show picker
 		let picker = await dialog.showOpenDialog({
-			defaultPath: defaultPath.directory.asString,
+			defaultPath: defaultPath.directory.stringify,
 			properties: ["openFile"]
 		});
 
@@ -156,7 +156,7 @@ export class Utils
 	{
 		let lastPath = new Path(Settings.exportPath);
 
-		if (lastPath.asString != "" && lastPath.exists)
+		if (lastPath.stringify != "" && lastPath.exists)
 		{
 			return lastPath.directory;
 		}
@@ -166,7 +166,7 @@ export class Utils
 
 	static async downloadFiles(files: Downloadable[], rootPath: Path)
 	{
-		if (!rootPath.isAbsolute) throw new Error("folderPath must be absolute: " + rootPath.asString);
+		if (!rootPath.isAbsolute) throw new Error("folderPath must be absolute: " + rootPath.stringify);
 
 		ExportLog.progress(0, files.length, "Saving HTML files to disk", "...", "var(--color-green)");
 		
@@ -266,7 +266,7 @@ export class Utils
 	static async openPath(path: Path)
 	{
 		// @ts-ignore
-		await window.electron.remote.shell.openPath(path.asString);
+		await window.electron.remote.shell.openPath(path.stringify);
 	}
 
 	static levenshteinDistance(string1: string, string2: string): number

@@ -2,10 +2,10 @@ import { Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder, TextComponen
 import { Utils } from '../utils/utils';
 import { Path } from '../utils/path';
 import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
-import { FlowList } from './flow-list';
+import { FlowList } from '../component-generators/flow-list';
 import { ExportInfo, ExportModal } from './export-modal';
 import { migrateSettings } from './settings-migration';
-import { ExportLog } from 'scripts/html-generation/render-log';
+import { ExportLog } from 'scripts/utils/export-log';
 
 // #region Settings Definition
 
@@ -32,7 +32,7 @@ export class Settings
 	// Asset Options
 	public static makeOfflineCompatible: boolean;
 	public static inlineAssets: boolean;
-	public static includePluginCSS: string;
+	public static includePluginCSS: string[];
 	public static includeSvelteCSS: boolean;
 	public static titleProperty: string;
 	public static customHeadContentPath: string;
@@ -45,6 +45,7 @@ export class Settings
 	// Behavior Options
 	public static minOutlineCollapse: number;
 	public static startOutlineCollapsed: boolean;
+	public static relativeOutlineLinks: boolean;
 	public static allowFoldingHeadings: boolean;
 	public static allowFoldingLists: boolean;
 	public static allowResizingSidebars: boolean;
@@ -88,9 +89,11 @@ export class Settings
 	public static defaultFolderIcon: string;
 	public static defaultMediaIcon: string;
 
-	// Cache
+	// internal settings
 	public static exportPath: string;
 	public static filesToExport: string[][];
+	public static filePickerBlacklist: string[];
+	public static filePickerWhitelist: string[];
 }
 
 export const DEFAULT_SETTINGS: Settings =
@@ -100,7 +103,7 @@ export const DEFAULT_SETTINGS: Settings =
 	// Asset Options
 	makeOfflineCompatible: false,
 	inlineAssets: false,
-	includePluginCSS: '',
+	includePluginCSS: [],
 	includeSvelteCSS: true,
 	titleProperty: 'title',
 	customHeadContentPath: '',
@@ -113,6 +116,7 @@ export const DEFAULT_SETTINGS: Settings =
 	// Behavior Options
 	minOutlineCollapse: 2,
 	startOutlineCollapsed: false,
+	relativeOutlineLinks: false,
 	allowFoldingHeadings: true,
 	allowFoldingLists: true,
 	allowResizingSidebars: true,
@@ -159,6 +163,8 @@ export const DEFAULT_SETTINGS: Settings =
 	// Cache
 	exportPath: '',
 	filesToExport: [[]],
+	filePickerBlacklist: ["(^|\\/)node_modules\\/","(^|\\/)dist\\/","(^|\\/)dist-ssr\\/","(^|\\/)\\.vscode\\/"], // ignore node_modules, dist, and .vscode
+	filePickerWhitelist: ["\\.\\w+$"], // only include files with extensions
 }
 
 // #endregion
@@ -356,14 +362,11 @@ This feature does not require "File & folder icons" to be enbaled.`);
 					});
 				});
 
-			SettingsPage.createText(section, 'Page title property', () => Settings.titleProperty, (value) => Settings.titleProperty = value,
-						"Override a specific file's title / name by defining this property in the frontmatter.");
-
 			SettingsPage.createFileInput(section, () => Settings.customHeadContentPath, (value) => Settings.customHeadContentPath = value,
 			{
 				name: 'Custom head content',
-				description: 'Custom scripts, styles, or anything else (html file)',
-				placeholder: 'Path to html formatted file...',
+				description: 'Custom scripts, styles, or anything else (html file).',
+				placeholder: 'Relative or absolute path to a file...',
 				defaultPath: Path.vaultPath,
 				validation: (path) => path.validate(
 					{
@@ -372,15 +375,15 @@ This feature does not require "File & folder icons" to be enbaled.`);
 						allowRelative: true,
 						allowFiles: true,
 						requireExists: true,
-						requireExtentions: ["html, htm, txt"]
+						requireExtentions: ["html", "htm", "txt"]
 					}),
 			});
 
 			SettingsPage.createFileInput(section, () => Settings.faviconPath, (value) => Settings.faviconPath = value,
 			{
 				name: 'Favicon path',
-				description: 'Add a custom favicon image to the website',
-				placeholder: 'Path to image file...',
+				description: 'Add a custom favicon image to the website.',
+				placeholder: 'Relative or absolute path to an image...',
 				defaultPath: Path.vaultPath,
 				validation: (path) => path.validate(
 					{
@@ -421,6 +424,9 @@ This feature does not require "File & folder icons" to be enbaled.`);
 			
 			SettingsPage.createToggle(section, 'Start Outline Collapsed', () => Settings.startOutlineCollapsed, (value) => Settings.startOutlineCollapsed = value,
 							  'All outline items will be collapsed by default.');
+
+			SettingsPage.createToggle(section, 'Relative Outline Links', () => Settings.relativeOutlineLinks, (value) => Settings.relativeOutlineLinks = value,
+							  '(NOT RECCOMENDED!) Make links in the outline relative to the current page. This will break the ability to copy the header links from the outline, but allows you to move the file and still have the links work.');
 
 			SettingsPage.createToggle(section, 'Allow folding headings', () => Settings.allowFoldingHeadings, (value) => Settings.allowFoldingHeadings = value,
 							  'Fold headings using an arrow icon, like in Obsidian.');
@@ -523,7 +529,8 @@ This feature does not require "File & folder icons" to be enbaled.`);
 			.setName('Include CSS from Plugins')
 			.setDesc('Include the CSS from the following plugins in the exported HTML. If plugin features aren\'t rendering correctly, try adding the plugin to this list. Avoid adding plugins unless you specifically notice a problem, because more CSS will increase the loading time of your page.')
 
-		let pluginsList = new FlowList(section);
+		let pluginsList = new FlowList();
+		pluginsList.insert(section);
 		Utils.getPluginIDs().forEach(async (plugin) => {
 			let pluginManifest = Utils.getPluginManifest(plugin);
 			if (!pluginManifest) return;
@@ -539,10 +546,10 @@ This feature does not require "File & folder icons" to be enbaled.`);
 			let hasCSS = pluginPath.joinString('styles.css').exists;
 			if (!hasCSS) return;
 
-			let isChecked = Settings.includePluginCSS.match(new RegExp(`^${plugin}`, 'm')) != null;
+			let isChecked = Settings.includePluginCSS.contains(plugin);
 
 			pluginsList.addItem(pluginManifest.name, plugin, isChecked, (value) => {
-				Settings.includePluginCSS = pluginsList.checkedList.join('\n');
+				Settings.includePluginCSS = pluginsList.checkedList;
 				SettingsPage.saveSettings();
 			});
 		});
@@ -573,6 +580,9 @@ This feature does not require "File & folder icons" to be enbaled.`);
 `Use the 'description' or 'summary' property to set a custom summary of a page.
 Use the 'author' property to set the author of a specific page.`);
 		summaryTutorial.infoEl.style.whiteSpace = "pre-wrap";
+
+		SettingsPage.createText(section, 'Page title property', () => Settings.titleProperty, (value) => Settings.titleProperty = value,
+						"Override a specific file's title / name by defining this property in the frontmatter.");
 
 		
 		//#endregion
@@ -643,7 +653,7 @@ Use the 'author' property to set the author of a specific page.`);
 
 	static renameFile(file: TFile, oldPath: string)
 	{
-		let oldPathParsed = new Path(oldPath).asString;
+		let oldPathParsed = new Path(oldPath).stringify;
 		Settings.filesToExport.forEach((fileList) =>
 		{
 			let index = fileList.indexOf(oldPathParsed);
@@ -821,7 +831,7 @@ Use the 'author' property to set the author of a specific page.`);
 					let path = pickFolder ? await Utils.showSelectFolderDialog(defaultPath) : await Utils.showSelectFileDialog(defaultPath);
 					if (!path) return;
 					
-					set(path.asString);
+					set(path.stringify);
 					let valid = validation(path);
 					headContentErrorMessage.setText(valid.error);
 					if (valid.valid)

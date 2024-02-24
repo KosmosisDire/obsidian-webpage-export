@@ -84,7 +84,7 @@ async function initGlobalObjects()
 	themeToggle = document.querySelector(".theme-toggle-input");
 }
 
-async function initializePage()
+async function initializePage(pageChanged = true)
 {
 	focusedCanvasNode = null;
 	canvasWrapper = document.querySelector(".canvas-wrapper") ?? canvasWrapper;
@@ -137,6 +137,11 @@ async function initializePage()
 
 	parseURLParams();
 	relativePathname = getVaultRelativePath(loadedURL.href);
+
+	if (pageChanged)
+	{
+		for (let func of onPageLoads) func();
+	}
 }
 
 function initializePageEvents(setupOnNode)
@@ -613,6 +618,18 @@ function getURLExtention(url)
 
 //#region -----------------   Loading & Paths   ----------------- 
 
+let onPageLoads = [];
+function onPageLoad(func)
+{
+	onPageLoads.push(func);
+}
+
+function offPageLoad(func)
+{
+	let index = onPageLoads.indexOf(func);
+	if (index > -1) onPageLoads.splice(index, 1);
+}
+
 let transferDocument = document.implementation.createHTMLDocument();
 let loading = false;
 async function loadDocument(url, changeURL, showInTree)
@@ -629,12 +646,17 @@ async function loadDocument(url, changeURL, showInTree)
 	relativePathname = getVaultRelativePath(newLoadedURL.href);
 	console.log("Loading document: ", newLoadedURL.pathname);
 
-	if (newLoadedURL.pathname == loadedURL?.pathname ?? "")
+	if 
+	(
+		(newLoadedURL.pathname == loadedURL?.pathname ?? "") || 
+		(loadedURL?.pathname == "/" && newLoadedURL.pathname == "index.html") ||
+		(loadedURL?.pathname == "index.html" && newLoadedURL.pathname == "/")
+	)
 	{
 		console.log("Document already loaded.");
 		loadedURL = newLoadedURL;
 		setActiveDocument(loadedURL, false, false);
-		await initializePage();
+		await initializePage(false);
 		loading = false;
 		return;
 	}
@@ -673,7 +695,7 @@ async function loadDocument(url, changeURL, showInTree)
 
 			// copy document content into DOM
 			let newDocumentEl = transferDocument.querySelector(".document-container");
-			documentContainer.innerHTML = newDocumentEl.innerHTML;
+			documentContainer.innerHTML = newDocumentEl?.innerHTML ?? "Error: No document container found in the document.";
 			
 			// copy the outline tree into the DOM
 			let newOutline = transferDocument.querySelector(".outline-tree");
@@ -1093,7 +1115,7 @@ function setupTrees(setupOnNode)
 
 	setupOnNode.querySelectorAll(".collapse-tree-button").forEach(function(button)
 	{
-		button.treeRoot = button.closest(".tree-container");
+		button.treeRoot = button.closest(".sidebar-content").querySelector(".tree-container");
 		button.icon = button.firstChild;
 		button.icon.innerHTML = "<path d></path><path d></path>";
 		
@@ -1189,7 +1211,7 @@ async function setTreeCollapsed(element, collapsed, animate = true, openParents 
 		let treeContainer = element.closest(".tree-container");
 		if (treeContainer)
 		{
-			let collapseButton = treeContainer.querySelector(".collapse-tree-button");
+			let collapseButton = treeContainer.closest(".sidebar-content").querySelector(".collapse-tree-button");
 			if (collapseButton) collapseButton.toggleState(false);
 		}
 	}
@@ -1256,6 +1278,9 @@ function getFileTreeItemFromPath(path)
 // hide all files and folder except the ones in the list (show parents of shown files)
 async function filterFileTree(showPathList, hintLabelLists, query, openFileTree = true)
 {
+	if (!fileTree) return;
+	fileTree.classList.add("filtered");
+
 	if (openFileTree) await setTreeCollapsedAll(fileTreeItems, false, false);
 	// hide all files and folders
 	let allItems = Array.from(document.querySelectorAll(".file-tree .tree-item:not(.filtered-out)"));
@@ -1265,6 +1290,7 @@ async function filterFileTree(showPathList, hintLabelLists, query, openFileTree 
 	}
 
 	await removeTreeHintLabels();
+
 
 	for (let i = 0; i < showPathList.length; i++)
 	{
@@ -1319,6 +1345,8 @@ async function filterFileTree(showPathList, hintLabelLists, query, openFileTree 
 
 async function clearFileTreeFilter(closeFileTree = true)
 {
+	fileTree.classList.remove("filtered");
+
 	await removeTreeHintLabels();
 
 	let filteredItems = document.querySelectorAll(".file-tree .filtered-out");
@@ -2485,12 +2513,15 @@ function setupExcalidraw(setupOnNode)
 // search box
 let index;
 let searchResults;
+let searchInputContainer;
 
 async function setupSearch() 
 {
 	if (isFileProtocol) return;
 	searchInput = document.querySelector('input[type="search"]');
 	if (!searchInput) return;
+
+	searchInputContainer = searchInput.closest(".search-input-container");
 
 	const indexResp = await fetch('lib/search-index.json');
 	const indexJSON = await indexResp.text();
@@ -2500,6 +2531,7 @@ async function setupSearch()
 
 	inputClear.addEventListener('click', (event) => 
 	{
+		searchInputContainer?.classList.remove("has-content");
 		search("");
 	});
 
@@ -2515,6 +2547,12 @@ async function setupSearch()
 		{
 			searchInput.style.color = "";
 		}
+
+		if (query.length > 0)
+			searchInputContainer?.classList.add("has-content");
+		else
+			searchInputContainer?.classList.remove("has-content");
+		
 		
 		search(query);
 	});
@@ -2528,17 +2566,19 @@ async function search(query)
 	searchInput.value = query;
 
 	// parse special query filters
-	let searchFields = ['title', 'content', 'tags', 'headers', 'path'];
-	if (query.startsWith("#")) searchFields = ['tags', 'headers'];
-	if (query.startsWith("tag:"))
+	let searchFields = ['title', 'aliases', 'headers', 'tags', 'path', 'content'];
+
+	if (startsWithAny(query, ["tag:", "#"]))
 	{
-		query = query.substring(query.indexOf(":") + 1);
+		if (query.startsWith("#")) query = query.substring(1);
+		else query = query.substring(query.indexOf(":") + 1);
+
 		searchFields = ['tags'];
 	}
 	if (startsWithAny(query, ["title:", "name:"])) 
 	{
 		query = query.substring(query.indexOf(":") + 1);
-		searchFields = ['title'];
+		searchFields = ['title', "aliases"];
 	}
 	if (startsWithAny(query, ["header:", "H:"]))
 	{
@@ -2553,14 +2593,16 @@ async function search(query)
 
 	if (query.length >= 1)
 	{
-		const results = index.search(query, { prefix: true, fuzzy: 0.3, boost: { title: 4, headers: 3, tags: 2, path: 1 }, fields: searchFields });
+		const results = index.search(query, { prefix: true, fuzzy: 0.3, boost: { title: 2, aliases: 1.8, headers: 1.5, tags: 1.3, path: 1.1 }, fields: searchFields });
 		// search through the file tree and hide documents that don't match the search
 		let showPaths = [];
 		let hintLabels = [];
 		for (let result of results)
 		{
 			// only show the most relevant results
-			if (((result.score < results[0].score * 0.33 || showPaths.length > 12) && showPaths.length > 3) || result.score < results[0].score * 0.1) break;
+			if ((result.score < results[0].score * 0.30 && showPaths.length > 4) || result.score < results[0].score * 0.1) 
+				break;
+
 			showPaths.push(result.path);
 
 			let hints = [];
@@ -2573,7 +2615,7 @@ async function search(query)
 					{
 						if (header.toLowerCase().includes(match.toLowerCase()))
 						{
-							hints.push(header);
+							if (!hints.includes(header)) hints.push(header);
 							if (query.toLowerCase() != match.toLowerCase()) 
 							{
 								breakEarly = true;
@@ -2605,23 +2647,25 @@ async function search(query)
 		else
 		{
 			const list = document.createElement('div');
-			results.slice(0, 10).forEach(result => {
+			results.filter(result => result.path.endsWith(".html"))
+				   .slice(0, 20).forEach(result => 
+					{
 
-				const item = document.createElement('div');
-				item.classList.add('search-result');
+						const item = document.createElement('div');
+						item.classList.add('search-result');
 
-				const link = document.createElement('a');
-				link.classList.add('tree-link');
+						const link = document.createElement('a');
+						link.classList.add('tree-link');
 
-				const searchURL = result.path + '?mark=' + encodeURIComponent(query);
-				link.setAttribute('href', searchURL);
-				link.appendChild(document.createTextNode(result.title));
-				item.appendChild(link);
-				list.append(item);
-			});
+						const searchURL = result.path + '?mark=' + encodeURIComponent(query);
+						link.setAttribute('href', searchURL);
+						link.appendChild(document.createTextNode(result.title));
+						item.appendChild(link);
+						list.append(item);
+					});
 
 			searchResults.replaceChildren(list);
-			searchInput.parentElement.after(searchResults);
+			searchInputContainer.after(searchResults);
 			initializePageEvents(searchResults);
 		}
 
