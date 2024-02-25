@@ -1,4 +1,6 @@
 # Webpage HTML Export
+(NOTE! THE LATEST OBSIDIAN UPDATE HAS CAUSED SOME STYLING TO BREAK. EITHER DOWNGRADE OBSISIAN OR WAIT FOR THE FIX SOON)
+
 
 Export html from single files, canvas pages, or whole vaults. Direct access to the exported HTML files allows you to publish your digital garden anywhere. Focuses on flexibility, features, and style parity.
 Demo / docs: [docs.obsidianweb.net](https://docs.obsidianweb.net/)
