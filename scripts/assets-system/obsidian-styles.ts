@@ -1,20 +1,18 @@
-import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
-import { SettingsPage } from "scripts/settings/settings";
-import { ExportLog } from "scripts/utils/export-log";
 import obsidianStyleOverrides from "assets/obsidian-styles.txt.css";
-import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
+import { WebAsset } from "./base-asset.js";
+import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 
-export class ObsidianStyles extends Asset
+export class ObsidianStyles extends WebAsset
 {
-    public content: string = "";
+    public data: string = "";
 
     constructor()
     {
-        super("obsidian.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Default, 10);
+        super("obsidian.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Default, 10);
     }
 
-    public static stylesFilter = 
-	["workspace-", "cm-", "ghost", "leaf", "CodeMirror", 
+    public static readonly stylesFilter =
+	["workspace-", "cm-", "cm6", "ghost", "leaf", "CodeMirror", 
 	"@media", "pdf", "xfa", "annotation", "@keyframes", 
 	"load", "@-webkit", "setting", "filter", "decorator", 
 	"dictionary", "status", "windows", "titlebar", "source",
@@ -25,82 +23,44 @@ export class ObsidianStyles extends Asset
 	"progress", "native", "aria", "tooltip", 
 	"drop", "sidebar", "mod-windows", "is-frameless", 
 	"is-hidden-frameless", "obsidian-app", "show-view-header", 
-	"is-maximized", "is-translucent", "community"];
+	"is-maximized", "is-translucent", "community", "Layer"];
 
-	public static stylesKeep = ["scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager", "inline-embed", "background", "token"];
-    
-	removeSelectors(css: string, containing: string): string
-	{
-		let regex = new RegExp(`([\w :*+~\\-\\.\\>\\[\\]()"=]*${containing}[\\w\\s:*+~\\-\\.\\>\\[\\]()"=]+)(,|{)`, "gm");
-		let toRemove = [...css.matchAll(regex)];
-		for (let match of toRemove)
-		{
-			css = css.replace(match[1], "");
-		}
-		css = css.trim();
-		return css;
-	}
+	public static readonly stylesKeep = ["scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager", "inline-embed", "background", "token"];
 
-
-    override async load(options: MarkdownWebpageRendererAPIOptions)
+    override async load()
     {
-        this.content = "";
+        this.data = "";
 
         let appSheet = document.styleSheets[1];
-        let stylesheets = document.styleSheets;
-        for (let i = 0; i < stylesheets.length; i++)
+        let stylesheets = Array.from(document.styleSheets);
+        for (const element of stylesheets)
         {
-            if (stylesheets[i].href && stylesheets[i].href?.includes("app.css"))
+            if (element.href && element.href?.includes("app.css"))
             {
-                appSheet = stylesheets[i];
+                appSheet = element;
                 break;
             }
         }
 
-        this.content += obsidianStyleOverrides;
+		let cssRules = Array.from(appSheet.cssRules);
+		for (const element of cssRules)
+		{
+			let rule = element;
+			let selectors = rule.cssText.split("{")[0].split(",");
+			let declarations = rule.cssText.split("{")[1].split("}")[0].split(";");
 
-        for (let i = 0; i < appSheet.cssRules.length; i++)
-        {
-            let rule = appSheet.cssRules[i];
-            if (rule)
-            {
-                let skip = false;
-				let cssText = rule.cssText;
-                let selector = cssText.split("{")[0];
+			selectors = selectors.map((selector) => selector.trim());
+			selectors = selectors.filter((selector) => ObsidianStyles.stylesKeep.some((keep) => selector.includes(keep)) || !ObsidianStyles.stylesFilter.some((filter) => selector.includes(filter)));
 
-                for (let keep of ObsidianStyles.stylesKeep) 
-                {
-                    if (!selector.includes(keep)) 
-                    {
-						// filter out certain unused styles to reduce file size
-                        for (let filter of ObsidianStyles.stylesFilter) 
-                        {
-                            if (selector.includes(filter)) 
-                            {
-                                skip = true;
-                                break;
-                            }
-                        }
-                    }
-                    else
-                    {
-                        skip = false;
-                        break;
-                    }
-                }
+			if (selectors.length == 0)
+				continue;
+			
 
-                if (skip) continue;
-				
-				cssText = this.removeSelectors(cssText, "\\.cm-");
-				if(cssText.startsWith("{")) continue; // skip empty rules
+			let newRule = selectors.join(", ") + " { " + declarations.join("; ") + " }";
+			this.data += newRule + "\n";
+		}
 
-				cssText += "\n";
-                
-                this.content += cssText;
-            }
-        }
-
-		this.modifiedTime = Date.now();
-        await super.load(options);
+        this.data += obsidianStyleOverrides;
+        await super.load();
     }
 }

@@ -1,16 +1,38 @@
 import { Notice, TFile, TFolder } from "obsidian";
 import { Path } from "../utils/path";
 import { Settings, SettingsPage } from "../settings/settings";
-import HTMLExportPlugin from "../main";
 import { Utils } from "../utils/utils";
 import { Website } from "../website/website";
 import { MarkdownRendererAPI } from "scripts/render-api/render-api";
+import { ExportInfo, ExportModal } from "scripts/settings/export-modal";
 
 export class HTMLExporter
 {
+	static async updateSettings(usePreviousSettings: boolean = false, overrideFiles: TFile[] | undefined = undefined): Promise<ExportInfo | undefined>
+	{
+		if (!usePreviousSettings) 
+		{
+			let modal = new ExportModal();
+			if(overrideFiles) modal.overridePickedFiles(overrideFiles);
+			return await modal.open();
+		}
+		
+		let files = Settings.filesToExport[0];
+		let path = new Path(Settings.exportPath);
+		if ((files.length == 0 && overrideFiles == undefined) || !path.exists || !path.isAbsolute || !path.isDirectory)
+		{
+			new Notice("Please set the export path and files to export in the settings first.", 5000);
+			let modal = new ExportModal();
+			if(overrideFiles) modal.overridePickedFiles(overrideFiles);
+			return await modal.open();
+		}
+
+		return undefined;
+	}
+
 	public static async export(usePreviousSettings: boolean = true, overrideFiles: TFile[] | undefined = undefined)
 	{
-		let info = await SettingsPage.updateSettings(usePreviousSettings, overrideFiles);
+		let info = await this.updateSettings(usePreviousSettings, overrideFiles);
 		if ((!info && !usePreviousSettings) || (info && info.canceled)) return;
 
 		let files = info?.pickedFiles ?? overrideFiles ?? SettingsPage.getFilesToExport();
@@ -25,7 +47,7 @@ export class HTMLExporter
 
 	public static async exportFiles(files: TFile[], destination: Path, saveFiles: boolean, deleteOld: boolean) : Promise<Website | undefined>
 	{
-		var website = await new Website().createWithFiles(files, destination);
+		var website = await (await new Website(destination).load(files)).build();
 
 		if (!website)
 		{
@@ -33,11 +55,22 @@ export class HTMLExporter
 			return;
 		}
 
-		await website.index.updateBodyClasses();
-		if (deleteOld) await website.index.deleteOldFiles();
+		// await website.index.updateBodyClasses();
+		if (deleteOld)
+		{
+			for (let dFile of website.index.deletedFiles)
+			{
+				let path = new Path(dFile, destination.stringify);
+				await path.delete();
+				console.log("Deleted: " + path.stringify);
+			};
+
+			await Path.removeEmptyDirectories(destination.stringify);
+		}
+		
 		if (saveFiles) 
 		{
-			await Utils.downloadFiles(website.downloads, destination);
+			await Utils.downloadAttachments(website.index.allFiles);
 		}
 
 		MarkdownRendererAPI.endBatch();
@@ -48,7 +81,7 @@ export class HTMLExporter
 	public static async exportFolder(folder: TFolder, rootExportPath: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website | undefined>
 	{
 		let folderPath = new Path(folder.path);
-		let allFiles = HTMLExportPlugin.plugin.app.vault.getFiles();
+		let allFiles = app.vault.getFiles();
 		let files = allFiles.filter((file) => new Path(file.path).directory.stringify.startsWith(folderPath.stringify));
 
 		return await this.exportFiles(files, rootExportPath, saveFiles, clearDirectory);
@@ -56,7 +89,7 @@ export class HTMLExporter
 
 	public static async exportVault(rootExportPath: Path, saveFiles: boolean, clearDirectory: boolean) : Promise<Website | undefined>
 	{
-		let files = HTMLExportPlugin.plugin.app.vault.getFiles();
+		let files = app.vault.getFiles();
 		return await this.exportFiles(files, rootExportPath, saveFiles, clearDirectory);
 	}
 

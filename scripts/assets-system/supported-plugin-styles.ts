@@ -1,20 +1,20 @@
-import { Settings, SettingsPage } from "scripts/settings/settings";
-import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
-import { ExportLog } from "scripts/utils/export-log";
-import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
+import { Settings } from "scripts/settings/settings";
+import { WebAsset } from "./base-asset.js";
+import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
+import { ExportLog } from "scripts/render-api/render-api";
 
-export class SupportedPluginStyles extends Asset
+export class SupportedPluginStyles extends WebAsset
 {
-    public content: string = "";
+    public data: string = "";
 
     constructor()
     {
-        super("supported-plugins.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 5);
+        super("supported-plugins.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 5);
     }
     
-    override async load(options: MarkdownWebpageRendererAPIOptions)
+    override async load()
     {
-        this.content = "";
+        this.data = "";
         let stylesheets = document.styleSheets;
 
 		for(let i = 1; i < stylesheets.length; i++) 
@@ -37,16 +37,15 @@ export class SupportedPluginStyles extends Asset
                     if(style[item].cssText != undefined)
                     {
                         
-                        this.content += "\n" + style[item].cssText;
+                        this.data += "\n" + style[item].cssText;
                     }
                 }
             }
 
-			this.content += "\n\n /* ---- */\n\n";
+			this.data += "\n\n /* ---- */\n\n";
         }
 
-		this.modifiedTime = Date.now();
-        await super.load(options);
+        await super.load();
     }
 
 	getStylesheetContent(stylesheet: CSSStyleSheet): string

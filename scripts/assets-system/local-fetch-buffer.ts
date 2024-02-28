@@ -1,27 +1,27 @@
-import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
+import { WebAsset } from "./base-asset.js";
+import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { Path } from "scripts/utils/path";
-import { ExportLog } from "scripts/utils/export-log";
+import { ExportLog } from "scripts/render-api/render-api";
 import { RequestUrlResponse, requestUrl } from "obsidian";
 import { Utils } from "scripts/utils/utils";
 import { fileTypeFromBuffer } from "file-type";
-import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
 
-export class FetchBuffer extends Asset
+export class FetchBuffer extends WebAsset
 {
-    public content: Buffer;
+    public data: Buffer;
     public url: Path | string;
 
     constructor(filename: string, url: Path | string, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadPriority?: number)
     {
 		
-        super(filename, "", type, inlinePolicy, minify, mutability, LoadMethod.Default, loadPriority);
+        super(filename, "", null, type, inlinePolicy, minify, mutability, LoadMethod.Default, loadPriority);
         this.url = url;
 		
 		let stringURL = this.url instanceof Path ? this.url.stringify : this.url;
 		if (stringURL.startsWith("http")) this.onlineURL = stringURL;
     }
     
-    override async load(options: MarkdownWebpageRendererAPIOptions)
+    override async load()
     {
 
 		if (this.url instanceof Path) 
@@ -34,7 +34,7 @@ export class FetchBuffer extends Asset
 			this.url = this.url.unixify().stringify;
 		}
 
-		if (options.offlineResources === false && this.url.startsWith("http")) return;
+		if (this.exportOptions.offlineResources === false && this.url.startsWith("http")) return;
 
 		if (this.url.startsWith("http") && (this.url.split(".").length <= 2 || this.url.split("/").length <= 2)) 
 		{
@@ -86,21 +86,19 @@ export class FetchBuffer extends Asset
 			data = res.arrayBuffer;
 		}
 
-        this.content = Buffer.from(data);
-		this.modifiedTime = Date.now();
+        this.data = Buffer.from(data);
 
-		if (this.relativePath.extension == '')
+		if (this.targetPath.extension == '')
 		{
-			let type = await fileTypeFromBuffer(this.content);
+			let type = await fileTypeFromBuffer(this.data);
 			if (type)
 			{
-				this.relativePath.setExtension(type.ext);
-				this.filename = this.relativePath.fullName;
-				this.type = Asset.extentionToType(type.ext);
-				this.relativeDirectory = Asset.typeToPath(this.type);
+				this.targetPath.setExtension(type.ext);
+				this.type = WebAsset.extentionToType(type.ext);
+				this.targetPath.directory = WebAsset.typeToDir(this.type);
 			}	
 		}
 
-        await super.load(options);
+        await super.load();
     }
 }

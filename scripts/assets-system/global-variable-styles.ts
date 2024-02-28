@@ -1,17 +1,17 @@
-import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
-import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
-import { Settings, SettingsPage } from "scripts/settings/settings";
+import { WebAsset } from "./base-asset.js";
+import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
+import { Settings } from "scripts/settings/settings";
 
-export class GlobalVariableStyles extends Asset
+export class GlobalVariableStyles extends WebAsset
 {
-    public content: string = "";
+    public data: string = "";
 
     constructor()
     {
-        super("global-variable-styles.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 6);
+        super("global-variable-styles.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 6);
     }
     
-    override async load(options: MarkdownWebpageRendererAPIOptions)
+    override async load()
     {
         let bodyStyle = (document.body.getAttribute("style") ?? "").replaceAll("\"", "'").replaceAll("; ", " !important;\n\t");
 		let lineWidth = Settings.documentWidth || "40em";
@@ -20,7 +20,7 @@ export class GlobalVariableStyles extends Asset
 		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
 
 		let lineWidthCss = `min(${lineWidth}, calc(100vw - 2em))`;
-		this.content = 
+		this.data = 
         `
         :root body
         {
@@ -36,8 +36,6 @@ export class GlobalVariableStyles extends Asset
         }
         `
 
-		this.modifiedTime = Date.now();
-
-        await super.load(options);
+        await super.load();
     }
 }

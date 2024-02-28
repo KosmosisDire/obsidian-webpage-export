@@ -2,7 +2,6 @@ import {  TFile } from "obsidian";
 import { Tree, TreeItem } from "./tree";
 import { Webpage } from "../website/webpage";
 
-
 export class OutlineTree extends Tree
 {
 	public file: TFile;
@@ -81,9 +80,9 @@ export class OutlineTreeItem extends TreeItem
 		super(tree, parent, heading.level);
 		this.heading = heading.heading;
 		this.href = "#" + heading.headingEl.id;
-		if (!tree.webpage.exportOptions.relativeOutlineLinks)
+		if (!tree.webpage.exportOptions.relativeHeaderLinks)
 		{
-			this.href = tree.webpage.relativePath + this.href;
+			this.href = tree.webpage.targetPath + this.href;
 		}
 	}
 

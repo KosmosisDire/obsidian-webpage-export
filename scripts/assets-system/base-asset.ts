@@ -1,49 +1,13 @@
 import { Path } from "scripts/utils/path";
-import { Downloadable } from "scripts/utils/downloadable";
-import { ExportLog } from "scripts/utils/export-log";
-import { Settings, SettingsPage } from "scripts/settings/settings";
+import { Attachment } from "scripts/utils/downloadable";
 import { AssetHandler } from "./asset-handler";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
+import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
+import { TFile } from "obsidian";
 const { minify: runMinify } = require('html-minifier-terser');
 const mime = require('mime');
 
-export enum AssetType
-{
-    Style = "style", // css
-    Script = "script", // js
-    Media = "media", // images, videos, audio, etc
-    HTML = "html", // reusable html
-    Font = "font", // fonts
-    Other = "other" // anything else
-}
-
-export enum InlinePolicy
-{
-    AutoHead = "autohead", // Fine for js, css, html, and fonts. Include data itself or reference to downloaded data into head.
-    Auto = "auto", // Does not auto insert anywhere, but chooses format on whether assets are being inlined. (will download if not inlined)
-	Inline = "inline", // Does not auto insert anywhere, but is always inline format
-    Download = "download", // Just download, does not auto insert anywhere
-	DownloadHead = "downloadhead", // Download and include ref in head
-	InlineHead = "inlinehead", // Inline raw data into head
-    None = "none" // Do nothing with this asset
-}
-
-export enum Mutability
-{
-	Static = "static", // this asset never changes
-	Dynamic = "dynamic", // this asset can change
-	Temporary = "temporary", // this asset is created only for the current export and is deleted afterwards
-	Child = "child", // this asset will only change when the parent changes
-}
-
-export enum LoadMethod
-{
-	Default = "",
-	Async = "async",
-	Defer = "defer"
-}
-
-export class Asset extends Downloadable 
+export class WebAsset extends Attachment 
 {
     public type: AssetType; // what type of asset is this
     public inlinePolicy: InlinePolicy; // should this asset be inlined into the html file
@@ -52,14 +16,15 @@ export class Asset extends Downloadable
     public loadMethod: LoadMethod = LoadMethod.Default; // should this asset be loaded asynchronously if possible
 	public loadPriority: number = 100; // the priority of this asset when loading 
 	public onlineURL: string | undefined = undefined; // the link to the asset online
-	public childAssets: Asset[] = []; // assets that depend on this asset
-	public exportOptions: MarkdownWebpageRendererAPIOptions;
+	public childAssets: WebAsset[] = []; // assets that depend on this asset
 
-	constructor(filename: string, content: string | Buffer, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async, loadPriority: number = 100, cdnPath: string | undefined = undefined, options: MarkdownWebpageRendererAPIOptions = new MarkdownWebpageRendererAPIOptions())
+	constructor(filename: string, data: string | Buffer, source: TFile | undefined | null, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async, loadPriority: number = 100, cdnPath: string | undefined = undefined, options: MarkdownWebpageRendererAPIOptions | undefined = undefined)
     {
-		if(options.webStylePaths) filename = Path.slugify(filename);
-        super(filename, content, Asset.typeToPath(type));
-		this.exportOptions = options;
+		if (source && options == undefined) throw new Error("WebAsset options cannot be empty if source is not empty");
+		options = Object.assign({}, new MarkdownWebpageRendererAPIOptions(), options ?? {});
+		let targetPath = WebAsset.typeToDir(type).joinString(filename).slugify(options.slugifyPaths);
+        super(data, targetPath, source, options);
+
         this.type = type;
         this.inlinePolicy = inlinePolicy;
 		this.mutability = mutability;
@@ -67,13 +32,11 @@ export class Asset extends Downloadable
         this.loadMethod = loadMethod;
 		this.loadPriority = loadPriority;
 		this.onlineURL = cdnPath;
-		this.modifiedTime = Date.now();
 
 		switch(mutability)
 		{
 			case Mutability.Static:
 				AssetHandler.staticAssets.push(this);
-				this.modifiedTime = AssetHandler.mainJsModTime; // by default all static assets have a modified time the same as main.js
 				break;
 			case Mutability.Dynamic:
 				AssetHandler.dynamicAssets.push(this);
@@ -86,29 +49,30 @@ export class Asset extends Downloadable
         if (mutability != Mutability.Child) AssetHandler.allAssets.push(this);
     }
 
-    public async load(options: MarkdownWebpageRendererAPIOptions): Promise<void>
+    public async load(): Promise<void>
     {
-		this.exportOptions = options;
-
-        if (this.type == AssetType.Style && typeof this.content == "string")
+        if (this.type == AssetType.Style && typeof this.data == "string")
         {
 			this.childAssets = [];
-            this.content = await AssetHandler.getStyleChildAssets(this, false);
+            this.data = await AssetHandler.getStyleChildAssets(this, false);
+
+			// replacements
+			this.data = this.data.replaceAll(".markdown-preview-section>div", ".heading-children>div");
 		}
 
         if (this.minify)
         {
-            this.minifyAsset();
+            await this.minifyAsset();
         }
     }
 
-    override async download(downloadDirectory: Path): Promise<void> 
+    override async download(): Promise<void> 
     {
         if (this.isInlineFormat(this.exportOptions)) return;
-        await super.download(downloadDirectory);
+        await super.download();
     }
 
-    public static typeToPath(type: AssetType): Path
+    public static typeToDir(type: AssetType): Path
     {
         switch(type)
         {
@@ -148,11 +112,11 @@ export class Asset extends Downloadable
 	/**Minify the contents of a JS or CSS string (No HTML)*/
     async minifyAsset()
 	{
-		if (this.type == AssetType.HTML || typeof this.content != "string") return;
+		if (this.type == AssetType.HTML || typeof this.data != "string") return;
 		let isJS = this.type == AssetType.Script;
 		let isCSS = this.type == AssetType.Style;
 
-		let tempContent = this.content;
+		let tempContent = this.data;
 
 		try
 		{
@@ -161,17 +125,17 @@ export class Asset extends Downloadable
 			if (isCSS) tempContent = `<style>${tempContent}</style>`;
 			
 			tempContent = await runMinify(tempContent, { minifyCSS: isCSS, minifyJS: isJS, removeComments: true, collapseWhitespace: true});
-
+			
 			// remove the <script> or <style> tags
 			tempContent = tempContent.replace("<script>", "").replace("</script>", "").replace("<style>", "").replace("</style>", "");
-			this.content = tempContent;
+			this.data = tempContent;
 		}
 		catch (e)
 		{
-			ExportLog.warning("Unable to minify " + (isJS ? "JS" : "CSS") + " file.");
+			console.log("Unable to minify " + (isJS ? "JS" : "CSS") + " file.");
 
 			// remove whitespace manually
-			this.content = this.content.replace(/[\n\r]+/g, "");
+			this.data = this.data.replace(/[\n\r]+/g, "");
 		}
 	}
 
@@ -181,8 +145,8 @@ export class Asset extends Downloadable
 		
 		if (relativeFrom == undefined) relativeFrom = Path.rootPath;
 		let toRoot = Path.getRelativePath(relativeFrom, Path.rootPath);
-		let newPath = toRoot.join(this.relativePath).unixify();
-		newPath.slugify(this.exportOptions.webStylePaths);
+		let newPath = toRoot.join(this.targetPath).unixify();
+		newPath.slugify(this.exportOptions.slugifyPaths);
 		
 		return newPath;
 	}
@@ -225,15 +189,15 @@ export class Asset extends Downloadable
             switch(this.type)
             {
                 case AssetType.Style:
-                    return `<style>${this.content}</style>`;
+                    return `<style>${this.data}</style>`;
                 case AssetType.Script:
-                    return `<script ${this.loadMethod}>${this.content}</script>`;
+                    return `<script ${this.loadMethod}>${this.data}</script>`;
 				case AssetType.Media:
 					return `<${this.getHTMLTagName()} src="${this.getContentBase64()}"/>`;
                 case AssetType.HTML:
-                    return this.content as string;
+                    return this.data as string;
                 case AssetType.Font:
-                    return `<style>@font-face{font-family:'${this.filename}';src:url(${this.getContentBase64()}) format('woff2');}</style>`;
+                    return `<style>@font-face{font-family:'${this.basename}';src:url(${this.getContentBase64()}) format('woff2');}</style>`;
                 default:
                     return "";
             }
@@ -256,7 +220,7 @@ export class Asset extends Downloadable
 					}
                     return include;
                 case AssetType.Script:
-					include = `<script ${this.loadMethod} id="${this.relativePath.basename + "-script"}" src="${path}" onload='this.onload=null;this.setAttribute(\"loaded\", \"true\")'></script>`;
+					include = `<script ${this.loadMethod} id="${this.basename + "-script"}" src="${path}" onload='this.onload=null;this.setAttribute(\"loaded\", \"true\")'></script>`;
                     return include;
                 case AssetType.Media:
 					attr = this.loadMethod == LoadMethod.Defer ? "loading='eager'" : "loading='lazy'";
@@ -264,7 +228,7 @@ export class Asset extends Downloadable
 					include = `<${this.getHTMLTagName()} src="${path}" ${attr} />`;
                     return include;
                 case AssetType.Font:
-					include = `<style>@font-face{font-family:'${this.filename}';src:url('${path}') format('woff2');}</style>`;
+					include = `<style>@font-face{font-family:'${this.basename}';src:url('${path}') format('woff2');}</style>`;
                     return include;
 				case AssetType.HTML:
 					return `<include src="${path}"></include>`
@@ -292,9 +256,9 @@ export class Asset extends Downloadable
 
 	public getContentBase64(): string
 	{
-		let extension = this.filename.split(".").pop() || "txt";
+		let extension = this.extensionName;
 		let mimeType = mime(extension) || "text/plain";
-		let base64 = this.content.toString("base64");
+		let base64 = this.data.toString("base64");
 		return `data:${mimeType};base64,${base64}`;
 	}
 
@@ -313,8 +277,8 @@ export class Asset extends Downloadable
 		}
 		
 		// media
-		let extension = this.filename.split(".").pop() || "txt";
-		const extToTag: {[key: string]: string} = {"png": "img", "jpg": "img", "jpeg": "img", "tiff": "img", "bmp": "img", "avif": "img", "apng": "img", "gif": "img", "svg": "img", "webp": "img", "ico": "img", "mp4": "video", "webm": "video", "ogg": "video", "3gp": "video", "mov": "video", "mpeg": "video", "mp3": "audio", "wav": "audio", "flac": "audio", "aac": "audio", "m4a": "audio", "opus": "audio"};
+		let extension = this.extensionName;
+		const extToTag: {[key: string]: string} = {"png": "img", "jpg": "img", "jpeg": "img", "tiff": "img", "bmp": "img", "avif": "img", "apng": "img", "gif": "img", "svg": "img", "webp": "img", "ico": "img", "mp4": "video", "webm": "video", "ogg": "video", "3gp": "video", "mov": "video", "mpeg": "video", "mp3": "audio", "wav": "audio", "flac": "audio", "aac": "audio", "m4a": "audio", "opus": "audio", "pdf": "embed"};
 		return extToTag[extension] || "img";
 	}
 }

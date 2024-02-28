@@ -6,17 +6,13 @@ import { AssetHandler } from 'scripts/assets-system/asset-handler';
 import { Settings, SettingsPage } from 'scripts/settings/settings';
 import { HTMLExporter } from 'scripts/plugin/exporter';
 import { Path } from 'scripts/utils/path';
-import { ExportLog } from 'scripts/utils/export-log';
 import { ExportModal } from 'scripts/settings/export-modal';
-import { MarkdownRendererAPI } from 'scripts/render-api/render-api';
-import { BrowserWindow } from 'electron';
+import { ExportLog, MarkdownRendererAPI } from 'scripts/render-api/render-api';
 import { DataviewGenerator } from './component-generators/dataview-generator';
-const querystring = require('querystring');
-const https = require("https");
+import { Website } from './website/website';
 
 export default class HTMLExportPlugin extends Plugin
 {
-	static plugin: HTMLExportPlugin;
 	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string} = {updateAvailable: false, latestVersion: "0", currentVersion: "0", updateNote: ""};
 	static pluginVersion: string = "0.0.0";
 	public api = MarkdownRendererAPI;
@@ -24,12 +20,11 @@ export default class HTMLExportPlugin extends Plugin
 	public assetHandler = AssetHandler;
 	public Path = Path;
 	public dv = DataviewGenerator;
+	public Website = Website;
 
 	async onload()
 	{
 		console.log("Loading webpage-html-export plugin");
-
-		HTMLExportPlugin.plugin = this;
 		this.checkForUpdates();
 		HTMLExportPlugin.pluginVersion = this.manifest.version;
 

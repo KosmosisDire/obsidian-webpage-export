@@ -143,7 +143,7 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	 * This will break the ability to copy the header links from the outline
 	 * But allows you to move the file and still have the links work.
 	 */
-	relativeOutlineLinks?: boolean = Settings.relativeOutlineLinks;
+	relativeHeaderLinks?: boolean = Settings.relativeOutlineLinks;
 
 	/**
 	 * Include javascript in the export (both inline or external)
@@ -186,10 +186,17 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	offlineResources?: boolean = Settings.makeOfflineCompatible;
 
 	/**
+	 * The name of the theme to use for the export.
+	 * If the theme does not exist, the default theme will be used.
+	*/
+	// @ts-ignore
+	themeName?: string = app.vault.config?.cssTheme || "Default"; 
+
+	/**
 	 * Make all paths and file names web style (lowercase, no spaces).
 	 * For example: "My File.md" -> "my-file.html"
 	 */
-	webStylePaths?: boolean = Settings.makeNamesWebStyle;
+	slugifyPaths?: boolean = Settings.makeNamesWebStyle;
 
 	/**
 	 * Flatten all export paths so that all HTML files are exported to the same root directory without the normal folder structure.
@@ -215,4 +222,9 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	 * The name of the author of the site.
 	 */
 	authorName?: string = Settings.authorName;
+
+	/**
+	 * The relative path in the vault that will be considered the root of the export. Anything outside of this path will either be moved or not included.
+	 */
+	exportRoot?: string = "";
 }

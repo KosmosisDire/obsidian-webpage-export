@@ -1,47 +1,32 @@
 import { FrontMatterCache, TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
-import { Downloadable } from "scripts/utils/downloadable";
+import { Attachment } from "scripts/utils/downloadable";
 import { OutlineTree } from "../component-generators/outline-tree";
-import { GraphView } from "../component-generators/graph-view";
 import { Website } from "./website";
 import { AssetHandler } from "scripts/assets-system/asset-handler";
 import { HTMLGeneration } from "scripts/render-api/html-generation-helpers";
 import { Utils } from "scripts/utils/utils";
-import { ExportLog } from "scripts/utils/export-log";
+import { ExportLog } from "scripts/render-api/render-api";
 import { MarkdownRendererAPI } from "scripts/render-api/render-api";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
 import { SearchInput } from "scripts/component-generators/search-input";
-const { minify } = require('html-minifier-terser');
 
-export class Webpage extends Downloadable
+export class Webpage extends Attachment
 {
-	/**
-	 * The original file this webpage was exported from
-	 */
-	public source: TFile;
-	public website: Website | undefined;
+	public get source(): TFile
+	{
+		return super.source as TFile;
+	}
 
-	/**
-	 * The document containing this webpage's HTML
-	 */
-	public document?: Document;
+	public set source(file: TFile)
+	{
+		super.source = file;
+	}
 
-	/**
-	 * The absolute path to the ROOT FOLDER of the export
-	 */
-	public destinationFolder: Path;
-
-	/**
-	 * The external files that need to be downloaded for this file to work NOT including the file itself.
-	 */
-	public dependencies: Downloadable[] = [];
-
+	public website: Website;
+	public document: Document | undefined = undefined;
+	public attachments: Attachment[] = [];
 	public viewType: string = "markdown";
-
-	public isConvertable: boolean = false;
-
-	public exportOptions: MarkdownWebpageRendererAPIOptions;
-
 	public title: string = "";
 	public icon: string = "";
 	public titleInfo: {title: string, icon: string, isDefaultTitle: boolean, isDefaultIcon: boolean} = {title: "", icon: "", isDefaultTitle: true, isDefaultIcon: true};
@@ -53,36 +38,21 @@ export class Webpage extends Downloadable
 	 * @param website The website this file is part of
 	 * @param options The options for exporting this file
 	 */
-	constructor(file: TFile, destination?: Path, name?: string, website?: Website, options?: MarkdownWebpageRendererAPIOptions)
+	constructor(file: TFile, filename: string, website: Website, options?: MarkdownWebpageRendererAPIOptions)
 	{
-		if(destination && (!destination.isAbsolute || !destination.isDirectory)) throw new Error("destination must be an absolute directory path: " + destination?.stringify);
+		if (!MarkdownRendererAPI.isConvertable(file.extension)) throw new Error("File type not supported: " + file.extension);
 
-		super(file.basename, "", Path.emptyPath);
-		 
+		let targetPath = website.getTargetPathForFile(file, filename);
 		options = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
 
-		let isConvertable = MarkdownRendererAPI.isConvertable(file.extension);
-		this.filename = name ?? file.basename;
-		this.filename += isConvertable ? ".html" : "." + file.extension;
-		this.isConvertable = isConvertable;
+		super("", targetPath, file, options);
+		this.targetPath.setExtension("html");
 		this.exportOptions = options;
 		this.source = file;
-		this.website = website ?? undefined;
-		this.destinationFolder = destination ?? Path.vaultPath.joinString("Export");
-
-		if (this.isConvertable) this.document = document.implementation.createHTMLDocument(this.source.basename);
-
-		let sourcePath = new Path(file.path);
-		this.relativeDirectory = sourcePath.directory;
+		this.website = website;
 
 		if (this.exportOptions.flattenExportPaths) 
-			this.relativeDirectory = Path.emptyPath;
-
-		if (this.exportOptions.webStylePaths)
-		{
-			this.filename = Path.slugify(this.filename);
-			this.relativeDirectory.slugify();
-		}
+			this.targetPath.parent = Path.emptyPath;
 	}
 
 	/**
@@ -97,25 +67,18 @@ export class Webpage extends Downloadable
 	/**
 	 * The element that contains the content of the document, aka the markdown-preview-view or view-content
 	 */
-	get viewElement(): HTMLElement
+	get viewElement(): HTMLElement | undefined
 	{
 		if (!this.document)
 		{
-			console.error("Document is not defined on ", this);
-			throw new Error("Document is not defined");
+			return undefined;
 		}
-
 
 		let viewContent = this.document.querySelector(".view-content") as HTMLElement;
 		let markdownPreview = this.document.querySelector(".markdown-preview-view") as HTMLElement;
 
-		if (!viewContent && !markdownPreview)
-		{
-			throw new Error("No content element found");
-		}
-
 		if (this.viewType != "markdown") 
-			return viewContent ?? markdownPreview;	
+			return viewContent ?? markdownPreview;
 
 		return markdownPreview ?? viewContent;
 	}
@@ -123,19 +86,10 @@ export class Webpage extends Downloadable
 	/**
 	 * The element that determines the size of the document, aka the markdown-preview-sizer
 	 */
-	get sizerElement(): HTMLDivElement
+	get sizerElement(): HTMLElement | undefined
 	{
-		if (this.viewType != "markdown") return this.document?.querySelector(".view-content")?.firstChild as HTMLDivElement;
-
-		return this.document?.querySelector(".markdown-preview-sizer") as HTMLDivElement;
-	}
-
-	/**
-	 * The absolute path that the file will be saved to
-	 */
-	get exportPath(): Path
-	{
-		return this.destinationFolder?.join(this.relativePath) ?? Path.vaultPath.join(this.relativePath);
+		if (this.viewType != "markdown") return this.document?.querySelector(".view-content")?.firstChild as HTMLElement;
+		return this.document?.querySelector(".markdown-preview-sizer") as HTMLElement;
 	}
 
 	/**
@@ -143,7 +97,8 @@ export class Webpage extends Downloadable
 	 */
 	get pathToRoot(): Path
 	{
-		return Path.getRelativePath(this.relativePath, new Path(this.relativePath.workingDirectory), true).unixify();
+		let ptr = Path.getRelativePath(this.targetPath, new Path(this.targetPath.workingDirectory), true).unixify();
+		return ptr;
 	}
 
 	get tags(): string[]
@@ -208,11 +163,11 @@ export class Webpage extends Downloadable
 
 	get descriptionOrShortenedContent(): string
 	{
-		if (!this.isConvertable) return "";
 		let description = this.description;
 
 		if (!description)
 		{
+			if(!this.viewElement) return "";
 			let content = this.viewElement.cloneNode(true) as HTMLElement;
 			content.querySelectorAll(`h1, h2, h3, h4, h5, h6, .mermaid, table, mjx-container, style, script, 
 .mod-header, .mod-footer, .metadata-container, .frontmatter, img[src^="data:"]`).forEach((heading) => heading.remove());
@@ -240,8 +195,6 @@ export class Webpage extends Downloadable
 				let path = Path.joinStrings(this.exportOptions.siteURL ?? "", href);
 				el.href = path.stringify;
 			});
-
-			// console.log("Content: ", content.outerHTML);
 
 			function keepTextLinksImages(element: HTMLElement) 
 			{
@@ -327,21 +280,22 @@ export class Webpage extends Downloadable
 
 	get fullURL(): string
 	{
-		let url = Path.joinStrings(this.exportOptions.siteURL ?? "", this.relativePath.stringify).unixify().stringify;
+		let url = Path.joinStrings(this.exportOptions.siteURL ?? "", this.targetPath.stringify).unixify().stringify;
 		return url;
 	}
 
 	get backlinks(): Webpage[]
 	{
 		// @ts-ignore
-		let backlinks = Object.keys(app.metadataCache.getBacklinksForFile(app.workspace.getActiveFile())?.data) ?? [];
-		let linkedWebpages = backlinks.map((link) => this.website?.getWebpageFromSource(link)).filter((webpage) => webpage) as Webpage[];
+		let backlinks = Object.keys(app.metadataCache.getBacklinksForFile(this.source)?.data) ?? [];
+		let linkedWebpages = backlinks.map((path) => this.website.index.getWebpage(path)) as Webpage[];
+		linkedWebpages = linkedWebpages.filter((page) => page != undefined);
 		return linkedWebpages;
 	}
 
-	get metadataImageURL(): string | undefined
+	get coverImageURL(): string | undefined
 	{
-		if (!this.isConvertable) return undefined;
+		if (!this.viewElement) return undefined;
 		let mediaPathStr = this.viewElement.querySelector("img")?.getAttribute("src") ?? "";
 		let hasMedia = mediaPathStr.length > 0;
 		if (!hasMedia) return undefined;
@@ -361,82 +315,67 @@ export class Webpage extends Downloadable
 		return frontmatter;
 	}
 
-	public getCompatibilityContent(): string
+	get srcLinks(): string[]
 	{
-		let oldContent = this.sizerElement.outerHTML;
-		let compatContent = this.sizerElement;
-
-		compatContent.querySelectorAll("script, style, .collapse-indicator, .callout-icon, .icon, a.tag").forEach((script) => script.remove());
-		
-		function moveChildrenOut(element: HTMLElement)
-		{
-			let children = Array.from(element.children);
-			element.parentElement?.append(...children);
-			element.remove();
-		}
-
-		let headingTreeElements = Array.from(compatContent.querySelectorAll(".heading-wrapper"));
-		headingTreeElements.forEach(moveChildrenOut);
-		headingTreeElements = Array.from(compatContent.querySelectorAll(".heading-children"));
-		headingTreeElements.forEach(moveChildrenOut);
-		let lowDivs = Array.from(compatContent.children).filter((el) => el.tagName == "DIV" && el.childElementCount == 1);
-		lowDivs.forEach(moveChildrenOut);
-
-		let all = Array.from(compatContent.querySelectorAll("*"));
-		all.forEach((el: HTMLElement) => 
-		{
-			// give default var values
-			let fillDefault = el.tagName == "text" ? "#181818" : "white";
-			el.style.fill = el.style.fill.replace(/var\(([\w -]+)\)/g, `var($1, ${fillDefault})`);
-			el.style.stroke = el.style.stroke.replace(/var\(([\w -]+)\)/g, "var($1, #181818)");
-			el.style.backgroundColor = el.style.backgroundColor.replace(/var\(([\w -]+)\)/g, "var($1, white)");
-			el.style.color = el.style.color.replace(/var\(([\w -]+)\)/g, "var($1, #181818)");
-
-			el.removeAttribute("id");
-			el.removeAttribute("class");
-			el.removeAttribute("font-family");
-		});
-
-		let result = compatContent.innerHTML;
-		compatContent.innerHTML = oldContent;
-
-		result = result.replaceAll("<", " <");
-
-		return result;
+		if (!this.document) return [];
+		let srcEls = this.srcLinkElements.map((item) => item.getAttribute("src")) as string[];
+		return srcEls;
+	}
+	get hrefLinks(): string[]
+	{
+		if (!this.document) return [];
+		let hrefEls = this.hrefLinkElements.map((item) => item.getAttribute("href")) as string[];
+		return hrefEls;
+	}
+	get srcLinkElements(): HTMLImageElement[]
+	{
+		if (!this.document) return [];
+		let srcEls = (Array.from(this.document.querySelectorAll("[src]:not(head *):not(span, div)")) as HTMLImageElement[]);
+		return srcEls;
+	}
+	get hrefLinkElements(): HTMLAnchorElement[]
+	{
+		if (!this.document) return [];
+		let hrefEls = (Array.from(this.document.querySelectorAll("[href]:not(head *):not(span, div)")) as HTMLAnchorElement[]);
+		return hrefEls;
 	}
 
-	public async create(): Promise<Webpage | undefined>
+	public async build(): Promise<Webpage | undefined>
 	{
+		if (!this.document) throw new Error("Must populate the document before building the webpage");
+
+		// get title and icon
 		this.titleInfo = await Website.getTitleAndIcon(this.source);
 		this.title = this.titleInfo.title;
+		let iconRenderContainer = document.body.createDiv();
+		MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, iconRenderContainer);
+		this.icon = iconRenderContainer.innerHTML;
+		iconRenderContainer.remove();
 
-		let tempContainer = document.body.createDiv();
-		MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, tempContainer);
-		this.icon = tempContainer.innerHTML;
-		tempContainer.remove();
-
-
-		if (!this.isConvertable)
+		if (this.exportOptions.fixLinks)
 		{
-			this.content = await new Path(this.source.path).readAsBuffer() ?? "";
-			this.modifiedTime = this.source.stat.mtime;
-			return this;
+			this.remapLinks();
+			this.remapEmbedLinks();
 		}
 
-		if (!this.document) return this;
-
-		let webpageWithContent = await this.populateDocument();
-		if(!webpageWithContent)
-		{
-			if (!MarkdownRendererAPI.checkCancelled()) ExportLog.error(this.source, "Failed to create webpage");
-			return;
-		}
+		if (this.exportOptions.inlineMedia) 
+			await this.inlineMedia();
 
 		if (this.exportOptions.addHeadTag) 
 			await this.addHead();
 		
 		if (this.exportOptions.addTitle)
 			await this.addTitle();
+
+		// add math styles to the document. They are here and not in <head> because they are unique to each document
+		if (this.exportOptions.addMathjaxStyles)
+		{
+			let mathStyleEl = document.createElement("style");
+			mathStyleEl.id = "MJX-CHTML-styles";
+			await AssetHandler.mathjaxStyles.load();
+			mathStyleEl.innerHTML = AssetHandler.mathjaxStyles.data;
+			this.viewElement?.prepend(mathStyleEl);
+		}
 
 		if (this.exportOptions.addSidebars)
 		{
@@ -450,7 +389,7 @@ export class Webpage extends Downloadable
 			// inject graph view
 			if (this.exportOptions.addGraphView)
 			{
-				this.website?.globalGraph.insert(rightSidebar);
+				this.website.globalGraph.insert(rightSidebar);
 			}
 
 			// inject outline
@@ -487,7 +426,7 @@ export class Webpage extends Downloadable
 				if (this.exportOptions.openNavFileLocation)
 				{
 					let sidebar = leftSidebar.querySelector(".file-tree");
-					let unixPath = this.relativePath.unixified().stringify;
+					let unixPath = this.targetPath.unixified().stringify;
 					let fileElement: HTMLElement = sidebar?.querySelector(`[href="${unixPath}"]`) as HTMLElement;
 					fileElement = fileElement?.closest(".tree-item") as HTMLElement;
 					while (fileElement)
@@ -511,22 +450,27 @@ export class Webpage extends Downloadable
 		{
 			let bodyScript = this.document.body.createEl("script");
 			bodyScript.setAttribute("defer", "");
-			bodyScript.innerText = AssetHandler.themeLoadJS.content.toString();
+			bodyScript.innerText = AssetHandler.themeLoadJS.data.toString();
 			this.document.body.prepend(bodyScript);
 		}
 
-		this.content = this.html;
+		this.data = this.html;
 
 		return this;
 	}
 
-	private async populateDocument(): Promise<Webpage | undefined>
+	public async populateDocument(): Promise<Webpage | undefined>
 	{
-		if (!this.isConvertable || !this.document) return this;
-
+		this.document = document.implementation.createHTMLDocument(this.title);
+		if (!this.document)
+		{
+			ExportLog.error("Failed to create HTML document");
+			return undefined;
+		}
+		
 		let body = this.document.body;
 		if (this.exportOptions.addBodyClasses)
-			body.setAttribute("class", Website.bodyClasses || await HTMLGeneration.getValidBodyClasses(false));
+			body.setAttribute("class", this.website.bodyClasses || await HTMLGeneration.getValidBodyClasses(false));
 		
 		let options = {...this.exportOptions, container: body};
 		let renderInfo = await MarkdownRendererAPI.renderFile(this.source, options);
@@ -548,39 +492,109 @@ export class Webpage extends Downloadable
 
 		if(this.sizerElement) this.sizerElement.style.paddingBottom = "";
 
-		// modify links to work outside of obsidian (including relative links)
-		if (this.exportOptions.fixLinks)
-			this.convertLinks();
-		
-		// add math styles to the document. They are here and not in <head> because they are unique to each document
-		if (this.exportOptions.addMathjaxStyles)
-		{
-			let mathStyleEl = document.createElement("style");
-			mathStyleEl.id = "MJX-CHTML-styles";
-			await AssetHandler.mathjaxStyles.load(this.exportOptions);
-			mathStyleEl.innerHTML = AssetHandler.mathjaxStyles.content;
-			this.viewElement.prepend(mathStyleEl);
-		}
-
-		// inline / outline images
-		let outlinedImages : Downloadable[] = [];
-		if (this.exportOptions.inlineMedia) 
-			await this.inlineMedia();
-		else 
-			outlinedImages = await this.exportMedia();
-
-		this.dependencies.push(...outlinedImages);
-
-		if(this.exportOptions.webStylePaths)
-		{
-			this.dependencies.forEach((file) =>
-			{
-				file.filename = Path.slugify(file.filename);
-				file.relativeDirectory = file.relativeDirectory?.slugify();
-			});
-		}
+		this.document.body.innerHTML = this.document.body.innerHTML;
 
 		return this;
+	}
+
+	public async getAttachments(): Promise<Attachment[]>
+	{
+		if (!this.document) return [];
+
+		let sources = this.srcLinks;
+		for (let src of sources)
+		{
+			if ((!src.startsWith("app://") && /\w+:(\/\/|\\\\)/.exec(src)) || // link is a URL except for app://
+				src.startsWith("data:")) // link is a data URL
+			continue;
+
+			let sourcePath = this.website.getFilePathFromSrc(src, this.source.path).pathname;
+			let attachment = this.attachments.find((attachment) => attachment.sourcePath == sourcePath);
+			attachment ??= this.website.index.getFileFromSrc(src, this.source);
+			attachment ??= await this.website.createAttachmentFromSrc(src, this.source);
+			
+			if (!sourcePath || !attachment)
+			{
+				ExportLog.warning("Attachment source not found: " + src);
+				continue;
+			}
+
+			if (!this.attachments.includes(attachment)) 
+				this.attachments.push(attachment);
+		}
+
+		return this.attachments;
+	}
+
+	private headingTextToID(heading: string | null): string
+	{
+		return heading?.replaceAll(" ", "_").replaceAll(":", "") ?? "";
+	}
+
+	public resolveLink(link: string | null): string | undefined
+	{
+		if (!link) return "";
+		if ((!link.startsWith("app://") && /\w+:(\/\/|\\\\)/.exec(link)) || // link is a URL except for app://
+			link.startsWith("data:")) // link is a data URL
+			return;
+
+		if (link.startsWith("#"))
+		{
+			let hrefValue = this.headingTextToID(link);
+			if (!this.exportOptions.relativeHeaderLinks)
+				hrefValue = this.targetPath + hrefValue;
+			
+			return hrefValue;
+		}
+
+		let hrefSplit = link.split("#")[0].split("?")[0];
+		let attachment = this.website.index.getFileFromSrc(hrefSplit, this.source);
+		if (!attachment)
+		{
+			ExportLog.warning("Attachment not found: " + hrefSplit);
+			return;
+		}
+
+		let hash = link.split("#")[1] ?? "";
+		if (hash != "") hash = "#" + hash;
+		if (attachment.targetPath.extensionName == "html") hash = this.headingTextToID(hash);
+		return attachment.targetPath.stringify + hash;
+	}
+
+	private remapLinks()
+	{
+		if (!this.document) return;
+
+		this.document.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((headerEl) =>
+		{
+			// convert the data-heading to the id
+			headerEl.setAttribute("id", this.headingTextToID(headerEl.getAttribute("data-heading") ?? headerEl.textContent));
+		});
+
+		let links = this.hrefLinkElements;
+		for (let link of links)
+		{
+			let href = link.getAttribute("href");
+			let newHref = this.resolveLink(href);
+			link.setAttribute("href", newHref ?? href ?? "");
+			link.setAttribute("target", "_self");
+			link.classList.toggle("is-unresolved", !newHref);
+		}
+	}
+
+	private remapEmbedLinks()
+	{
+		if (!this.document) return;
+
+		let links = this.srcLinkElements;
+		for (let link of links)
+		{
+			let src = link.getAttribute("src");
+			let newSrc = this.resolveLink(src);
+			link.setAttribute("src", newSrc ?? src ?? "");
+			link.setAttribute("target", "_self");
+			link.classList.toggle("is-unresolved", !newSrc);
+		}
 	}
 	
 	private generateWebpageLayout(middleContent: HTMLElement | Node | string): {container: HTMLElement, left: HTMLElement, leftBar: HTMLElement, right: HTMLElement, rightBar: HTMLElement, center: HTMLElement}
@@ -771,23 +785,24 @@ export class Webpage extends Downloadable
 	{
 		if (!this.document) return;
 
-		let rootPath = this.pathToRoot.slugified(this.exportOptions.webStylePaths).stringify;
+		let rootPath = this.pathToRoot.slugified(this.exportOptions.slugifyPaths).stringify;
+		if (rootPath == "") rootPath = "./";
 		let description = this.description || (this.exportOptions.siteName + " - " + this.titleInfo.title);
 		let head =
-		`
-		<title>${this.titleInfo.title}</title>
-		<base href="${rootPath}/">
-		<meta id="root-path" root-path="${rootPath}/">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
-		<meta charset="UTF-8">
-		<meta name="description" content="${description}">
-		<meta property="og:title" content="${this.titleInfo.title}">
-		<meta property="og:description" content="${description}">
-		<meta property="og:type" content="website">
-		<meta property="og:url" content="${this.fullURL}">
-		<meta property="og:image" content="${this.metadataImageURL}">
-		<meta property="og:site_name" content="${this.exportOptions.siteName}">
-		`;
+`
+<title>${this.titleInfo.title}</title>
+<base href="${rootPath}">
+<meta id="root-path" root-path="${rootPath}">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
+<meta charset="UTF-8">
+<meta name="description" content="${description}">
+<meta property="og:title" content="${this.titleInfo.title}">
+<meta property="og:description" content="${description}">
+<meta property="og:type" content="website">
+<meta property="og:url" content="${this.fullURL}">
+<meta property="og:image" content="${this.coverImageURL}">
+<meta property="og:site_name" content="${this.exportOptions.siteName}">
+`;
 
 		if (this.author && this.author != "")
 		{
@@ -796,57 +811,13 @@ export class Webpage extends Downloadable
 
 		if (this.exportOptions.addRSS)
 		{
-			let rssURL = Path.joinStrings(this.exportOptions.siteURL ?? "", this.website?.rssPath ?? "").unixify().stringify;
+			let rssURL = this.website.index.rssURL ?? "";
 			head += `<link rel="alternate" type="application/rss+xml" title="RSS Feed" href="${rssURL}">`;
 		}
 
 		head += AssetHandler.getHeadReferences(this.exportOptions);
 
 		this.document.head.innerHTML = head;
-	}
-
-	private convertLinks()
-	{
-		if (!this.document) return;
-
-		this.document.querySelectorAll("a.internal-link").forEach((linkEl) =>
-		{
-			linkEl.setAttribute("target", "_self");
-
-			let href = linkEl.getAttribute("href");
-			if (!href) return;
-
-			if (href.startsWith("#")) // link pointing to header of this document
-			{
-				linkEl.setAttribute("href", href.replaceAll(" ", "_"));
-			}
-			else // if it doesn't start with #, it's a link to another document
-			{
-				let targetHeader = href.split("#").length > 1 ? "#" + href.split("#")[1] : "";
-				let target = href.split("#")[0];
-
-				let targetFile = app.metadataCache.getFirstLinkpathDest(target, this.source.path);
-				if (!targetFile) return;
-
-				let targetPath = new Path(targetFile.path);
-				if (MarkdownRendererAPI.isConvertable(targetPath.extensionName)) targetPath.setExtension("html");
-				targetPath.slugify(this.exportOptions.webStylePaths);
-
-				let finalHref = targetPath.unixify() + targetHeader.replaceAll(" ", "_");
-				linkEl.setAttribute("href", finalHref);
-			}
-		});
-
-		this.document.querySelectorAll("a.footnote-link").forEach((linkEl) =>
-		{
-			linkEl.setAttribute("target", "_self");
-		});
-
-		this.document.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((headerEl) =>
-		{
-			// convert the data-heading to the id
-			headerEl.setAttribute("id", (headerEl.getAttribute("data-heading") ?? headerEl.textContent)?.replaceAll(" ", "_") ?? "");
-		});
 	}
 
 	private async inlineMedia()
@@ -857,100 +828,21 @@ export class Webpage extends Downloadable
 		for (let mediaEl of elements)
 		{
 			let rawSrc = mediaEl.getAttribute("src") ?? "";
-			let filePath = Webpage.getMediaPath(rawSrc, this.source.path);
-			if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
+			// let filePath = Webpage.getFilePathFromSrc(rawSrc, this.source.path);
+			// if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
 
-			let base64 = await filePath.readAsString("base64") ?? "";
-			if (base64 === "") return;
+			// let base64 = await filePath.readAsString("base64") ?? "";
+			// if (base64 === "") return;
 
-			let ext = filePath.extensionName;
+			// let ext = filePath.extensionName;
 
-			//@ts-ignore
-			let type = app.viewRegistry.typeByExtension[ext] ?? "audio";
+			// //@ts-ignore
+			// let type = app.viewRegistry.typeByExtension[ext] ?? "audio";
 
-			if(ext === "svg") ext += "+xml";
+			// if(ext === "svg") ext += "+xml";
 			
-			mediaEl.setAttribute("src", `data:${type}/${ext};base64,${base64}`);
+			// mediaEl.setAttribute("src", `data:${type}/${ext};base64,${base64}`);
 		};
 	}
 
-	private async exportMedia(): Promise<Downloadable[]>
-	{
-		if (!this.document) return [];
-
-		let downloads: Downloadable[] = [];
-
-		let elements = Array.from(this.document.querySelectorAll("[src]:not(head [src]):not(span)"));
-
-		for (let mediaEl of elements)
-		{
-			let rawSrc = mediaEl.getAttribute("src") ?? "";
-			let filePath = Webpage.getMediaPath(rawSrc, this.source.path);
-			if (filePath.isEmpty || filePath.isDirectory || 
-				filePath.isAbsolute || MarkdownRendererAPI.isConvertable(filePath.extension)) 
-				continue;
-
-			let exportLocation = filePath.copy;
-
-
-			// if the media is inside the exported folder then keep it in the same place
-			let sourceFolder = new Path(this.source.path).directory;
-			let mediaPathInExport = Path.getRelativePath(sourceFolder, filePath);
-			if (mediaPathInExport.stringify.startsWith(".."))
-			{
-				// if path is outside of the vault, outline it into the media folder
-				exportLocation = AssetHandler.mediaPath.joinString(filePath.fullName);
-			}
-
-			exportLocation = exportLocation.slugify(this.exportOptions.webStylePaths).unixify();
-			mediaEl.setAttribute("src", exportLocation.stringify);
-
-			let data = await filePath.readAsBuffer();
-			if (data)
-			{
-				let imageDownload = new Downloadable(exportLocation.fullName, data, exportLocation.directory.folderize());
-				let imageStat = filePath.stat;
-				if (imageStat) imageDownload.modifiedTime = imageStat.mtimeMs;
-				downloads.push(imageDownload);
-			}
-		};
-
-		return downloads;
-	}
-
-	private static getMediaPath(src: string, exportingFilePath: string): Path
-	{
-		// @ts-ignore
-		let pathString = "";
-		if (src.startsWith("app://"))
-		{
-			let fail = false;
-			try
-			{
-				// @ts-ignore
-				pathString = app.vault.resolveFileUrl(src)?.path ?? "";
-				if (pathString == "") fail = true;
-			}
-			catch
-			{
-				fail = true;
-			}
-
-			if(fail)
-			{
-				pathString = src.replaceAll("app://", "").replaceAll("\\", "/");
-				pathString = pathString.replaceAll(pathString.split("/")[0] + "/", "");
-				pathString = Path.getRelativePathFromVault(new Path(pathString), true).stringify;
-				ExportLog.log(pathString, "Fallback path parsing:");
-			}
-		}
-		else
-		{
-			pathString = app.metadataCache.getFirstLinkpathDest(src, exportingFilePath)?.path ?? "";
-		}
-
-		pathString = pathString ?? "";
-
-		return new Path(pathString);
-	}
 }

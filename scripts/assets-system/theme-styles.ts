@@ -1,16 +1,16 @@
-import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
-import { ExportLog } from "scripts/utils/export-log";
+import { WebAsset } from "./base-asset.js";
+import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
+import { ExportLog } from "scripts/render-api/render-api";
 import { AssetHandler } from "./asset-handler";
-import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
 
-export class ThemeStyles extends Asset
+export class ThemeStyles extends WebAsset
 {
-    public content: string = "";
+    public data: string = "";
     private lastThemeName: string = "";
 
     constructor()
     {
-        super("theme.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Default, 8);
+        super("theme.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Default, 8);
     }
 
     private static async getThemeContent(themeName: string): Promise<string>
@@ -35,18 +35,16 @@ export class ThemeStyles extends Asset
         return (themeName ?? "") == "" ? "Default" : themeName;
     }
     
-    override async load(options: MarkdownWebpageRendererAPIOptions)
+    override async load()
     {
         let themeName = ThemeStyles.getCurrentThemeName();
         if (themeName == this.lastThemeName) 
 		{
-			this.modifiedTime = 0;
+			this.data = "";
 			return;
 		}
-        this.content = await ThemeStyles.getThemeContent(themeName);
-		this.modifiedTime = Date.now();
+        this.data = await ThemeStyles.getThemeContent(themeName);
         this.lastThemeName = themeName;
-
-        await super.load(options);
+        await super.load();
     }
 }

@@ -1,6 +1,5 @@
 import { TFile } from "obsidian";
 import { Path } from "scripts/utils/path";
-import { Settings } from "scripts/settings/settings";
 import { Website } from "../website/website";
 import { GraphViewOptions, MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
 import { ComponentGenerator } from "./component-generator";
@@ -94,7 +93,7 @@ export class GraphView implements ComponentGenerator
 		let maxLinks = Math.max(...linkCounts);
 
 		this.radii = linkCounts.map(l => GraphView.InOutQuadBlend(this.graphOptions.minNodeRadius, this.graphOptions.maxNodeRadius, Math.min(l / (maxLinks * 0.8), 1.0)));
-		this.paths = this.paths.map(p => new Path(p).setExtension(".html").unixify().slugify(options.webStylePaths).stringify);
+		this.paths = this.paths.map(p => new Path(p).setExtension(".html").unixify().slugify(options.slugifyPaths).stringify);
 
 		this.linkCount = this.linkSources.length;
 

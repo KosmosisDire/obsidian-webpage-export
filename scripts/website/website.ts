@@ -1,4 +1,4 @@
-import { Downloadable } from "scripts/utils/downloadable";
+import { Attachment } from "scripts/utils/downloadable";
 import { Webpage } from "./webpage";
 import { FileTree } from "../component-generators/file-tree";
 import { AssetHandler } from "scripts/assets-system/asset-handler";
@@ -6,34 +6,90 @@ import {  TAbstractFile, TFile, TFolder } from "obsidian";
 import {  Settings } from "scripts/settings/settings";
 import { GraphView } from "../component-generators/graph-view";
 import { Path } from "scripts/utils/path";
-import { ExportLog } from "scripts/utils/export-log";
-import { Asset, AssetType, InlinePolicy, Mutability } from "scripts/assets-system/asset";
-import { WebsiteIndex } from "./website-index";
+import { ExportLog } from "scripts/render-api/render-api";
+import { WebAsset } from "scripts/assets-system/base-asset";
+import { AssetType, InlinePolicy, Mutability } from "scripts/assets-system/asset-types.js";
 import { HTMLGeneration } from "scripts/render-api/html-generation-helpers";
 import { MarkdownRendererAPI } from "scripts/render-api/render-api";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
-import RSS from 'rss';
+import { Index } from "scripts/website/index";
 
 export class Website
 {
-	public webpages: Webpage[] = [];
-	public dependencies: Downloadable[] = [];
-	public downloads: Downloadable[] = [];
-	public batchFiles: TFile[] = [];
 	public progress: number = 0;
 	public destination: Path;
-	public index: WebsiteIndex;
-	public rss: RSS;
-	public rssPath = AssetHandler.libraryPath.joinString("rss.xml").unixify().stringify;
+	public index: Index;
+	
+	private sourceFiles: TFile[] = [];
 
 	public globalGraph: GraphView;
 	public fileTree: FileTree;
-	public fileTreeAsset: Asset;
-	private graphAsset: Asset;
+	public fileTreeAsset: WebAsset;
+	private graphAsset: WebAsset;
 	
-	
-	public static bodyClasses: string;
+	public bodyClasses: string;
 	public exportOptions: MarkdownWebpageRendererAPIOptions;
+
+	constructor(destination: Path | string, options?: MarkdownWebpageRendererAPIOptions)
+	{
+		if (typeof destination == "string") destination = new Path(destination);
+		this.exportOptions = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
+		if (destination.isFile) throw new Error("Website destination must be a folder: " + destination.stringify);
+		this.destination = destination;
+	}
+
+	public async load(files?: TFile[]): Promise<this>
+	{
+		this.sourceFiles = files?.filter((file) => file) ?? [];
+		this.bodyClasses = await HTMLGeneration.getValidBodyClasses(true);
+
+		// Find root path
+		if (this.exportOptions.exportRoot == "" && files)
+		{
+			if (this.sourceFiles.length > 1)
+			{ 
+				let commonPath = "";
+				let paths = this.sourceFiles.map((file) => file.path.split("/"));
+				while (paths.every((path) => path[0] == paths[0][0]))
+				{
+					commonPath += paths[0][0] + "/";
+					paths = paths.map((path) => path.slice(1));
+					
+					let anyEmpty = paths.some((path) => path.length == 1);
+					if (anyEmpty) break;
+				}
+				console.log("Common path: " + commonPath);
+				this.exportOptions.exportRoot = new Path(commonPath).unixify().stringify + "/";
+			}
+			else this.exportOptions.exportRoot = this.sourceFiles[0].parent?.path ?? "";
+		}
+
+		await AssetHandler.reloadAssets(this.exportOptions);
+		this.index = new Index();
+		await this.index.load(this, this.exportOptions);
+
+		// create webpages
+		for (let file of this.sourceFiles)
+		{
+			let attachment: Webpage | Attachment | undefined = undefined;
+
+			if (MarkdownRendererAPI.isConvertable(file.extension))
+			{
+				attachment = new Webpage(file, file.name, this, this.exportOptions);
+			}
+			else
+			{
+				let data = Buffer.from(await app.vault.readBinary(file));
+				let path = this.getTargetPathForFile(file);
+				attachment = new Attachment(data, path, file, this.exportOptions);
+			}
+
+			attachment.showInTree = true;
+			await this.index.addFile(attachment);
+		}
+
+		return this;
+	}
 	
 	/**
 	 * Create a new website with the given files and options.
@@ -42,57 +98,96 @@ export class Website
 	 * @param options The api options to use for the export.
 	 * @returns The website object.
 	 */
-	public async createWithFiles(files: TFile[], destination: Path, options?: MarkdownWebpageRendererAPIOptions): Promise<Website | undefined>
-	{
-		this.exportOptions = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
-		this.batchFiles = files;
-		this.destination = destination;
-		await this.initExport();
+	public async build(files?: TFile[]): Promise<Website | undefined>
+	{ 
+		if (files) this.load(files);
 
-		console.log("Creating website with files: ", files);
+		console.log("Creating website with files: ", this.sourceFiles);
 
-		let useIncrementalExport = this.index.shouldApplyIncrementalExport();
+		await MarkdownRendererAPI.beginBatch(this.exportOptions);
+		this.giveWarnings();
 
-		for (let file of files)
+		// create file tree asset
+		if (this.exportOptions.addFileNavigation)
 		{
-			if(MarkdownRendererAPI.checkCancelled()) return;
-
-			if (!MarkdownRendererAPI.isConvertable(file.extension)) continue;
-
-			ExportLog.progress(this.progress, this.batchFiles.length, "Generating HTML", "Exporting: " + file.path, "var(--interactive-accent)");
-			this.progress++;
-			
-			let filename = new Path(file.path).basename;
-			let webpage = new Webpage(file, destination, filename, this, this.exportOptions);
-			let shouldExportPage = (useIncrementalExport && this.index.isFileChanged(file)) || !useIncrementalExport;
-			if (!shouldExportPage) continue;
-			
-			let createdPage = await webpage.create();
-			if(!createdPage) continue;
-
-			this.webpages.push(webpage);
-			this.downloads.push(webpage);
-			this.downloads.push(...webpage.dependencies);
-			this.dependencies.push(...webpage.dependencies);
+			let paths = this.index.attachmentsShownInTree.map((file) => new Path(file.sourcePathRootRelative ?? ""));
+			this.fileTree = new FileTree(paths, false, true);
+			this.fileTree.makeLinksWebStyle = this.exportOptions.slugifyPaths ?? true;
+			this.fileTree.showNestingIndicator = true;
+			this.fileTree.generateWithItemsClosed = true;
+			this.fileTree.showFileExtentionTags = true;
+			this.fileTree.hideFileExtentionTags = ["md"];
+			this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
+			this.fileTree.class = "file-tree";
+			let tempTreeContainer = document.body.createDiv();
+			await this.fileTree.insert(tempTreeContainer);
+			this.fileTreeAsset = new WebAsset("file-tree.html", "dummy content", null, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
 		}
 
-		await this.createGraphAndFileTree();
+		// create graph view asset
+		if (this.exportOptions.addGraphView)
+		{
+			this.globalGraph = new GraphView();
+			let convertableFiles = this.sourceFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
+			await this.globalGraph.init(convertableFiles, this.exportOptions);
+			this.graphAsset = new WebAsset("graph-data.js", "dummy content", null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Temporary);
+		}
 
-		this.dependencies.push(...AssetHandler.getDownloads(this.exportOptions));
-		this.downloads.push(...AssetHandler.getDownloads(this.exportOptions));
+		// render the documents with bare html
+		let webpages = this.index.webpages;
+		let progress = 0;
+		for (let webpage of webpages)
+		{
+			ExportLog.progress(progress, "Rendering Documents", webpage.source.path);
+			await webpage.populateDocument();
+			progress += 1 / (webpages.length * 1.5);
+		}
 
+		// create attachments from the webpages
+		for (let webpage of webpages)
+		{
+			ExportLog.progress(progress, "Creating Attachments", webpage.source.path);
+			let attachments = await webpage.getAttachments();
+			this.index.addFiles(attachments);
+			progress += 1 / (webpages.length * 6);
+		}
 
-		this.filterDownloads(true);
-		this.index.build(this.exportOptions);
-		this.filterDownloads();
+		this.index.addFiles(AssetHandler.getDownloads(this.destination, this.exportOptions));
+
+		for (let webpage of webpages)
+		{
+			ExportLog.progress(progress, "Building Website", webpage.source.path);
+			let page = await webpage.build();
+			
+			if (page)
+			{
+				await this.index.addFile(webpage);
+			}
+			else
+			{
+				this.index.removeFile(webpage);
+			}
+
+			progress += 1 / (webpages.length * 6);
+		}
+
+		this.graphAsset.data = this.globalGraph.getExportData();
+
+		// Since we are adding the collapse button to the search bar, we need to remove it from the file tree
+		if (this.exportOptions.addSearch) this.fileTree.container?.querySelector(".collapse-tree-button")?.remove();
+		this.fileTreeAsset.data = this.fileTree.container?.innerHTML ?? "";
+		this.fileTree.container?.remove();
 
 		if (this.exportOptions.addRSS)
 		{
-			this.createRSS();
+			this.index.createRSSFeed();
 		}
-		
+
 		console.log("Website created: ", this);
-			
+		console.log("Index: ", this.index);
+		
+		await this.index.finalize();
+
 		return this;
 	}
 
@@ -145,198 +240,13 @@ export class Website
 
 	}
 
-	private async initExport()
+	public getTargetPathForFile(file: TFile, filename?: string): Path
 	{
-		this.progress = 0;
-		this.index = new WebsiteIndex(this);
-
-		await MarkdownRendererAPI.beginBatch();
-
-		this.giveWarnings();
-
-		// wipe all temporary assets and reload dynamic assets
-		ExportLog.progress(0, 1, "Initialize Export", "loading assets", "var(--color-yellow)");
-		await AssetHandler.reloadAssets();
-
-		Website.bodyClasses = await HTMLGeneration.getValidBodyClasses(true);
-
-		// create file tree asset as placeholder until it is loaded later
-		if (this.exportOptions.addFileNavigation)
-		{
-			ExportLog.progress(0, 1, "Generating Assets", "Generating file tree", "var(--color-yellow)");
-			this.fileTree = new FileTree(this.batchFiles, false, true);
-			this.fileTree.makeLinksWebStyle = this.exportOptions.webStylePaths ?? true;
-			this.fileTree.showNestingIndicator = true;
-			this.fileTree.generateWithItemsClosed = true;
-			this.fileTree.showFileExtentionTags = true;
-			this.fileTree.hideFileExtentionTags = ["md"]
-			this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
-			this.fileTree.class = "file-tree";
-			let tempTreeContainer = document.body.createDiv();
-			await this.fileTree.insert(tempTreeContainer);
-			this.fileTreeAsset = new Asset("file-tree.html", "dummy content", AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
-		}
-
-		// create graph asset as placeholder until it is loaded later
-		if (this.exportOptions.addGraphView)
-		{
-			ExportLog.progress(0, 1, "Generating Assets", "Generating graph view", "var(--color-yellow)");
-			this.globalGraph = new GraphView();
-			let convertableFiles = this.batchFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
-			await this.globalGraph.init(convertableFiles, this.exportOptions);
-			this.graphAsset = new Asset("graph-data.js", "dummy content", AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Temporary);
-		}
-
-		ExportLog.progress(1, 1, "Initializing index", "...", "var(--color-yellow)");
-		await this.index.init();
-	}
-
-	private async createGraphAndFileTree()
-	{
-		if (this.exportOptions.addGraphView)
-		{
-			ExportLog.progress(0, 1, "Generating Assets", "Generating graph view", "var(--color-yellow)");
-			this.graphAsset.content = this.globalGraph.getExportData();
-		}
-		
-		if (this.exportOptions.addFileNavigation)
-		{
-			// Since we are adding the collapse button to the search, we need to remove it from the file tree
-			if (this.exportOptions.addSearch) this.fileTree.container?.querySelector(".collapse-tree-button")?.remove();
-			this.fileTreeAsset.content = this.fileTree.container?.innerHTML ?? "";
-			this.fileTree.container?.remove();
-		}
-	}
-
-	private async createRSS()
-	{
-		let author = this.exportOptions.authorName ||  undefined;
-
-		this.rss = new RSS(
-		{
-			title: this.exportOptions.siteName ?? app.vault.getName(),
-			description: "Obsidian digital garden",
-			generator: "Webpage HTML Export plugin for Obsidian",
-			feed_url: Path.joinStrings(this.exportOptions.siteURL ?? "", this.rssPath).stringify,
-			site_url: this.exportOptions.siteURL ?? "",
-			image_url: Path.joinStrings(this.exportOptions.siteURL ?? "", AssetHandler.favicon.relativePath.stringify).stringify,
-			pubDate: new Date(this.index.exportTime),
-			copyright: author,
-			ttl: 60,
-			custom_elements:
-			[
-				{ "dc:creator": author },
-			]
-		});
-
-		// sort pages by modified time
-		this.webpages.sort((a, b) => b.source.stat.mtime - a.source.stat.mtime);
-
-		for (let page of this.webpages)
-		{
-			// only include convertable pages with content
-			if (!page.isConvertable || page.sizerElement.innerText.length < 5) continue;
-
-			let title = page.title;
-			let url = Path.joinStrings(this.exportOptions.siteURL ?? "", page.relativePath.stringify).stringify;
-			let guid = page.source.path;
-			let date = new Date(page.source.stat.mtime);
-			author = page.author ?? author;
-			let media = page.metadataImageURL ?? "";
-			let hasMedia = media != "";
-			let description = page.descriptionOrShortenedContent;
-
-			this.rss.item(
-			{ 
-				title: title,
-				description: description,
-				url: url,
-				guid: guid,
-				date: date,
-				enclosure: hasMedia ? { url: media } : undefined,
-				author: author,
-				custom_elements: 
-				[
-					hasMedia ? { "content:encoded": `<figure><img src="${media}"></figure>` } : undefined,
-				]
-			});
-		}
-
-		let result = this.rss.xml();
-
-		let rssAbsoultePath = this.destination.joinString(this.rssPath);
-		let rssFileOld = await rssAbsoultePath.readAsString();
-		if (rssFileOld)
-		{
-			let rssDocOld = new DOMParser().parseFromString(rssFileOld, "text/xml");
-			let rssDocNew = new DOMParser().parseFromString(result, "text/xml");
-
-			// insert old items into new rss and remove duplicates
-			let oldItems = Array.from(rssDocOld.querySelectorAll("item")) as HTMLElement[];
-			let newItems = Array.from(rssDocNew.querySelectorAll("item")) as HTMLElement[];
-
-			oldItems = oldItems.filter((oldItem) => !newItems.find((newItem) => newItem.querySelector("guid")?.textContent == oldItem.querySelector("guid")?.textContent));
-			oldItems = oldItems.filter((oldItem) => !this.index.removedFiles.contains(oldItem.querySelector("guid")?.textContent ?? ""));
-			newItems = newItems.concat(oldItems);
-
-			// remove all items from new rss
-			newItems.forEach((item) => item.remove());
-
-			// add items back to new rss
-			let channel = rssDocNew.querySelector("channel");
-			newItems.forEach((item) => channel?.appendChild(item));
-
-			result = rssDocNew.documentElement.outerHTML;
-		}
-
-		let rss = new Asset("rss.xml", result, AssetType.Other, InlinePolicy.Download, false, Mutability.Temporary);
-		rss.download(this.destination);
-	}
-
-	public getWebpageFromSource(sourcePath: string): Webpage | undefined
-	{
-		return this.webpages.find((page) => page.source.path == sourcePath);
-	}
-
-	private filterDownloads(onlyDuplicates: boolean = false)
-	{
-		// remove duplicates from the dependencies and downloads
-		this.dependencies = this.dependencies.filter((file, index) => this.dependencies.findIndex((f) => f.relativePath.stringify == file.relativePath.stringify) == index);
-		this.downloads = this.downloads.filter((file, index) => this.downloads.findIndex((f) => f.relativePath.stringify == file.relativePath.stringify) == index);
-		
-		// remove files that have not been modified since last export
-		if (!this.index.shouldApplyIncrementalExport() || onlyDuplicates) return;
-		
-		let localThis = this;
-		function filterFunction(file: Downloadable)
-		{
-			// always include .html files
-			if (file.filename.endsWith(".html")) return true; 
-
-			// always exclude fonts if they exist
-			if 
-			(
-				localThis.index.hasFileByPath(file.relativePath.stringify) &&
-				file.filename.endsWith(".woff") || 
-				file.filename.endsWith(".woff2") ||
-				file.filename.endsWith(".otf") ||
-				file.filename.endsWith(".ttf")
-			)
-			{
-				return false;
-			}
-
-			// always include files that have been modified since last export
-			let metadata = localThis.index.getMetadataForPath(file.relativePath.unixified().stringify);
-			if (metadata && (file.modifiedTime > metadata.modifiedTime || metadata.sourceSize != file.content.length)) 
-				return true;
-			
-			console.log("Excluding: " + file.relativePath.stringify);
-			return false;
-		}
-
-		this.dependencies = this.dependencies.filter(filterFunction);
-		this.downloads = this.downloads.filter(filterFunction);
+		let targetPath = new Path(file.path);
+		if (filename) targetPath.fullName = filename;
+		targetPath.setWorkingDirectory((this.destination ?? Path.vaultPath.joinString("Web Export")).stringify);
+		targetPath.slugify(this.exportOptions.slugifyPaths).unixify();
+		return targetPath;
 	}
 
 	// TODO: Seperate the icon and title into seperate functions
@@ -362,7 +272,7 @@ export class Website
 			if (!iconProperty && Settings.showDefaultTreeIcons) 
 			{
 				useDefaultIcon = true;
-				let isMedia = Asset.extentionToType(file.extension) == AssetType.Media;
+				let isMedia = WebAsset.extentionToType(file.extension) == AssetType.Media;
 				iconProperty = isMedia ? Settings.defaultMediaIcon : Settings.defaultFileIcon;
 				if (file.extension == "canvas") iconProperty = "lucide//layout-dashboard";
 			}
@@ -419,4 +329,70 @@ export class Website
 
 		return { title: title, icon: iconOutput, isDefaultIcon: useDefaultIcon, isDefaultTitle: isDefaultTitle };
 	}
+
+	public async createAttachmentFromSrc(src: string, sourceFile: TFile): Promise<Attachment | undefined>
+	{
+		let attachedFile = this.getFilePathFromSrc(src, sourceFile.path);
+		if (attachedFile.isDirectory) return;
+
+		let file = app.vault.getFileByPath(attachedFile.pathname);
+		let path = file?.path ?? "";
+		if (!file) path = AssetHandler.mediaPath.joinString(attachedFile.fullName).stringify;
+		let data: Buffer | undefined = await attachedFile.readAsBuffer();
+
+		if (!data) return;
+
+		let target = new Path(path, this.destination.stringify)
+							.slugify(this.exportOptions.slugifyPaths).unixify();
+
+		let attachment = new Attachment(data, target, file, this.exportOptions);
+		if (!attachment.sourcePath) attachment.sourcePath = attachedFile.pathname;
+		return attachment;
+	}
+
+	public getFilePathFromSrc(src: string, exportingFilePath: string): Path
+	{
+		// @ts-ignore
+		let pathString = "";
+		if (src.startsWith("app://"))
+		{
+			let fail = false;
+			try
+			{
+				// @ts-ignore
+				pathString = app.vault.resolveFileUrl(src)?.path ?? "";
+				if (pathString == "") fail = true;
+			}
+			catch
+			{
+				fail = true;
+			}
+
+			if(fail)
+			{
+				pathString = src.replaceAll("app://", "").replaceAll("\\", "/");
+				pathString = pathString.replaceAll(pathString.split("/")[0] + "/", "");
+				pathString = Path.getRelativePathFromVault(new Path(pathString), true).stringify;
+				ExportLog.log(pathString, "Fallback path parsing:");
+			}
+		}
+		else
+		{
+			let split = src.split("#");
+
+			let hash = split[1]?.trim();
+			let path = split[0];
+			pathString = app.metadataCache.getFirstLinkpathDest(path, exportingFilePath)?.path ?? "";
+			if (hash) 
+			{
+				pathString += "#" + hash;
+			}
+		}
+
+		pathString = pathString ?? "";
+
+		return new Path(pathString).unixify();
+	}
+
+
 }

@@ -1,13 +1,11 @@
 import { MarkdownPreviewView, TFile } from "obsidian";
 import { DataviewApi, getAPI } from "obsidian-dataview";
 import { ComponentGenerator } from "scripts/component-generators/component-generator";
-import { Utils } from "scripts/utils/utils";
-
 
 export class DataviewGenerator implements ComponentGenerator
 {
-	public static api: DataviewApi = getAPI();
-	public static jsKeyword = DataviewGenerator.api.settings.dataviewJsKeyword;
+	public static readonly api: DataviewApi = getAPI();
+	public static readonly jsKeyword = DataviewGenerator.api?.settings?.dataviewJsKeyword ?? "dataviewjs";
 
 	public view: MarkdownPreviewView;
 	public file: TFile;
@@ -24,6 +22,8 @@ export class DataviewGenerator implements ComponentGenerator
 		this.keyword = keyword;
 	}
 
+	
+
 	public async insert(container: HTMLElement)
 	{
 		this.container = container;
@@ -32,7 +32,11 @@ export class DataviewGenerator implements ComponentGenerator
 		else
 			await DataviewGenerator.api.executeJs(this.query, container, this.view, this.file.path);
 
-		await Utils.delay(100);
+		function delay(ms: number) {
+			return new Promise( resolve => setTimeout(resolve, ms) );
+		}
+
+		await delay(100);
 		
 		this.rendered = true;
 	}

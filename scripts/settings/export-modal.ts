@@ -4,6 +4,7 @@ import HTMLExportPlugin from '../main';
 import { ExportPreset, Settings, SettingsPage } from './settings';
 import { FilePickerTree } from '../component-generators/file-picker';
 import { Path } from 'scripts/utils/path';
+import { FileDialogs } from 'scripts/utils/file-dialogs';
 
 export interface ExportInfo
 {
@@ -75,7 +76,8 @@ export class ExportModal extends Modal
 			scrollArea.style.padding = "1em";
 			scrollArea.style.boxShadow = "0 0 7px 1px inset #00000060";
 
-			this.filePicker = new FilePickerTree(app.vault.getFiles(), true, true);
+			let paths = app.vault.getFiles().map(file => new Path(file.path));
+			this.filePicker = new FilePickerTree(paths, true, true);
 			this.filePicker.regexBlacklist.push(...Settings.filePickerBlacklist);
 			this.filePicker.regexBlacklist.push(...[Settings.customHeadContentPath, Settings.faviconPath]);
 			this.filePicker.regexWhitelist.push(...Settings.filePickerWhitelist);
@@ -230,7 +232,7 @@ export class ExportModal extends Modal
 			name: '',
 			description: '',
 			placeholder: 'Type or browse an export directory...',
-			defaultPath: Utils.idealDefaultPath(),
+			defaultPath: FileDialogs.idealDefaultPath(),
 			pickFolder: true,
 			validation: validatePath,
 			onChanged: (path) => (!validatePath(path).valid) ? setExportDisabled(true) : setExportDisabled(false)

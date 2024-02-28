@@ -1,4 +1,4 @@
-import { TAbstractFile, TFile, TFolder } from "obsidian";
+import { TFile } from "obsidian";
 import { FileTree, FileTreeItem } from "./file-tree";
 import { Path } from "scripts/utils/path";
 import { Website } from "../website/website";
@@ -9,7 +9,7 @@ export class FilePickerTree extends FileTree
 	public children: FilePickerTreeItem[] = [];
 	public selectAllItem: FilePickerTreeItem | undefined;
 
-	public constructor(files: TFile[], keepOriginalExtensions: boolean = false, sort = true)
+	public constructor(files: Path[], keepOriginalExtensions: boolean = false, sort = true)
 	{
 		super(files, keepOriginalExtensions, sort);
 		this.renderMarkdownTitles = false;
@@ -19,13 +19,13 @@ export class FilePickerTree extends FileTree
 	protected override async populateTree(): Promise<void> 
 	{
 		this.regexBlacklist = this.regexBlacklist.filter((pattern) => pattern.trim() != "");
-		let filteredFiles = this.files.filter((file) => this.regexBlacklist.every((pattern) => !file.path.match(new RegExp(pattern))));
-		filteredFiles = filteredFiles.filter((file) => this.regexWhitelist.every((pattern) => file.path.match(new RegExp(pattern))));
+		let filteredFiles = this.files.filter((file) => this.regexBlacklist.every((pattern) => !file.stringify.match(new RegExp(pattern))));
+		filteredFiles = filteredFiles.filter((file) => this.regexWhitelist.every((pattern) => file.stringify.match(new RegExp(pattern))));
 		for (let file of filteredFiles)
 		{
-			let pathSections: TAbstractFile[] = [];
+			let pathSections: Path[] = [];
 
-			let parentFile: TAbstractFile = file;
+			let parentFile: Path = file.unixified();
 			while (parentFile != undefined)
 			{
 				pathSections.push(parentFile);
@@ -36,28 +36,30 @@ export class FilePickerTree extends FileTree
 			pathSections.reverse();
 
 			let parent: FilePickerTreeItem | FilePickerTree = this;
-			for (let i = 1; i < pathSections.length; i++)
+			for (let i = 0; i < pathSections.length; i++)
 			{
 				let section = pathSections[i];
-				let isFolder = section instanceof TFolder;
+				let depth = i+1;
+				let isFolder = section.isDirectory;
 
 				// make sure this section hasn't already been added
-				let child = parent.children.find(sibling => sibling.title == section.name && sibling.isFolder == isFolder && sibling.depth == i) as FilePickerTreeItem | undefined;
+				let child = parent.children.find(sibling => sibling.title == section.fullName && sibling.isFolder == isFolder && sibling.depth == depth) as FilePickerTreeItem | undefined;
 				
 				if (child == undefined)
 				{
-					child = new FilePickerTreeItem(this, parent, i);
-					child.title = section.name;
+					child = new FilePickerTreeItem(this, parent, depth);
+					child.title = section.fullName;
 					child.isFolder = isFolder;
 
 					if(child.isFolder) 
 					{
-						child.dataRef = section.path;
+						child.dataRef = section.stringify;
 						child.itemClass = "mod-tree-folder"
 					}
 					else 
 					{
-						child.file = file;
+						let tfile = app.vault.getFileByPath(section.stringify);
+						if (tfile) child.file = tfile;
 						child.itemClass = "mod-tree-file"
 					}
 
@@ -68,17 +70,22 @@ export class FilePickerTree extends FileTree
 			
 			if (parent instanceof FilePickerTreeItem)
 			{
-				let titleInfo = await Website.getTitleAndIcon(file, true);
-				let path = new Path(file.path).unixify();
+				let path = file.unixified();
+				let tfile = app.vault.getAbstractFileByPath(path.stringify);
 
-				if (file instanceof TFolder) path.folderize();
+				if (file.isDirectory) path.folderize();
 				else 
 				{
 					parent.originalExtension = path.extensionName;
 					if(!this.keepOriginalExtensions && MarkdownRendererAPI.isConvertable(path.extensionName)) path.setExtension("html");
 				}
+
 				parent.dataRef = path.stringify;
-				parent.title = path.basename == "." ? "" : titleInfo.title;
+				if (tfile)
+				{
+					let titleInfo = await Website.getTitleAndIcon(tfile, true);
+					parent.title = titleInfo.title;
+				}
 			}
 		}
 

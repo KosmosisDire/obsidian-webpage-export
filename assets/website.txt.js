@@ -46,6 +46,9 @@ let embedType; // "img" | "video" | "audio" | "embed" | "none"
 let customType; // "kanban" | "excalidraw" | "none"
 let deviceSize; // "large-screen" | "small screen" | "tablet" | "phone"
 
+let websiteData = {};
+
+
 let fullyInitialized = false;
 
 async function initGlobalObjects()
@@ -54,8 +57,6 @@ async function initGlobalObjects()
 	{
 		await loadIncludes();
 	}
-
-
 
 	loadingIcon = document.createElement("div");
 	loadingIcon.classList.add("loading-icon");
@@ -110,6 +111,17 @@ async function initializePage(pageChanged = true)
 
 		sidebarDefaultWidth = await getComputedPixelValue("--sidebar-width");
 		contentTargetWidth = await getComputedPixelValue("--line-width") * 0.9;
+
+		// load websiteData
+		let dataReq = await fetch("lib/metadata.json");
+		if (dataReq.ok)
+		{
+			websiteData = await dataReq.json();
+		}
+		else
+		{
+			console.log("Failed to load website metadata.");
+		}
 
 		window.addEventListener('resize', () => onResize());
 		onResize();
@@ -1146,6 +1158,8 @@ function setupTrees(setupOnNode)
 			button.toggleCollapse();
 			return false;
 		});
+
+		button.toggleState(true);
 
 		// if any outline items are unncollapsed, toggle collapse all button state
 		let treeItems = button.treeRoot.classList.contains("file-tree") ? fileTreeItems : outlineTreeItems;
@@ -2524,8 +2538,21 @@ async function setupSearch()
 	searchInputContainer = searchInput.closest(".search-input-container");
 
 	const indexResp = await fetch('lib/search-index.json');
+	if (!indexResp.ok)
+	{
+		console.error("Failed to fetch search index");
+		return;
+	}
 	const indexJSON = await indexResp.text();
-	index = MiniSearch.loadJSON(indexJSON, { fields: ['title', 'path', 'tags', 'headers'] });
+	try
+	{
+		index = MiniSearch.loadJSON(indexJSON, { fields: ['title', 'path', 'tags', 'headers'] });
+	}
+	catch (e)
+	{
+		console.error("Failed to load search index");
+		return;
+	}
 
 	const inputClear = document.querySelector('.search-input-clear-button');
 

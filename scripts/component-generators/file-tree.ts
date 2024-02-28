@@ -1,4 +1,3 @@
-import { TAbstractFile, TFile, TFolder } from "obsidian";
 import { Tree, TreeItem } from "./tree";
 import { Path } from "scripts/utils/path";
 import { Website } from "../website/website";
@@ -16,13 +15,21 @@ export class FileTree extends Tree
 	/** Remove files that don't match these regexes */
 	public regexWhitelist: string[] = [];
 
-	public files: TFile[];
+	public files: Path[];
 	public keepOriginalExtensions: boolean;
 	public sort: boolean;
 
-	public constructor(files: TFile[], keepOriginalExtensions: boolean = false, sort = true)
+	public constructor(files: Path[], keepOriginalExtensions: boolean = false, sort = true)
 	{
 		super();
+
+		// make sure every path is a file
+		if (files.some((file) => file.isDirectory))
+		{
+			console.error("FileTree: All paths must be files, not directories");
+			files = files.filter((file) => !file.isDirectory);
+		}
+
 		this.files = files;
 		this.keepOriginalExtensions = keepOriginalExtensions;
 		this.sort = sort;
@@ -33,13 +40,13 @@ export class FileTree extends Tree
 	protected async populateTree()
 	{
 		this.regexBlacklist = this.regexBlacklist.filter((pattern) => pattern.trim() != "");
-		let filteredFiles = this.files.filter((file) => this.regexBlacklist.every((pattern) => !file.path.match(new RegExp(pattern))));
-		filteredFiles = filteredFiles.filter((file) => this.regexWhitelist.every((pattern) => file.path.match(new RegExp(pattern))));
+		let filteredFiles = this.files.filter((file) => this.regexBlacklist.every((pattern) => !file.stringify.match(new RegExp(pattern))));
+		filteredFiles = filteredFiles.filter((file) => this.regexWhitelist.every((pattern) => file.stringify.match(new RegExp(pattern))));
 		for (let file of filteredFiles)
 		{
-			let pathSections: TAbstractFile[] = [];
+			let pathSections: Path[] = [];
 
-			let parentFile: TAbstractFile = file;
+			let parentFile: Path = file;
 			while (parentFile != undefined)
 			{
 				pathSections.push(parentFile);
@@ -50,25 +57,30 @@ export class FileTree extends Tree
 			pathSections.reverse();
 
 			let parent: FileTreeItem | FileTree = this;
-			for (let i = 1; i < pathSections.length; i++)
+			for (let i = 0; i < pathSections.length; i++)
 			{
 				let section = pathSections[i];
-				let isFolder = section instanceof TFolder;
+				let depth = i+1;
+				let isFolder = section.isDirectory;
 
 				// make sure this section hasn't already been added
-				let child = parent.children.find(sibling => sibling.title == section.name && sibling.isFolder == isFolder && sibling.depth == i) as FileTreeItem | undefined;
+				let child = parent.children.find(sibling => sibling.title == section.basename && sibling.isFolder == isFolder && sibling.depth == depth) as FileTreeItem | undefined;
 				
 				if (child == undefined)
 				{
-					child = new FileTreeItem(this, parent, i);
-					child.title = section.name;
+					child = new FileTreeItem(this, parent, depth);
+					child.title = section.basename;
 					child.isFolder = isFolder;
 
 					if(child.isFolder) 
 					{
 						child.itemClass = "mod-tree-folder nav-folder";
-						let titleInfo = await Website.getTitleAndIcon(section);
-						child.icon = titleInfo.icon;
+						let tfolder = app.vault.getFolderByPath(section.stringify);
+						if (tfolder)
+						{
+							let titleInfo = await Website.getTitleAndIcon(tfolder);
+							child.icon = titleInfo.icon;
+						}
 					}
 					else child.itemClass = "mod-tree-file nav-file"
 
@@ -80,10 +92,11 @@ export class FileTree extends Tree
 			
 			if (parent instanceof FileTreeItem)
 			{
-				let titleInfo = await Website.getTitleAndIcon(file);
-				let path = new Path(file.path).unixify();
+				
+				let path = file.unixified();
+				let tfile = app.vault.getAbstractFileByPath(path.stringify);
 
-				if (file instanceof TFolder) path.folderize();
+				if (file.isDirectory) path.folderize();
 				else 
 				{
 					if (path.stringify.endsWith(".excalidraw.md")) path.setExtension("drawing");
@@ -91,9 +104,13 @@ export class FileTree extends Tree
 					if(!this.keepOriginalExtensions && MarkdownRendererAPI.isConvertable(path.extensionName)) path.setExtension("html");
 				}
 
-				parent.href = path.stringify;	
-				parent.title = path.basename == "." ? "" : titleInfo.title;
-				parent.icon = titleInfo.icon || "";
+				parent.href = path.stringify;
+				if (tfile)
+				{
+					let titleInfo = await Website.getTitleAndIcon(tfile);
+					parent.title = titleInfo.title;
+					parent.icon = titleInfo.icon || "";
+				}
 			}
 		}
 

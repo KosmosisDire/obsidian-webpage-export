@@ -1,16 +1,14 @@
 import { MarkdownRendererAPIOptions, MarkdownWebpageRendererAPIOptions } from "./api-options";
 import { Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, MarkdownPreviewView, loadMermaid, TFile, MarkdownView, View } from "obsidian";
-import { Utils } from "scripts/utils/utils";
 import { TabManager } from "scripts/utils/tab-manager";
-import { Webpage } from "scripts/website/webpage";
 import * as electron from 'electron';
-import { ExportLog } from "../utils/export-log";
-import { AssetHandler } from "../assets-system/asset-handler";
 import { DataviewGenerator } from "../component-generators/dataview-generator";
+import { Settings, SettingsPage } from "scripts/settings/settings";
+import { Path } from "scripts/utils/path";
 
 export namespace MarkdownRendererAPI
 {
-	export let convertableExtensions = ["md", "canvas", "drawing", "excalidraw"]; // drawing is an alias for excalidraw
+	export const convertableExtensions = ["md", "canvas", "drawing", "excalidraw"]; // drawing is an alias for excalidraw
 
 	function makeHeadingsTrees(html: HTMLElement)
 	{
@@ -21,7 +19,7 @@ export namespace MarkdownRendererAPI
 			- h1.heading
 				- .heading-collapse-indicator.collapse-indicator.collapse-icon
 				- "Text"
-			- .heading-childrenc  
+			- .heading-children 
 		*/
 
 		function getHeaderEl(headingContainer: HTMLDivElement)
@@ -122,24 +120,6 @@ export namespace MarkdownRendererAPI
 		return html;
 	}
 
-	// export async function renderMarkdownsToStrings(markdowns: string[], options?: MarkdownRendererAPIOptions): Promise<(string | undefined)[]>
-	// {
-	// 	options = Object.assign(new MarkdownRendererAPIOptions(), options);
-	// 	await _MarkdownRendererInternal.beginBatch(options);
-	// 	let results = await Promise.all(markdowns.map(markdown => this.renderMarkdownToString(markdown, options)));
-	// 	_MarkdownRendererInternal.endBatch();
-	// 	return results;
-	// }
-
-	// export async function renderMarkdownsToElements(markdowns: string[], options?: MarkdownRendererAPIOptions): Promise<(HTMLElement | undefined)[]>
-	// {
-	// 	options = Object.assign(new MarkdownRendererAPIOptions(), options);
-	// 	await _MarkdownRendererInternal.beginBatch(options);
-	// 	let results = await Promise.all(markdowns.map(markdown => this.renderMarkdownToElement(markdown, options)));
-	// 	_MarkdownRendererInternal.endBatch();
-	// 	return results;
-	// }
-
 	export async function renderFile(file: TFile, options?: MarkdownRendererAPIOptions): Promise<{contentEl: HTMLElement; viewType: string;} | undefined>
 	{
 		options = Object.assign(new MarkdownRendererAPIOptions(), options);
@@ -149,7 +129,6 @@ export namespace MarkdownRendererAPI
 
 		if (options.postProcess) await _MarkdownRendererInternal.postProcessHTML(result.contentEl, options);
 		if (options.makeHeadersTrees) makeHeadingsTrees(result.contentEl);
-
 
 		return result;
 	}
@@ -162,24 +141,6 @@ export namespace MarkdownRendererAPI
 		let text = result.contentEl.innerHTML;
 		if (!options.container) result.contentEl.remove();
 		return text;
-	}
-
-	export async function renderFileToWebpage(file: TFile, options?: MarkdownWebpageRendererAPIOptions): Promise<Webpage | undefined>
-	{
-		options = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
-		this.beginBatch(options);
-		let webpage : Webpage | undefined = new Webpage(file, undefined, file.basename, undefined, options);
-		webpage = await webpage.create();
-		
-		if (!webpage)
-		{
-			ExportLog.error("Failed to create webpage for file " + file.path);
-			return;
-		}
-
-		this.endBatch();
-
-		return webpage;
 	}
 
 	export async function renderMarkdownSimple(markdown: string): Promise<string | undefined>
@@ -250,6 +211,32 @@ export namespace _MarkdownRendererInternal
 		return false;
 	}
 
+	async function delay (ms: number)
+	{
+		return new Promise( resolve => setTimeout(resolve, ms) );
+	}
+
+	async function  waitUntil(condition: () => boolean, timeout: number = 1000, interval: number = 100): Promise<boolean>
+	{
+		if (condition()) return true;
+		
+		return new Promise((resolve, reject) => {
+			let timer = 0;
+			let intervalId = setInterval(() => {
+				if (condition()) {
+					clearInterval(intervalId);
+					resolve(true);
+				} else {
+					timer += interval;
+					if (timer >= timeout) {
+						clearInterval(intervalId);
+						resolve(false);
+					}
+				}
+			}, interval);
+		});
+	}
+
 	function failRender(file: TFile | undefined, message: any): undefined
 	{
 		if (checkCancelled()) return undefined;
@@ -267,7 +254,7 @@ export namespace _MarkdownRendererInternal
 			await _MarkdownRendererInternal.beginBatch(options);
 		}
 
-		let success = await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 1);
+		let success = await waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 1);
 		if (!success || !renderLeaf) return failRender(file, "Failed to get leaf for rendering!");
 
 		
@@ -323,7 +310,7 @@ export namespace _MarkdownRendererInternal
 			await _MarkdownRendererInternal.beginBatch(options);
 		}
 
-		let success = await Utils.waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 1);
+		let success = await waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 1);
 		if (!success || !renderLeaf) return failRender(undefined, "Failed to get leaf for rendering!");
 		
 
@@ -382,10 +369,8 @@ export namespace _MarkdownRendererInternal
 		// @ts-ignore
 		let promises: Promise<any>[] = [];
 		let foldedCallouts: HTMLElement[] = [];
-		for (let i = 0; i < sections.length; i++)
+		for (const section of sections)
 		{
-			let section = sections[i];
-
 			section.shown = true;
 			section.rendered = false;
 			// @ts-ignore
@@ -400,11 +385,11 @@ export namespace _MarkdownRendererInternal
 			await section.render();
 
 			// @ts-ignore
-			let success = await Utils.waitUntil(() => (section.el && section.rendered) || checkCancelled(), 2000, 1);
+			let success = await waitUntil(() => (section.el && section.rendered) || checkCancelled(), 2000, 1);
 			if (!success) return failRender(preview.file, "Failed to render section!");
 
 			await renderer.measureSection(section);
-			success = await Utils.waitUntil(() => section.computed || checkCancelled(), 2000, 1);
+			success = await waitUntil(() => section.computed || checkCancelled(), 2000, 1);
 			if (!success) return failRender(preview.file, "Failed to compute section!");
 
 			// compile dataview
@@ -429,7 +414,7 @@ export namespace _MarkdownRendererInternal
 			foldedCallouts.push(...folded);
 
 			// wait for transclusions
-			await Utils.waitUntil(() => !section.el.querySelector(".markdown-preview-sizer:empty") || checkCancelled(), 500, 1);
+			await waitUntil(() => !section.el.querySelector(".markdown-preview-sizer:empty") || checkCancelled(), 500, 1);
 			if (checkCancelled()) return undefined;
 
 			if (section.el.querySelector(".markdown-preview-sizer:empty"))
@@ -438,7 +423,7 @@ export namespace _MarkdownRendererInternal
 			}
 
 			// wait for generic plugins
-			await Utils.waitUntil(() => !section.el.querySelector("[class^='block-language-']:empty") || checkCancelled(), 500, 1);
+			await waitUntil(() => !section.el.querySelector("[class^='block-language-']:empty") || checkCancelled(), 500, 1);
 			if (checkCancelled()) return undefined;
 
 			// convert canvas elements into images here because otherwise they will lose their data when moved
@@ -480,9 +465,8 @@ export namespace _MarkdownRendererInternal
 
 		newSizerEl.empty();
 		// move all of them back in since rendering can cause some sections to move themselves out of their container
-		for (let i = 0; i < sections.length; i++)
+		for (const section of sections)
 		{
-			let section = sections[i];
 			newSizerEl.appendChild(section.el.cloneNode(true));
 		}
 
@@ -497,7 +481,6 @@ export namespace _MarkdownRendererInternal
 		if (options.keepViewContainer === false) 
 		{
 			newMarkdownEl.outerHTML = newSizerEl.innerHTML;
-			console.log("keeping only sizer content");
 		}
 
 		options.container?.appendChild(newMarkdownEl);
@@ -554,7 +537,7 @@ export namespace _MarkdownRendererInternal
 
 	async function renderGeneric(view: View, options: MarkdownRendererAPIOptions): Promise<HTMLElement | undefined>
 	{
-		await Utils.delay(2000);
+		await delay(2000);
 
 		if (checkCancelled()) return undefined;
 
@@ -567,7 +550,7 @@ export namespace _MarkdownRendererInternal
 
 	async function renderExcalidraw(view: any, options: MarkdownRendererAPIOptions): Promise<HTMLElement | undefined>
 	{
-		await Utils.delay(500);
+		await delay(500);
 
 		// @ts-ignore
 		let scene = view.excalidrawData.scene;
@@ -619,7 +602,7 @@ export namespace _MarkdownRendererInternal
 		}
 
 		canvas.zoomToFit();
-		await Utils.delay(500);
+		await delay(500);
 
 		let contentEl = view.contentEl;
 		let canvasEl = contentEl.querySelector(".canvas");
@@ -648,7 +631,6 @@ export namespace _MarkdownRendererInternal
 
 			if (node.url)
 			{
-				console.log(node.url);
 				let iframe = node.contentEl.createEl("iframe");
 				iframe.src = node.url;
 				iframe.classList.add("canvas-link");
@@ -743,7 +725,6 @@ export namespace _MarkdownRendererInternal
 		});
 
 		// replace obsidian's pdf embeds with normal embeds
-		// this has to happen before converting canvases because the pdf embeds use canvas elements
 		html.querySelectorAll("span.internal-embed.pdf-embed").forEach((pdf: HTMLElement) =>
 		{
 			let embed = document.createElement("embed");
@@ -819,12 +800,11 @@ export namespace _MarkdownRendererInternal
 		loadingContainer = undefined;
 		logContainer = undefined;
 		logShowing = false;
-		AssetHandler.exportOptions = options;
 
 		renderLeaf = TabManager.openNewTab("window", "vertical");
 
 		// @ts-ignore
-		let parentFound = await Utils.waitUntil(() => (renderLeaf && renderLeaf.parent) || checkCancelled(), 2000, 1);
+		let parentFound = await waitUntil(() => (renderLeaf && renderLeaf.parent) || checkCancelled(), 2000, 1);
 		if (!parentFound) 
 		{
 			try
@@ -917,7 +897,7 @@ export namespace _MarkdownRendererInternal
 			else
 			{
 				ExportLog.warning("Error in batch, leaving render window open");
-				_reportProgress(1, 1, "Completed with errors", "Please see the log for more details.", errorColor);
+				_reportProgress(1, "Completed with errors", "Please see the log for more details.", errorColor);
 			}
 		}
 
@@ -1003,24 +983,21 @@ export namespace _MarkdownRendererInternal
 		logEl.scrollIntoView({ behavior: "instant", block: "end", inline: "end" });	
 	}
 
-	export async function _reportProgress(complete: number, total:number, message: string, subMessage: string, progressColor: string)
+	export async function _reportProgress(fraction: number, message: string, subMessage: string, progressColor: string)
 	{
 		if (!batchStarted) return;
 
 		// @ts-ignore
-		if (!renderLeaf || !renderLeaf.parent || !renderLeaf.parent.parent) return;
+		if (!renderLeaf?.parent?.parent) return;
 
 		// @ts-ignore
 		let loadingContainer = renderLeaf.parent.parent.containerEl.querySelector(`.html-render-progress-container`);
 		if (!loadingContainer) return;
-		
-
-		let progress = complete / total;
 
 		let progressBar = loadingContainer.querySelector("progress");
 		if (progressBar)
 		{
-			progressBar.value = progress;
+			progressBar.value = fraction;
 			progressBar.style.backgroundColor = "transparent";
 			progressBar.style.color = progressColor;
 		}
@@ -1038,7 +1015,7 @@ export namespace _MarkdownRendererInternal
 			subMessageElement.innerText = subMessage;
 		}
 
-		electronWindow?.setProgressBar(progress);
+		electronWindow?.setProgressBar(fraction);
 	}
 
 	export async function _reportError(messageTitle: string, message: any, fatal: boolean)
@@ -1048,7 +1025,7 @@ export namespace _MarkdownRendererInternal
 		errorInBatch = true;
 
 		// @ts-ignore
-		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
+		let found = await waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		appendLogEl(generateLogEl(messageTitle, message, errorColor, errorBoxColor));
@@ -1066,7 +1043,7 @@ export namespace _MarkdownRendererInternal
 		if (!batchStarted) return;
 
 		// @ts-ignore
-		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
+		let found = await waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		appendLogEl(generateLogEl(messageTitle, message, warningColor, warningBoxColor));
@@ -1077,10 +1054,143 @@ export namespace _MarkdownRendererInternal
 		if (!batchStarted) return;
 
 		// @ts-ignore
-		let found = await Utils.waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
+		let found = await waitUntil(() => renderLeaf && renderLeaf.parent && renderLeaf.parent.parent, 100, 10);
 		if (!found) return;
 
 		appendLogEl(generateLogEl(messageTitle, message, infoColor, infoBoxColor));
 	}
 
 }
+
+export namespace ExportLog
+{
+    export let fullLog: string = "";
+
+    function logToString(message: any, title: string)
+    {
+        let messageString = (typeof message === "string") ? message : JSON.stringify(message).replaceAll("\n", "\n\t\t");
+        let titleString = title != "" ? title + "\t" : "";
+        let log = `${titleString}${messageString}\n`;
+        return log;
+    }
+
+    function humanReadableJSON(object: any)
+    {
+        let string = JSON.stringify(object, null, 2).replaceAll(/\"|\{|\}|,/g, "").split("\n").map((s) => s.trim()).join("\n\t");
+        // make the properties into a table
+        let lines = string.split("\n");
+        lines = lines.filter((line) => line.contains(":"));
+        let names = lines.map((line) => line.split(":")[0] + " ");
+        let values = lines.map((line) => line.split(":").slice(1).join(":"));
+        let maxLength = Math.max(...names.map((name) => name.length)) + 3;
+        let table = "";
+        for (let i = 0; i < names.length; i++)
+        {
+            let padString = i % 2 == 0 ? "-" : " ";
+            table += `${names[i].padEnd(maxLength, padString)}${values[i]}\n`;
+        }
+
+        return table;
+    }
+
+    export function log(message: any, messageTitle: string = "")
+    {
+        pullPathLogs();
+
+        messageTitle = `[INFO] ${messageTitle}`
+        fullLog += logToString(message, messageTitle);
+
+		if(SettingsPage.loaded && !(Settings.logLevel == "all")) return;
+
+        if (messageTitle != "") console.log(messageTitle + " ", message);
+        else console.log(message);
+        _MarkdownRendererInternal._reportInfo(messageTitle, message);
+    }
+
+    export function warning(message: any, messageTitle: string = "")
+    {
+        pullPathLogs();
+
+        messageTitle = `[WARNING] ${messageTitle}`
+        fullLog += logToString(message, messageTitle);
+
+		if(SettingsPage.loaded && !["warning", "all"].contains(Settings.logLevel)) return;
+
+        if (messageTitle != "") console.warn(messageTitle + " ", message);
+        else console.warn(message);
+        _MarkdownRendererInternal._reportWarning(messageTitle, message);
+    }
+
+    export function error(message: any, messageTitle: string = "", fatal: boolean = false)
+    {
+        pullPathLogs();
+
+        messageTitle = (fatal ? "[FATAL ERROR] " : "[ERROR] ") + messageTitle;
+        fullLog += logToString(message, messageTitle);
+
+        if (SettingsPage.loaded && !fatal && !["error", "warning", "all"].contains(Settings.logLevel)) return;
+		
+        if (fatal && messageTitle == "Error") messageTitle = "Fatal Error";
+
+        if (messageTitle != "") console.error(messageTitle + " ", message);
+        else console.error(message);
+
+        _MarkdownRendererInternal._reportError(messageTitle, message, fatal);
+    }
+
+    export function progress(fraction: number, message: string, subMessage: string, progressColor: string = "var(--interactive-accent)")
+    {
+        pullPathLogs();
+        _MarkdownRendererInternal._reportProgress(fraction, message, subMessage, progressColor);
+    }
+
+    function pullPathLogs()
+    {
+        let logs = Path.dequeueLog();
+        for (let thisLog of logs)
+        {
+            switch (thisLog.type)
+            {
+                case "info":
+                    log(thisLog.message, thisLog.title);
+                    break;
+                case "warn":
+                    warning(thisLog.message, thisLog.title);
+                    break;
+                case "error":
+                    error(thisLog.message, thisLog.title, false);
+                    break;
+                case "fatal":
+                    error(thisLog.message, thisLog.title, true);
+                    break;
+            }
+        }
+    }
+
+    export function getDebugInfo()
+    {
+        let debugInfo = "";
+
+        debugInfo += `Log:\n${fullLog}\n\n`;
+
+        let settingsCopy = Object.assign({}, Settings);
+        //@ts-ignore
+        settingsCopy.filesToExport = settingsCopy.filesToExport[0].length;
+        debugInfo += `Settings:\n${humanReadableJSON(settingsCopy)}\n\n`;
+
+        // @ts-ignore
+        let loadedPlugins = Object.values(app.plugins.plugins).filter((plugin) => plugin._loaded == true).map((plugin) => plugin.manifest.name).join("\n\t");
+        debugInfo += `Enabled Plugins:\n\t${loadedPlugins}`;
+
+        return debugInfo;
+    }
+
+    export function testThrowError(chance: number)
+    {
+        if (Math.random() < chance)
+        {
+            throw new Error("Test error");
+        }
+    }
+}
+

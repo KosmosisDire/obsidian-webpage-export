@@ -1,6 +1,6 @@
 import HTMLExportPlugin from "scripts/main"
 import { DEFAULT_SETTINGS, Settings, SettingsPage } from "./settings"
-import { ExportLog } from "scripts/utils/export-log";
+import { ExportLog } from "scripts/render-api/render-api";
 import { Notice } from "obsidian";
 
 

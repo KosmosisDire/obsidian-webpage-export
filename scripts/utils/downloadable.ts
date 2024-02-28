@@ -1,56 +1,79 @@
+import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
 import { Path } from "./path";
+import { FileStats, TFile } from "obsidian";
 
-export class Downloadable
+export class Attachment
 {
-	/**
-	 * The name of the file with the extention
-	 */
-	public filename: string;
-
 	/**
 	 * The raw data of the file
 	 */
-	public content: string | Buffer;
+	public data: string | Buffer;
+	private _source: TFile | null;
+	private _sourcePath: string | undefined;
+	private _sourcePathRootRelative: string | undefined;
+	private _targetPath: Path;
+	public sourceStat: FileStats;
+	public exportOptions: MarkdownWebpageRendererAPIOptions;
+	public showInTree: boolean = false;
+	public treeOrder: number = 0;
 
-	/**
-	 * The directory this file will be saved in, relative to the destination root
-	 */
-	public relativeDirectory: Path;
-	public encoding: BufferEncoding | undefined;
-	public modifiedTime: number = 0; // when was the source file last modified
-
-	constructor(filename: string, content: string | Buffer, vaultRelativeDestination: Path, encoding: BufferEncoding | undefined = "utf8")
+	public get filename() { return this.targetPath.fullName; }
+	public get basename() { return this.targetPath.basename; }
+	public get extension() { return this.targetPath.extension; }
+	public get extensionName() { return this.targetPath.extensionName; }
+	public get sourcePath() { return this._sourcePath; }
+	public set sourcePath(source: string | undefined)
 	{
-		if(vaultRelativeDestination.isFile) throw new Error("vaultRelativeDestination must be a folder: " + vaultRelativeDestination.stringify);
-
-		this.filename = filename;
-		this.content = content;
-		this.relativeDirectory = vaultRelativeDestination;
-		this.encoding = encoding;
+		this._sourcePath = source;
+		this._sourcePathRootRelative = this.removeRootFromPath(new Path(source ?? ""), false).stringify;
+	}
+	public get sourcePathRootRelative() { return this._sourcePathRootRelative;};
+	public set source(source: TFile | null)
+	{
+		this._source = source;
+		this.sourceStat = source?.stat ?? { ctime: 0, mtime: Date.now(), size: this.data.length };
+		this.sourcePath = source?.path;
+	}
+	public get source() { return this._source; }
+	public get targetPath() { return this._targetPath; }
+	public set targetPath(target: Path)
+	{
+		target.slugify(this.exportOptions.slugifyPaths).unixify();
+		target = this.removeRootFromPath(target);
+		this._targetPath = target;
 	}
 
-	/**
-	 * The path relative to the destination root
-	 */
-	public get relativePath(): Path
+
+	constructor(data: string | Buffer, target: Path, source: TFile | undefined | null, options: MarkdownWebpageRendererAPIOptions)
 	{
-		return this.relativeDirectory.joinString(this.filename);
+		if (target.isDirectory) throw new Error("target must be a file: " + target.stringify);
+		if (target.isAbsolute) throw new Error("(absolute) Target must be a relative path with the working directory set to the root: " + target.stringify);
+		this.exportOptions = options;
+		this.data = data;
+		this.source = source ?? null;
+		this.targetPath = target;
 	}
 
-	async download(downloadDirectory: Path)
+	private removeRootFromPath(path: Path, allowSlugify: boolean = true)
 	{
-		let data = this.content instanceof Buffer ? this.content : Buffer.from(this.content.toString(), this.encoding);
-		let writePath = this.getAbsoluteDownloadDirectory(downloadDirectory).joinString(this.filename);
-		await writePath.write(data, this.encoding);
+		// remove the export root from the target path
+		let root = new Path(this.exportOptions.exportRoot ?? "").unixify().slugify(allowSlugify && this.exportOptions.slugifyPaths).stringify + "/";
+		if (path.stringify.startsWith(root))
+		{
+			path.reparse(path.stringify.substring(root.length));
+		}
+		return path;
 	}
 
-	public getAbsoluteDownloadPath(downloadDirectory: Path): Path
+	async download()
 	{
-		return this.relativeDirectory.absoluted(downloadDirectory).joinString(this.filename);
-	}
+		if (this.targetPath.workingDirectory == Path.vaultPath.stringify)
+		{ 
+			console.log(this.targetPath.workingDirectory, Path.vaultPath.stringify, this.targetPath.stringify);
+			throw new Error("(working dir) Target should be a relative path with the working directory set to the root: " + this.targetPath.absoluted().stringify);
+		}
 
-	public getAbsoluteDownloadDirectory(downloadDirectory: Path): Path
-	{
-		return this.relativeDirectory.absoluted(downloadDirectory);
+		let data = this.data instanceof Buffer ? this.data : Buffer.from(this.data.toString());
+		await this.targetPath.write(data);
 	}
 }

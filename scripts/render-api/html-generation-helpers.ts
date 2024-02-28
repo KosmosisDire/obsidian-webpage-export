@@ -1,10 +1,10 @@
 import { EmojiStyle, Settings } from "scripts/settings/settings";
 import { AssetHandler } from "scripts/assets-system/asset-handler";
-import { AssetType } from "scripts/assets-system/asset";
-import { ExportLog } from "scripts/utils/export-log";
+import { ExportLog } from "scripts/render-api/render-api";
 import { getIcon as getObsidianIcon, requestUrl } from "obsidian";
 import { Utils } from "scripts/utils/utils";
 import { ObsidianStyles } from "scripts/assets-system/obsidian-styles";
+import { AssetType } from "scripts/assets-system/asset-types";
 
 export namespace HTMLGeneration
 {
@@ -50,11 +50,11 @@ export namespace HTMLGeneration
 
 		for (var style of styles)
 		{
-			ExportLog.progress(i, styles.length, "Compiling css classes", "Scanning: " + style.filename, "var(--color-yellow)");
-			if (typeof(style.content) != "string") continue;
+			ExportLog.progress(i / styles.length, "Compiling css classes", "Scanning: " + style.filename, "var(--color-yellow)");
+			if (typeof(style.data) != "string") continue;
 			
 			// this matches every class name with the dot
-			let matches = Array.from(style.content.matchAll(/\.([A-Za-z_-]+[\w-]+)/g));
+			let matches = Array.from(style.data.matchAll(/\.([A-Za-z_-]+[\w-]+)/g));
 			let styleClasses = matches.map(match => match[0].substring(1).trim());
 			// remove duplicates
 			styleClasses = styleClasses.filter((value, index, self) => self.indexOf(value) === index);
@@ -64,15 +64,15 @@ export namespace HTMLGeneration
 		}
 
 		// remove duplicates
-		ExportLog.progress(1, 1, "Filtering classes", "...", "var(--color-yellow)");
+		ExportLog.progress(1, "Filtering classes", "...", "var(--color-yellow)");
 		classes = classes.filter((value, index, self) => self.indexOf(value) === index);
-		ExportLog.progress(1, 1, "Sorting classes", "...", "var(--color-yellow)");
+		ExportLog.progress(1, "Sorting classes", "...", "var(--color-yellow)");
 		classes = classes.sort();
 
 		i = 0;
-		for (var bodyClass of bodyClasses)
+		for (let bodyClass of bodyClasses)
 		{
-			ExportLog.progress(i, bodyClasses.length, "Collecting valid classes", "Scanning: " + bodyClass, "var(--color-yellow)");
+			ExportLog.progress(i / bodyClasses.length, "Collecting valid classes", "Scanning: " + bodyClass, "var(--color-yellow)");
 
 			if (classes.includes(bodyClass))
 			{
@@ -82,14 +82,14 @@ export namespace HTMLGeneration
 			i++;
 		}
 
-		ExportLog.progress(1, 1, "Cleanup classes", "...", "var(--color-yellow)");
+		ExportLog.progress(1, "Cleanup classes", "...", "var(--color-yellow)");
 		_validBodyClasses = validClasses.replace(/\s\s+/g, ' ');
 
 		// convert to array and remove duplicates
-		ExportLog.progress(1, 1, "Filter duplicate classes", _validBodyClasses.length + " classes", "var(--color-yellow)");
+		ExportLog.progress(1, "Filter duplicate classes", _validBodyClasses.length + " classes", "var(--color-yellow)");
 		_validBodyClasses = _validBodyClasses.split(" ").filter((value, index, self) => self.indexOf(value) === index).join(" ").trim();
 		
-		ExportLog.progress(1, 1, "Classes done", "...", "var(--color-yellow)");
+		ExportLog.progress(1, "Classes done", "...", "var(--color-yellow)");
 
 		return _validBodyClasses;
 	}
@@ -145,7 +145,6 @@ export namespace HTMLGeneration
 				case EmojiStyle.Twemoji:
 					return `<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/${codepoint}.svg" class="emoji" />`;
 				case EmojiStyle.OpenMoji:
-					console.log(codepoint);
 					return `<img src="https://openmoji.org/data/color/svg/${codepoint.toUpperCase()}.svg" class="emoji" />`;
 				case EmojiStyle.OpenMojiOutline:
 					let req = await requestUrl(`https://openmoji.org/data/black/svg/${codepoint.toUpperCase()}.svg`);

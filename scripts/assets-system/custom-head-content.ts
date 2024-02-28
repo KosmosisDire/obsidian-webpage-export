@@ -1,26 +1,26 @@
-import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
+import { WebAsset } from "./base-asset.js";
+import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { Path } from "scripts/utils/path";
 import { Settings, SettingsPage } from "scripts/settings/settings";
-import { ExportLog } from "scripts/utils/export-log";
-import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
+import { ExportLog } from "scripts/render-api/render-api";
 
-export class CustomHeadContent extends Asset
+export class CustomHeadContent extends WebAsset
 {
-    public content: string = "";
+    public data: string = "";
 
     constructor()
     {
-        super("custom-head-content.html", "", AssetType.HTML, InlinePolicy.AutoHead, false, Mutability.Dynamic);
+        super("custom-head-content.html", "", null, AssetType.HTML, InlinePolicy.AutoHead, false, Mutability.Dynamic);
     }
     
-    override async load(options: MarkdownWebpageRendererAPIOptions)
+    override async load()
     {
 		if (!SettingsPage.loaded) return;
 
         let customHeadPath = new Path(Settings.customHeadContentPath);
 		if (customHeadPath.isEmpty)
 		{
-			this.content = "";
+			this.data = "";
 			return;
 		}
 
@@ -35,13 +35,22 @@ export class CustomHeadContent extends Asset
 
         if (!validation.valid)
         {
-            this.content = "";
+            this.data = "";
             ExportLog.error(validation.error + customHeadPath.stringify);
             return;
         }
 
-		this.modifiedTime = customHeadPath.stat?.mtimeMs ?? this.modifiedTime;
-        this.content = await customHeadPath.readAsString() ?? "";
-        await super.load(options);
+		this.source = app.vault.getFileByPath(customHeadPath.unixified().stringify);
+		if (!this.source)
+		{
+			console.error("Custom head source tfile not found: " + customHeadPath.unixified().stringify);
+			let stat = customHeadPath.stat;
+			if (stat)
+			{
+				this.sourceStat = {ctime: stat.ctimeMs, mtime: stat.mtimeMs, size: stat.size};
+			}
+		}
+        this.data = await customHeadPath.readAsString() ?? "";
+        await super.load();
     }
 }

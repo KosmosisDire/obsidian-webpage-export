@@ -1,15 +1,14 @@
-import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
+import { WebAsset } from "./base-asset.js";
+import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { Path } from "scripts/utils/path";
-import { ExportLog } from "scripts/utils/export-log";
-import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
 
-export class SnippetStyles extends Asset
+export class SnippetStyles extends WebAsset
 {
-    public content: string = "";
+    public data: string = "";
 
     constructor()
     {
-        super("snippets.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 2);
+        super("snippets.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 2);
     }
 
     private static getEnabledSnippets(): string[]
@@ -31,7 +30,7 @@ export class SnippetStyles extends Asset
     }
 
     
-    override async load(options: MarkdownWebpageRendererAPIOptions)
+    override async load()
     {
         let snippetsList = await SnippetStyles.getStyleSnippetsContent();
         let snippets = "\n";
@@ -43,9 +42,7 @@ export class SnippetStyles extends Asset
 		// replace "publish" styles with a high specificity prefix
 		snippets = snippets.replaceAll(/^publish /gm, "html body[class].publish ");
 		
-        this.content = snippets;
-		this.modifiedTime = Date.now();
-
-        await super.load(options);
+        this.data = snippets;
+        await super.load();
     }
 }

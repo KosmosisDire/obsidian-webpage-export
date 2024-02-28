@@ -1,23 +1,23 @@
-import { Settings, SettingsPage } from "scripts/settings/settings";
-import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset";
+import { Settings } from "scripts/settings/settings";
+import { WebAsset } from "./base-asset.js";
+import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { AssetHandler } from "./asset-handler";
-import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
 
-export class OtherPluginStyles extends Asset
+export class OtherPluginStyles extends WebAsset
 {
-    public content: string = "";
+    public data: string = "";
     private lastEnabledPluginStyles: string[] = [];
 
     constructor()
     {
-        super("other-plugins.css", "", AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 9);
+        super("other-plugins.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 9);
     }
     
-    override async load(options: MarkdownWebpageRendererAPIOptions)
+    override async load()
     {
         if(this.lastEnabledPluginStyles == Settings.includePluginCSS) return;
 
-        this.content = "";        
+        this.data = "";        
         for (let i = 0; i < Settings.includePluginCSS.length; i++)
         {
             if (!Settings.includePluginCSS[i] || (Settings.includePluginCSS[i] && !(/\S/.test(Settings.includePluginCSS[i])))) continue;
@@ -28,13 +28,12 @@ export class OtherPluginStyles extends Asset
             let style = await path.readAsString();
             if (style)
             {
-                this.content += style;
+                this.data += style;
 				console.log("Loaded plugin style: " + Settings.includePluginCSS[i] + " size: " + style.length);
             }
         }
 
-		this.modifiedTime = Date.now();
         this.lastEnabledPluginStyles = Settings.includePluginCSS;
-        await super.load(options);
+        await super.load();
     }
 }

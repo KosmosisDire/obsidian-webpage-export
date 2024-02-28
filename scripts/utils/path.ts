@@ -1,13 +1,9 @@
 const pathTools = require('upath');
-import {  Stats, existsSync } from 'fs';
-import { FileSystemAdapter, Notice } from 'obsidian';
-import { Utils } from './utils';
-import { promises as fs } from 'fs';
-import { statSync } from 'fs';
+import { Stats, existsSync, statSync, promises as fs } from 'fs';
+import { FileSystemAdapter } from 'obsidian';
 import internal from 'stream'; 
-import { ExportLog } from 'scripts/utils/export-log';
-import { join } from 'path';
 import { homedir } from 'os';
+import { readdir, rmdir } from 'fs/promises';
 
 export class Path
 {
@@ -28,6 +24,7 @@ export class Path
 	private _parent: string = "";
 	private _base: string = "";
 	private _ext: string = "";
+	private _hash: string = "";
 	private _name: string = "";
 	private _fullPath: string = "";
 	private _isDirectory: boolean = false;
@@ -47,14 +44,17 @@ export class Path
 		if (this.isAbsolute) this._workingDirectory = "";
 	}
 
-	private reparse(path: string): Path
+	public reparse(path: string): Path
 	{
 		let parsed = Path.parsePath(path);
+		if (path == "") parsed = { root: "", dir: "", parent: "", base: "", ext: "", name: "", fullPath: ""}
+		
 		this._root = parsed.root;
 		this._dir = parsed.dir;
 		this._parent = parsed.parent;
 		this._base = parsed.base;
-		this._ext = parsed.ext;
+		this._ext = parsed.ext.split("#")[0] ?? parsed.ext;
+		this._hash = parsed.ext.split("#")[1] ?? "";
 		this._name = parsed.name;
 		this._fullPath = parsed.fullPath;
 		this._isDirectory = this._ext == "";
@@ -62,7 +62,12 @@ export class Path
 		this._exists = undefined;
 		this._sourceString = path;
 
-		if (this._isWindows)
+		if (this._base.lastIndexOf("#") > this._base.lastIndexOf("."))
+		{
+			this._base = this._base.split("#")[0] ?? this._base;
+		}
+
+		if (false)
 		{
 			if (this._root.startsWith("http:") || this._root.startsWith("https:"))
 			{
@@ -125,6 +130,7 @@ export class Path
 	 */
 	absoluted(workingDirectory: string | Path = this._workingDirectory): Path
 	{
+		if (this.isAbsolute) return this.copy;
 		return this.copy.absolute(workingDirectory);
 	}
 
@@ -211,7 +217,7 @@ export class Path
 	unixify(): Path
 	{
 		this._isWindows = false;
-		this._fullPath = this.stringify.replaceAll("\\", "/").replace(/^.:\/\//i, "/");
+		this._fullPath = this.stringify.replaceAll("\\", "/");
 		this.reparse(this.stringify);
 		return this;
 	}
@@ -286,15 +292,37 @@ export class Path
 	 */
 	get directory(): Path
 	{
-		return new Path(this._dir, this._workingDirectory);
+		let newPath = this.copy;
+		newPath.reparse(this._dir);
+		newPath.setWorkingDirectory(this._workingDirectory);
+		return newPath;
+	}
+
+	set directory(dir: Path)
+	{
+		this._dir = dir.stringify;
+		if (!this.isDirectory) this._fullPath = Path.joinStringPaths(this._dir, this._base);
+		else this._fullPath = this._dir;
+
+		this.reparse(this._fullPath);
 	}
 
 	/**
 	 * Same as dir, but if the path is a directory this will be the parent directory not the full path.
 	 */
-	get parent(): Path
+	get parent(): Path | undefined
 	{
-		return new Path(this._parent, this._workingDirectory);
+		if (this._parent == "") return;
+		let newPath = this.copy;
+		newPath.reparse(this._parent);
+		return newPath;
+	}
+
+	set parent(parent: Path | undefined)
+	{
+		this._parent = parent?.stringify ?? "";
+		this._fullPath = Path.joinStringPaths(this._parent, this._base);
+		this.reparse(this._fullPath);
 	}
 
 	/**
@@ -307,6 +335,13 @@ export class Path
 		return this._base;
 	}
 
+	set fullName(name: string)
+	{
+		this._base = name;
+		this._fullPath = Path.joinStringPaths(this._parent, this._base);
+		this.reparse(this._fullPath);
+	}
+
 	/**
 	 * The extension of the file or folder.
 	 * @example
@@ -317,12 +352,27 @@ export class Path
 		return this._ext;
 	}
 
+	set extension(ext: string)
+	{
+		this.setExtension(ext);
+	}
+
 	/**
 	 * The extension of the file or folder without the dot.
 	 */
 	get extensionName(): string
 	{
 		return this._ext.replace(".", "");
+	}
+
+	/**
+	 * The hash which was appended to the end of the path.
+	 * @example
+	 * Given, "/path/to/file.txt#hash" -> "#hash"
+	 */
+	get hash(): string
+	{
+		return this._hash;
 	}
 
 	/**
@@ -344,7 +394,60 @@ export class Path
 	 */
 	get depth(): number
 	{
-		return this.stringify.replaceAll("\\", "/").replaceAll("//", "/").split("/").length - 1;
+		let depth = 0;
+		let splits = this.unixified().stringify.split("/");
+
+		for (let i = 0; i < splits.length-1; i++)
+		{
+			if (splits[i] == "..") 
+			{
+				depth--;
+			}
+			else if (splits[i] != ".")
+			{
+				depth++;
+			}
+		}
+
+		if (this.isAbsolute) depth--;
+
+		return depth;
+	}
+
+	/**
+	 * The maximum depth of the path.
+	 * @example
+	 * "C:/Users/JohnDoe/Documents/file.txt" = 4
+	 * "/home/johndoe/Documents/file.txt" = 4
+	 * "JohnDoe/Documents/Documents" = 2
+	 */
+	get maxDepth(): number
+	{
+		let initialDirection = 0;
+		let maxDepth = 0;
+		let depth = 0;
+		let splits = this.unixified().stringify.split("/");
+
+		for (let i = 0; i < splits.length-1; i++)
+		{
+			if (splits[i] == "..") 
+			{
+				depth--;
+				if (initialDirection == 0) initialDirection = -1;
+			}
+			else if (splits[i] != ".")
+			{
+				depth++;
+				if (initialDirection == 0) initialDirection = 1;
+			}
+
+			if (initialDirection == -1 && depth < maxDepth) maxDepth = depth;
+			if (initialDirection == 1 && depth > maxDepth) maxDepth = depth;
+		}
+
+		if (this.isAbsolute) maxDepth--;
+
+		return maxDepth;
 	}
 
 	/**
@@ -373,6 +476,15 @@ export class Path
 	}
 
 	/**
+	 * Indentical to stringify, except it leaves out the hash from the end of the path if it exists.
+	 */
+	get pathname(): string
+	{
+		if (this.isDirectory) return this.stringify;
+		return this.directory.joinString(this.fullName).stringify;
+	}
+
+	/**
 	 * True if this is a directory.
 	 */
 	get isDirectory(): boolean
@@ -381,12 +493,12 @@ export class Path
 	}
 
 	/**
-	 * True if this is an empty path: ".".
+	 * True if this is an empty path: "".
 	 * AKA is the path just referencing its working directory.
 	 */
 	get isEmpty(): boolean
 	{
-		return this.stringify == ".";
+		return this.stringify == "";
 	}
 
 	/**
@@ -411,12 +523,13 @@ export class Path
 		{
 			try
 			{
-				this._exists = Path.pathExists(this.absoluted().stringify);
+				let absPath = this.absoluted().pathname;
+				this._exists = Path.pathExists(absPath);
 			}
 			catch (error)
 			{
 				this._exists = false;
-				Path.log("Error checking if path exists: " + this.stringify, error, "error");
+				Path.log("Error checking if path exists: " + this.pathname, error, "error");
 			}
 		}
 
@@ -433,12 +546,12 @@ export class Path
 		try
 		{
 		
-			let stat = statSync(this.absoluted().stringify);
+			let stat = statSync(this.absoluted().pathname);
 			return stat;
 		}
 		catch (error)
 		{
-			Path.log("Error getting stat: " + this.stringify, error, "error");
+			Path.log("Error getting stat: " + this.pathname, error, "error");
 			return;
 		}
 	}
@@ -477,7 +590,10 @@ export class Path
 	 */
 	get copy(): Path
 	{
-		return new Path(this.stringify, this._workingDirectory);
+		let newPath = new Path(this.stringify, this._workingDirectory);
+		newPath._isWindows = this._isWindows;
+		newPath.reparse(this.stringify);
+		return newPath;
 	}
 
 	validate(options: {allowEmpty?: boolean, requireExists?: boolean, allowAbsolute?: boolean, allowRelative?: boolean, allowTildeHomeDirectory?: boolean, allowFiles?: boolean, allowDirectories?: boolean, requireExtentions?: string[]}): {valid: boolean, isEmpty: boolean, error: string}
@@ -565,28 +681,32 @@ export class Path
 
 		try
 		{
-			let data = await fs.readFile(this.absoluted().stringify, { encoding: encoding });
+			let data = await fs.readFile(this.absoluted().pathname, { encoding: encoding });
 			return data;
 		}
 		catch (error)
 		{
-			Path.log("Error reading file: " + this.stringify, error, "error");
+			Path.log("Error reading file: " + this.pathname, error, "error");
 			return;
 		}
 	}
 
 	async readAsBuffer(): Promise<Buffer|undefined>
 	{
-		if(!this.exists || this.isDirectory) return;
+		if(!this.exists || this.isDirectory)
+		{
+			console.error("Error reading file buffer: " + this.pathname, (this.isDirectory ? "Path is directory" : "Path does not exist"));
+			return;
+		}
 
 		try
 		{
-			let data = await fs.readFile(this.absoluted().stringify);
+			let data = await fs.readFile(this.absoluted().pathname);
 			return data;
 		}
 		catch (error)
 		{
-			Path.log("Error reading file buffer: " + this.stringify, error, "error");
+			Path.log("Error reading file buffer: " + this.pathname, error, "error");
 			return;
 		}
 	}
@@ -597,7 +717,7 @@ export class Path
 
 		try
 		{
-			await fs.writeFile(this.absoluted().stringify, data, { encoding: encoding });
+			await fs.writeFile(this.absoluted().pathname, data, { encoding: encoding });
 			return true;
 		}
 		catch (error)
@@ -607,12 +727,12 @@ export class Path
 
 			try
 			{
-				await fs.writeFile(this.absoluted().stringify, data, { encoding: encoding });
+				await fs.writeFile(this.absoluted().pathname, data, { encoding: encoding });
 				return true;
 			}
 			catch (error)
 			{
-				Path.log("Error writing file: " + this.stringify, error, "error");
+				Path.log("Error writing file: " + this.pathname, error, "error");
 				return false;
 			}
 		}
@@ -624,12 +744,12 @@ export class Path
 
 		try
 		{
-			await fs.rm(this.absoluted().stringify, { recursive: recursive });
+			await fs.rm(this.absoluted().pathname, { recursive: recursive });
 			return true;
 		}
 		catch (error)
 		{
-			Path.log("Error deleting file: " + this.stringify, error, "error");
+			Path.log("Error deleting file: " + this.pathname, error, "error");
 			return false;
 		}
 	}
@@ -689,6 +809,7 @@ export class Path
 			parsed.base = parsed.name;
 			parsed.ext = "";
 			fullPath = parsed.dir;
+			parent = parsed.dir.substring(0, parsed.dir.length - parsed.name.length);
 		}
 		else
 		{
@@ -701,10 +822,11 @@ export class Path
 		if(fullPath.startsWith("http:")) parsed.root = "http://";
 		else if(fullPath.startsWith("https:")) parsed.root = "https://"; 
 
-		// make sure that protocols and windows drives use two slashes
-		parsed.dir = parsed.dir.replace(/(https?)[:][\\/](?![\\/])/g, "$1://");
-		parent = parsed.dir;
-		fullPath = fullPath.replace(/(https?)[:][\\/](?![\\/])/g, "$1://");
+		// make sure that protocols use two slashes
+		let protocolRegex = /(https?)[:][\\/](?![\\/])/g;
+		parsed.dir = parsed.dir.replace(protocolRegex, "$1://");
+		parent = parent.replace(protocolRegex, "$1://");
+		fullPath = fullPath.replace(protocolRegex, "$1://");
 
 		return { root: parsed.root, dir: parsed.dir, parent: parent, base: parsed.base, ext: parsed.ext, name: parsed.name, fullPath: fullPath };
 	}
@@ -812,61 +934,37 @@ export class Path
 		return path1Parsed == path2Parsed;
 	}
 
-	public static async getAllEmptyFoldersRecursive(folder: Path): Promise<Path[]>
+	/**
+	 * Recursively removes empty directories from the given directory.
+	 *
+	 * If the directory itself is empty, it is also removed.
+	 *
+	 * Code taken from: https://gist.github.com/jakub-g/5903dc7e4028133704a4
+	 *
+	 * @param {string} directory Path to the directory to clean up
+	 */
+	public static async removeEmptyDirectories(directory: string): Promise<void>
 	{
-		if (!folder.isDirectory) throw new Error("folder must be a directory: " + folder.stringify);
+		let path = new Path(directory);
+		if (!path.isDirectory || !path.exists) 
+			return;
 
-		let folders: Path[] = [];
+		let fileNames = await readdir(directory);
+		if (fileNames.length > 0) {
+			const recursiveRemovalPromises = fileNames.map(
+				(fileName) => this.removeEmptyDirectories(Path.joinStringPaths(directory, fileName)),
+			);
+			await Promise.all(recursiveRemovalPromises);
 
-		let folderFiles = await fs.readdir(folder.stringify);
-		for (let i = 0; i < folderFiles.length; i++)
-		{
-			let file = folderFiles[i];
-			let path = folder.joinString(file);
-
-			if ((await fs.stat(path.stringify)).isDirectory())
-			{
-				let subFolders = await this.getAllEmptyFoldersRecursive(path);
-				if (subFolders.length == 0)
-				{
-					let subFiles = await fs.readdir(path.stringify);
-					if (subFiles.length == 0) folders.push(path);
-				}
-				else
-				{
-					folders.push(...subFolders);
-				}
-			}
+			// re-evaluate fileNames; after deleting subdirectory
+			// we may have parent directory empty now
+			fileNames = await readdir(directory);
 		}
 
-		return folders;
-	}
-
-	public static async getAllFilesInFolderRecursive(folder: Path): Promise<Path[]>
-	{
-		if (!folder.isDirectory) throw new Error("folder must be a directory: " + folder.stringify);
-
-		let files: Path[] = [];
-
-		let folderFiles = await fs.readdir(folder.stringify);
-		for (let i = 0; i < folderFiles.length; i++)
+		if (fileNames.length === 0) 
 		{
-			let file = folderFiles[i];
-			let path = folder.joinString(file);
-
-			ExportLog.progress(i, folderFiles.length, "Finding Old Files", "Searching: " + folder.stringify, "var(--color-yellow)");
-
-			if ((await fs.stat(path.stringify)).isDirectory())
-			{
-				files.push(...await this.getAllFilesInFolderRecursive(path));
-			}
-			else
-			{
-				files.push(path);
-			}
+			await rmdir(directory);
 		}
-
-		return files;
 	}
 
 }

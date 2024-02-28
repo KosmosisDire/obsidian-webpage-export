@@ -13,7 +13,8 @@ import pixiJS from "assets/pixi.txt.js";
 import minisearchJS from "assets/minisearch.txt.js";
 
 import { Path } from "scripts/utils/path.js";
-import { Asset, AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset.js";
+import { WebAsset } from "./base-asset.js";
+import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { ObsidianStyles } from "./obsidian-styles.js";
 import { OtherPluginStyles } from "./other-plugin-styles.js";
 import { ThemeStyles } from "./theme-styles.js";
@@ -23,10 +24,10 @@ import { CustomHeadContent } from "./custom-head-content.js";
 import { GlobalVariableStyles } from "./global-variable-styles.js";
 import { Favicon } from "./favicon.js";
 import { FetchBuffer } from "./local-fetch-buffer.js";
-import { ExportLog } from "../utils/export-log.js";
 import { SupportedPluginStyles } from "./supported-plugin-styles.js";
 import { fileTypeFromBuffer } from "file-type";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options.js";
+import { ExportLog } from "scripts/render-api/render-api.js";
 const mime = require('mime');
 
 
@@ -34,10 +35,10 @@ export class AssetHandler
 {
 	public static vaultPluginsPath: Path;
 
-	public static staticAssets: Asset[] = [];
-	public static dynamicAssets: Asset[] = [];
-	public static allAssets: Asset[] = [];
-	public static temporaryAssets: Asset[] = [];
+	public static staticAssets: WebAsset[] = [];
+	public static dynamicAssets: WebAsset[] = [];
+	public static allAssets: WebAsset[] = [];
+	public static temporaryAssets: WebAsset[] = [];
 
 	// this path is used to generate the relative path to the images folder, likewise for the other paths
     private static libraryFolder: Path;
@@ -51,34 +52,39 @@ export class AssetHandler
 
     public static get libraryPath(): Path
     {
-		if (!this.libraryFolder) this.initialize();
-        return AssetHandler.libraryFolder.slugified(this.exportOptions.webStylePaths);
+		if (!this.libraryFolder) this.initPaths();
+        return AssetHandler.libraryFolder.slugified(this.exportOptions.slugifyPaths);
     }
     public static get mediaPath(): Path
     {
-		if (!this.mediaFolder) this.initialize();
-		return AssetHandler.mediaFolder.slugified(this.exportOptions.webStylePaths);
+		if (!this.mediaFolder) this.initPaths();
+		return AssetHandler.mediaFolder.slugified(this.exportOptions.slugifyPaths);
     }
     public static get jsPath(): Path
     {
-		if (!this.jsFolder) this.initialize();
-        return AssetHandler.jsFolder.slugified(this.exportOptions.webStylePaths);
+		if (!this.jsFolder) this.initPaths();
+        return AssetHandler.jsFolder.slugified(this.exportOptions.slugifyPaths);
     }
     public static get cssPath(): Path
     {
-		if (!this.cssFolder) this.initialize();
-		return AssetHandler.cssFolder.slugified(this.exportOptions.webStylePaths);
+		if (!this.cssFolder) this.initPaths();
+		return AssetHandler.cssFolder.slugified(this.exportOptions.slugifyPaths);
     }
 	public static get fontPath(): Path
 	{
-		if (!this.fontFolder) this.initialize();
-		return AssetHandler.fontFolder.slugified(this.exportOptions.webStylePaths);
+		if (!this.fontFolder) this.initPaths();
+		return AssetHandler.fontFolder.slugified(this.exportOptions.slugifyPaths);
 	}
     public static get htmlPath(): Path
     {
-		if (!this.htmlFolder) this.initialize();
-		return AssetHandler.htmlFolder.slugified(this.exportOptions.webStylePaths);
+		if (!this.htmlFolder) this.initPaths();
+		return AssetHandler.htmlFolder.slugified(this.exportOptions.slugifyPaths);
     }
+
+	public static generateSavePath(filename: string, type: AssetType, destinationDir: Path)
+	{
+		return WebAsset.typeToDir(type).joinString(filename).setWorkingDirectory(destinationDir.stringify).slugified(this.exportOptions.slugifyPaths);
+	}
 
 	// styles
 	public static obsidianStyles: ObsidianStyles = new ObsidianStyles();
@@ -88,29 +94,29 @@ export class AssetHandler
 	public static mathjaxStyles: MathjaxStyles = new MathjaxStyles();
 	public static globalDataStyles: GlobalVariableStyles = new GlobalVariableStyles();
 	public static supportedPluginStyles: SupportedPluginStyles = new SupportedPluginStyles();
-	public static websiteStyles: Asset = new Asset("main-styles.css", webpageStyles, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 4);
-	public static deferredCSS: Asset = new Asset("deferred.css", deferredCSS, AssetType.Style, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer);
+	public static websiteStyles: WebAsset = new WebAsset("main-styles.css", webpageStyles, null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 4);
+	public static deferredCSS: WebAsset = new WebAsset("deferred.css", deferredCSS, null, AssetType.Style, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer);
 
 	// scripts
-	public static websiteJS: Asset = new Asset("webpage.js", websiteJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async);
-	public static graphViewJS: Asset = new Asset("graph-view.js", graphViewJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
-	public static graphWASMJS: Asset = new Asset("graph-wasm.js", graphWASMJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
-	public static graphWASM: Asset = new Asset("graph-wasm.wasm", Buffer.from(graphWASM), AssetType.Script, InlinePolicy.Download, false, Mutability.Static);
-	public static renderWorkerJS: Asset = new Asset("graph-render-worker.js", renderWorkerJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
-	public static deferredJS: Asset = new Asset("deferred.js", deferredJS, AssetType.Script, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer);
-	public static themeLoadJS: Asset = new Asset("theme-load.js", themeLoadJS, AssetType.Script, InlinePolicy.Inline, true, Mutability.Static, LoadMethod.Defer);
+	public static websiteJS: WebAsset = new WebAsset("webpage.js", websiteJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async);
+	public static graphViewJS: WebAsset = new WebAsset("graph-view.js", graphViewJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+	public static graphWASMJS: WebAsset = new WebAsset("graph-wasm.js", graphWASMJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+	public static graphWASM: WebAsset = new WebAsset("graph-wasm.wasm", Buffer.from(graphWASM), null, AssetType.Script, InlinePolicy.Download, false, Mutability.Static);
+	public static renderWorkerJS: WebAsset = new WebAsset("graph-render-worker.js", renderWorkerJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+	public static deferredJS: WebAsset = new WebAsset("deferred.js", deferredJS, null, AssetType.Script, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer);
+	public static themeLoadJS: WebAsset = new WebAsset("theme-load.js", themeLoadJS, null, AssetType.Script, InlinePolicy.Inline, true, Mutability.Static, LoadMethod.Defer);
 
-	public static tinyColorJS: Asset = new Asset("tinycolor.js", tinyColorJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
-	public static pixiJS: Asset = new Asset("pixi.js", pixiJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js");
-	public static minisearchJS: Asset = new Asset("minisearch.js", minisearchJS, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js");
+	public static tinyColorJS: WebAsset = new WebAsset("tinycolor.js", tinyColorJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+	public static pixiJS: WebAsset = new WebAsset("pixi.js", pixiJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js");
+	public static minisearchJS: WebAsset = new WebAsset("minisearch.js", minisearchJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js");
 	 
 	// other
 	public static favicon: Favicon = new Favicon();
-	public static externalLinkIcon: Asset;
+	public static externalLinkIcon: WebAsset;
 	public static customHeadContent: CustomHeadContent = new CustomHeadContent();
 	public static mainJsModTime: number = 0;
 
-	public static async initialize()
+	private static initPaths()
 	{
 		this.libraryFolder = new Path("lib").unixify();
 		this.mediaFolder = this.libraryFolder.joinString("media").unixify();
@@ -119,26 +125,32 @@ export class AssetHandler
 		this.fontFolder = this.libraryFolder.joinString("fonts").unixify();
 		this.htmlFolder = this.libraryFolder.joinString("html").unixify();
 		this.vaultPluginsPath = Path.vaultPath.joinString(app.vault.configDir, "plugins/").absolute();
-		
+	}
+
+	public static async initialize()
+	{
+		this.initPaths();
 		// by default all static assets have a modified time the same as main.js
 		this.mainJsModTime = this.vaultPluginsPath.joinString("webpage-html-export/main.js").stat?.mtimeMs ?? 0;
-		this.staticAssets.forEach(asset => asset.modifiedTime = this.mainJsModTime);
+		this.staticAssets.forEach(asset => asset.sourceStat.mtime = this.mainJsModTime);
 
 		this.allAssets.sort((a, b) => a.loadPriority - b.loadPriority);
 		
 		let loadPromises = []
 		for (let asset of this.allAssets)
 		{
-			loadPromises.push(asset.load(this.exportOptions));
+			loadPromises.push(asset.load());
 		}
 		await Promise.all(loadPromises);
-		
+
 		let graphViewJSPath = this.graphViewJS.getAssetPath();
 		this.graphViewJS.getHTML = () => `<script type="module" async id="graph-view-script" src="${graphViewJSPath}"></script>`;
 	}
 
-	public static async reloadAssets()
+	public static async reloadAssets(options: MarkdownWebpageRendererAPIOptions)
 	{
+		this.exportOptions = options;
+
 		// remove all temporary assets from allAssets
 		this.allAssets = this.allAssets.filter(asset => asset.mutability != Mutability.Temporary);
 		this.temporaryAssets = [];
@@ -148,32 +160,32 @@ export class AssetHandler
 		let loadPromises = []
 		for (let asset of this.dynamicAssets)
 		{
-			let loadPromise = asset.load(this.exportOptions);
+			let loadPromise = asset.load();
 			loadPromise.then(() =>
 			{
 				i++;
-				ExportLog.progress(i, this.dynamicAssets.length, "Initialize Export", "Loading asset: " + asset.filename, "var(--color-yellow)");
+				ExportLog.progress(i / this.dynamicAssets.length, "Initialize Export", "Loading asset: " + asset.filename, "var(--color-yellow)");
 			});
 			loadPromises.push(loadPromise);
 		}
 		await Promise.all(loadPromises);
 	}
 
-	public static getAssetsOfType(type: AssetType): Asset[]
+	public static getAssetsOfType(type: AssetType): WebAsset[]
 	{
 		let assets = this.allAssets.filter(asset => asset.type == type);
 		assets = assets.concat(this.allAssets.map(asset => asset.childAssets).flat().filter(asset => asset.type == type));
 		return assets;
 	}
 
-	public static getAssetsOfInlinePolicy(inlinePolicy: InlinePolicy): Asset[]
+	public static getAssetsOfInlinePolicy(inlinePolicy: InlinePolicy): WebAsset[]
 	{
 		let assets = this.allAssets.filter(asset => asset.inlinePolicy == inlinePolicy);
 		assets = assets.concat(this.allAssets.map(asset => asset.childAssets).flat().filter(asset => asset.inlinePolicy == inlinePolicy));
 		return assets;
 	}
 
-	private static filterDownloads(downloads: Asset[], options: MarkdownWebpageRendererAPIOptions): Asset[]
+	private static filterDownloads(downloads: WebAsset[], options: MarkdownWebpageRendererAPIOptions): WebAsset[]
 	{
 		if (!options.addGraphView || !options.addSidebars)
 		{
@@ -196,15 +208,15 @@ export class AssetHandler
 		}
 
 		// remove duplicates
-		downloads = downloads.filter((asset, index, self) => self.findIndex((t) => t.relativePath.stringify == asset.relativePath.stringify) === index);
+		downloads = downloads.filter((asset, index, self) => self.findIndex((t) => t.targetPath.stringify == asset.targetPath.stringify) === index);
 
 		// remove assets with no content
-		downloads = downloads.filter(asset => asset.content && asset.content.length > 0);
+		downloads = downloads.filter(asset => asset.data && asset.data.length > 0);
 
 		return downloads;
 	}
 
-	public static getDownloads(options: MarkdownWebpageRendererAPIOptions): Asset[]
+	public static getDownloads(destination: Path, options: MarkdownWebpageRendererAPIOptions): WebAsset[]
 	{
 		let downloads = this.getAssetsOfInlinePolicy(InlinePolicy.Download)
 						    .concat(this.getAssetsOfInlinePolicy(InlinePolicy.DownloadHead));
@@ -217,6 +229,7 @@ export class AssetHandler
 
 		downloads = this.filterDownloads(downloads, options);
 		downloads.sort((a, b) => b.loadPriority - a.loadPriority);
+		downloads.forEach(asset => asset.targetPath.setWorkingDirectory(destination.stringify));
 
 		return downloads;
 	}
@@ -241,11 +254,11 @@ export class AssetHandler
 	}
 
 	/*Takes a style sheet string and creates assets from every font or image url embedded in it*/
-	public static async getStyleChildAssets(asset: Asset, makeBase64External: boolean = false): Promise<string>
+	public static async getStyleChildAssets(asset: WebAsset, makeBase64External: boolean = false): Promise<string>
 	{
-		if (typeof asset.content != "string") throw new Error("Asset content is not a string");
+		if (typeof asset.data != "string") throw new Error("Asset content is not a string");
 
-		let content = asset.content.replaceAll("app://obsidian.md/", "");
+		let content = asset.data.replaceAll("app://obsidian.md/", "");
 
 		let urls = Array.from(content.matchAll(/url\("([^"]+)"\)|url\('([^']+)'\)/g));
 
@@ -289,7 +302,7 @@ export class AssetHandler
 
 					let splitData = url.split(",")
 					let data = splitData.slice(1).join(",");
-					let extension = Asset.mimeToExtention(splitData[0].split(":")[1].split(";")[0]);
+					let extension = WebAsset.mimeToExtention(splitData[0].split(":")[1].split(";")[0]);
 					let buffer = Buffer.from(data, "base64");
 					let dataHash = hash(data);
 					let filename = `${dataHash}.${extension}`;
@@ -299,15 +312,15 @@ export class AssetHandler
 						if (type) extension = type.ext;
 						filename = `${dataHash}.${extension}`;						
 					}
-					let type = Asset.extentionToType(extension);
+					let type = WebAsset.extentionToType(extension);
 
-					let childAsset = new Asset(filename, buffer, type, InlinePolicy.Download, false, Mutability.Child);
+					let childAsset = new WebAsset(filename, buffer, null, type, InlinePolicy.Download, false, Mutability.Child);
 					asset.childAssets.push(childAsset);
-					let loadPromise = childAsset.load(this.exportOptions);
+					let loadPromise = childAsset.load();
 					promises.push(loadPromise);
 					loadPromise.then(() =>
 					{
-						if (childAsset.content == undefined || childAsset.content == null || childAsset.content.length == 0)
+						if (childAsset.data == undefined || childAsset.data == null || childAsset.data.length == 0)
 						{
 							return;
 						}
@@ -320,29 +333,26 @@ export class AssetHandler
 			} 
 
 			let path = new Path(url);
-			let type = Asset.extentionToType(path.extension);
+			let type = WebAsset.extentionToType(path.extension);
 			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.Download, false, Mutability.Child);
 			asset.childAssets.push(childAsset);
 
-			let loadPromise = childAsset.load(this.exportOptions);
+			let loadPromise = childAsset.load();
 			promises.push(loadPromise);
 			loadPromise.then(() => 
 			{
-				if (childAsset.content == undefined || childAsset.content == null || childAsset.content.length == 0)
+				if (childAsset.data == undefined || childAsset.data == null || childAsset.data.length == 0)
 				{
 					return;
 				}
 
 				if (this.exportOptions.inlineMedia)
 				{
-					let base64 = childAsset.content.toString("base64");
+					let base64 = childAsset.data.toString("base64");
 					content = content.replaceAll(url, `data:${mime.getType(url)};base64,${base64}`);
 				}
 				else
 				{
-					childAsset.relativeDirectory.slugify(this.exportOptions.webStylePaths);
-					if (this.exportOptions.webStylePaths) childAsset.filename = Path.slugify(childAsset.filename);
-
 					let newPath = childAsset.getAssetPath(asset.getAssetPath());
 					content = content.replaceAll(url, newPath.stringify);
 				}

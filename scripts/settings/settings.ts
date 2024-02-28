@@ -1,11 +1,10 @@
-import { Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder, TextComponent, Vault, getIcon } from 'obsidian';
-import { Utils } from '../utils/utils';
+import { Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder, TextComponent, getIcon } from 'obsidian';
 import { Path } from '../utils/path';
 import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
 import { FlowList } from '../component-generators/flow-list';
-import { ExportInfo, ExportModal } from './export-modal';
 import { migrateSettings } from './settings-migration';
-import { ExportLog } from 'scripts/utils/export-log';
+import { ExportLog } from 'scripts/render-api/render-api';
+import { FileDialogs } from 'scripts/utils/file-dialogs';
 
 // #region Settings Definition
 
@@ -186,8 +185,8 @@ export class SettingsPage extends PluginSettingTab
 		let supportContainer = contentEl.createDiv();
 		supportContainer.style.marginBottom = '15px';
 		let supportLink = contentEl.createEl('a');
-		let buttonColor = Utils.sampleCSSColorHex("--color-accent", document.body).hex;
-		let buttonTextColor = Utils.sampleCSSColorHex("--text-on-accent", document.body).hex;
+		let buttonColor = "#3ebba4";
+		let buttonTextColor = "white";
 		// @ts-ignore
 		supportLink.href = `href="https://www.buymeacoffee.com/nathangeorge"`;
 		supportLink.style.height = "40px"
@@ -531,8 +530,10 @@ This feature does not require "File & folder icons" to be enbaled.`);
 
 		let pluginsList = new FlowList();
 		pluginsList.insert(section);
-		Utils.getPluginIDs().forEach(async (plugin) => {
-			let pluginManifest = Utils.getPluginManifest(plugin);
+		this.getPluginIDs().forEach(async (plugin) => 
+		{
+			//@ts-ignore
+			let pluginManifest = app.plugins.manifests[plugin];
 			if (!pluginManifest) return;
 
 			if ((await this.getBlacklistedPluginIDs()).contains(pluginManifest.id)) {
@@ -639,6 +640,23 @@ Use the 'author' property to set the author of a specific page.`);
 		SettingsPage.plugin = plugin;
 	}
 
+	getPluginIDs(): string[]
+	{
+		/*@ts-ignore*/
+		let pluginsArray: string[] = Array.from(app.plugins.enabledPlugins.values()) as string[];
+		for (let i = 0; i < pluginsArray.length; i++)
+		{
+			/*@ts-ignore*/
+			if (app.plugins.manifests[pluginsArray[i]] == undefined)
+			{
+				pluginsArray.splice(i, 1);
+				i--;
+			}
+		}
+
+		return pluginsArray;
+	}
+
 	static async loadSettings() 
 	{
 		let loadedSettings = await SettingsPage.plugin.loadData();
@@ -664,28 +682,6 @@ Use the 'author' property to set the author of a specific page.`);
 		});
 
 		SettingsPage.saveSettings();
-	}
-
-	static async updateSettings(usePreviousSettings: boolean = false, overrideFiles: TFile[] | undefined = undefined): Promise<ExportInfo | undefined>
-	{
-		if (!usePreviousSettings) 
-		{
-			let modal = new ExportModal();
-			if(overrideFiles) modal.overridePickedFiles(overrideFiles);
-			return await modal.open();
-		}
-		
-		let files = Settings.filesToExport[0];
-		let path = new Path(Settings.exportPath);
-		if ((files.length == 0 && overrideFiles == undefined) || !path.exists || !path.isAbsolute || !path.isDirectory)
-		{
-			new Notice("Please set the export path and files to export in the settings first.", 5000);
-			let modal = new ExportModal();
-			if(overrideFiles) modal.overridePickedFiles(overrideFiles);
-			return await modal.open();
-		}
-
-		return undefined;
 	}
 
 	static getFilesToExport(): TFile[]
@@ -782,9 +778,9 @@ Use the 'author' property to set the author of a specific page.`);
 		let onChanged = options?.onChanged;
 
 		let headContentErrorMessage = this.createError(container);
-		if (get().trim() != "")
+		if (get()?.trim() != "")
 		{
-			let tempPath = new Path(get());
+			let tempPath = new Path(get() ?? "");
 			headContentErrorMessage.setText(validation(tempPath).error);
 		}
 
@@ -802,7 +798,7 @@ Use the 'author' property to set the author of a specific page.`);
 			headContentInput = text;
 			text.inputEl.style.width = '100%';
 			text.setPlaceholder(placeholder)
-				.setValue(get())
+				.setValue(get() ?? "")
 				.onChange(async (value) => 
 				{
 					let path = new Path(value);
@@ -812,7 +808,7 @@ Use the 'author' property to set the author of a specific page.`);
 					{
 						headContentErrorMessage.setText("");
 						set(value.replaceAll("\"", ""));
-						text.setValue(get());
+						text.setValue(get() ?? "");
 						await SettingsPage.saveSettings();
 					}
 
@@ -828,7 +824,7 @@ Use the 'author' property to set the author of a specific page.`);
 				browseButtonEl = button.buttonEl;
 				button.setButtonText('Browse').onClick(async () => 
 				{
-					let path = pickFolder ? await Utils.showSelectFolderDialog(defaultPath) : await Utils.showSelectFileDialog(defaultPath);
+					let path = pickFolder ? await FileDialogs.showSelectFolderDialog(defaultPath) : await FileDialogs.showSelectFileDialog(defaultPath);
 					if (!path) return;
 					
 					set(path.stringify);
@@ -841,7 +837,7 @@ Use the 'author' property to set the author of a specific page.`);
 
 					if (onChanged) onChanged(path);
 
-					headContentInput?.setValue(get());
+					headContentInput?.setValue(get() ?? "");
 				});
 			});
 		}

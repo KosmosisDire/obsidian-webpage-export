@@ -1,18 +1,18 @@
-import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
-import { Asset, AssetType, InlinePolicy, Mutability } from "./asset";
+import { WebAsset } from "./base-asset.js";
+import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 
-export class MathjaxStyles extends Asset
+export class MathjaxStyles extends WebAsset
 {
 	private mathjaxStylesheet: CSSStyleSheet | undefined = undefined;
 	private lastMathjaxChanged: number = -1;
-    public content: string = "";
+    public data: string = "";
 
     constructor()
     {
-        super("mathjax.css", "", AssetType.Style, InlinePolicy.Inline, true, Mutability.Dynamic);
+        super("mathjax.css", "", null, AssetType.Style, InlinePolicy.Inline, true, Mutability.Dynamic);
     }
     
-    override async load(options: MarkdownWebpageRendererAPIOptions)
+    override async load()
     {
         // @ts-ignore
         if (this.mathjaxStylesheet == undefined) this.mathjaxStylesheet = Array.from(document.styleSheets).find((sheet) => sheet.ownerNode.id == ("MJX-CHTML-styles"));
@@ -20,17 +20,15 @@ export class MathjaxStyles extends Asset
 		{
 			return;
 		}
-		
-		this.modifiedTime = Date.now();
 
         // @ts-ignore
         let changed = this.mathjaxStylesheet?.ownerNode.getAttribute("data-change");
         if (changed != this.lastMathjaxChanged)
         {
-            this.content = "";
+            this.data = "";
             for (let i = 0; i < this.mathjaxStylesheet.cssRules.length; i++)
             {
-                this.content += this.mathjaxStylesheet.cssRules[i].cssText + "\n";
+                this.data += this.mathjaxStylesheet.cssRules[i].cssText + "\n";
             }
         }
         else
@@ -39,6 +37,6 @@ export class MathjaxStyles extends Asset
         }
 
         this.lastMathjaxChanged = changed;
-        await super.load(options);
+        await super.load();
     }
 }
