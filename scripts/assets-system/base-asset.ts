@@ -145,7 +145,7 @@ export class WebAsset extends Attachment
 		
 		if (relativeFrom == undefined) relativeFrom = Path.rootPath;
 		let toRoot = Path.getRelativePath(relativeFrom, Path.rootPath);
-		let newPath = toRoot.join(this.targetPath).unixify();
+		let newPath = toRoot.join(this.targetPath);
 		newPath.slugify(this.exportOptions.slugifyPaths);
 		
 		return newPath;
@@ -205,7 +205,7 @@ export class WebAsset extends Attachment
         
         if (this.isRefFormat(options))
         {
-            let path = this.getAssetPath(undefined).stringify;
+            let path = this.getAssetPath(undefined).path;
 			if (options.offlineResources === false && this.onlineURL) path = this.onlineURL;
 
 			let include = "";

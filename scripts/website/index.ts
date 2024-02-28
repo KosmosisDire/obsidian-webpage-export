@@ -9,7 +9,7 @@ import Minisearch from 'minisearch';
 import { Path } from "scripts/utils/path";
 import HTMLExportPlugin from "scripts/main";
 import { Settings } from "scripts/settings/settings";
-import { AssetType, InlinePolicy, LoadMethod, Mutability } from "scripts/assets-system/asset-types";
+import { AssetType } from "scripts/assets-system/asset-types";
 import RSS from 'rss';
 import { WebAsset } from "scripts/assets-system/base-asset";
 
@@ -159,13 +159,13 @@ export class Index
 		}
 
 		this.rssPath = AssetHandler.generateSavePath("rss.xml", AssetType.Other, this.website.destination);
-		this.rssURL = AssetHandler.generateSavePath("rss.xml", AssetType.Other, new Path(this.exportOptions.siteURL ?? ""));
+		this.rssURL = AssetHandler.generateSavePath("rss.xml", AssetType.Other, new Path(this.exportOptions.siteURL ?? "")).absolute();
 	}
 
 	public async finalize()
 	{
-		this.websiteData.shownInTree = this.attachmentsShownInTree.map((attachment) => attachment.targetPath.unixified().stringify);
-		this.websiteData.allFiles = this.allFiles.map((file) => file.targetPath.unixified().stringify);
+		this.websiteData.shownInTree = this.attachmentsShownInTree.map((attachment) => attachment.targetPath.path);
+		this.websiteData.allFiles = this.allFiles.map((file) => file.targetPath.path);
 
 		// remove deleted files from website data
 		for (let file of this.deletedFiles)
@@ -201,9 +201,9 @@ export class Index
 			title: this.exportOptions.siteName ?? app.vault.getName(),
 			description: "Obsidian digital garden",
 			generator: "Webpage HTML Export plugin for Obsidian",
-			feed_url: this.rssURL.stringify,
+			feed_url: this.rssURL.path,
 			site_url: this.exportOptions.siteURL ?? "",
-			image_url: Path.joinStrings(this.exportOptions.siteURL ?? "", AssetHandler.favicon.targetPath.stringify).stringify,
+			image_url: Path.joinStrings(this.exportOptions.siteURL ?? "", AssetHandler.favicon.targetPath.path).path,
 			pubDate: new Date(this.websiteData.modifiedTime),
 			copyright: author,
 			ttl: 60,
@@ -219,7 +219,7 @@ export class Index
 			if ((page.sizerElement?.innerText.length ?? 0) < 5) continue;
 
 			let title = page.title;
-			let url = Path.joinStrings(this.exportOptions.siteURL ?? "", page.targetPath.stringify).stringify;
+			let url = Path.joinStrings(this.exportOptions.siteURL ?? "", page.targetPath.path).path;
 			let guid = page.source.path;
 			let date = new Date(page.source.stat.mtime);
 			author = page.author ?? author;
@@ -292,7 +292,7 @@ export class Index
 		if (file.showInTree && !this.attachmentsShownInTree.includes(file))
 			this.attachmentsShownInTree.push(file);
 
-		let key = file.targetPath.unixified().stringify;
+		let key = file.targetPath.path;
 		if(!this.hadFile(key))
 		{
 			this.newFiles.push(file);
@@ -318,7 +318,7 @@ export class Index
 				}
 			}
 
-			this.deletedFiles.remove(file.targetPath.unixified().stringify);
+			this.deletedFiles.remove(file.targetPath.path);
 		}
 	}
 
@@ -452,21 +452,21 @@ export class Index
 			webpageInfo.aliases = webpage.aliases;
 			webpageInfo.tags = webpage.tags;
 			webpageInfo.headers = await webpage.getStrippedHeadings();
-			webpageInfo.backlinks = webpage.backlinks.map((backlink) => backlink.targetPath.unixified().stringify);
+			webpageInfo.backlinks = webpage.backlinks.map((backlink) => backlink.targetPath.path);
 			webpageInfo.links = webpage.hrefLinks;
 			webpageInfo.author = webpage.author;
 			webpageInfo.coverImageURL = "";
 			webpageInfo.fullURL = webpage.fullURL;
-			webpageInfo.pathToRoot = webpage.pathToRoot.unixified().stringify;
+			webpageInfo.pathToRoot = webpage.pathToRoot.path;
 
 			webpageInfo.createdTime = webpage.source.stat.ctime;
 			webpageInfo.modifiedTime = webpage.source.stat.mtime;
 			webpageInfo.sourceSize = webpage.source.stat.size;
-			webpageInfo.sourcePath = new Path(webpage.source.path).unixify().stringify;
-			webpageInfo.exportPath = webpage.targetPath.unixified().stringify;
+			webpageInfo.sourcePath = new Path(webpage.source.path).path;
+			webpageInfo.exportPath = webpage.targetPath.path;
 			webpageInfo.showInTree = webpage.showInTree;
 			webpageInfo.treeOrder = webpage.treeOrder;
-			webpageInfo.attachments = webpage.attachments.map((download) => download.targetPath.unixified().stringify);
+			webpageInfo.attachments = webpage.attachments.map((download) => download.targetPath.path);
 
 			// get file info version of the webpage
 			let fileInfo: FileData = {} as FileData;
@@ -488,7 +488,7 @@ export class Index
 	{
 		if (this.minisearch)
 		{
-			const webpagePath = webpage.targetPath.unixified().stringify;
+			const webpagePath = webpage.targetPath.path;
 			if (this.minisearch.has(webpagePath)) 
 			{
 				this.minisearch.discard(webpagePath);
@@ -528,7 +528,7 @@ export class Index
 
 	private addAttachmentToWebsiteData(attachment: Attachment): string
 	{
-		let exportPath = attachment.targetPath.unixified().stringify;
+		let exportPath = attachment.targetPath.path;
 		let key = exportPath;
 
 		if (this.websiteData)
@@ -572,7 +572,7 @@ export class Index
 			this.sourceToWebpage.delete(webpage.sourcePath);
 		}
 
-		let key = webpage.targetPath.unixified().stringify;
+		let key = webpage.targetPath.path;
 		delete this.websiteData.webpages[key];
 		delete this.websiteData.fileInfo[key];
 
@@ -592,7 +592,7 @@ export class Index
 			this.sourceToAttachment.delete(attachment.sourcePath);
 		}
 
-		let key = attachment.targetPath.unixified().stringify;
+		let key = attachment.targetPath.path;
 		delete this.websiteData.fileInfo[key];
 	}
 

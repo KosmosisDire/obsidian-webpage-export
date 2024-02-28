@@ -60,12 +60,12 @@ export class HTMLExporter
 		{
 			for (let dFile of website.index.deletedFiles)
 			{
-				let path = new Path(dFile, destination.stringify);
+				let path = new Path(dFile, destination.path);
 				await path.delete();
-				console.log("Deleted: " + path.stringify);
+				console.log("Deleted: " + path.path);
 			};
 
-			await Path.removeEmptyDirectories(destination.stringify);
+			await Path.removeEmptyDirectories(destination.path);
 		}
 		
 		if (saveFiles) 
@@ -82,7 +82,7 @@ export class HTMLExporter
 	{
 		let folderPath = new Path(folder.path);
 		let allFiles = app.vault.getFiles();
-		let files = allFiles.filter((file) => new Path(file.path).directory.stringify.startsWith(folderPath.stringify));
+		let files = allFiles.filter((file) => new Path(file.path).directory.path.startsWith(folderPath.path));
 
 		return await this.exportFiles(files, rootExportPath, saveFiles, clearDirectory);
 	}

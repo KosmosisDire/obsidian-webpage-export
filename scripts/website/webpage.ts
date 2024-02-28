@@ -97,7 +97,7 @@ export class Webpage extends Attachment
 	 */
 	get pathToRoot(): Path
 	{
-		let ptr = Path.getRelativePath(this.targetPath, new Path(this.targetPath.workingDirectory), true).unixify();
+		let ptr = Path.getRelativePath(this.targetPath, new Path(this.targetPath.workingDirectory), true);
 		return ptr;
 	}
 
@@ -181,7 +181,7 @@ export class Webpage extends Attachment
 				src = src.replace("app://obsidian", "");
 				src = src.replace(".md", "");
 				let path = Path.joinStrings(this.exportOptions.siteURL ?? "", src);
-				el.src = path.stringify;
+				el.src = path.path;
 			});
 
 			// update normal links
@@ -193,7 +193,7 @@ export class Webpage extends Attachment
 				href = href.replace("app://obsidian", "");
 				href = href.replace(".md", "");
 				let path = Path.joinStrings(this.exportOptions.siteURL ?? "", href);
-				el.href = path.stringify;
+				el.href = path.path;
 			});
 
 			function keepTextLinksImages(element: HTMLElement) 
@@ -280,7 +280,7 @@ export class Webpage extends Attachment
 
 	get fullURL(): string
 	{
-		let url = Path.joinStrings(this.exportOptions.siteURL ?? "", this.targetPath.stringify).unixify().stringify;
+		let url = Path.joinStrings(this.exportOptions.siteURL ?? "", this.targetPath.path).path;
 		return url;
 	}
 
@@ -303,7 +303,7 @@ export class Webpage extends Attachment
 		if (!mediaPathStr.startsWith("http") && !mediaPathStr.startsWith("data:"))
 		{
 			let mediaPath = Path.joinStrings(this.exportOptions.siteURL ?? "", mediaPathStr);
-			mediaPathStr = mediaPath.stringify;
+			mediaPathStr = mediaPath.path;
 		}
 
 		return mediaPathStr;
@@ -426,7 +426,7 @@ export class Webpage extends Attachment
 				if (this.exportOptions.openNavFileLocation)
 				{
 					let sidebar = leftSidebar.querySelector(".file-tree");
-					let unixPath = this.targetPath.unixified().stringify;
+					let unixPath = this.targetPath.path;
 					let fileElement: HTMLElement = sidebar?.querySelector(`[href="${unixPath}"]`) as HTMLElement;
 					fileElement = fileElement?.closest(".tree-item") as HTMLElement;
 					while (fileElement)
@@ -558,7 +558,7 @@ export class Webpage extends Attachment
 		let hash = link.split("#")[1] ?? "";
 		if (hash != "") hash = "#" + hash;
 		if (attachment.targetPath.extensionName == "html") hash = this.headingTextToID(hash);
-		return attachment.targetPath.stringify + hash;
+		return attachment.targetPath.path + hash;
 	}
 
 	private remapLinks()
@@ -785,7 +785,7 @@ export class Webpage extends Attachment
 	{
 		if (!this.document) return;
 
-		let rootPath = this.pathToRoot.slugified(this.exportOptions.slugifyPaths).stringify;
+		let rootPath = this.pathToRoot.slugified(this.exportOptions.slugifyPaths).path;
 		if (rootPath == "") rootPath = "./";
 		let description = this.description || (this.exportOptions.siteName + " - " + this.titleInfo.title);
 		let head =

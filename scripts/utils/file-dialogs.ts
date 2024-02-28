@@ -26,7 +26,7 @@ export namespace FileDialogs
 
 		// show picker
 		let picker = await dialog.showSaveDialog({
-			defaultPath: absoluteDefaultPath.stringify,
+			defaultPath: absoluteDefaultPath.path,
 			filters: filters,
 			properties: ["showOverwriteConfirmation"]
 		})
@@ -34,7 +34,7 @@ export namespace FileDialogs
 		if (picker.canceled || !picker.filePath) return;
 		
 		let pickedPath = new Path(picker.filePath);
-		Settings.exportPath = pickedPath.stringify;
+		Settings.exportPath = pickedPath.path;
 		SettingsPage.saveSettings();
 		
 		return pickedPath;
@@ -46,14 +46,14 @@ export namespace FileDialogs
 
 		// show picker
 		let picker = await dialog.showOpenDialog({
-			defaultPath: defaultPath.directory.stringify,
+			defaultPath: defaultPath.directory.path,
 			properties: ["openDirectory"]
 		});
 
 		if (picker.canceled) return;
 
 		let path = new Path(picker.filePaths[0]);
-		Settings.exportPath = path.directory.stringify;
+		Settings.exportPath = path.directory.path;
 		SettingsPage.saveSettings();
 
 		return path;
@@ -65,7 +65,7 @@ export namespace FileDialogs
 
 		// show picker
 		let picker = await dialog.showOpenDialog({
-			defaultPath: defaultPath.directory.stringify,
+			defaultPath: defaultPath.directory.path,
 			properties: ["openFile"]
 		});
 
@@ -79,7 +79,7 @@ export namespace FileDialogs
 	{
 		let lastPath = new Path(Settings.exportPath);
 
-		if (lastPath.stringify != "" && lastPath.exists)
+		if (lastPath.path != "" && lastPath.exists)
 		{
 			return lastPath.directory;
 		}

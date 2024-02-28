@@ -671,7 +671,7 @@ Use the 'author' property to set the author of a specific page.`);
 
 	static renameFile(file: TFile, oldPath: string)
 	{
-		let oldPathParsed = new Path(oldPath).stringify;
+		let oldPathParsed = new Path(oldPath).path;
 		Settings.filesToExport.forEach((fileList) =>
 		{
 			let index = fileList.indexOf(oldPathParsed);
@@ -827,7 +827,7 @@ Use the 'author' property to set the author of a specific page.`);
 					let path = pickFolder ? await FileDialogs.showSelectFolderDialog(defaultPath) : await FileDialogs.showSelectFileDialog(defaultPath);
 					if (!path) return;
 					
-					set(path.stringify);
+					set(path.path);
 					let valid = validation(path);
 					headContentErrorMessage.setText(valid.error);
 					if (valid.valid)

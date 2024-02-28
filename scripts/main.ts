@@ -96,7 +96,7 @@ export default class HTMLExportPlugin extends Plugin
 						}
 						else if(file instanceof TFolder)
 						{
-							let filesInFolder = this.app.vault.getFiles().filter((f) => new Path(f.path).directory.stringify.startsWith(file.path));
+							let filesInFolder = this.app.vault.getFiles().filter((f) => new Path(f.path).directory.path.startsWith(file.path));
 							HTMLExporter.export(false, filesInFolder);
 						}
 						else

@@ -17,7 +17,7 @@ export class FetchBuffer extends WebAsset
         super(filename, "", null, type, inlinePolicy, minify, mutability, LoadMethod.Default, loadPriority);
         this.url = url;
 		
-		let stringURL = this.url instanceof Path ? this.url.stringify : this.url;
+		let stringURL = this.url instanceof Path ? this.url.path : this.url;
 		if (stringURL.startsWith("http")) this.onlineURL = stringURL;
     }
     
@@ -31,7 +31,7 @@ export class FetchBuffer extends WebAsset
 				this.url.setWorkingDirectory("").absolute();
 			}
 
-			this.url = this.url.unixify().stringify;
+			this.url = this.url.path;
 		}
 
 		if (this.exportOptions.offlineResources === false && this.url.startsWith("http")) return;

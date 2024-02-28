@@ -40,8 +40,8 @@ export class FileTree extends Tree
 	protected async populateTree()
 	{
 		this.regexBlacklist = this.regexBlacklist.filter((pattern) => pattern.trim() != "");
-		let filteredFiles = this.files.filter((file) => this.regexBlacklist.every((pattern) => !file.stringify.match(new RegExp(pattern))));
-		filteredFiles = filteredFiles.filter((file) => this.regexWhitelist.every((pattern) => file.stringify.match(new RegExp(pattern))));
+		let filteredFiles = this.files.filter((file) => this.regexBlacklist.every((pattern) => !file.path.match(new RegExp(pattern))));
+		filteredFiles = filteredFiles.filter((file) => this.regexWhitelist.every((pattern) => file.path.match(new RegExp(pattern))));
 		for (let file of filteredFiles)
 		{
 			let pathSections: Path[] = [];
@@ -75,7 +75,7 @@ export class FileTree extends Tree
 					if(child.isFolder) 
 					{
 						child.itemClass = "mod-tree-folder nav-folder";
-						let tfolder = app.vault.getFolderByPath(section.stringify);
+						let tfolder = app.vault.getFolderByPath(section.path);
 						if (tfolder)
 						{
 							let titleInfo = await Website.getTitleAndIcon(tfolder);
@@ -93,18 +93,18 @@ export class FileTree extends Tree
 			if (parent instanceof FileTreeItem)
 			{
 				
-				let path = file.unixified();
-				let tfile = app.vault.getAbstractFileByPath(path.stringify);
+				let path = file.copy;
+				let tfile = app.vault.getAbstractFileByPath(path.path);
 
 				if (file.isDirectory) path.folderize();
 				else 
 				{
-					if (path.stringify.endsWith(".excalidraw.md")) path.setExtension("drawing");
+					if (path.path.endsWith(".excalidraw.md")) path.setExtension("drawing");
 					parent.originalExtension = path.extensionName;
 					if(!this.keepOriginalExtensions && MarkdownRendererAPI.isConvertable(path.extensionName)) path.setExtension("html");
 				}
 
-				parent.href = path.stringify;
+				parent.href = path.path;
 				if (tfile)
 				{
 					let titleInfo = await Website.getTitleAndIcon(tfile);

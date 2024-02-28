@@ -83,7 +83,7 @@ export class AssetHandler
 
 	public static generateSavePath(filename: string, type: AssetType, destinationDir: Path)
 	{
-		return WebAsset.typeToDir(type).joinString(filename).setWorkingDirectory(destinationDir.stringify).slugified(this.exportOptions.slugifyPaths);
+		return WebAsset.typeToDir(type).joinString(filename).setWorkingDirectory(destinationDir.path).slugified(this.exportOptions.slugifyPaths);
 	}
 
 	// styles
@@ -118,12 +118,12 @@ export class AssetHandler
 
 	private static initPaths()
 	{
-		this.libraryFolder = new Path("lib").unixify();
-		this.mediaFolder = this.libraryFolder.joinString("media").unixify();
-		this.jsFolder = this.libraryFolder.joinString("scripts").unixify(); 
-		this.cssFolder = this.libraryFolder.joinString("styles").unixify();
-		this.fontFolder = this.libraryFolder.joinString("fonts").unixify();
-		this.htmlFolder = this.libraryFolder.joinString("html").unixify();
+		this.libraryFolder = new Path("lib");
+		this.mediaFolder = this.libraryFolder.joinString("media");
+		this.jsFolder = this.libraryFolder.joinString("scripts"); 
+		this.cssFolder = this.libraryFolder.joinString("styles");
+		this.fontFolder = this.libraryFolder.joinString("fonts");
+		this.htmlFolder = this.libraryFolder.joinString("html");
 		this.vaultPluginsPath = Path.vaultPath.joinString(app.vault.configDir, "plugins/").absolute();
 	}
 
@@ -208,7 +208,7 @@ export class AssetHandler
 		}
 
 		// remove duplicates
-		downloads = downloads.filter((asset, index, self) => self.findIndex((t) => t.targetPath.stringify == asset.targetPath.stringify) === index);
+		downloads = downloads.filter((asset, index, self) => self.findIndex((t) => t.targetPath.path == asset.targetPath.path) === index);
 
 		// remove assets with no content
 		downloads = downloads.filter(asset => asset.data && asset.data.length > 0);
@@ -229,7 +229,7 @@ export class AssetHandler
 
 		downloads = this.filterDownloads(downloads, options);
 		downloads.sort((a, b) => b.loadPriority - a.loadPriority);
-		downloads.forEach(asset => asset.targetPath.setWorkingDirectory(destination.stringify));
+		downloads.forEach(asset => asset.targetPath.setWorkingDirectory(destination.path));
 
 		return downloads;
 	}
@@ -326,7 +326,7 @@ export class AssetHandler
 						}
 
 						let newPath = childAsset.getAssetPath(asset.getAssetPath());
-						content = content.replaceAll(url, newPath.stringify);
+						content = content.replaceAll(url, newPath.path);
 					});
 				}
 				continue;
@@ -354,7 +354,7 @@ export class AssetHandler
 				else
 				{
 					let newPath = childAsset.getAssetPath(asset.getAssetPath());
-					content = content.replaceAll(url, newPath.stringify);
+					content = content.replaceAll(url, newPath.path);
 				}
 			});
 		}

@@ -155,7 +155,7 @@ export namespace Utils
 	export async function  openPath(path: Path)
 	{
 		// @ts-ignore
-		await window.electron.remote.shell.openPath(path.stringify);
+		await window.electron.remote.shell.openPath(path.path);
 	}
 
 	export function levenshteinDistance(string1: string, string2: string): number

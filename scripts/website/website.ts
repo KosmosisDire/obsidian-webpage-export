@@ -34,7 +34,7 @@ export class Website
 	{
 		if (typeof destination == "string") destination = new Path(destination);
 		this.exportOptions = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
-		if (destination.isFile) throw new Error("Website destination must be a folder: " + destination.stringify);
+		if (destination.isFile) throw new Error("Website destination must be a folder: " + destination.path);
 		this.destination = destination;
 	}
 
@@ -59,7 +59,7 @@ export class Website
 					if (anyEmpty) break;
 				}
 				console.log("Common path: " + commonPath);
-				this.exportOptions.exportRoot = new Path(commonPath).unixify().stringify + "/";
+				this.exportOptions.exportRoot = new Path(commonPath).path + "/";
 			}
 			else this.exportOptions.exportRoot = this.sourceFiles[0].parent?.path ?? "";
 		}
@@ -244,8 +244,8 @@ export class Website
 	{
 		let targetPath = new Path(file.path);
 		if (filename) targetPath.fullName = filename;
-		targetPath.setWorkingDirectory((this.destination ?? Path.vaultPath.joinString("Web Export")).stringify);
-		targetPath.slugify(this.exportOptions.slugifyPaths).unixify();
+		targetPath.setWorkingDirectory((this.destination ?? Path.vaultPath.joinString("Web Export")).path);
+		targetPath.slugify(this.exportOptions.slugifyPaths);
 		return targetPath;
 	}
 
@@ -337,13 +337,13 @@ export class Website
 
 		let file = app.vault.getFileByPath(attachedFile.pathname);
 		let path = file?.path ?? "";
-		if (!file) path = AssetHandler.mediaPath.joinString(attachedFile.fullName).stringify;
+		if (!file) path = AssetHandler.mediaPath.joinString(attachedFile.fullName).path;
 		let data: Buffer | undefined = await attachedFile.readAsBuffer();
 
 		if (!data) return;
 
-		let target = new Path(path, this.destination.stringify)
-							.slugify(this.exportOptions.slugifyPaths).unixify();
+		let target = new Path(path, this.destination.path)
+							.slugify(this.exportOptions.slugifyPaths);
 
 		let attachment = new Attachment(data, target, file, this.exportOptions);
 		if (!attachment.sourcePath) attachment.sourcePath = attachedFile.pathname;
@@ -372,7 +372,7 @@ export class Website
 			{
 				pathString = src.replaceAll("app://", "").replaceAll("\\", "/");
 				pathString = pathString.replaceAll(pathString.split("/")[0] + "/", "");
-				pathString = Path.getRelativePathFromVault(new Path(pathString), true).stringify;
+				pathString = Path.getRelativePathFromVault(new Path(pathString), true).path;
 				ExportLog.log(pathString, "Fallback path parsing:");
 			}
 		}
@@ -391,7 +391,7 @@ export class Website
 
 		pathString = pathString ?? "";
 
-		return new Path(pathString).unixify();
+		return new Path(pathString);
 	}
 
 

@@ -19,13 +19,13 @@ export class FilePickerTree extends FileTree
 	protected override async populateTree(): Promise<void> 
 	{
 		this.regexBlacklist = this.regexBlacklist.filter((pattern) => pattern.trim() != "");
-		let filteredFiles = this.files.filter((file) => this.regexBlacklist.every((pattern) => !file.stringify.match(new RegExp(pattern))));
-		filteredFiles = filteredFiles.filter((file) => this.regexWhitelist.every((pattern) => file.stringify.match(new RegExp(pattern))));
+		let filteredFiles = this.files.filter((file) => this.regexBlacklist.every((pattern) => !file.path.match(new RegExp(pattern))));
+		filteredFiles = filteredFiles.filter((file) => this.regexWhitelist.every((pattern) => file.path.match(new RegExp(pattern))));
 		for (let file of filteredFiles)
 		{
 			let pathSections: Path[] = [];
 
-			let parentFile: Path = file.unixified();
+			let parentFile: Path = file.copy;
 			while (parentFile != undefined)
 			{
 				pathSections.push(parentFile);
@@ -53,12 +53,12 @@ export class FilePickerTree extends FileTree
 
 					if(child.isFolder) 
 					{
-						child.dataRef = section.stringify;
+						child.dataRef = section.path;
 						child.itemClass = "mod-tree-folder"
 					}
 					else 
 					{
-						let tfile = app.vault.getFileByPath(section.stringify);
+						let tfile = app.vault.getFileByPath(section.path);
 						if (tfile) child.file = tfile;
 						child.itemClass = "mod-tree-file"
 					}
@@ -70,8 +70,8 @@ export class FilePickerTree extends FileTree
 			
 			if (parent instanceof FilePickerTreeItem)
 			{
-				let path = file.unixified();
-				let tfile = app.vault.getAbstractFileByPath(path.stringify);
+				let path = file.copy;
+				let tfile = app.vault.getAbstractFileByPath(path.path);
 
 				if (file.isDirectory) path.folderize();
 				else 
@@ -80,7 +80,7 @@ export class FilePickerTree extends FileTree
 					if(!this.keepOriginalExtensions && MarkdownRendererAPI.isConvertable(path.extensionName)) path.setExtension("html");
 				}
 
-				parent.dataRef = path.stringify;
+				parent.dataRef = path.path;
 				if (tfile)
 				{
 					let titleInfo = await Website.getTitleAndIcon(tfile, true);

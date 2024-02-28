@@ -36,14 +36,14 @@ export class CustomHeadContent extends WebAsset
         if (!validation.valid)
         {
             this.data = "";
-            ExportLog.error(validation.error + customHeadPath.stringify);
+            ExportLog.error(validation.error + customHeadPath.path);
             return;
         }
 
-		this.source = app.vault.getFileByPath(customHeadPath.unixified().stringify);
+		this.source = app.vault.getFileByPath(customHeadPath.path);
 		if (!this.source)
 		{
-			console.error("Custom head source tfile not found: " + customHeadPath.unixified().stringify);
+			console.error("Custom head source tfile not found: " + customHeadPath.path);
 			let stat = customHeadPath.stat;
 			if (stat)
 			{

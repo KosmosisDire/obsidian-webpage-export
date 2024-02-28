@@ -2,7 +2,7 @@ const pathTools = require('upath');
 import { Stats, existsSync, statSync, promises as fs } from 'fs';
 import { FileSystemAdapter } from 'obsidian';
 import internal from 'stream'; 
-import { homedir } from 'os';
+import { homedir, platform } from 'os';
 import { readdir, rmdir } from 'fs/promises';
 
 export class Path
@@ -33,9 +33,7 @@ export class Path
 	private _workingDirectory: string;
 	private _sourceString: string = "";
 
-	private _isWindows: boolean = process.platform === "win32";
-
-	constructor(path: string, workingDirectory: string = Path.vaultPath.stringify)
+	constructor(path: string, workingDirectory: string = Path.vaultPath.path)
 	{
 		this._workingDirectory = Path.parsePath(workingDirectory).fullPath;
 
@@ -48,7 +46,13 @@ export class Path
 	{
 		let parsed = Path.parsePath(path);
 		if (path == "") parsed = { root: "", dir: "", parent: "", base: "", ext: "", name: "", fullPath: ""}
-		
+
+		for (let key in parsed)
+		{
+			// @ts-ignore
+			parsed[key] = parsed[key].replaceAll("\\", "/");
+		}
+
 		this._root = parsed.root;
 		this._dir = parsed.dir;
 		this._parent = parsed.parent;
@@ -67,23 +71,6 @@ export class Path
 			this._base = this._base.split("#")[0] ?? this._base;
 		}
 
-		if (false)
-		{
-			if (this._root.startsWith("http:") || this._root.startsWith("https:"))
-			{
-				this._isWindows = false;
-				this.reparse(this._fullPath.replaceAll("\\", "/"));
-			}
-			else
-			{
-				this._root = this._root.replaceAll("/", "\\");
-				this._dir = this._dir.replaceAll("/", "\\");
-				this._parent = this._parent.replaceAll("/", "\\");
-				this._fullPath = this._fullPath.replaceAll("/", "\\");
-				this._workingDirectory = this._workingDirectory.replaceAll("/", "\\");
-			}
-		}
-
 		this._exists; // force a re-evaluation of the exists property which will also throw an error if the path does not exist
 		return this;
 	}
@@ -94,7 +81,7 @@ export class Path
 	 */
 	public joinString(...paths: string[]): Path
 	{
-		return this.copy.reparse(Path.joinStringPaths(this.stringify, ...paths));
+		return this.copy.reparse(Path.joinStringPaths(this.path, ...paths));
 	}
 
 	/**
@@ -103,7 +90,7 @@ export class Path
 	 */
 	public join(...paths: Path[]): Path
 	{
-		return new Path(Path.joinStringPaths(this.stringify, ...paths.map(p => p.stringify)), this._workingDirectory);
+		return new Path(Path.joinStringPaths(this.path, ...paths.map(p => p.path)), this._workingDirectory);
 	}
 
 	/**
@@ -112,13 +99,13 @@ export class Path
 	 */
 	absolute(workingDirectory: string | Path = this._workingDirectory): Path
 	{
-		if(workingDirectory instanceof Path && !workingDirectory.isAbsolute) throw new Error("workingDirectory must be an absolute path: " + workingDirectory.stringify);
+		if(workingDirectory instanceof Path && !workingDirectory.isAbsolute) throw new Error("workingDirectory must be an absolute path: " + workingDirectory.path);
 
 		if (!this.isAbsolute)
 		{
-			this._fullPath = Path.joinStringPaths(workingDirectory.toString(), this.stringify);
+			this._fullPath = Path.joinStringPaths(workingDirectory.toString(), this.path);
 			this._workingDirectory = "";
-			this.reparse(this.stringify);
+			this.reparse(this.path);
 		}
 
 		return this;
@@ -141,7 +128,7 @@ export class Path
 	{
 		if (!this.isDirectory)
 		{
-			this.reparse(this.stringify + "/");
+			this.reparse(this.path + "/");
 		}
 
 		return this;
@@ -160,7 +147,7 @@ export class Path
 	 */
 	normalize(): Path
 	{
-		let fullPath = pathTools.normalizeSafe(this.absoluted().stringify);
+		let fullPath = pathTools.normalizeSafe(this.absoluted().path);
 		let newWorkingDir = "";
 		let newFullPath = "";
 		let reachedEndOfWorkingDir = false;
@@ -198,8 +185,8 @@ export class Path
 	slugify(makeWebStyle: boolean = true): Path
 	{
 		if (!makeWebStyle) return this;
-		this._fullPath = Path.slugify(this.stringify);
-		this.reparse(this.stringify);
+		this._fullPath = Path.slugify(this.path);
+		this.reparse(this.path);
 		return this;
 	}
 
@@ -209,25 +196,6 @@ export class Path
 	slugified(makeWebStyle: boolean = true): Path
 	{
 		return this.copy.slugify(makeWebStyle);
-	}
-
-	/**
-	 * Makes the path use unix file path conventions / formatting. (in-place).
-	 */
-	unixify(): Path
-	{
-		this._isWindows = false;
-		this._fullPath = this.stringify.replaceAll("\\", "/");
-		this.reparse(this.stringify);
-		return this;
-	}
-
-	/**
-	 * Returns a copy of the path using unix file path conventions / formatting. (returns copy).
-	 */
-	unixified(): Path
-	{
-		return this.copy.unixify();
 	}
 
 	/**
@@ -272,7 +240,7 @@ export class Path
 	// overide the default toString() method
 	toString(): string
 	{
-		return this.stringify;
+		return this.path;
 	}
 
 	/**
@@ -300,7 +268,7 @@ export class Path
 
 	set directory(dir: Path)
 	{
-		this._dir = dir.stringify;
+		this._dir = dir.path;
 		if (!this.isDirectory) this._fullPath = Path.joinStringPaths(this._dir, this._base);
 		else this._fullPath = this._dir;
 
@@ -320,7 +288,7 @@ export class Path
 
 	set parent(parent: Path | undefined)
 	{
-		this._parent = parent?.stringify ?? "";
+		this._parent = parent?.path ?? "";
 		this._fullPath = Path.joinStringPaths(this._parent, this._base);
 		this.reparse(this._fullPath);
 	}
@@ -395,7 +363,7 @@ export class Path
 	get depth(): number
 	{
 		let depth = 0;
-		let splits = this.unixified().stringify.split("/");
+		let splits = this.path.split("/");
 
 		for (let i = 0; i < splits.length-1; i++)
 		{
@@ -426,7 +394,7 @@ export class Path
 		let initialDirection = 0;
 		let maxDepth = 0;
 		let depth = 0;
-		let splits = this.unixified().stringify.split("/");
+		let splits = this.path.split("/");
 
 		for (let i = 0; i < splits.length-1; i++)
 		{
@@ -470,18 +438,18 @@ export class Path
 	 * "relative/path/to/example.txt"
 	 * "relative/path/to/folder"
 	 */
-	get stringify(): string
+	get path(): string
 	{
 		return this._fullPath;
 	}
 
 	/**
-	 * Indentical to stringify, except it leaves out the hash from the end of the path if it exists.
+	 * Indentical to path, except it leaves out the hash from the end of the path if it exists.
 	 */
 	get pathname(): string
 	{
-		if (this.isDirectory) return this.stringify;
-		return this.directory.joinString(this.fullName).stringify;
+		if (this.isDirectory) return this.path;
+		return this.directory.joinString(this.fullName).path;
 	}
 
 	/**
@@ -498,7 +466,7 @@ export class Path
 	 */
 	get isEmpty(): boolean
 	{
-		return this.stringify == "";
+		return this.path == "";
 	}
 
 	/**
@@ -561,10 +529,10 @@ export class Path
 	 */
 	get isAbsolute(): boolean
 	{
-		let asString = this.stringify;
+		let asString = this.path;
 		if (asString.startsWith("http:") || asString.startsWith("https:")) return true;
 
-		if(this._isWindows)
+		if(platform() == "win32")
 		{
 			if (asString.match(/^[A-Za-z]:[\\|\/|\\\\|\/\/]/)) return true;
 			if (asString.startsWith("\\") && !asString.contains(":")) return true;
@@ -590,9 +558,8 @@ export class Path
 	 */
 	get copy(): Path
 	{
-		let newPath = new Path(this.stringify, this._workingDirectory);
-		newPath._isWindows = this._isWindows;
-		newPath.reparse(this.stringify);
+		let newPath = new Path(this.path, this._workingDirectory);
+		newPath.reparse(this.path);
 		return newPath;
 	}
 
@@ -621,7 +588,7 @@ export class Path
 			error += "Path does not exist";
 			valid = false;
 		}
-		else if (!options.allowTildeHomeDirectory && this.stringify.startsWith("~"))
+		else if (!options.allowTildeHomeDirectory && this.path.startsWith("~"))
 		{
 			error += "Home directory with tilde (~) is not allowed";
 			valid = false;
@@ -659,7 +626,7 @@ export class Path
 	{
 		if (!this.exists)
 		{
-			let path = this.absoluted().directory.stringify;
+			let path = this.absoluted().directory.path;
 
 			try
 			{
@@ -858,7 +825,7 @@ export class Path
 
 	public static joinPath(...paths: Path[]): Path
 	{
-		return new Path(Path.joinStringPaths(...paths.map(p => p.stringify)), paths[0]._workingDirectory);
+		return new Path(Path.joinStringPaths(...paths.map(p => p.path)), paths[0]._workingDirectory);
 	}
 
 	public static joinStrings(...paths: string[]): Path
@@ -875,8 +842,8 @@ export class Path
 	{
 		let fromUse = useAbsolute ? from.absoluted() : from;
 		let toUse = useAbsolute ? to.absoluted() : to;
-		let relative = pathTools.relative(fromUse.directory.stringify, toUse.stringify);
-		let workingDir = from.absoluted().directory.stringify;
+		let relative = pathTools.relative(fromUse.directory.path, toUse.path);
+		let workingDir = from.absoluted().directory.path;
 		return new Path(relative, workingDir);
 	}
 
@@ -929,8 +896,8 @@ export class Path
 
 	static equal(path1: string, path2: string): boolean
 	{
-		let path1Parsed = new Path(path1).unixify().slugify().stringify;
-		let path2Parsed = new Path(path2).unixify().slugify().stringify;
+		let path1Parsed = new Path(path1).slugify().path;
+		let path2Parsed = new Path(path2).slugify().path;
 		return path1Parsed == path2Parsed;
 	}
 

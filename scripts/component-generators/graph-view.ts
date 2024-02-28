@@ -93,7 +93,7 @@ export class GraphView implements ComponentGenerator
 		let maxLinks = Math.max(...linkCounts);
 
 		this.radii = linkCounts.map(l => GraphView.InOutQuadBlend(this.graphOptions.minNodeRadius, this.graphOptions.maxNodeRadius, Math.min(l / (maxLinks * 0.8), 1.0)));
-		this.paths = this.paths.map(p => new Path(p).setExtension(".html").unixify().slugify(options.slugifyPaths).stringify);
+		this.paths = this.paths.map(p => new Path(p).setExtension(".html").slugify(options.slugifyPaths).path);
 
 		this.linkCount = this.linkSources.length;
 

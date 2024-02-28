@@ -24,10 +24,10 @@ export class Favicon extends WebAsset
         {
             this.data = icon;
             this.targetPath.fullName = "favicon" + iconPath.extension;
-			this.source = app.vault.getFileByPath(iconPath.unixified().stringify);
+			this.source = app.vault.getFileByPath(iconPath.path);
 			if (!this.source)
 			{
-				console.error("Favicon source tfile not found: " + iconPath.unixified().stringify);
+				console.error("Favicon source tfile not found: " + iconPath.path);
 				let stat = iconPath.stat;
 				if (stat)
 				{
