@@ -185,7 +185,8 @@ export class Index
 			}
 		}
 
-		await this.indexSelf();
+		if (!this.exportOptions.inlineOther)
+			await this.indexSelf();
 
 		console.log("Deleted: ", this.deletedFiles);
 		console.log("New: ", this.newFiles);
@@ -353,7 +354,7 @@ export class Index
 	public getFileFromSrc(src: string, sourceFile: TFile): Attachment | undefined
 	{
 		let attachedFile = this.website.getFilePathFromSrc(src, sourceFile.path);
-		return this.sourceToWebpage.get(attachedFile.pathname) ?? this.sourceToAttachment.get(attachedFile.pathname);
+		return this.getFile(attachedFile.pathname);
 	}
 
 	public getAttachment(sourcePath: string): Attachment | undefined
@@ -376,24 +377,18 @@ export class Index
 		return this.sourceToWebpage.has(sourcePath);
 	}
 
-	public hadFile(sourcePath: string): boolean
+	public hadFile(targetPath: string): boolean
 	{
-		let targetPath = this.oldWebsiteData?.sourceToTarget?.[sourcePath];
-		if (!targetPath) return false;
 		return this.oldWebsiteData?.fileInfo[targetPath] != undefined;
 	}
 
-	public getOldFile(sourcePath: string): FileData | undefined
+	public getOldFile(targetPath: string): FileData | undefined
 	{
-		let targetPath = this.oldWebsiteData?.sourceToTarget?.[sourcePath];
-		if (!targetPath) return undefined;
 		return this.oldWebsiteData?.fileInfo[targetPath];
 	}
 
-	public getOldWebpage(sourcePath: string): WebpageData | undefined
+	public getOldWebpage(targetPath: string): WebpageData | undefined
 	{
-		let targetPath = this.oldWebsiteData?.sourceToTarget?.[sourcePath];
-		if (!targetPath) return undefined;
 		return this.oldWebsiteData?.webpages[targetPath];
 	}
 
@@ -552,7 +547,9 @@ export class Index
 
 	private updateAttachment(attachment: Attachment)
 	{
-		let key = this.addAttachmentToWebsiteData(attachment);
+		this.addAttachmentToWebsiteData(attachment);
+
+		let key = attachment.sourcePath ?? attachment.targetPath.path;
 		if (!this.sourceToAttachment.has(key))
 		{
 			this.sourceToAttachment.set(key, attachment);

@@ -4,8 +4,8 @@ import { AssetHandler } from "./asset-handler";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { TFile } from "obsidian";
+import  mime from "mime";
 const { minify: runMinify } = require('html-minifier-terser');
-const mime = require('mime');
 
 export class WebAsset extends Attachment 
 {
@@ -257,7 +257,7 @@ export class WebAsset extends Attachment
 	public getContentBase64(): string
 	{
 		let extension = this.extensionName;
-		let mimeType = mime(extension) || "text/plain";
+		let mimeType = mime.getType(extension) || "text/plain";
 		let base64 = this.data.toString("base64");
 		return `data:${mimeType};base64,${base64}`;
 	}

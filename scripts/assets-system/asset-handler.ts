@@ -28,6 +28,7 @@ import { SupportedPluginStyles } from "./supported-plugin-styles.js";
 import { fileTypeFromBuffer } from "file-type";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options.js";
 import { ExportLog } from "scripts/render-api/render-api.js";
+import { Settings } from "scripts/settings/settings.js";
 const mime = require('mime');
 
 
@@ -221,15 +222,23 @@ export class AssetHandler
 		let downloads = this.getAssetsOfInlinePolicy(InlinePolicy.Download)
 						    .concat(this.getAssetsOfInlinePolicy(InlinePolicy.DownloadHead));
 
-		if (!options.inlineMedia) 
-		{
-			downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.Auto));
-			downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.AutoHead));
-		}
+		downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.Auto));
+		downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.AutoHead));
 
 		downloads = this.filterDownloads(downloads, options);
 		downloads.sort((a, b) => b.loadPriority - a.loadPriority);
 		downloads.forEach(asset => asset.targetPath.setWorkingDirectory(destination.path));
+
+		if (options.inlineMedia)
+			downloads = downloads.filter(asset => asset.type != AssetType.Media);
+		if (options.inlineFonts)
+			downloads = downloads.filter(asset => asset.type != AssetType.Font);
+		if (options.inlineJS)
+			downloads = downloads.filter(asset => asset.type != AssetType.Script);
+		if (options.inlineCSS)
+			downloads = downloads.filter(asset => asset.type != AssetType.Style);
+		if (options.inlineHTML)
+			downloads = downloads.filter(asset => asset.type != AssetType.HTML);
 
 		return downloads;
 	}
@@ -334,7 +343,7 @@ export class AssetHandler
 
 			let path = new Path(url);
 			let type = WebAsset.extentionToType(path.extension);
-			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.Download, false, Mutability.Child);
+			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.Auto, false, Mutability.Child);
 			asset.childAssets.push(childAsset);
 
 			let loadPromise = childAsset.load();

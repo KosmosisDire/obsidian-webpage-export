@@ -70,7 +70,8 @@ export class HTMLExporter
 		
 		if (saveFiles) 
 		{
-			await Utils.downloadAttachments(website.index.allFiles);
+			await Utils.downloadAttachments(website.index.newFiles);
+			await Utils.downloadAttachments(website.index.updatedFiles);
 		}
 
 		MarkdownRendererAPI.endBatch();

@@ -6,11 +6,10 @@ import {  TAbstractFile, TFile, TFolder } from "obsidian";
 import {  Settings } from "scripts/settings/settings";
 import { GraphView } from "../component-generators/graph-view";
 import { Path } from "scripts/utils/path";
-import { ExportLog } from "scripts/render-api/render-api";
+import { ExportLog, MarkdownRendererAPI } from "scripts/render-api/render-api";
 import { WebAsset } from "scripts/assets-system/base-asset";
 import { AssetType, InlinePolicy, Mutability } from "scripts/assets-system/asset-types.js";
 import { HTMLGeneration } from "scripts/render-api/html-generation-helpers";
-import { MarkdownRendererAPI } from "scripts/render-api/render-api";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
 import { Index } from "scripts/website/index";
 
@@ -135,6 +134,14 @@ export class Website
 
 		// render the documents with bare html
 		let webpages = this.index.webpages;
+		// only render the updated and new files
+		webpages = webpages.filter((webpage) => 
+		{
+			return this.index.updatedFiles.includes(webpage) || this.index.newFiles.includes(webpage)
+		});
+
+		console.log("Rendering webpages: ", webpages);
+
 		let progress = 0;
 		for (let webpage of webpages)
 		{
@@ -143,13 +150,28 @@ export class Website
 			progress += 1 / (webpages.length * 1.5);
 		}
 
-		// create attachments from the webpages
-		for (let webpage of webpages)
+		// create attachments from the webpages if we are not inlining media
+		if (!this.exportOptions.inlineMedia)
 		{
-			ExportLog.progress(progress, "Creating Attachments", webpage.source.path);
-			let attachments = await webpage.getAttachments();
-			this.index.addFiles(attachments);
-			progress += 1 / (webpages.length * 6);
+			for (let webpage of webpages)
+			{
+				ExportLog.progress(progress, "Creating Attachments", webpage.source.path);
+				let attachments = await webpage.getAttachments();
+				this.index.addFiles(attachments);
+				progress += 1 / (webpages.length * 6);
+			}
+		}
+
+		if (this.exportOptions.addGraphView)
+			this.graphAsset.data = this.globalGraph.getExportData();
+
+		if (this.exportOptions.addFileNavigation)
+		{
+			// Since we are adding the collapse button to the search bar, we need to remove it from the file tree
+			if (this.exportOptions.addSearch) this.fileTree.container?.querySelector(".collapse-tree-button")?.remove();
+			this.fileTreeAsset.data = this.fileTree.container?.innerHTML ?? "";
+			this.fileTree.container?.remove();
+			console.log("File tree asset: ", this.fileTreeAsset);
 		}
 
 		this.index.addFiles(AssetHandler.getDownloads(this.destination, this.exportOptions));
@@ -170,13 +192,6 @@ export class Website
 
 			progress += 1 / (webpages.length * 6);
 		}
-
-		this.graphAsset.data = this.globalGraph.getExportData();
-
-		// Since we are adding the collapse button to the search bar, we need to remove it from the file tree
-		if (this.exportOptions.addSearch) this.fileTree.container?.querySelector(".collapse-tree-button")?.remove();
-		this.fileTreeAsset.data = this.fileTree.container?.innerHTML ?? "";
-		this.fileTree.container?.remove();
 
 		if (this.exportOptions.addRSS)
 		{

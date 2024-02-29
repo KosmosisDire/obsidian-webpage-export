@@ -295,6 +295,7 @@ export class Webpage extends Attachment
 
 	get coverImageURL(): string | undefined
 	{
+		if (this.exportOptions.inlineMedia) return undefined;
 		if (!this.viewElement) return undefined;
 		let mediaPathStr = this.viewElement.querySelector("img")?.getAttribute("src") ?? "";
 		let hasMedia = mediaPathStr.length > 0;
@@ -510,7 +511,7 @@ export class Webpage extends Attachment
 
 			let sourcePath = this.website.getFilePathFromSrc(src, this.source.path).pathname;
 			let attachment = this.attachments.find((attachment) => attachment.sourcePath == sourcePath);
-			attachment ??= this.website.index.getFileFromSrc(src, this.source);
+			attachment ??= this.website.index.getFile(sourcePath);
 			attachment ??= await this.website.createAttachmentFromSrc(src, this.source);
 			
 			if (!sourcePath || !attachment)
@@ -547,11 +548,11 @@ export class Webpage extends Attachment
 			return hrefValue;
 		}
 
-		let hrefSplit = link.split("#")[0].split("?")[0];
-		let attachment = this.website.index.getFileFromSrc(hrefSplit, this.source);
+		let linkSplit = link.split("#")[0].split("?")[0];
+		let attachmentPath = this.website.getFilePathFromSrc(linkSplit, this.source.path).pathname;
+		let attachment = this.website.index.getFile(attachmentPath);
 		if (!attachment)
 		{
-			ExportLog.warning("Attachment not found: " + hrefSplit);
 			return;
 		}
 
@@ -828,20 +829,20 @@ export class Webpage extends Attachment
 		for (let mediaEl of elements)
 		{
 			let rawSrc = mediaEl.getAttribute("src") ?? "";
-			// let filePath = Webpage.getFilePathFromSrc(rawSrc, this.source.path);
-			// if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
+			let filePath = this.website.getFilePathFromSrc(rawSrc, this.source.path);
+			if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
 
-			// let base64 = await filePath.readAsString("base64") ?? "";
-			// if (base64 === "") return;
+			let base64 = await filePath.readAsString("base64");
+			if (!base64) return;
 
-			// let ext = filePath.extensionName;
+			let ext = filePath.extensionName;
 
-			// //@ts-ignore
-			// let type = app.viewRegistry.typeByExtension[ext] ?? "audio";
+			//@ts-ignore
+			let type = app.viewRegistry.typeByExtension[ext] ?? "audio";
 
-			// if(ext === "svg") ext += "+xml";
+			if(ext === "svg") ext += "+xml";
 			
-			// mediaEl.setAttribute("src", `data:${type}/${ext};base64,${base64}`);
+			mediaEl.setAttribute("src", `data:${type}/${ext};base64,${base64}`);
 		};
 	}
 

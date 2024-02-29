@@ -185,8 +185,8 @@ export class SettingsPage extends PluginSettingTab
 		let supportContainer = contentEl.createDiv();
 		supportContainer.style.marginBottom = '15px';
 		let supportLink = contentEl.createEl('a');
-		let buttonColor = "#3ebba4";
-		let buttonTextColor = "white";
+		let buttonColor = "3ebba4";
+		let buttonTextColor = "ffffff";
 		// @ts-ignore
 		supportLink.href = `href="https://www.buymeacoffee.com/nathangeorge"`;
 		supportLink.style.height = "40px"

@@ -181,6 +181,11 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	inlineFonts?: boolean = Settings.inlineAssets;
 
 	/**
+	 * Inline / embed other files directly into the HTML.
+	 */
+	inlineOther?: boolean = Settings.inlineAssets;
+
+	/**
 	 * Do not leave any online urls, download them and embed them into the HTML.
 	 */
 	offlineResources?: boolean = Settings.makeOfflineCompatible;

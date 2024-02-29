@@ -96,7 +96,7 @@ async function initializePage(pageChanged = true)
 
 	canvasBackground = document.querySelector(".canvas-background") ?? canvasBackground;
 	canvasBackgroundPattern = document.querySelector(".canvas-background pattern") ?? canvasBackgroundPattern;
-	viewContent = document.querySelector(".document-container > .view-content") ?? document.querySelector(".document-container > .markdown-preview-view") ?? viewContent;
+	viewContent = document.querySelector(".document-container > .view-content") ?? document.querySelector(".document-container > .markdown-preview-view") ?? viewContent ?? documentContainer;
 	outlineTreeItems = Array.from(document.querySelectorAll(".tree-container.outline-tree .tree-item"));
 
 	if(!fullyInitialized)
@@ -113,14 +113,24 @@ async function initializePage(pageChanged = true)
 		contentTargetWidth = await getComputedPixelValue("--line-width") * 0.9;
 
 		// load websiteData
-		let dataReq = await fetch("lib/metadata.json");
-		if (dataReq.ok)
+		if (window.location.protocol != "file:")
 		{
-			websiteData = await dataReq.json();
-		}
-		else
-		{
-			console.log("Failed to load website metadata.");
+			try
+			{
+				let dataReq = await fetch("lib/metadata.json");
+				if (dataReq.ok)
+				{
+					websiteData = await dataReq.json();
+				}
+				else
+				{
+					console.log("Failed to load website metadata.");
+				}
+			}
+			catch (e)
+			{
+				console.log("Failed to load website metadata.", e);
+			}
 		}
 
 		window.addEventListener('resize', () => onResize());
@@ -1800,7 +1810,8 @@ function setupCanvas(setupOnNode)
 /**Gets the bounding rect of the voew-content or markdown-preview-sizer*/
 function getViewBounds()
 {
-	let viewContentRect = viewContent.getBoundingClientRect();
+	let viewContentRect = viewContent?.getBoundingClientRect();
+	if (!viewContentRect) viewContentRect = document.body?.getBoundingClientRect();
 
 	let minX = viewContentRect.x;
 	let minY = viewContentRect.y;
