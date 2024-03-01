@@ -5,7 +5,6 @@ import { AssetHandler } from "./asset-handler";
 
 export class OtherPluginStyles extends WebAsset
 {
-    public data: string = "";
     private lastEnabledPluginStyles: string[] = [];
 
     constructor()

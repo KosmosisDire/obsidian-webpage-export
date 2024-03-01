@@ -5,8 +5,6 @@ import { ExportLog } from "scripts/render-api/render-api";
 
 export class SupportedPluginStyles extends WebAsset
 {
-    public data: string = "";
-
     constructor()
     {
         super("supported-plugins.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 5);

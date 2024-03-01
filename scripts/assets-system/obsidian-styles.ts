@@ -4,8 +4,6 @@ import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.j
 
 export class ObsidianStyles extends WebAsset
 {
-    public data: string = "";
-
     constructor()
     {
         super("obsidian.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Default, 10);

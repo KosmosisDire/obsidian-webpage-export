@@ -5,7 +5,6 @@ export class MathjaxStyles extends WebAsset
 {
 	private mathjaxStylesheet: CSSStyleSheet | undefined = undefined;
 	private lastMathjaxChanged: number = -1;
-    public data: string = "";
 
     constructor()
     {

@@ -105,7 +105,7 @@ export class Index
 		try
 		{
 			let metadataPath = this.website.destination.join(AssetHandler.libraryPath).joinString("metadata.json");
-			let metadata = await metadataPath.readAsString();
+			let metadata = Settings.onlyExportModified ? await metadataPath.readAsString() : undefined; // only load metadata if we will use it
 			if (metadata) 
 			{
 				this.oldWebsiteData = JSON.parse(metadata) as WebsiteData;
@@ -301,6 +301,7 @@ export class Index
 		else
 		{
 			let oldData = this.getOldFile(key);
+			
 			if (oldData)
 			{
 				if (oldData.modifiedTime != file.sourceStat.mtime && oldData.sourceSize != file.sourceStat.size)
@@ -390,6 +391,29 @@ export class Index
 	public getOldWebpage(targetPath: string): WebpageData | undefined
 	{
 		return this.oldWebsiteData?.webpages[targetPath];
+	}
+
+	public async applyToOldWebpages(callback: (document: Document, oldData: WebpageData) => Promise<any>)
+	{
+		let promises: Promise<any>[] = [];
+
+		if (this.oldWebsiteData)
+		{
+			let webpages = Object.entries(this.oldWebsiteData.webpages);
+			for (let [path, data] of webpages)
+			{
+				let filePath = new Path(path, this.website.destination.path);
+				let fileData = await filePath.readAsBuffer();
+				if (fileData)
+				{
+					let document = new DOMParser().parseFromString(fileData.toString(), "text/html");
+					await callback(document, data);
+					promises.push(filePath.write(`<!DOCTYPE html>\n${document.documentElement.outerHTML}`));
+				}
+			}
+		}
+
+		Promise.all(promises);
 	}
 
 	private getPlainText(webpage: Webpage): string 

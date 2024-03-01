@@ -8,7 +8,6 @@ import { fileTypeFromBuffer } from "file-type";
 
 export class FetchBuffer extends WebAsset
 {
-    public data: Buffer;
     public url: Path | string;
 
     constructor(filename: string, url: Path | string, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadPriority?: number)

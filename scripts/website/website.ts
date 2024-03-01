@@ -11,7 +11,7 @@ import { WebAsset } from "scripts/assets-system/base-asset";
 import { AssetType, InlinePolicy, Mutability } from "scripts/assets-system/asset-types.js";
 import { HTMLGeneration } from "scripts/render-api/html-generation-helpers";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options";
-import { Index } from "scripts/website/index";
+import { Index, WebpageData } from "scripts/website/index";
 
 export class Website
 {
@@ -57,7 +57,7 @@ export class Website
 					let anyEmpty = paths.some((path) => path.length == 1);
 					if (anyEmpty) break;
 				}
-				console.log("Common path: " + commonPath);
+				console.log("Export root path: " + commonPath);
 				this.exportOptions.exportRoot = new Path(commonPath).path + "/";
 			}
 			else this.exportOptions.exportRoot = this.sourceFiles[0].parent?.path ?? "";
@@ -87,6 +87,34 @@ export class Website
 			await this.index.addFile(attachment);
 		}
 
+		// create file tree asset
+		if (this.exportOptions.addFileNavigation)
+		{
+			let paths = this.index.attachmentsShownInTree.map((file) => new Path(file.sourcePathRootRelative ?? ""));
+			this.fileTree = new FileTree(paths, false, true);
+			this.fileTree.makeLinksWebStyle = this.exportOptions.slugifyPaths ?? true;
+			this.fileTree.showNestingIndicator = true;
+			this.fileTree.generateWithItemsClosed = true;
+			this.fileTree.showFileExtentionTags = true;
+			this.fileTree.hideFileExtentionTags = ["md"];
+			this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
+			this.fileTree.class = "file-tree";
+			let tempContainer = document.createElement("div");
+			await this.fileTree.insert(tempContainer);
+			let data = tempContainer.innerHTML;
+			tempContainer.remove();
+			this.fileTreeAsset = new WebAsset("file-tree.html", data, null, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
+		}
+
+		// create graph view asset
+		if (this.exportOptions.addGraphView)
+		{
+			this.globalGraph = new GraphView();
+			let convertableFiles = this.sourceFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
+			await this.globalGraph.init(convertableFiles, this.exportOptions);
+			this.graphAsset = new WebAsset("graph-data.js", this.globalGraph.getExportData(), null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Temporary);
+		}
+
 		return this;
 	}
 	
@@ -103,34 +131,18 @@ export class Website
 
 		console.log("Creating website with files: ", this.sourceFiles);
 
+		// if body classes have changed write new body classes to existing files
+		if (this.bodyClasses != (this.index.oldWebsiteData?.bodyClasses ?? this.bodyClasses))
+		{
+			this.index.applyToOldWebpages(async (document: Document, oldData: WebpageData) => 
+			{
+				document.body.className = this.bodyClasses;
+				ExportLog.progress(0, "Updating Body Classes", oldData.sourcePath);
+			});
+		}
+
 		await MarkdownRendererAPI.beginBatch(this.exportOptions);
 		this.giveWarnings();
-
-		// create file tree asset
-		if (this.exportOptions.addFileNavigation)
-		{
-			let paths = this.index.attachmentsShownInTree.map((file) => new Path(file.sourcePathRootRelative ?? ""));
-			this.fileTree = new FileTree(paths, false, true);
-			this.fileTree.makeLinksWebStyle = this.exportOptions.slugifyPaths ?? true;
-			this.fileTree.showNestingIndicator = true;
-			this.fileTree.generateWithItemsClosed = true;
-			this.fileTree.showFileExtentionTags = true;
-			this.fileTree.hideFileExtentionTags = ["md"];
-			this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
-			this.fileTree.class = "file-tree";
-			let tempTreeContainer = document.body.createDiv();
-			await this.fileTree.insert(tempTreeContainer);
-			this.fileTreeAsset = new WebAsset("file-tree.html", "dummy content", null, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
-		}
-
-		// create graph view asset
-		if (this.exportOptions.addGraphView)
-		{
-			this.globalGraph = new GraphView();
-			let convertableFiles = this.sourceFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
-			await this.globalGraph.init(convertableFiles, this.exportOptions);
-			this.graphAsset = new WebAsset("graph-data.js", "dummy content", null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Temporary);
-		}
 
 		// render the documents with bare html
 		let webpages = this.index.webpages;
@@ -139,8 +151,6 @@ export class Website
 		{
 			return this.index.updatedFiles.includes(webpage) || this.index.newFiles.includes(webpage)
 		});
-
-		console.log("Rendering webpages: ", webpages);
 
 		let progress = 0;
 		for (let webpage of webpages)
@@ -160,18 +170,6 @@ export class Website
 				this.index.addFiles(attachments);
 				progress += 1 / (webpages.length * 6);
 			}
-		}
-
-		if (this.exportOptions.addGraphView)
-			this.graphAsset.data = this.globalGraph.getExportData();
-
-		if (this.exportOptions.addFileNavigation)
-		{
-			// Since we are adding the collapse button to the search bar, we need to remove it from the file tree
-			if (this.exportOptions.addSearch) this.fileTree.container?.querySelector(".collapse-tree-button")?.remove();
-			this.fileTreeAsset.data = this.fileTree.container?.innerHTML ?? "";
-			this.fileTree.container?.remove();
-			console.log("File tree asset: ", this.fileTreeAsset);
 		}
 
 		this.index.addFiles(AssetHandler.getDownloads(this.destination, this.exportOptions));
@@ -199,7 +197,6 @@ export class Website
 		}
 
 		console.log("Website created: ", this);
-		console.log("Index: ", this.index);
 		
 		await this.index.finalize();
 

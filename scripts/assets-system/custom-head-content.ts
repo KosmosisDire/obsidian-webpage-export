@@ -6,11 +6,9 @@ import { ExportLog } from "scripts/render-api/render-api";
 
 export class CustomHeadContent extends WebAsset
 {
-    public data: string = "";
-
     constructor()
     {
-        super("custom-head-content.html", "", null, AssetType.HTML, InlinePolicy.AutoHead, false, Mutability.Dynamic);
+        super("custom-head-content.html", "", null, AssetType.HTML, InlinePolicy.AutoHead, false, Mutability.Dynamic, LoadMethod.Default, 100000000000);
     }
     
     override async load()

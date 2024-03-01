@@ -7,7 +7,7 @@ export class Attachment
 	/**
 	 * The raw data of the file
 	 */
-	public data: string | Buffer;
+	private _data: string | Buffer;
 	private _source: TFile | null;
 	private _sourcePath: string | undefined;
 	private _sourcePathRootRelative: string | undefined;
@@ -31,7 +31,7 @@ export class Attachment
 	public set source(source: TFile | null)
 	{
 		this._source = source;
-		this.sourceStat = source?.stat ?? { ctime: 0, mtime: Date.now(), size: this.data.length };
+		this.sourceStat = source?.stat ?? { ctime: Date.now(), mtime: Date.now(), size: this.data?.length ?? 0 };
 		this.sourcePath = source?.path;
 	}
 	public get source() { return this._source; }
@@ -43,14 +43,21 @@ export class Attachment
 		this._targetPath = target;
 	}
 
+	public get data() { return this._data; }
+	public set data(data: string | Buffer)
+	{
+		this._data = data;
+		if (!this.source) this.sourceStat = { ctime: Date.now(), mtime: Date.now(), size: this.data?.length ?? 0 };
+	}
+
 
 	constructor(data: string | Buffer, target: Path, source: TFile | undefined | null, options: MarkdownWebpageRendererAPIOptions)
 	{
 		if (target.isDirectory) throw new Error("target must be a file: " + target.path);
 		if (target.isAbsolute) throw new Error("(absolute) Target must be a relative path with the working directory set to the root: " + target.path);
 		this.exportOptions = options;
-		this.data = data;
 		this.source = source ?? null;
+		this.data = data;
 		this.targetPath = target;
 	}
 

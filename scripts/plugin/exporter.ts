@@ -3,7 +3,7 @@ import { Path } from "../utils/path";
 import { Settings, SettingsPage } from "../settings/settings";
 import { Utils } from "../utils/utils";
 import { Website } from "../website/website";
-import { MarkdownRendererAPI } from "scripts/render-api/render-api";
+import { ExportLog, MarkdownRendererAPI } from "scripts/render-api/render-api";
 import { ExportInfo, ExportModal } from "scripts/settings/export-modal";
 
 export class HTMLExporter
@@ -47,7 +47,8 @@ export class HTMLExporter
 
 	public static async exportFiles(files: TFile[], destination: Path, saveFiles: boolean, deleteOld: boolean) : Promise<Website | undefined>
 	{
-		var website = await (await new Website(destination).load(files)).build();
+		MarkdownRendererAPI.beginBatch();
+		let website = await (await new Website(destination).load(files)).build();
 
 		if (!website)
 		{
@@ -55,14 +56,15 @@ export class HTMLExporter
 			return;
 		}
 
-		// await website.index.updateBodyClasses();
 		if (deleteOld)
 		{
+			let i = 0;
 			for (let dFile of website.index.deletedFiles)
 			{
 				let path = new Path(dFile, destination.path);
 				await path.delete();
-				console.log("Deleted: " + path.path);
+				ExportLog.progress(i / website.index.deletedFiles.length, "Deleting Old Files", "Deleting: " + path.path, "var(--color-red)");
+				i++;
 			};
 
 			await Path.removeEmptyDirectories(destination.path);
@@ -94,50 +96,4 @@ export class HTMLExporter
 		return await this.exportFiles(files, rootExportPath, saveFiles, clearDirectory);
 	}
 
-	
-	// public static async deleteNonExports(webpages: Webpage[], rootPath: Path)
-	// {
-	// 	return;
-
-	// 	// delete all files in root path that are not in exports
-	// 	let files = (await this.getAllFilesInFolderRecursive(rootPath)).filter((file) => !file.makeUnixStyle().asString.contains(Asset.mediaPath.makeUnixStyle().asString));
-
-	// 	RenderLog.log(files, "Deletion candidates");
-
-	// 	let toDelete = [];
-	// 	for (let i = 0; i < files.length; i++)
-	// 	{
-	// 		RenderLog.progress(i, files.length, "Finding Old Files", "Checking: " + files[i].asString, "var(--color-yellow)");
-
-	// 		let file = files[i];
-	// 		if(!webpages.find((exportedFile) => exportedFile.exportPathAbsolute.makeUnixStyle().asString == file.makeUnixStyle().asString))
-	// 		{
-	// 			for (let webpage of webpages)
-	// 			{
-	// 				if (webpage.downloads.find((download) => download.relativeDownloadDirectory.makeUnixStyle().asString == file.makeUnixStyle().asString))
-	// 				{
-	// 					toDelete.push(file);
-	// 					break;
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-
-	// 	for	(let i = 0; i < toDelete.length; i++)
-	// 	{
-	// 		let file = toDelete[i];
-	// 		RenderLog.progress(i, toDelete.length, "Deleting Old Files", "Deleting: " + file.asString, "var(--color-red)");
-	// 		await fs.unlink(file.asString);
-	// 	}
-
-	// 	// delete all empty folders in root path
-	// 	let folders = (await this.getAllEmptyFoldersRecursive(rootPath));
-
-	// 	for	(let i = 0; i < folders.length; i++)
-	// 	{
-	// 		let folder = folders[i];
-	// 		RenderLog.progress(i, folders.length, "Deleting Empty Folders", "Deleting: " + folder.asString, "var(--color-purple)");
-	// 		await fs.rmdir(folder.directory.asString);
-	// 	}
-	// }
 }

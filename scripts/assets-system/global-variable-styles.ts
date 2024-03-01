@@ -4,8 +4,6 @@ import { Settings } from "scripts/settings/settings";
 
 export class GlobalVariableStyles extends WebAsset
 {
-    public data: string = "";
-
     constructor()
     {
         super("global-variable-styles.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 6);

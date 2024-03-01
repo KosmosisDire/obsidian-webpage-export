@@ -188,7 +188,7 @@ export class Webpage extends Attachment
 			content.querySelectorAll("[href]").forEach((el: HTMLAnchorElement) => 
 			{
 				let href = el.href;
-				if (!href) return;
+				if (!href) return; 
 				if (href.startsWith("http") || href.startsWith("data:")) return;
 				href = href.replace("app://obsidian", "");
 				href = href.replace(".md", "");
@@ -295,9 +295,9 @@ export class Webpage extends Attachment
 
 	get coverImageURL(): string | undefined
 	{
-		if (this.exportOptions.inlineMedia) return undefined;
 		if (!this.viewElement) return undefined;
 		let mediaPathStr = this.viewElement.querySelector("img")?.getAttribute("src") ?? "";
+		if (mediaPathStr.startsWith("data:")) return undefined;
 		let hasMedia = mediaPathStr.length > 0;
 		if (!hasMedia) return undefined;
 
@@ -348,8 +348,9 @@ export class Webpage extends Attachment
 		// get title and icon
 		this.titleInfo = await Website.getTitleAndIcon(this.source);
 		this.title = this.titleInfo.title;
+		this.icon = this.titleInfo.icon;
 		let iconRenderContainer = document.body.createDiv();
-		MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, iconRenderContainer);
+		await MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, iconRenderContainer);
 		this.icon = iconRenderContainer.innerHTML;
 		iconRenderContainer.remove();
 
@@ -374,7 +375,7 @@ export class Webpage extends Attachment
 			let mathStyleEl = document.createElement("style");
 			mathStyleEl.id = "MJX-CHTML-styles";
 			await AssetHandler.mathjaxStyles.load();
-			mathStyleEl.innerHTML = AssetHandler.mathjaxStyles.data;
+			mathStyleEl.innerHTML = AssetHandler.mathjaxStyles.data as string;
 			this.viewElement?.prepend(mathStyleEl);
 		}
 
@@ -412,10 +413,9 @@ export class Webpage extends Attachment
 			}
 
 			// inject search bar
-			let search: SearchInput | undefined = undefined;
 			if (this.exportOptions.addSearch)
 			{
-				search = new SearchInput().insert(leftSidebar);
+				new SearchInput().insert(leftSidebar);
 			}
 
 			// inject file tree
@@ -437,12 +437,6 @@ export class Webpage extends Attachment
 						if(children) children.style.display = "block";
 						fileElement = fileElement?.parentElement?.closest(".tree-item") as HTMLElement;
 					}
-				}
-
-				if (search)
-				{
-					let collapseAllButton = this.website.fileTree.container?.querySelector(".collapse-tree-button");
-					if (collapseAllButton) search.inputContainerEl.appendChild(collapseAllButton.cloneNode(true));
 				}
 			}
 		}
@@ -597,7 +591,7 @@ export class Webpage extends Attachment
 			link.classList.toggle("is-unresolved", !newSrc);
 		}
 	}
-	
+
 	private generateWebpageLayout(middleContent: HTMLElement | Node | string): {container: HTMLElement, left: HTMLElement, leftBar: HTMLElement, right: HTMLElement, rightBar: HTMLElement, center: HTMLElement}
 	{
 		if (!this.document) throw new Error("Document is not defined");
@@ -769,13 +763,14 @@ export class Webpage extends Attachment
 		{
 			pageIcon = this.document.createElement("div");
 			pageIcon.id = "webpage-icon";
+			pageIcon.innerHTML = this.icon;
 		}
 		
 		// Insert title into the title element
 		MarkdownRendererAPI.renderMarkdownSimpleEl(this.title, titleEl);
 		if (pageIcon) 
 		{
-			titleEl.innerHTML = this.icon + titleEl.innerHTML;
+			titleEl.prepend(pageIcon);
 		}
 
 		// Insert title into the document

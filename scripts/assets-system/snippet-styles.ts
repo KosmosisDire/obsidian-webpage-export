@@ -4,8 +4,6 @@ import { Path } from "scripts/utils/path";
 
 export class SnippetStyles extends WebAsset
 {
-    public data: string = "";
-
     constructor()
     {
         super("snippets.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 2);

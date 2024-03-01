@@ -28,7 +28,6 @@ import { SupportedPluginStyles } from "./supported-plugin-styles.js";
 import { fileTypeFromBuffer } from "file-type";
 import { MarkdownWebpageRendererAPIOptions } from "scripts/render-api/api-options.js";
 import { ExportLog } from "scripts/render-api/render-api.js";
-import { Settings } from "scripts/settings/settings.js";
 const mime = require('mime');
 
 
@@ -96,7 +95,7 @@ export class AssetHandler
 	public static globalDataStyles: GlobalVariableStyles = new GlobalVariableStyles();
 	public static supportedPluginStyles: SupportedPluginStyles = new SupportedPluginStyles();
 	public static websiteStyles: WebAsset = new WebAsset("main-styles.css", webpageStyles, null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 4);
-	public static deferredCSS: WebAsset = new WebAsset("deferred.css", deferredCSS, null, AssetType.Style, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer);
+	public static deferredCSS: WebAsset = new WebAsset("deferred.css", deferredCSS, null, AssetType.Style, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer, -1000);
 
 	// scripts
 	public static websiteJS: WebAsset = new WebAsset("webpage.js", websiteJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async);
@@ -104,7 +103,7 @@ export class AssetHandler
 	public static graphWASMJS: WebAsset = new WebAsset("graph-wasm.js", graphWASMJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
 	public static graphWASM: WebAsset = new WebAsset("graph-wasm.wasm", Buffer.from(graphWASM), null, AssetType.Script, InlinePolicy.Download, false, Mutability.Static);
 	public static renderWorkerJS: WebAsset = new WebAsset("graph-render-worker.js", renderWorkerJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
-	public static deferredJS: WebAsset = new WebAsset("deferred.js", deferredJS, null, AssetType.Script, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer);
+	public static deferredJS: WebAsset = new WebAsset("deferred.js", deferredJS, null, AssetType.Script, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer, -1000);
 	public static themeLoadJS: WebAsset = new WebAsset("theme-load.js", themeLoadJS, null, AssetType.Script, InlinePolicy.Inline, true, Mutability.Static, LoadMethod.Defer);
 
 	public static tinyColorJS: WebAsset = new WebAsset("tinycolor.js", tinyColorJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
@@ -343,7 +342,7 @@ export class AssetHandler
 
 			let path = new Path(url);
 			let type = WebAsset.extentionToType(path.extension);
-			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.Auto, false, Mutability.Child);
+			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.Download, false, Mutability.Child);
 			asset.childAssets.push(childAsset);
 
 			let loadPromise = childAsset.load();
@@ -355,11 +354,18 @@ export class AssetHandler
 					return;
 				}
 
-				if (this.exportOptions.inlineMedia)
+				function addAsBase64()
 				{
 					let base64 = childAsset.data.toString("base64");
 					content = content.replaceAll(url, `data:${mime.getType(url)};base64,${base64}`);
 				}
+
+				if ((this.exportOptions.inlineMedia && type == AssetType.Media) ||
+					(this.exportOptions.inlineFonts && type == AssetType.Font) ||
+					(this.exportOptions.inlineCSS && type == AssetType.Style) ||
+					(this.exportOptions.inlineJS && type == AssetType.Script) ||
+					(this.exportOptions.inlineHTML && type == AssetType.HTML))
+					addAsBase64();
 				else
 				{
 					let newPath = childAsset.getAssetPath(asset.getAssetPath());

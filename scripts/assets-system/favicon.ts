@@ -6,8 +6,6 @@ import defaultIcon from "assets/icon.png";
 
 export class Favicon extends WebAsset
 {
-    public data: Buffer;
-
     constructor()
     {
         super("favicon.png", "", null, AssetType.Media, InlinePolicy.AutoHead, false, Mutability.Dynamic);

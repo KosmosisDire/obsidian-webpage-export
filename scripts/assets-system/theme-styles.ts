@@ -5,7 +5,6 @@ import { AssetHandler } from "./asset-handler";
 
 export class ThemeStyles extends WebAsset
 {
-    public data: string = "";
     private lastThemeName: string = "";
 
     constructor()
@@ -38,9 +37,8 @@ export class ThemeStyles extends WebAsset
     override async load()
     {
         let themeName = ThemeStyles.getCurrentThemeName();
-        if (themeName == this.lastThemeName) 
+        if (themeName == this.lastThemeName && this.data != "") 
 		{
-			this.data = "";
 			return;
 		}
         this.data = await ThemeStyles.getThemeContent(themeName);
