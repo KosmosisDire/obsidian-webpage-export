@@ -1,12 +1,12 @@
 {
 	"id": "webpage-html-export",
 	"name": "Webpage HTML Export",
-	"version": "1.8.0",
+	"version": "1.8.0-0b",
 	"minAppVersion": "1.4.0",
 	"description": "Export full websites or html documents from single files, canvas pages, or whole vaults. Similar to obsidian's publish or digital garden, but with direct access to the exported HTML. Focuses on flexibility, features, and style parity.",
 	"author": "Nathan George",
 	"authorUrl": "https://github.com/KosmosisDire/obsidian-webpage-export",
 	"isDesktopOnly": true,
 	"fundingUrl": "https://www.buymeacoffee.com/nathangeorge",
-	"updateNote": "Major stable update features:\n- Full text search / search bar\n- Resizable sidebars\n- Hundreds of QoL improvements\n\nSee full changelog on github: https://t.ly/hsOPy"
+	"updateNote": ""
 }
