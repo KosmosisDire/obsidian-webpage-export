@@ -74,7 +74,6 @@ export class FileTree extends Tree
 
 					if(child.isFolder) 
 					{
-						child.itemClass = "mod-tree-folder nav-folder";
 						let tfolder = app.vault.getFolderByPath(section.path);
 						if (tfolder)
 						{
@@ -82,7 +81,6 @@ export class FileTree extends Tree
 							child.icon = titleInfo.icon;
 						}
 					}
-					else child.itemClass = "mod-tree-file nav-file"
 
 					parent.children.push(child);
 				}
@@ -168,26 +166,50 @@ export class FileTreeItem extends TreeItem
 		}
 	}
 
-	protected override async createItemContents(container: HTMLElement): Promise<HTMLDivElement> 
+	protected async insertSelf(container: HTMLElement): Promise<HTMLElement> 
 	{
-		let containerEl = await super.createItemContents(container);
-		if (this.isFolder) containerEl.addClass("nav-folder-title");
-		else containerEl.addClass("nav-file-title");
+		let self = await super.insertSelf(container);
+
+		self.classList.toggle("nav-folder-title", this.isFolder);
+		self.classList.toggle("nav-file-title", !this.isFolder);
 
 		if (!this.isFolder && this.tree.showFileExtentionTags && !this.tree.hideFileExtentionTags.contains(this.originalExtension))
 		{
-			let tag = containerEl.createDiv({ cls: "nav-file-tag" });
-			tag.textContent = this.originalExtension.toUpperCase();
+			let tag = self.createDiv({ cls: "nav-file-tag" });
+			tag.textContent = this.originalExtension;
 		}
 
-		return containerEl;
+		return self;
 	}
 
-	protected override async createItemTitle(container: HTMLElement): Promise<HTMLSpanElement>
+	protected override async insertInner(container: HTMLElement): Promise<HTMLDivElement> 
 	{
-		let titleEl = await super.createItemTitle(container);
-		if (this.isFolder) titleEl.addClass("nav-folder-title-content", "tree-item-inner");
-		else titleEl.addClass("nav-file-title-content", "tree-item-inner");
-		return titleEl; 
+		let inner = await super.insertInner(container);
+		inner.classList.toggle("nav-folder-title-content", this.isFolder);
+		inner.classList.toggle("nav-file-title-content", !this.isFolder);
+		return inner;
+	}
+
+	protected override insertCollapseIcon(container: HTMLElement): HTMLElement | undefined
+	{
+		let icon = super.insertCollapseIcon(container);
+		icon?.classList.toggle("nav-folder-collapse-indicator", this.isFolder);
+		return icon;
+	}
+
+	protected insertItem(container: HTMLElement): HTMLDivElement 
+	{
+		let item = super.insertItem(container);
+		item.classList.toggle("nav-folder", this.isFolder);
+		item.classList.toggle("nav-file", !this.isFolder);
+		return item;
+	}
+
+	protected insertChildren(container: HTMLElement): HTMLDivElement 
+	{
+		let children = super.insertChildren(container);
+		children.classList.toggle("nav-folder-children", this.isFolder);
+		children.classList.toggle("nav-file-children", !this.isFolder);
+		return children;
 	}
 }

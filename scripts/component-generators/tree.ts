@@ -19,7 +19,7 @@ export class Tree implements ComponentGenerator
 	protected async buildTreeRecursive(tree: TreeItem, container: HTMLElement, minDepth:number = 1, closeAllItems: boolean = false): Promise<void>
 	{
 		tree.minCollapsableDepth = this.minCollapsableDepth;
-		let treeItem = await tree.generateItemHTML(container, closeAllItems);
+		let treeItem = await tree.insert(container, closeAllItems);
 		
 		if(!tree.childContainer) return;
 
@@ -50,7 +50,7 @@ export class Tree implements ComponentGenerator
 		/*
 		- div.tree-header
 				- span.sidebar-section-header
-				- button.collapse-tree-button
+				- button.tree-collapse-all
 					- svg
 		- div.tree-container.mod-root.nav-folder
 			- div.tree-scroll-area.tree-item-children
@@ -68,34 +68,23 @@ export class Tree implements ComponentGenerator
 
 		if (this.title && this.addCollapseAllButton)
 		{
-			let treeHeaderEl = container.createDiv();
-			let sectionHeaderEl = container.createEl('span');
-			let collapseAllEl = container.createEl('button');
-			let treeContainerEl = container.createDiv();
-			let treeScrollAreaEl = container.createDiv();
+			let wrapper = container.createDiv(this.class + " tree-container");
+				let root = wrapper.createDiv("tree-item nav-folder mod-root");
+					root.setAttribute("data-depth", "0");
+					let title = root.createDiv("tree-item-self nav-folder-title");
+						let titleInner = title.createDiv("tree-item-inner nav-folder-title-content");
+							titleInner.textContent = this.title;
+						let collapseAllEl = title.createEl('button', { cls: "clickable-icon nav-action-button tree-collapse-all" });
+							collapseAllEl.setAttribute("aria-label", "Collapse All");
+							collapseAllEl.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'></svg>";
 
-			treeContainerEl.classList.add('tree-container', "mod-root", "nav-folder", "tree-item", this.class);
-			treeHeaderEl.classList.add("tree-header");
-			sectionHeaderEl.classList.add("sidebar-section-header");
-			collapseAllEl.classList.add("clickable-icon", "collapse-tree-button");
-			collapseAllEl.setAttribute("aria-label", "Collapse All");
-			collapseAllEl.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'></svg>";
-			treeScrollAreaEl.classList.add("tree-scroll-area", "tree-item-children", "nav-folder-children");
-			
-			// create an invisible first element because in obsidian the vault title is technically the first element in the tree
-			let invisFirst = treeScrollAreaEl.createDiv("tree-item mod-tree-folder nav-folder mod-collapsible is-collapsed"); // invisible first item
-			invisFirst.style.display = "none";
+					let children = root.createDiv("tree-item-children nav-folder-children");
+						children.createDiv("nav-folder-spacer");
 
 			if (this.generateWithItemsClosed) collapseAllEl.classList.add("is-collapsed");
-			if (this.showNestingIndicator) treeContainerEl.classList.add("mod-nav-indicator");
+			if (this.showNestingIndicator) root.classList.add("mod-nav-indicator");
 
-			treeContainerEl.setAttribute("data-depth", "0");
-			sectionHeaderEl.innerText = this.title;
-
-			treeHeaderEl.appendChild(sectionHeaderEl);
-			treeHeaderEl.appendChild(collapseAllEl);
-			treeContainerEl.appendChild(treeScrollAreaEl);
-			await this.generateTree(treeScrollAreaEl);
+			await this.generateTree(children);
 		}
 		else await this.generateTree(container);
 	}
@@ -125,7 +114,6 @@ export class TreeItem
 	public children: TreeItem[] = [];
 	public parent: TreeItem | Tree;
 	public depth: number = 0;
-	public itemClass: string = "";
 	public title: string = "";
 	public icon: string = "";
 	private _href: string | undefined = undefined;
@@ -137,6 +125,7 @@ export class TreeItem
 	public childContainer: HTMLDivElement | undefined = undefined;
 
 	public itemEl: HTMLDivElement | undefined = undefined;
+	public collapseIcon: HTMLElement | undefined = undefined;
 
 	public constructor(tree: Tree, parent: TreeItem | Tree, depth: number)
 	{
@@ -145,23 +134,12 @@ export class TreeItem
 		this.depth = depth;
 	}
 
-	public async generateItemHTML(container: HTMLElement, startClosed: boolean = true): Promise<HTMLDivElement>
+	public async insert(container: HTMLElement, startClosed: boolean = true): Promise<HTMLDivElement>
 	{
-
-		/*
-		- div.tree-item-wrapper
-			- div.a.tree-link
-				- .tree-item-contents
-					- div.tree-item-icon
-						- svg
-					- span.tree-item-title
-			- div.tree-item-children
-		*/
-
 		if(startClosed) this.isCollapsed = true;
-		this.itemEl = this.createItemWrapper(container);
-		await this.createItemLink(this.itemEl);
-		this.createItemChildren(this.itemEl);
+		this.itemEl = this.insertItem(container);
+		await this.insertSelf(this.itemEl);
+		this.insertChildren(this.itemEl);
 
 		return this.itemEl;
 	}
@@ -187,12 +165,14 @@ export class TreeItem
 		if (collapsed)
 		{
 			this.itemEl.classList.add("is-collapsed");
+			this.collapseIcon?.classList.add("is-collapsed");
 			if(animate) this.slideUp(children, 100);
 			else children.style.display = "none";
 		}
 		else
 		{
 			this.itemEl.classList.remove("is-collapsed");
+			this.collapseIcon?.classList.remove("is-collapsed");
 			if(animate) this.slideDown(children, 100);
 			else children.style.removeProperty("display");
 		}
@@ -220,78 +200,66 @@ export class TreeItem
 		return this.children.length != 0 && this.depth >= this.minCollapsableDepth;
 	}
 
-	protected createItemWrapper(container: HTMLElement): HTMLDivElement
+	protected insertItem(container: HTMLElement): HTMLDivElement
 	{
-		let itemEl = container.createDiv();
-		itemEl.classList.add("tree-item");
-		if (this.itemClass.trim() != "") itemEl.classList.add(...this.itemClass.split(" "));
+		let itemEl = container.createDiv("tree-item");
 		itemEl.setAttribute("data-depth", this.depth.toString());
 		if (this.isCollapsible()) itemEl.classList.add("mod-collapsible");
+		if (this.isCollapsed) itemEl.classList.add("is-collapsed");
 		return itemEl;
 	}
 
-	protected async createItemContents(container: HTMLElement): Promise<HTMLDivElement>
+	protected async insertInner(container: HTMLElement): Promise<HTMLDivElement>
 	{
-		let itemContentsEl = container.createDiv("tree-item-contents");
+		let itemContentsEl = container.createDiv("tree-item-inner");
 
-		if (this.isCollapsible())
-		{
-			this.createItemCollapseIcon(itemContentsEl);
-			if (this.isCollapsed) 
-			{
-				this.itemEl?.classList.add("is-collapsed");
-			}
-		}
-
-		this.createItemIcon(itemContentsEl);
-		await this.createItemTitle(itemContentsEl);
-
-		return itemContentsEl;
-	}
-
-	protected async createItemLink(container: HTMLElement): Promise<{ linkEl: HTMLElement, contentEl: HTMLSpanElement }>
-	{
-		if (this.tree.makeLinksWebStyle && this.href) this.href = Path.slugify(this.href);
-		let itemLinkEl = container.createEl(this.href ? "a" : "div", { cls: "tree-link" });
-		if (this.href) itemLinkEl.setAttribute("href", this.href);
-		if (this.dataRef) itemLinkEl.setAttribute("data-ref", this.dataRef);
-
-		let itemContentEl = await this.createItemContents(itemLinkEl);
-
-		return { linkEl: itemLinkEl, contentEl: itemContentEl };
-	}
-
-	protected createItemCollapseIcon(container: HTMLElement): HTMLElement | undefined
-	{
-		const arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg>`;
-
-		let itemIconEl = container.createDiv("collapse-icon");
-		itemIconEl.innerHTML = arrowIcon;
-		return itemIconEl;
-	}
-
-	protected async createItemTitle(container: HTMLElement): Promise<HTMLSpanElement>
-	{
-		let titleEl = container.createEl("span", { cls: "tree-item-title" });
-		if (this.tree.renderMarkdownTitles) MarkdownRendererAPI.renderMarkdownSimpleEl(this.title, titleEl);
-		else titleEl.innerText = this.title;
+		if (this.tree.renderMarkdownTitles) MarkdownRendererAPI.renderMarkdownSimpleEl(this.title, itemContentsEl);
+		else itemContentsEl.innerText = this.title;
 
 		// remove a tags from the title
-		titleEl.querySelectorAll("a").forEach((a) => 
+		itemContentsEl.querySelectorAll("a").forEach((a) => 
 		{
 			let span = a.ownerDocument.createElement("span");
 			span.innerHTML = a.innerHTML;
 			a.replaceWith(span);
 		});
 
-		return titleEl;
+		return itemContentsEl;
 	}
 
-	protected createItemIcon(container: HTMLElement): HTMLDivElement | undefined
+	protected async insertSelf(container: HTMLElement): Promise<HTMLElement>
+	{
+		if (this.tree.makeLinksWebStyle && this.href) this.href = Path.slugify(this.href);
+		let itemLinkEl = container.createEl(this.href ? "a" : "div", { cls: "tree-item-self is-clickable" });
+
+		if (this.href) 
+			itemLinkEl.setAttribute("href", this.href);
+		if (this.dataRef) 
+			itemLinkEl.setAttribute("data-path", this.dataRef);
+		if (this.isCollapsible()) 
+			this.insertCollapseIcon(itemLinkEl);
+		
+		this.insertIcon(itemLinkEl);
+		await this.insertInner(itemLinkEl);
+
+		return itemLinkEl
+	}
+
+	protected insertCollapseIcon(container: HTMLElement): HTMLElement | undefined
+	{
+		const arrowIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon right-triangle"><path d="M3 8L12 17L21 8"></path></svg>`;
+
+		this.collapseIcon = container.createDiv("tree-item-icon collapse-icon");
+		if (this.isCollapsed) this.collapseIcon.classList.add("is-collapsed");
+		this.collapseIcon.innerHTML = arrowIcon;
+		return this.collapseIcon;
+	}
+
+	protected insertIcon(container: HTMLElement): HTMLDivElement | undefined
 	{
 		if (this.icon.trim() == "") return undefined;
 		
-		let itemIconEl = container.createDiv("tree-item-icon");
+		let itemIconEl = container.createDiv("tree-icon");
 
 		if (this.tree.renderMarkdownTitles) MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, itemIconEl);
 		else itemIconEl.innerText = this.icon;
@@ -299,12 +267,11 @@ export class TreeItem
 		return itemIconEl;
 	}
 
-	protected createItemChildren(container: HTMLElement): HTMLDivElement
+	protected insertChildren(container: HTMLElement): HTMLDivElement
 	{
-		this.childContainer = container.createDiv("tree-item-children nav-folder-children");
+		this.childContainer = container.createDiv("tree-item-children");
 		return this.childContainer;
 	}
-
 
 	protected slideUp(target: HTMLElement, duration=500)
 	{

@@ -426,7 +426,7 @@ export class Webpage extends Attachment
 				// if the file will be opened locally, un-collapse the tree containing this file
 				if (this.exportOptions.openNavFileLocation)
 				{
-					let sidebar = leftSidebar.querySelector(".file-tree");
+					let sidebar = leftSidebar.querySelector(".nav-files-container");
 					let unixPath = this.targetPath.path;
 					let fileElement: HTMLElement = sidebar?.querySelector(`[href="${unixPath}"]`) as HTMLElement;
 					fileElement = fileElement?.closest(".tree-item") as HTMLElement;

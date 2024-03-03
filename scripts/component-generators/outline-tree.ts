@@ -91,9 +91,9 @@ export class OutlineTreeItem extends TreeItem
 		super.forAllChildren(func, recursive);
 	}
 
-	protected override async createItemContents(container: HTMLElement): Promise<HTMLDivElement> 
+	protected override async insertInner(container: HTMLElement): Promise<HTMLDivElement> 
 	{
-		let linkEl = await super.createItemContents(container);
+		let linkEl = await super.insertInner(container);
 		linkEl?.setAttribute("heading-name", this.heading);
 		linkEl.classList.add("heading-link");
 

@@ -98,7 +98,7 @@ export class Website
 			this.fileTree.showFileExtentionTags = true;
 			this.fileTree.hideFileExtentionTags = ["md"];
 			this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
-			this.fileTree.class = "file-tree";
+			this.fileTree.class = "nav-files-container";
 			let tempContainer = document.createElement("div");
 			await this.fileTree.insert(tempContainer);
 			let data = tempContainer.innerHTML;

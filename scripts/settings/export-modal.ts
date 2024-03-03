@@ -58,17 +58,8 @@ export class ExportModal extends Modal
 			this.filePickerModalEl.style.margin = "10px";
 			this.filePickerModalEl.style.maxHeight = "80%";
 			this.filePickerModalEl.style.boxShadow = "0 0 7px 1px inset #00000060";
-
-			let container = this.filePickerModalEl.createDiv({ cls: 'modal-content tree-container mod-root file-picker-tree file-tree mod-nav-indicator' });
-			container.style.height = "100%";
-			container.style.width = "100%";
-			container.style.padding = "0";
-			container.style.margin = "0";
-			container.style.display = "flex";
-			container.style.flexDirection = "column";
-			container.style.alignItems = "flex-end";
 			
-			let scrollArea = container.createDiv({ cls: 'tree-scroll-area' });
+			let scrollArea = this.filePickerModalEl.createDiv({ cls: 'tree-scroll-area' });
 			scrollArea.style.height = "100%";
 			scrollArea.style.width = "100%";
 			scrollArea.style.overflowY = "auto";
@@ -85,6 +76,9 @@ export class ExportModal extends Modal
 			this.filePicker.generateWithItemsClosed = true;
 			this.filePicker.showFileExtentionTags = true;
 			this.filePicker.hideFileExtentionTags = ["md"];
+			this.filePicker.title = "Select Files to Export";
+			this.filePicker.addCollapseAllButton = true;
+			this.filePicker.class = "file-picker";
 			await this.filePicker.insert(scrollArea);
 			
 			if((this.pickedFiles?.length ?? 0 > 0) || Settings.filesToExport[0].length > 0) 
@@ -93,7 +87,7 @@ export class ExportModal extends Modal
 				this.filePicker.setSelectedFiles(filesToPick);
 			}
 
-			let saveFiles = new Setting(container).addButton((button) => 
+			let saveFiles = new Setting(this.filePickerModalEl).addButton((button) => 
 			{
 				button.setButtonText("Save").onClick(async () =>
 				{

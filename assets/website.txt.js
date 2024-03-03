@@ -68,9 +68,9 @@ async function initGlobalObjects()
 	leftSidebar = document.querySelector(".sidebar-left");
 	rightSidebar = document.querySelector(".sidebar-right");
 
-	fileTree = document.querySelector(".file-tree");
+	fileTree = document.querySelector(".nav-files-container");
 	outlineTree = document.querySelector(".outline-tree");
-	fileTreeItems = Array.from(document.querySelectorAll(".tree-container.file-tree .tree-item"));
+	fileTreeItems = Array.from(document.querySelectorAll(".tree-container.nav-files-container .tree-item"));
 
 	sidebars = []
 	sidebarGutters = []
@@ -787,12 +787,12 @@ function setActiveDocument(url, showInTree, changeURL, animate = true)
 	if (searchlessHeaderlessPath == "/" || searchlessHeaderlessPath == "") searchlessHeaderlessPath = "index.html";
 
 	// switch active file in file tree
-	let oldActiveTreeItem = document.querySelector(".file-tree .tree-item.mod-active");
-	let newActiveTreeItem = document.querySelector(`.file-tree .tree-item:has(>.tree-link[href^="${searchlessHeaderlessPath}"])`);
+	let oldActiveTreeItem = document.querySelector(".nav-files-container .tree-item > .tree-item-self.is-active");
+	let newActiveTreeItem = document.querySelector(`.nav-files-container .tree-item > .tree-item-self[href^="${searchlessHeaderlessPath}"]`);
 	if(newActiveTreeItem && !newActiveTreeItem.isEqualNode(oldActiveTreeItem)) 
 	{
-		oldActiveTreeItem?.classList.remove("mod-active");
-		newActiveTreeItem.classList.add("mod-active");
+		oldActiveTreeItem?.classList.remove("is-active");
+		newActiveTreeItem.classList.add("is-active");
 		if(showInTree) scrollIntoView(newActiveTreeItem, {block: "center", inline: "nearest"}, animate);
 	}
 
@@ -1135,7 +1135,7 @@ function showHeader(headingWrapper, showParents = true, showChildren = false, fo
 function setupTrees(setupOnNode) 
 {
 
-	setupOnNode.querySelectorAll(".collapse-tree-button").forEach(function(button)
+	setupOnNode.querySelectorAll(".tree-collapse-all").forEach(function(button)
 	{
 		button.treeRoot = button.closest(".sidebar-content").querySelector(".tree-container");
 		button.icon = button.firstChild;
@@ -1148,7 +1148,7 @@ function setupTrees(setupOnNode)
 		}
 		button.collapse = function(collapse) 
 		{ 
-			let treeItems = button.treeRoot.classList.contains("file-tree") ? fileTreeItems : outlineTreeItems;
+			let treeItems = button.treeRoot.classList.contains("nav-files-container") ? fileTreeItems : outlineTreeItems;
 			setTreeCollapsedAll(treeItems, collapse);
 			button.setIcon(collapse);
 			button.collapsed = collapse;
@@ -1172,15 +1172,15 @@ function setupTrees(setupOnNode)
 		button.toggleState(true);
 
 		// if any outline items are unncollapsed, toggle collapse all button state
-		let treeItems = button.treeRoot.classList.contains("file-tree") ? fileTreeItems : outlineTreeItems;
+		let treeItems = button.treeRoot.classList.contains("nav-files-container") ? fileTreeItems : outlineTreeItems;
 		if (treeItems.some(item => !item.classList.contains("is-collapsed") && item.classList.contains("mod-collapsible")))
 		{
 			button.toggleState(false);
 		}
 	});
 
-	let fileTreeClick = Array.from(setupOnNode.querySelectorAll(".tree-container.file-tree .tree-item:has(.collapse-icon) > .tree-link"));
-	let outlineTreeClick = Array.from(setupOnNode.querySelectorAll(".tree-container.outline-tree .tree-item:has(.collapse-icon) > .tree-link .collapse-icon"));
+	let fileTreeClick = Array.from(setupOnNode.querySelectorAll(".tree-container.nav-files-container .tree-item.mod-collapsible > .tree-item-self"));
+	let outlineTreeClick = Array.from(setupOnNode.querySelectorAll(".tree-container.outline-tree .tree-item.mod-collapsible > .tree-item-self .collapse-icon"));
 	let collapsable = Array.from(fileTreeClick).concat(Array.from(outlineTreeClick));
 	
 	for (let item of collapsable)
@@ -1193,6 +1193,12 @@ function setupTrees(setupOnNode)
 			toggleTreeCollapsed(closestItem);
 		});
 	}
+
+	let collapsibleItems = Array.from(setupOnNode.querySelectorAll(".tree-item.mod-collapsible"));
+	collapsibleItems.forEach(async function(item)
+	{
+		item.collapseIcon = item.querySelector(".collapse-icon");
+	});
 	
 }
 
@@ -1222,12 +1228,14 @@ async function setTreeCollapsed(element, collapsed, animate = true, openParents 
 	if (collapsed)
 	{
 		element.classList.add("is-collapsed");
+		element.collapseIcon.classList.add("is-collapsed");
 		if(animate) slideUp(children, 100);
 		else children.style.display = "none";
 	}
 	else
 	{
 		element.classList.remove("is-collapsed");
+		element.collapseIcon.classList.remove("is-collapsed");
 		if(animate) slideDown(children, 100);
 		else children.style.display = "";
 
@@ -1235,7 +1243,7 @@ async function setTreeCollapsed(element, collapsed, animate = true, openParents 
 		let treeContainer = element.closest(".tree-container");
 		if (treeContainer)
 		{
-			let collapseButton = treeContainer.closest(".sidebar-content").querySelector(".collapse-tree-button");
+			let collapseButton = treeContainer.closest(".sidebar-content").querySelector(".tree-collapse-all");
 			if (collapseButton) collapseButton.toggleState(false);
 		}
 	}
@@ -1254,10 +1262,12 @@ async function setTreeCollapsedAll(elements, collapsed, animate = true)
 		if (collapsed)
 		{
 			element.classList.add("is-collapsed");
+			element.collapseIcon.classList.add("is-collapsed");
 		}
 		else
 		{
 			element.classList.remove("is-collapsed");
+			element.collapseIcon.classList.remove("is-collapsed");
 		}
 
 		childrenList.push(children);
@@ -1296,7 +1306,7 @@ function toggleTreeCollapsedAll(elements)
 
 function getFileTreeItemFromPath(path)
 {
-	return document.querySelector(`.file-tree .tree-item:has(> .tree-link[href^="${path}"])`);
+	return document.querySelector(`.nav-files-container .tree-item:has(> .tree-item-self[href^="${path}"])`);
 }
 
 // hide all files and folder except the ones in the list (show parents of shown files)
@@ -1307,7 +1317,7 @@ async function filterFileTree(showPathList, hintLabelLists, query, openFileTree 
 
 	if (openFileTree) await setTreeCollapsedAll(fileTreeItems, false, false);
 	// hide all files and folders
-	let allItems = Array.from(document.querySelectorAll(".file-tree .tree-item:not(.filtered-out)"));
+	let allItems = Array.from(document.querySelectorAll(".nav-files-container .tree-item:not(.filtered-out)"));
 	for await (let item of allItems)
 	{
 		item.classList.add("filtered-out");
@@ -1326,7 +1336,7 @@ async function filterFileTree(showPathList, hintLabelLists, query, openFileTree 
 		{
 			// show the file and it's parent tree items
 			treeItem.classList.remove("filtered-out");
-			let itemLink = treeItem.querySelector(".tree-link");
+			let itemLink = treeItem.querySelector(".tree-item-self");
 			if(itemLink) itemLink.href = path + "?mark=" + query;
 			let parent = treeItem.parentElement.closest(".tree-item");
 
@@ -1338,8 +1348,7 @@ async function filterFileTree(showPathList, hintLabelLists, query, openFileTree 
 
 			if (hintLabels.length > 0)
 			{
-				let treeLink = treeItem.querySelector(".tree-link");
-				let hintContainer = treeLink.appendChild(document.createElement("div"));
+				let hintContainer = treeItem.appendChild(document.createElement("div"));
 				hintContainer.classList.add("tree-hint-container");
 
 				function createHintLabel(text, link)
@@ -1373,13 +1382,13 @@ async function clearFileTreeFilter(closeFileTree = true)
 
 	await removeTreeHintLabels();
 
-	let filteredItems = document.querySelectorAll(".file-tree .filtered-out");
+	let filteredItems = document.querySelectorAll(".nav-files-container .filtered-out");
 	for await (let item of filteredItems)
 	{
 		item.classList.remove("filtered-out");
 	}
 
-	let markItems = document.querySelectorAll(".file-tree .tree-link[href*='?mark=']");
+	let markItems = document.querySelectorAll(".nav-files-container .tree-item-self[href*='?mark=']");
 	for await (let item of markItems)
 	{
 		let href = item.href.split("?")[0];
@@ -1401,7 +1410,7 @@ async function removeTreeHintLabels()
 
 function sortFileTreeDocuments(sortByFunction)
 {
-	let treeItems = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-file:not(.filtered-out)"));
+	let treeItems = Array.from(document.querySelectorAll(".nav-files-container .tree-item.nav-file:not(.filtered-out)"));
 	treeItems.sort(sortByFunction);
 
 	// sort the files within their parent folders
@@ -1416,11 +1425,11 @@ function sortFileTreeDocuments(sortByFunction)
 	}
 
 	// sort the folders using their contents
-	let folders = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-folder:not(.filtered-out)"));
+	let folders = Array.from(document.querySelectorAll(".nav-files-container .tree-item.nav-folder:not(.filtered-out)"));
 	folders.sort(function (a, b)
 	{
-		let aFirst = a.querySelector(".tree-item.mod-tree-file:not(.filtered-out)");
-		let bFirst = b.querySelector(".tree-item.mod-tree-file:not(.filtered-out)");
+		let aFirst = a.querySelector(".tree-item.nav-file:not(.filtered-out)");
+		let bFirst = b.querySelector(".tree-item.nav-file:not(.filtered-out)");
 		return treeItems.indexOf(aFirst) - treeItems.indexOf(bFirst);
 	});
 
@@ -1452,7 +1461,7 @@ function sortFileTreeDocuments(sortByFunction)
 
 function sortFileTree(sortByFunction)
 {
-	let treeItems = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-file:not(.filtered-out)"));
+	let treeItems = Array.from(document.querySelectorAll(".nav-files-container .tree-item.nav-file:not(.filtered-out)"));
 	treeItems.sort(sortByFunction);
 
 	// sort the files within their parent folders
@@ -1467,7 +1476,7 @@ function sortFileTree(sortByFunction)
 	}
 
 	// sort the folders using their contents
-	let folders = Array.from(document.querySelectorAll(".file-tree .tree-item.mod-tree-folder:not(.filtered-out)"));
+	let folders = Array.from(document.querySelectorAll(".nav-files-container .tree-item.nav-folder:not(.filtered-out)"));
 	folders.sort(sortByFunction);
 
 	// sort the folders within their parent folders
@@ -1500,8 +1509,8 @@ function sortFileTreeAlphabetically(reverse = false)
 {
 	sortFileTree(function (a, b)
 	{
-		const aTitle = a.querySelector(".tree-item-title");
-		const bTitle = b.querySelector(".tree-item-title");
+		const aTitle = a.querySelector(".tree-item-inner");
+		const bTitle = b.querySelector(".tree-item-inner");
 		if (!aTitle || !bTitle) return 0;
 		const aName = aTitle.textContent.toLowerCase();
 		const bName = bTitle.textContent.toLowerCase();
@@ -2088,7 +2097,7 @@ function setupCodeblocks(setupOnNode)
 
 function setupLinks(setupOnNode)
 {
-	setupOnNode.querySelectorAll(".internal-link, a.tag, .tree-link, .footnote-link").forEach(function(link)
+	setupOnNode.querySelectorAll(".internal-link, a.tag, .tree-item-self, .footnote-link").forEach(function(link)
 	{
 		link.addEventListener("click", function(event)
 		{
@@ -2107,7 +2116,7 @@ function setupLinks(setupOnNode)
 
 			if(target.startsWith("#") || target.startsWith("?")) target = relativePathnameStrip + target;
 
-			loadDocument(target, true, !link.classList.contains("tree-link"));
+			loadDocument(target, true, !link.classList.contains("tree-item-self"));
 		});
 	});
 }
@@ -2669,7 +2678,7 @@ async function search(query)
 			hintLabels.push(hints);
 		}
 
-		let fileTree = document.querySelector(".file-tree");
+		let fileTree = document.querySelector(".nav-files-container");
 		if (fileTree)
 		{
 			// filter the file tree and sort it by the order of the search results
@@ -2693,7 +2702,7 @@ async function search(query)
 						item.classList.add('search-result');
 
 						const link = document.createElement('a');
-						link.classList.add('tree-link');
+						link.classList.add('tree-item-self');
 
 						const searchURL = result.path + '?mark=' + encodeURIComponent(query);
 						link.setAttribute('href', searchURL);

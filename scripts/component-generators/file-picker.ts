@@ -1,5 +1,5 @@
 import { TFile } from "obsidian";
-import { FileTree, FileTreeItem } from "./file-tree";
+import { FileTree, FileTreeItem } from "scripts/component-generators/file-tree";
 import { Path } from "scripts/utils/path";
 import { Website } from "../website/website";
 import { MarkdownRendererAPI } from "scripts/render-api/render-api";
@@ -54,13 +54,11 @@ export class FilePickerTree extends FileTree
 					if(child.isFolder) 
 					{
 						child.dataRef = section.path;
-						child.itemClass = "mod-tree-folder"
 					}
 					else 
 					{
 						let tfile = app.vault.getFileByPath(section.path);
 						if (tfile) child.file = tfile;
-						child.itemClass = "mod-tree-file"
 					}
 
 					parent.children.push(child);
@@ -103,19 +101,20 @@ export class FilePickerTree extends FileTree
 		// add a select all button at the top
 		let selectAllButton = new FilePickerTreeItem(this, this, 0);
 		selectAllButton.title = "Select All";
-		selectAllButton.itemClass = "mod-tree-control";
-		let itemEl = await selectAllButton.generateItemHTML(container);
+		let selectAllEl = await selectAllButton.insert(container);
 
 		// remove all event listeners from the select all button
-		let oldItemEl = itemEl;
-		itemEl = itemEl.cloneNode(true) as HTMLDivElement;
-		selectAllButton.checkbox = itemEl.querySelector("input") as HTMLInputElement;
-		selectAllButton.itemEl = itemEl;
-		selectAllButton.childContainer = itemEl.querySelector(".tree-item-children") as HTMLDivElement;
+		let oldItemEl = selectAllEl;
+		selectAllEl = selectAllEl.cloneNode(true) as HTMLDivElement;
+		selectAllButton.checkbox = selectAllEl.querySelector("input") as HTMLInputElement;
+		selectAllButton.itemEl = selectAllEl;
+		selectAllButton.childContainer = selectAllEl.querySelector(".tree-item-children") as HTMLDivElement;
 
-		container.prepend(itemEl);
-
+		container.prepend(selectAllEl);
 		oldItemEl.remove();
+
+		let root = this.container?.querySelector(".mod-root");
+		if (root) root.classList.remove("tree-item");
 
 
 		let localThis = this;
@@ -203,7 +202,7 @@ export class FilePickerTree extends FileTree
 		{
 			if(child.isFolder)
 			{
-				let uncheckedChildren = child?.itemEl?.querySelectorAll(".mod-tree-file .file-checkbox:not(.checked)");
+				let uncheckedChildren = child?.itemEl?.querySelectorAll(".nav-file .file-checkbox:not(.checked)");
 
 				if (!child.checked && uncheckedChildren?.length == 0)
 				{
@@ -235,12 +234,12 @@ export class FilePickerTreeItem extends FileTreeItem
 	public tree: FilePickerTree;
 	public checked: boolean = false;
 
-	protected async createItemContents(container: HTMLElement): Promise<HTMLDivElement>
+	protected override async insertSelf(container: HTMLElement): Promise<HTMLElement>
 	{
-		let linkEl = await super.createItemContents(container);
+		let self = await super.insertSelf(container);
 
-		this.checkbox = linkEl.createEl("input");
-		linkEl.prepend(this.checkbox);
+		this.checkbox = self.createEl("input");
+		self.prepend(this.checkbox);
 		this.checkbox.classList.add("file-checkbox");
 		this.checkbox.setAttribute("type", "checkbox");
 		this.checkbox.addEventListener("click", (event) =>
@@ -252,13 +251,13 @@ export class FilePickerTreeItem extends FileTreeItem
 		});
 
 		let localThis = this;
-		linkEl?.addEventListener("click", function(event)
+		self?.addEventListener("click", function(event)
 		{
 			if(localThis.isFolder) localThis.toggleCollapse();
 			else localThis.toggle(true);
 		});
 		
-		return linkEl;
+		return self;
 	}
 
 	public check(checked: boolean, evaluate: boolean = false, skipChildren: boolean = false)

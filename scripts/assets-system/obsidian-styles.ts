@@ -23,7 +23,7 @@ export class ObsidianStyles extends WebAsset
 	"is-hidden-frameless", "obsidian-app", "show-view-header", 
 	"is-maximized", "is-translucent", "community", "Layer"];
 
-	public static readonly stylesKeep = ["scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager", "inline-embed", "background", "token"];
+	public static readonly stylesKeep = ["tree", "scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager", "inline-embed", "background", "token"];
 
     override async load()
     {
@@ -44,18 +44,17 @@ export class ObsidianStyles extends WebAsset
 		for (const element of cssRules)
 		{
 			let rule = element;
-			let selectors = rule.cssText.split("{")[0].split(",");
-			let declarations = rule.cssText.split("{")[1].split("}")[0].split(";");
+			// let selectors = rule.cssText.split("{")[0].split(",");
+			// let declarations = rule.cssText.split("{")[1].split("}")[0].split(";");
 
-			selectors = selectors.map((selector) => selector.trim());
-			selectors = selectors.filter((selector) => ObsidianStyles.stylesKeep.some((keep) => selector.includes(keep)) || !ObsidianStyles.stylesFilter.some((filter) => selector.includes(filter)));
+			// selectors = selectors.map((selector) => selector.trim());
+			// selectors = selectors.filter((selector) => ObsidianStyles.stylesKeep.some((keep) => selector.includes(keep)) || !ObsidianStyles.stylesFilter.some((filter) => selector.includes(filter)));
 
-			if (selectors.length == 0)
-				continue;
-			
+			// if (selectors.length == 0)
+			// 	continue;
 
-			let newRule = selectors.join(", ") + " { " + declarations.join("; ") + " }";
-			this.data += newRule + "\n";
+			// let newRule = selectors.join(", ") + " { " + declarations.join("; ") + " }";
+			this.data += rule.cssText + "\n";
 		}
 
         this.data += obsidianStyleOverrides;

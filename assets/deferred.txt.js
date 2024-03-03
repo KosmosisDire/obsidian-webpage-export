@@ -4,9 +4,8 @@ async function loadIncludes()
 	{
 		// replace include tags with the contents of the file
 		let includeTags = document.querySelectorAll("include");
-		for (let i = 0; i < includeTags.length; i++)
+		for (const includeTag of includeTags)
 		{
-			let includeTag = includeTags[i];
 			let includePath = includeTag.getAttribute("src");
 
 			try
