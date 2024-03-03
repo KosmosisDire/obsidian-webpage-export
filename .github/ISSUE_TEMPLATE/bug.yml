@@ -22,6 +22,11 @@ body:
     validations:
       required: true
   - type: input
+    id: last-working
+    attributes:
+      label: Last Working Version
+      description: Did this work in a previous version of the plugin? If so which one?
+  - type: input
     id: version
     attributes:
       label: Version
