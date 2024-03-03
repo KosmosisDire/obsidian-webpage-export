@@ -1,0 +1,5 @@
+blank_issues_enabled=false
+contact_links:
+  - name: GitHub Disscussions
+    url: https://github.com/KosmosisDire/obsidian-webpage-export/discussions
+    about: If you have a question or need help please use create a discussion. Only create an issue for bugs or feature requests.
