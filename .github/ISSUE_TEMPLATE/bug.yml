@@ -42,7 +42,7 @@ body:
     validations:
       required: true
   - type: dropdown
-    id: reproduction
+    id: browsers
     attributes:
       label: Which browsers can you reproduce this in?
       description: (optional)
