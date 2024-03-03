@@ -5,8 +5,11 @@ const dialog: Electron.Dialog = require('electron').remote.dialog;
 
 export namespace FileDialogs
 {
-	export async function  showSaveDialog(defaultPath: Path, defaultFileName: string, showAllFilesOption: boolean = true): Promise<Path | undefined>
+	export async function showSaveDialog(defaultPath: Path, defaultFileName: string, showAllFilesOption: boolean = true): Promise<Path | undefined>
 	{
+		if (process.platform === "win32")
+			defaultPath = defaultPath.backslashified()
+
 		// get paths
 		let absoluteDefaultPath = defaultPath.directory.absoluted().joinString(defaultFileName);
 		
@@ -40,9 +43,11 @@ export namespace FileDialogs
 		return pickedPath;
 	}
 
-	export async function  showSelectFolderDialog(defaultPath: Path): Promise<Path | undefined>
+	export async function showSelectFolderDialog(defaultPath: Path): Promise<Path | undefined>
 	{
 		if(!defaultPath.exists) defaultPath = Path.vaultPath;
+		if (process.platform === "win32")
+			defaultPath = defaultPath.backslashified()
 
 		// show picker
 		let picker = await dialog.showOpenDialog({
@@ -59,9 +64,11 @@ export namespace FileDialogs
 		return path;
 	}
 
-	export async function  showSelectFileDialog(defaultPath: Path): Promise<Path | undefined>
+	export async function showSelectFileDialog(defaultPath: Path): Promise<Path | undefined>
 	{
 		if(!defaultPath.exists) defaultPath = Path.vaultPath;
+		if (process.platform === "win32")
+			defaultPath = defaultPath.backslashified()
 
 		// show picker
 		let picker = await dialog.showOpenDialog({
@@ -81,9 +88,16 @@ export namespace FileDialogs
 
 		if (lastPath.path != "" && lastPath.exists)
 		{
-			return lastPath.directory;
+			lastPath = lastPath.directory;
+		}
+		else 
+		{
+			lastPath = Path.vaultPath;
 		}
 
-		return Path.vaultPath;
+		if (process.platform === "win32")
+			lastPath.backslashify()
+
+		return lastPath;
 	}
 }

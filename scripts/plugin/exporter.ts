@@ -19,6 +19,7 @@ export class HTMLExporter
 		
 		let files = Settings.filesToExport[0];
 		let path = new Path(Settings.exportPath);
+
 		if ((files.length == 0 && overrideFiles == undefined) || !path.exists || !path.isAbsolute || !path.isDirectory)
 		{
 			new Notice("Please set the export path and files to export in the settings first.", 5000);

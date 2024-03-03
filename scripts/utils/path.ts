@@ -32,6 +32,7 @@ export class Path
 	private _exists: boolean | undefined = undefined;
 	private _workingDirectory: string;
 	private _sourceString: string = "";
+	private _useBackslashes: boolean = false;
 
 	constructor(path: string, workingDirectory: string = Path.vaultPath.path)
 	{
@@ -49,8 +50,16 @@ export class Path
 
 		for (let key in parsed)
 		{
-			// @ts-ignore
-			parsed[key] = parsed[key].replaceAll("\\", "/");
+			if (this._useBackslashes)
+			{
+				// @ts-ignore
+				parsed[key] = parsed[key].replaceAll("/", "\\"); 
+			}
+			else
+			{
+				// @ts-ignore
+				parsed[key] = parsed[key].replaceAll("\\", "/");
+			}
 		}
 
 		this._root = parsed.root;
@@ -196,6 +205,25 @@ export class Path
 	slugified(makeWebStyle: boolean = true): Path
 	{
 		return this.copy.slugify(makeWebStyle);
+	}
+
+	/**
+	 * Makes the path use backslashes instead of forward slashes. (in-place).
+	 */
+	backslashify(): Path
+	{
+		this._useBackslashes = true;
+		let path = this.path.replaceAll("/", "\\");
+		this.reparse(path);
+		return this;
+	}
+
+	/**
+	 * Returns a copy of the path using backslashes instead of forward slashes. (returns copy).
+	 */
+	backslashified(): Path
+	{
+		return this.copy.backslashify();
 	}
 
 	/**
@@ -559,6 +587,7 @@ export class Path
 	get copy(): Path
 	{
 		let newPath = new Path(this.path, this._workingDirectory);
+		newPath._useBackslashes = this._useBackslashes;
 		newPath.reparse(this.path);
 		return newPath;
 	}
@@ -913,24 +942,37 @@ export class Path
 	public static async removeEmptyDirectories(directory: string): Promise<void>
 	{
 		let path = new Path(directory);
-		if (!path.isDirectory || !path.exists) 
+		if (!path.isDirectory || !path.exists || path.isFile) 
 			return;
 
-		let fileNames = await readdir(directory);
-		if (fileNames.length > 0) {
-			const recursiveRemovalPromises = fileNames.map(
-				(fileName) => this.removeEmptyDirectories(Path.joinStringPaths(directory, fileName)),
-			);
-			await Promise.all(recursiveRemovalPromises);
-
-			// re-evaluate fileNames; after deleting subdirectory
-			// we may have parent directory empty now
-			fileNames = await readdir(directory);
-		}
-
-		if (fileNames.length === 0) 
+		try
 		{
-			await rmdir(directory);
+			let stats = await fs.stat(directory);
+			if (!stats?.isDirectory()) 
+				return;
+
+			let fileNames = await readdir(directory);
+			if (fileNames.length > 0) {
+				const recursiveRemovalPromises = fileNames.map((fileName) => 
+				{
+					let newPath = path.joinString(fileName).path;
+					return this.removeEmptyDirectories(newPath);
+				});
+				await Promise.all(recursiveRemovalPromises);
+
+				// re-evaluate fileNames; after deleting subdirectory
+				// we may have parent directory empty now
+				fileNames = await readdir(directory);
+			}
+
+			if (fileNames.length === 0) 
+			{
+				await rmdir(directory);
+			}
+		}
+		catch (error)
+		{
+			Path.log("Problem removing directory", error, "warn");
 		}
 	}
 

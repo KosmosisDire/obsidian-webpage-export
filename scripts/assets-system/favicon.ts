@@ -16,8 +16,10 @@ export class Favicon extends WebAsset
         if (Settings.faviconPath == "") this.data = Buffer.from(defaultIcon);
 
         let iconPath = new Path(Settings.faviconPath);
-		if (iconPath.isEmpty) return;
-        let icon = await iconPath.readAsBuffer();
+		if (iconPath.isEmpty) 
+			return;
+        
+		let icon = await iconPath.readAsBuffer();
         if (icon) 
         {
             this.data = icon;
@@ -25,7 +27,6 @@ export class Favicon extends WebAsset
 			this.source = app.vault.getFileByPath(iconPath.path);
 			if (!this.source)
 			{
-				console.error("Favicon source tfile not found: " + iconPath.path);
 				let stat = iconPath.stat;
 				if (stat)
 				{

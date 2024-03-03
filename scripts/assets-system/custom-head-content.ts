@@ -41,7 +41,6 @@ export class CustomHeadContent extends WebAsset
 		this.source = app.vault.getFileByPath(customHeadPath.path);
 		if (!this.source)
 		{
-			console.error("Custom head source tfile not found: " + customHeadPath.path);
 			let stat = customHeadPath.stat;
 			if (stat)
 			{

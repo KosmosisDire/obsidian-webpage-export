@@ -1,4 +1,4 @@
-import {  MarkdownView, PluginManifest, TextFileView } from 'obsidian';
+import {  MarkdownView, TextFileView } from 'obsidian';
 import { Path } from './path';
 import { Attachment } from './downloadable';
 import { ExportLog } from 'scripts/render-api/render-api';
@@ -152,8 +152,11 @@ export namespace Utils
 		return inputString;
 	}
 
-	export async function  openPath(path: Path)
+	export async function openPath(path: Path)
 	{
+		if (process.platform === "win32")
+			path = path.backslashified()
+
 		// @ts-ignore
 		await window.electron.remote.shell.openPath(path.path);
 	}
