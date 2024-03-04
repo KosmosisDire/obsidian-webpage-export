@@ -24,6 +24,8 @@ export class SupportedPluginStyles extends WebAsset
 			(
 				styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET" || 
 				styleID == "css-settings-manager" ||
+				styleID == "colored-tags-wrangler" ||
+				styleID == "highlightr-styles" ||
 				(Settings.includeSvelteCSS && this.isSvelteStylesheet(stylesheets[i]))
 			)
             {

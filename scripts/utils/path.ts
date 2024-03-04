@@ -226,6 +226,12 @@ export class Path
 		return this.copy.backslashify();
 	}
 
+	makePlatformSafe(): Path
+	{
+		if (platform() == "win32") return this.backslashify();
+		return this;
+	}
+
 	/**
 	 * Sets the working directory of the path. (in-place).
 	 */

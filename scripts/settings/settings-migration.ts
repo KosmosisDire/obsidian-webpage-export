@@ -20,11 +20,10 @@ export async function migrateSettings()
 
 		let validSettings = Object.keys(DEFAULT_SETTINGS);
 
-		var savedSettings = JSON.parse(JSON.stringify(Object.assign({}, Settings)));
+		const savedSettings = JSON.parse(JSON.stringify(Object.assign({}, Settings)));
 		Object.assign(Settings, DEFAULT_SETTINGS);
-		for (var i = 0; i < validSettings.length; i++)
+		for (const settingName of validSettings)
 		{
-			var settingName = validSettings[i];
 			let savedSetting = savedSettings[settingName];
 			// @ts-ignore
 			Settings[settingName] = savedSetting === undefined ? DEFAULT_SETTINGS[settingName] : savedSetting;
@@ -40,11 +39,23 @@ export async function migrateSettings()
 	catch (e)
 	{
 		ExportLog.error(e, "Failed to migrate settings, resetting to default settings.");
-		new Notice("Failed to migrate settings, resetting to default settings.", 0);
+		new Notice("⚠️ Failed to migrate Webpage HTML Export settings, resetting to default settings!", 0);
 		Object.assign(Settings, DEFAULT_SETTINGS);
 	}
 
-	await SettingsPage.saveSettings();
+	// reapply export preset
+	switch (Settings.exportPreset)
+	{
+		case 'website':
+			await Settings.websitePreset();
+			break;
+		case 'documents':
+			await Settings.documentsPreset();
+			break;
+		case 'raw-documents':
+			await Settings.rawDocumentsPreset();
+			break;
+	}
 
-	return;
+	await SettingsPage.saveSettings();
 }

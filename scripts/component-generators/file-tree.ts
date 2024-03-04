@@ -173,7 +173,7 @@ export class FileTreeItem extends TreeItem
 		self.classList.toggle("nav-folder-title", this.isFolder);
 		self.classList.toggle("nav-file-title", !this.isFolder);
 
-		if (!this.isFolder && this.tree.showFileExtentionTags && !this.tree.hideFileExtentionTags.contains(this.originalExtension))
+		if (!this.isFolder && this.tree.showFileExtentionTags && !this.tree.hideFileExtentionTags.contains(this.originalExtension) && this.originalExtension != "")
 		{
 			let tag = self.createDiv({ cls: "nav-file-tag" });
 			tag.textContent = this.originalExtension;

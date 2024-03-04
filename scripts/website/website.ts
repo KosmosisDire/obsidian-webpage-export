@@ -207,11 +207,11 @@ export class Website
 	{
 		// if iconize plugin is installed, warn if note icons are not enabled
 		// @ts-ignore
-		if (app.plugins.enabledPlugins.has("obsidian-icon-folder"))
+		if (app.plugins?.enabledPlugins?.has("obsidian-icon-folder"))
 		{
 			// @ts-ignore
-			let fileToIconName = app.plugins.plugins['obsidian-icon-folder'].data;
-			let noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;
+			let fileToIconName = app.plugins?.plugins?.['obsidian-icon-folder']?.data;
+			let noteIconsEnabled = fileToIconName?.settings?.iconsInNotesEnabled ?? false;
 			if (!noteIconsEnabled)
 			{
 				ExportLog.warning("For Iconize plugin support, enable \"Toggle icons while editing notes\" in the Iconize plugin settings.");
@@ -220,10 +220,10 @@ export class Website
 
 		// if excalidraw installed and the embed mode is not set to Native SVG, warn
 		// @ts-ignore
-		if (app.plugins.enabledPlugins.has("obsidian-excalidraw-plugin"))
+		if (app.plugins?.enabledPlugins?.has("obsidian-excalidraw-plugin"))
 		{
 			// @ts-ignore
-			let embedMode = app.plugins.plugins['obsidian-excalidraw-plugin']?.settings['previewImageType'] ?? "";		
+			let embedMode = app.plugins?.plugins?.['obsidian-excalidraw-plugin']?.settings?.['previewImageType'] ?? "";		
 			if (embedMode != "SVG")
 			{
 				ExportLog.warning("For Excalidraw embed support, set the embed mode to \"Native SVG\" in the Excalidraw plugin settings.");
@@ -232,12 +232,12 @@ export class Website
 
 		// the plugin only supports the banner plugin above version 2.0.5
 		// @ts-ignore
-		if (app.plugins.enabledPlugins.has("obsidian-banners"))
+		if (app.plugins?.enabledPlugins?.has("obsidian-banners"))
 		{
 			// @ts-ignore
-			let bannerPlugin = app.plugins.plugins['obsidian-banners'];
+			let bannerPlugin = app.plugins?.plugins?.['obsidian-banners'];
 			let version = bannerPlugin?.manifest?.version ?? "0.0.0";
-			version = version.substring(0, 5);
+			version = version?.substring(0, 5);
 			if (version < "2.0.5")
 			{
 				ExportLog.warning("The Banner plugin version 2.0.5 or higher is required for full support. You have version " + version + ".");

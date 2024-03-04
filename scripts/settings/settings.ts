@@ -93,6 +93,39 @@ export class Settings
 	public static filesToExport: string[][];
 	public static filePickerBlacklist: string[];
 	public static filePickerWhitelist: string[];
+
+	public static async websitePreset()
+	{
+		Settings.inlineAssets = false;
+		Settings.makeNamesWebStyle = true;
+		Settings.addGraphView = true;
+		Settings.addFileNav = true;
+		Settings.addSearchBar = true;
+		Settings.addRSSFeed = true;
+		await SettingsPage.saveSettings();
+	}
+
+	public static async documentsPreset()
+	{
+		Settings.inlineAssets = true;
+		Settings.makeNamesWebStyle = false;
+		Settings.addFileNav = true;
+		Settings.addGraphView = false;
+		Settings.addSearchBar = false;
+		Settings.addRSSFeed = false;
+		await SettingsPage.saveSettings();
+	}
+
+	public static async rawDocumentsPreset()
+	{
+		Settings.inlineAssets = true;
+		Settings.makeNamesWebStyle = false;
+		Settings.addGraphView = false;
+		Settings.addFileNav = false;
+		Settings.addSearchBar = false;
+		Settings.addRSSFeed = false;
+		await SettingsPage.saveSettings();
+	}
 }
 
 export const DEFAULT_SETTINGS: Settings =
@@ -768,6 +801,9 @@ Use the 'author' property to set the author of a specific page.`);
 
 	public static createFileInput(container: HTMLElement, get: () => string, set: (value: string) => void, options?: {name?: string, description?: string, placeholder?: string, defaultPath?: Path, pickFolder?: boolean, validation?: (path: Path) => {valid: boolean, isEmpty: boolean, error: string}, browseButton?: boolean, onChanged?: (path: Path)=>void}): {fileInput: Setting, textInput: TextComponent, browseButton: HTMLElement | undefined}
 	{
+		let getSafe = () => new Path(get() ?? "").makePlatformSafe();
+		let setSafe = (value: string) => set(new Path(value).makePlatformSafe().path);
+
 		let name = options?.name ?? "";
 		let description = options?.description ?? "";
 		let placeholder = options?.placeholder ?? "Path to file...";
@@ -778,10 +814,9 @@ Use the 'author' property to set the author of a specific page.`);
 		let onChanged = options?.onChanged;
 
 		let headContentErrorMessage = this.createError(container);
-		if (get()?.trim() != "")
+		if (!getSafe().isEmpty)
 		{
-			let tempPath = new Path(get() ?? "");
-			headContentErrorMessage.setText(validation(tempPath).error);
+			headContentErrorMessage.setText(validation(getSafe()).error);
 		}
 
 		let headContentInput : TextComponent | undefined = undefined;
@@ -798,17 +833,16 @@ Use the 'author' property to set the author of a specific page.`);
 			headContentInput = text;
 			text.inputEl.style.width = '100%';
 			text.setPlaceholder(placeholder)
-				.setValue(get() ?? "")
+				.setValue(getSafe().path)
 				.onChange(async (value) => 
 				{
-					let path = new Path(value);
+					let path = new Path(value).makePlatformSafe();
 					let valid = validation(path);
 					headContentErrorMessage.setText(valid.error);
 					if (valid.valid) 
 					{
 						headContentErrorMessage.setText("");
-						set(value.replaceAll("\"", ""));
-						text.setValue(get() ?? "");
+						setSafe(value.replaceAll("\"", ""));
 						await SettingsPage.saveSettings();
 					}
 
@@ -827,7 +861,7 @@ Use the 'author' property to set the author of a specific page.`);
 					let path = pickFolder ? await FileDialogs.showSelectFolderDialog(defaultPath) : await FileDialogs.showSelectFileDialog(defaultPath);
 					if (!path) return;
 					
-					set(path.path);
+					setSafe(path.path);
 					let valid = validation(path);
 					headContentErrorMessage.setText(valid.error);
 					if (valid.valid)
@@ -837,7 +871,7 @@ Use the 'author' property to set the author of a specific page.`);
 
 					if (onChanged) onChanged(path);
 
-					headContentInput?.setValue(get() ?? "");
+					headContentInput?.setValue(getSafe().path);
 				});
 			});
 		}

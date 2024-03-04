@@ -77,7 +77,6 @@ export class ExportModal extends Modal
 			this.filePicker.showFileExtentionTags = true;
 			this.filePicker.hideFileExtentionTags = ["md"];
 			this.filePicker.title = "Select Files to Export";
-			this.filePicker.addCollapseAllButton = true;
 			this.filePicker.class = "file-picker";
 			await this.filePicker.insert(scrollArea);
 			
@@ -161,34 +160,13 @@ export class ExportModal extends Modal
 
 					switch (value) {
 						case 'website':
-							Settings.inlineAssets = false;
-							Settings.makeNamesWebStyle = true;
-							Settings.addGraphView = true;
-							Settings.addFileNav = true;
-							Settings.addSearchBar = true;
-							Settings.addRSSFeed = true;
-							await SettingsPage.saveSettings();
-
+							await Settings.websitePreset();
 							break;
 						case 'documents':
-							Settings.inlineAssets = true;
-							Settings.makeNamesWebStyle = false;
-							Settings.addFileNav = true;
-							Settings.addGraphView = false;
-							Settings.addSearchBar = false;
-							Settings.addRSSFeed = false;
-							await SettingsPage.saveSettings();
-
+							await Settings.documentsPreset();
 							break;
 						case 'raw-documents':
-							Settings.inlineAssets = true;
-							Settings.makeNamesWebStyle = false;
-							Settings.addGraphView = false;
-							Settings.addFileNav = false;
-							Settings.addSearchBar = false;
-							Settings.addRSSFeed = false;
-							await SettingsPage.saveSettings();
-
+							await Settings.rawDocumentsPreset();
 							break;
 					}
 
@@ -221,6 +199,8 @@ export class ExportModal extends Modal
 				requireExists: true
 			});
 
+		let onChanged = (path: Path) => (!validatePath(path).valid) ? setExportDisabled(true) : setExportDisabled(false);
+
 		let exportPathInput = SettingsPage.createFileInput(contentEl, () => Settings.exportPath, (value) => Settings.exportPath = value,
 		{
 			name: '',
@@ -229,7 +209,7 @@ export class ExportModal extends Modal
 			defaultPath: FileDialogs.idealDefaultPath(),
 			pickFolder: true,
 			validation: validatePath,
-			onChanged: (path) => (!validatePath(path).valid) ? setExportDisabled(true) : setExportDisabled(false)
+			onChanged: onChanged
 		});
 
 		let { fileInput } = exportPathInput;
@@ -243,6 +223,8 @@ export class ExportModal extends Modal
 				this.close();
 			});
 		});
+
+		onChanged(new Path(Settings.exportPath));
 
 		new Setting(contentEl)
 			.setDesc("More options located on the plugin settings page.")

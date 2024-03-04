@@ -58,6 +58,7 @@ export class WebAsset extends Attachment
 
 			// replacements
 			this.data = this.data.replaceAll(".markdown-preview-section>div", ".heading-children>div");
+			this.data = this.data.replaceAll("[href", "[data-href");
 		}
 
         if (this.minify)

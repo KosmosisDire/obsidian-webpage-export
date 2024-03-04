@@ -7,8 +7,7 @@ export namespace FileDialogs
 {
 	export async function showSaveDialog(defaultPath: Path, defaultFileName: string, showAllFilesOption: boolean = true): Promise<Path | undefined>
 	{
-		if (process.platform === "win32")
-			defaultPath = defaultPath.backslashified()
+		defaultPath.makePlatformSafe();
 
 		// get paths
 		let absoluteDefaultPath = defaultPath.directory.absoluted().joinString(defaultFileName);
@@ -36,7 +35,7 @@ export namespace FileDialogs
 
 		if (picker.canceled || !picker.filePath) return;
 		
-		let pickedPath = new Path(picker.filePath);
+		let pickedPath = new Path(picker.filePath).makePlatformSafe();
 		Settings.exportPath = pickedPath.path;
 		SettingsPage.saveSettings();
 		
@@ -46,8 +45,7 @@ export namespace FileDialogs
 	export async function showSelectFolderDialog(defaultPath: Path): Promise<Path | undefined>
 	{
 		if(!defaultPath.exists) defaultPath = Path.vaultPath;
-		if (process.platform === "win32")
-			defaultPath = defaultPath.backslashified()
+		defaultPath.makePlatformSafe();
 
 		// show picker
 		let picker = await dialog.showOpenDialog({
@@ -57,7 +55,7 @@ export namespace FileDialogs
 
 		if (picker.canceled) return;
 
-		let path = new Path(picker.filePaths[0]);
+		let path = new Path(picker.filePaths[0]).makePlatformSafe();
 		Settings.exportPath = path.directory.path;
 		SettingsPage.saveSettings();
 
@@ -67,8 +65,7 @@ export namespace FileDialogs
 	export async function showSelectFileDialog(defaultPath: Path): Promise<Path | undefined>
 	{
 		if(!defaultPath.exists) defaultPath = Path.vaultPath;
-		if (process.platform === "win32")
-			defaultPath = defaultPath.backslashified()
+		defaultPath.makePlatformSafe();
 
 		// show picker
 		let picker = await dialog.showOpenDialog({
@@ -78,7 +75,7 @@ export namespace FileDialogs
 
 		if (picker.canceled) return;
 
-		let path = new Path(picker.filePaths[0]);
+		let path = new Path(picker.filePaths[0]).makePlatformSafe();
 		return path;
 	}
 
@@ -95,8 +92,7 @@ export namespace FileDialogs
 			lastPath = Path.vaultPath;
 		}
 
-		if (process.platform === "win32")
-			lastPath.backslashify()
+		lastPath.makePlatformSafe();
 
 		return lastPath;
 	}

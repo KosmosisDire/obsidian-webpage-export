@@ -65,28 +65,28 @@ export class Tree implements ComponentGenerator
 		*/
 
 		this.container = container;
-
-		if (this.title && this.addCollapseAllButton)
-		{
-			let wrapper = container.createDiv(this.class + " tree-container");
-				let root = wrapper.createDiv("tree-item nav-folder mod-root");
-					root.setAttribute("data-depth", "0");
+		let wrapper = container.createDiv(this.class + " tree-container");
+			let root = wrapper.createDiv("tree-item nav-folder mod-root");
+				root.setAttribute("data-depth", "0");
+				if (this.title || this.addCollapseAllButton){
 					let title = root.createDiv("tree-item-self nav-folder-title");
+					if (this.title){
 						let titleInner = title.createDiv("tree-item-inner nav-folder-title-content");
 							titleInner.textContent = this.title;
+					}
+					if (this.addCollapseAllButton){
 						let collapseAllEl = title.createEl('button', { cls: "clickable-icon nav-action-button tree-collapse-all" });
 							collapseAllEl.setAttribute("aria-label", "Collapse All");
 							collapseAllEl.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'></svg>";
+							if (this.generateWithItemsClosed) collapseAllEl.classList.add("is-collapsed");
+					}
+				}
+				let children = root.createDiv("tree-item-children nav-folder-children");
+					children.createDiv("nav-folder-spacer");
 
-					let children = root.createDiv("tree-item-children nav-folder-children");
-						children.createDiv("nav-folder-spacer");
+		if (this.showNestingIndicator) root.classList.add("mod-nav-indicator");
 
-			if (this.generateWithItemsClosed) collapseAllEl.classList.add("is-collapsed");
-			if (this.showNestingIndicator) root.classList.add("mod-nav-indicator");
-
-			await this.generateTree(children);
-		}
-		else await this.generateTree(container);
+		await this.generateTree(children);
 	}
 
 	public sortAlphabetically(reverse: boolean = false)

@@ -29,8 +29,6 @@ a.tree-item-self.is-clickable
 {
 	text-decoration: none !important;
 	text-decoration-line: none !important;
-	outline: none !important;
-	border: none !important;
 }
 
 .tree-item-inner > p
@@ -48,10 +46,16 @@ a.tree-item-self.is-clickable
     letter-spacing: .06em;
 }
 
-.nav-folder.mod-root > .nav-folder-title > .tree-item-inner
+.nav-folder.mod-root>.nav-folder-title>.tree-item-inner 
 {
-	flex-grow: 0 !important;
-	margin-right: 0.5em;
+    flex-grow: 0 !important;
+    margin-right: .5em !important;
+    font-size: inherit !important;
+    color: var(--text-normal) !important;
+}
+
+.tree-item.filtered-out {
+    display: none;
 }
 
 

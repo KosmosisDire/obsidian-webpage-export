@@ -709,6 +709,7 @@ export namespace _MarkdownRendererInternal
 		{
 			let split = element.href.split("#");
 			let tag = split[1] ?? element.href.substring(1); // remove the #
+			element.setAttribute("data-href", element.getAttribute("href") ?? "");
 			element.setAttribute("href", `?query=tag:${tag}`);
 		});
 

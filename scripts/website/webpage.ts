@@ -529,8 +529,11 @@ export class Webpage extends Attachment
 	public resolveLink(link: string | null): string | undefined
 	{
 		if (!link) return "";
-		if ((!link.startsWith("app://") && /\w+:(\/\/|\\\\)/.exec(link)) || // link is a URL except for app://
-			link.startsWith("data:")) // link is a data URL
+		if ((!link.startsWith("app://") && /\w+:(\/\/|\\\\)/.exec(link)))
+			return;
+		if (link.startsWith("data:"))
+			return;
+		if (link?.startsWith("?")) 
 			return;
 
 		if (link.startsWith("#"))

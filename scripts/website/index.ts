@@ -301,12 +301,13 @@ export class Index
 		else
 		{
 			let oldData = this.getOldFile(key);
-			
+			let updated = false;
 			if (oldData)
 			{
 				if (oldData.modifiedTime != file.sourceStat.mtime && oldData.sourceSize != file.sourceStat.size)
 				{
 					this.updatedFiles.push(file);
+					updated = true;
 				}
 				else if (oldData.sourceSize != file.sourceStat.size)
 				{
@@ -316,11 +317,26 @@ export class Index
 					if (!oldData?.equals(newData))
 					{
 						this.updatedFiles.push(file);
+						updated = true;
 					}
 				}
 			}
 
 			this.deletedFiles.remove(file.targetPath.path);
+
+			// if we didn't update the file make sure we don't delete the file's attachments
+			// if we did update the file we don't need to worry, because the attachments will be recreated
+			if (!updated)
+			{
+				let oldWebpage = this.getOldWebpage(key);
+				if (oldWebpage)
+				{
+					for (let attachment of oldWebpage.attachments)
+					{
+						this.deletedFiles.remove(attachment);
+					}
+				}
+			}
 		}
 	}
 
