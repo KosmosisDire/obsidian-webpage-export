@@ -232,7 +232,7 @@ export class WebAsset extends Attachment
 					include = `<style>@font-face{font-family:'${this.basename}';src:url('${path}') format('woff2');}</style>`;
                     return include;
 				case AssetType.HTML:
-					return `<include src="${path}"></include>`
+					return `<div data-include="${path}"></div>`
                 default:
                     return "";
             }

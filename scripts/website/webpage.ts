@@ -600,7 +600,7 @@ export class Webpage extends Attachment
 		if (!this.document) throw new Error("Document is not defined");
 
 		/*
-		- div.webpage-container
+		- div.website-container
 
 			- div.sidebar.sidebar-left
 				- div.sidebar-content
@@ -635,7 +635,7 @@ export class Webpage extends Attachment
 		let rightTopbarContent = this.document.createElement("div");
 		let rightCollapseIcon = this.document.createElement("div");
 
-		pageContainer.setAttribute("class", "webpage-container workspace");
+		pageContainer.setAttribute("class", "website-container workspace");
 
 		leftSidebar.setAttribute("class", "sidebar-left sidebar");
 		leftSidebarHandle.setAttribute("class", "sidebar-handle");

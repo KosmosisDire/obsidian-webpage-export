@@ -22,6 +22,7 @@ export interface FileData
 	exportPath: string;
 	showInTree: boolean;
 	treeOrder: number;
+	backlinks: string[];
 }
 
 export interface WebpageData extends FileData
@@ -29,7 +30,6 @@ export interface WebpageData extends FileData
 	headers: {heading: string, level: number, id: string}[];
 	aliases: string[];
 	tags: string[];
-	backlinks: string[];
 	links: string[];
 	attachments: string[];
 
@@ -510,8 +510,9 @@ export class Index
 			fileInfo.sourceSize = webpageInfo.sourceSize;
 			fileInfo.sourcePath = webpageInfo.sourcePath;
 			fileInfo.exportPath = webpageInfo.exportPath;
-			webpageInfo.showInTree = webpage.showInTree;
-			webpageInfo.treeOrder = webpage.treeOrder;
+			fileInfo.backlinks = webpageInfo.backlinks;
+			fileInfo.showInTree = webpageInfo.showInTree;
+			fileInfo.treeOrder = webpageInfo.treeOrder;
 
 			this.websiteData.webpages[webpageInfo.exportPath] = webpageInfo;
 			this.websiteData.fileInfo[webpageInfo.exportPath] = fileInfo;
@@ -576,6 +577,7 @@ export class Index
 			fileInfo.exportPath = exportPath;
 			fileInfo.showInTree = attachment.showInTree;
 			fileInfo.treeOrder = attachment.treeOrder;
+			fileInfo.backlinks = [];
 
 			this.websiteData.fileInfo[key] = fileInfo;
 			if (!this.websiteData.attachments.includes(key)) this.websiteData.attachments.push(key);

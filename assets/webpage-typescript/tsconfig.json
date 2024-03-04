@@ -6,6 +6,6 @@
 		"sourceMap": true,
 		"skipLibCheck": true,
 	},
-    "include": ["webpage.ts"]
+    "include": ["./webpage.ts"]
 	
 }

@@ -107,6 +107,7 @@
 {
 	padding-left: 5px !important;
 	display: flex !important;
+	align-items: center !important;
 }
 
 .file-picker .tree-item-self > *:not(.nav-file-tag, .file-checkbox)

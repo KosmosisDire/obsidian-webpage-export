@@ -63,7 +63,7 @@ async function initGlobalObjects()
 	document.body.appendChild(loadingIcon);
 	loadingIcon.innerHTML = `<div></div><div></div><div></div><div></div>`;
 
-	webpageContainer = document.querySelector(".webpage-container");
+	webpageContainer = document.querySelector(".website-container");
 	documentContainer = document.querySelector(".document-container");
 	leftSidebar = document.querySelector(".sidebar-left");
 	rightSidebar = document.querySelector(".sidebar-right");

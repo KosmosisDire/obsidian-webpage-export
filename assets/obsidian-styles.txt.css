@@ -179,8 +179,8 @@ h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-i
 
 /*#region Lists */
 
-.webpage-container .is-collapsed .list-collapse-indicator svg.svg-icon, 
-.webpage-container .is-collapsed .collapse-indicator svg.svg-icon
+.website-container .is-collapsed .list-collapse-indicator svg.svg-icon, 
+.website-container .is-collapsed .collapse-indicator svg.svg-icon
 {
 	color: var(--collapse-icon-color-collapsed);
 }

@@ -177,7 +177,7 @@ body
 	transition: background-color var(--color-fade-speed) ease-in-out;
 }
 
-.webpage-container {
+.website-container {
     display: flex;
     flex-direction: row;
     height: 100%;

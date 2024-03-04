@@ -69,6 +69,8 @@ a.tree-item-self.is-clickable
   border: none !important;
   border-radius: 0 !important;
   stroke: currentColor;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 #webpage-icon *:has(:is(svg, img))
@@ -130,7 +132,7 @@ h1 li {
 }
 
 /* high specificity in order to override other style */
-html > body > .webpage-container > .document-container > .markdown-preview-view >  .markdown-preview-sizer > div
+html > body > .website-container > .document-container > .markdown-preview-view >  .markdown-preview-sizer > div
 {
 	margin-inline: 0 !important;
     margin: 0 !important;
@@ -681,7 +683,7 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 
 @media print 
 {
-	body .webpage-container .document-container *
+	body .website-container .document-container *
 	{ 
 		overflow: visible !important;
 		overflow-y: visible !important;
@@ -693,7 +695,7 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 		display: none !important;
 	}
 
-	:root, html body.publish > :is(.webpage-container, .document-container, .markdown-preview-view):not(script, style, include)
+	:root, html body.publish > :is(.website-container, .document-container, .markdown-preview-view):not(script, style, include)
 	{
 		display: contents !important;
 	}
