@@ -224,8 +224,6 @@ export class ExportModal extends Modal
 			});
 		});
 
-		onChanged(new Path(Settings.exportPath));
-
 		new Setting(contentEl)
 			.setDesc("More options located on the plugin settings page.")
 			.addExtraButton((button) => button.setTooltip('Open plugin settings').onClick(() => {

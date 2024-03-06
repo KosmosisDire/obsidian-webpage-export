@@ -103,7 +103,8 @@
 	display: none !important;
 }
 
-.file-picker .tree-item-self
+.file-picker .tree-item > .tree-item-self,
+.file-picker .tree-item .tree-item-self:has(> .tree-item-icon)
 {
 	padding-left: 5px !important;
 	display: flex !important;

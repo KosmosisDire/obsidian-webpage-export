@@ -58,8 +58,31 @@ a.tree-item-self.is-clickable
     display: none;
 }
 
+.outline-tree .tree-item[data-depth="1"]:not(.mod-collapsible) > .tree-item-self
+{
+	padding-left: var(--nav-item-children-margin-left);
+	font-weight: 900;
+	font-size: 1.05em;
+}
+
+.tree-item-self
+{
+	display: flex !important;
+	align-items: center !important;
+}
+
+.tree-item-self .tree-item-icon
+{
+	height: 100% !important;
+}
+
 
 /*#region Headers */
+
+.heading p
+{
+	margin: 0 !important;
+}
 
 #webpage-icon :is(svg, img)
 {
@@ -238,6 +261,27 @@ div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
 {
     width: 100%;
 }
+
+.tree-container,
+.tree-container > .tree-item.mod-root
+{
+	overflow: hidden hidden !important;
+	overflow: clip clip !important;
+	height: 100% !important;
+}
+
+.tree-container > .tree-item.mod-root > .tree-item-children
+{
+	overflow: hidden auto !important;
+	overflow: clip auto !important;
+	height: 100% !important;
+}
+
+.nav-file-title, .nav-folder-title
+{
+	line-height: var(--tree-vertical-spacing) !important;
+}
+
 
 /*#endregion */
 
@@ -570,7 +614,7 @@ body :is(.canvas-node-container, .canvas-wrapper)
 body.is-phone .sidebar 
 {
     font-size: 1.15em;
-    --tree-vertical-spacing: 0.9em;
+    --tree-vertical-spacing: 1.8em;
 	--sidebar-width: 85vw !important;
 }
 
@@ -578,7 +622,6 @@ body.is-phone
 {
 	--collapse-arrow-size: 13px;
 	--tree-vertical-spacing: 0.8em;
-	--tree-horizontal-spacing: 0.5em;
 }
 
 body.is-phone .heading-wrapper .heading-collapse-indicator
@@ -785,19 +828,21 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 	text-decoration-line: underline;
 }	
 
-.tree-hint-container
-{
-	width: 100%;
-    padding-left: calc(var(--tree-horizontal-spacing) * 2 + var(--collapse-arrow-size));
-    padding-bottom: calc(var(--tree-vertical-spacing) / 2);
+.tree-hint-container {
+    width: 100%;
+    padding: var(--nav-item-padding);
+    padding-bottom: 0;
+    padding-top: 0;
+    padding-right: 0;
     display: flex;
     flex-direction: column;
+    margin-left: 22px;
 }
 
 /* find hints inside folders with no other folders in them */
 .tree-container .nav-folder:not(:has(.nav-folder)) .nav-file > .tree-link > .tree-hint-container
 {
-	padding-left: calc(var(--tree-horizontal-spacing) * 2);
+	padding-left: calc(1em * 2);
 }
 
 a.tree-hint-label:hover
@@ -890,11 +935,6 @@ input[type=search] {
 	margin-right: 0.5em;
 }
 
-.tree-item::before
-{
-	margin-left: calc(var(--tree-horizontal-spacing) - 0.3em);
-}
-
 .tree-item-contents:has(.tree-item-icon) .tree-item-title::before, 
 .tree-item-contents:has(.tree-item-icon)::before, 
 .tree-item:has(.tree-item-contents > .tree-item-icon)::before
@@ -903,62 +943,6 @@ input[type=search] {
 }
 
 /*#endregion */
-
-/*#region AnuPpuccin */
-
-/* AnuPpuccin rainbow indent support */
-.anp-simple-rainbow-color-toggle.anp-simple-rainbow-indentation-toggle .tree-container.nav-files-container .tree-item
-{
-	border-color: rgba(var(--rainbow-folder-color), 0.5);
-}
-
-/* AnuPpuccin folder icon support */
-.anp-collapse-folders .tree-container .tree-item .collapse-icon 
-{
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 27 24' fill='none' stroke='currentColor' stroke-linejoin='round' stroke-linecap='round' stroke-width='2'%3E%3Cpath d='M6 14l1.45-2.9A2 2 0 0 1 9.24 10H22a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H20a2 2 0 0 1 2 2v2'/%3E%3C/svg%3E%0A");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 27 24' fill='none' stroke='currentColor' stroke-linejoin='round' stroke-linecap='round' stroke-width='2'%3E%3Cpath d='M6 14l1.45-2.9A2 2 0 0 1 9.24 10H22a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H20a2 2 0 0 1 2 2v2'/%3E%3C/svg%3E%0A");
-    -webkit-mask-repeat: no-repeat;
-	mask-repeat: no-repeat;
-
-    background-color: currentColor;
-    display: flex;
-    flex-basis: 100%;
-    height: 16px;
-    width: 17px;
-}
-
-.anp-collapse-folders .tree-container .tree-item.is-collapsed .collapse-icon
-{
-	-webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 27 24' fill='none' stroke='currentColor' stroke-linejoin='round' stroke-linecap='round' stroke-width='2'%3E%3Cpath d='M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z'/%3E%3Cpath d='M2 10h20' /%3E%3C/svg%3E%0A");
-	mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 27 24' fill='none' stroke='currentColor' stroke-linejoin='round' stroke-linecap='round' stroke-width='2'%3E%3Cpath d='M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2z'/%3E%3Cpath d='M2 10h20' /%3E%3C/svg%3E%0A");
-}
-
-.anp-file-icons .nav-file .nav-file-title::before
-{
-    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z'/%3E%3Cpath d='M14 2v6h6'/%3E%3C/svg%3E%0A");
-    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z'/%3E%3Cpath d='M14 2v6h6'/%3E%3C/svg%3E%0A");
-    -webkit-mask-repeat: no-repeat;
-    mask-repeat: no-repeat;
-    background-color: currentColor;
-    content: "";
-    display: flex;
-    flex-shrink: 0;
-    height: var(--size-4-4);
-    margin-left: calc(-1 * var(--size-4-5));
-    opacity: var(--icon-opacity);
-    position: absolute;
-    width: var(--size-4-4);
-}
-
-.anp-collapse-folders .tree-container .tree-item .collapse-icon:hover
-{
-	color: currentColor;
-}
-
-.anp-collapse-folders .tree-container .tree-item .collapse-icon svg
-{
-	display: none;
-}
 
 /*#endregion */
 

@@ -6,8 +6,7 @@ body
 	--file-line-width: 40em;
 	--sidebar-width: min(20em, 80vw);
 	--collapse-arrow-size: 11px;
-	--tree-horizontal-spacing: 0.6em;
-	--tree-vertical-spacing: 0.6em;
+	--tree-vertical-spacing: 1.3em;
 	--sidebar-margin: 12px;
 }
 
@@ -22,7 +21,7 @@ body
 
     position: relative;
     overflow: hidden;
-    /* overflow: clip; */
+    overflow: clip;
 	
     transition: min-width ease-in-out, max-width ease-in-out;
 	transition-duration: .2s;
@@ -214,7 +213,6 @@ body
 	width: -webkit-fill-available;
 	width: -moz-available;
 	width: fill-available;
-    background-color: var(--background-primary);
     transition: background-color var(--color-fade-speed) ease-in-out;
     border-top-right-radius: var(--window-radius, var(--radius-m));
     border-top-left-radius: var(--window-radius, var(--radius-m));

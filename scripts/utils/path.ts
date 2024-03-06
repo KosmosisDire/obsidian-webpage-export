@@ -565,10 +565,13 @@ export class Path
 	{
 		let asString = this.path;
 		if (asString.startsWith("http:") || asString.startsWith("https:")) return true;
+		if (asString.startsWith("file://")) return true;
 
 		if(platform() == "win32")
 		{
-			if (asString.match(/^[A-Za-z]:[\\|\/|\\\\|\/\/]/)) return true;
+			asString = asString.replaceAll("/", "\\");
+			if (asString.startsWith("\\\\")) return true;
+			if (asString.match(/^[A-Za-z]:\\/)) return true;
 			if (asString.startsWith("\\") && !asString.contains(":")) return true;
 			else return false;
 		}
