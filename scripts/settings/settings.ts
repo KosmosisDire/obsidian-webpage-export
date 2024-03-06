@@ -372,7 +372,7 @@ This feature does not require "File & folder icons" to be enbaled.`);
 						allowRelative: true,
 						allowFiles: true,
 						requireExists: true,
-						requireExtentions: ["html, htm, txt"]
+						requireExtentions: ["html", "htm", "txt"]
 					}),
 			});
 
