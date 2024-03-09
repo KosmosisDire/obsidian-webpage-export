@@ -12,6 +12,11 @@ export class ThemeStyles extends WebAsset
         super("theme.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Default, 8);
     }
 
+	static readonly obsidianStylesFilter =
+	["cm-", "cm6", "CodeMirror", "pdf"];
+	static readonly stylesKeep = ["@media", "tree", "scrollbar", "input[type", "table", "markdown-rendered", "inline-embed"];
+    
+
     private static async getThemeContent(themeName: string): Promise<string>
     {
         if (themeName == "Default") return "/* Using default theme. */";
@@ -41,7 +46,11 @@ export class ThemeStyles extends WebAsset
 		{
 			return;
 		}
-        this.data = await ThemeStyles.getThemeContent(themeName);
+        let themeCSS = await ThemeStyles.getThemeContent(themeName);
+		const themeStylesheet = new CSSStyleSheet();
+		// @ts-ignore
+		await themeStylesheet.replace(themeCSS);
+		this.data = AssetHandler.filterStyleRules(themeStylesheet, ThemeStyles.obsidianStylesFilter, ThemeStyles.stylesKeep);
         this.lastThemeName = themeName;
         await super.load();
     }

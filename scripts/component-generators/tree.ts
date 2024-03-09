@@ -234,8 +234,9 @@ export class TreeItem
 
 		if (this.href) 
 			itemLinkEl.setAttribute("href", this.href);
-		if (this.dataRef) 
-			itemLinkEl.setAttribute("data-path", this.dataRef);
+
+		itemLinkEl.setAttribute("data-path", this.dataRef ?? this.href ?? this.title);
+
 		if (this.isCollapsible()) 
 			this.insertCollapseIcon(itemLinkEl);
 		
@@ -259,7 +260,7 @@ export class TreeItem
 	{
 		if (this.icon.trim() == "") return undefined;
 		
-		let itemIconEl = container.createDiv("tree-icon");
+		let itemIconEl = container.createDiv("tree-icon iconize-icon");
 
 		if (this.tree.renderMarkdownTitles) MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, itemIconEl);
 		else itemIconEl.innerText = this.icon;

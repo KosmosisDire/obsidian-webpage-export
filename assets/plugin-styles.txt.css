@@ -40,6 +40,9 @@ a.tree-item-self.is-clickable
 {
     display: flex!important;
     align-items: center!important;
+	border: none!important;
+	margin-top: 1em !important;
+	padding-top: 0 !important;
     font-size: 1em;
     padding-left: 0;
     text-transform: uppercase;
@@ -52,6 +55,17 @@ a.tree-item-self.is-clickable
     margin-right: .5em !important;
     font-size: inherit !important;
     color: var(--text-normal) !important;
+}
+
+.outline-tree .nav-folder.mod-root>.nav-folder-title>.nav-folder-title-content::before,
+.outline-tree .nav-folder.mod-root>.nav-folder-title::before
+{
+	content: none;
+}
+
+.outline-tree .nav-folder.mod-root>.nav-folder-title>.nav-folder-title-content
+{
+	margin-left: 0;
 }
 
 .tree-item.filtered-out {

@@ -178,6 +178,11 @@ export class Webpage extends Attachment
 				let src = el.src;
 				if (!src) return;
 				if (src.startsWith("http") || src.startsWith("data:")) return;
+				if (src.startsWith("data:")) 
+				{
+					el.remove();
+					return;
+				}
 				src = src.replace("app://obsidian", "");
 				src = src.replace(".md", "");
 				let path = Path.joinStrings(this.exportOptions.siteURL ?? "", src);
@@ -236,12 +241,36 @@ export class Webpage extends Attachment
 				element.append(...nodes);
 			}
 
+			
 			keepTextLinksImages(content);
+
+			//remove subsequent br tags
+			content.querySelectorAll("br").forEach((br: HTMLElement) => 
+			{
+				let next = br.nextElementSibling;
+				if (next?.tagName == "BR") br.remove();
+			});
+
+			// remove br tags at the start and end of the content
+			let first = content.firstElementChild;
+			if (first?.tagName == "BR") first.remove();
+			let last = content.lastElementChild;
+			if (last?.tagName == "BR") last.remove();
+
 			description = content.innerHTML;
 			content.remove();
 		}
-		
-		// add tags to top of description
+
+		// remove multiple whitespace characters in a row
+		description = description.replace(/\s{2,}/g, " ");
+
+		return description ?? "";
+	}
+
+	get tagsPreviewHTML(): string
+	{
+		let tagsHTML = "";
+
 		let tags = this.tags.map((tag) => `<a class="tag" href="${this.exportOptions.siteURL}?query=tag:${tag.replace("#", "")}">${tag.startsWith("#") ? tag : "#" + tag}</a>`).join(" ");
 		if (tags.length > 0)
 		{
@@ -260,17 +289,11 @@ export class Webpage extends Attachment
 				tag.style.padding = "0.2em 0.5em";
 			});
 
-			description = description.replaceAll(/(<br>\s*?){2,}/gi, "<br>").trim();
-			if(description.startsWith("<br>")) description = description.substring(4);
-
-			description = tagContainer.innerHTML + " <br> " + description;
+			tagsHTML = tagContainer.innerHTML + " <br> ";
 			tagContainer.remove();
 		}
 
-		// remove multiple whitespace characters in a row
-		description = description.replace(/\s{2,}/g, " ");
-
-		return description ?? "";
+		return tagsHTML;
 	}
 
 	get author(): string
@@ -339,6 +362,12 @@ export class Webpage extends Attachment
 		if (!this.document) return [];
 		let hrefEls = (Array.from(this.document.querySelectorAll("[href]:not(head *):not(span, div)")) as HTMLAnchorElement[]);
 		return hrefEls;
+	}
+	get linksToOtherFiles(): string[]
+	{
+		let links = this.hrefLinks;
+		let otherFiles = links.filter((link) => !link.includes("#") && !link.startsWith("http") && !link.startsWith("data:"));
+		return otherFiles;
 	}
 
 	public async build(): Promise<Webpage | undefined>

@@ -41,16 +41,115 @@
 
 /* Progressbar used in the render progress */
 
-.html-render-progressbar::-webkit-progress-bar {
+.html-progress-bar
+{
+	width: 300px; 
+	height: 15px; 
+	background-color: transparent; 
+	color: var(--interactive-accent);
+}
+
+.html-progress-bar::-webkit-progress-bar {
     background-color: var(--background-secondary);
     border-radius: 500px;
 }
 
-.html-render-progressbar::-webkit-progress-value {
+.html-progress-bar::-webkit-progress-value {
     background-color: currentColor;
     border-radius: 500px;
 }
 
+.file-list-wrapper
+{
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	height:  -webkit-fill-available;
+	margin-left: 1em;
+}
+
+.file-list
+{
+	display: flex;
+	flex-direction: column;
+	overflow: auto;
+	height: 100%;
+	width: 100%;
+	font-size: 12px;
+	line-height: 1.6em;
+	border-right: 1px solid var(--divider-color);
+	padding-bottom: 4em;
+}
+
+.file-list-title
+{
+	font-size: 20px;
+	padding: 0.2em 0 0.5em 0;
+	margin-right: 2em;
+	text-align: center;
+	width: 100%;
+}
+
+.file-list-item {
+    display: flex;
+    align-items: center;
+}
+
+.file-list-item-icon
+{
+	margin-right: 0.5em;
+	width: 1.1em !important;
+	height: 1.1em !important;
+}
+
+.html-progress-wrapper
+{
+	height: 100%;
+	min-width: 100%;
+	display:flex;
+	flex-direction:column;
+}
+
+.html-progress-content
+{
+	display: flex;
+	height: 100%;
+}
+
+.html-progress-inner
+{
+	flex-grow: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+}
+
+.html-progress-sub
+{
+	margin-block-start: 2em;
+}
+
+.html-progress-log
+{
+	display:none; 
+	flex-direction: column; 
+	border-left: 1px solid var(--divider-color); 
+	overflow-y: auto; 
+	width: 300px; 
+	max-width: 300px; 
+	min-width: 300px;
+}
+
+.html-progress-log > h1
+{
+	color: var(--color-yellow);
+	padding: 0.3em;
+	background-color: rgba(100, 70, 20, 0.1);
+	margin: 0;
+}
+
+/* File picker */
 
 .file-picker .tree-icon {
     border: 1px solid transparent;

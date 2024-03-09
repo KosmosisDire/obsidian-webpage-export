@@ -4,7 +4,7 @@ import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
 import { FlowList } from '../component-generators/flow-list';
 import { migrateSettings } from './settings-migration';
 import { ExportLog } from 'scripts/render-api/render-api';
-import { FileDialogs } from 'scripts/utils/file-dialogs';
+import { createDivider, createFileInput, createSection, createText, createToggle }  from './settings-components';
 
 // #region Settings Definition
 
@@ -257,18 +257,18 @@ export class SettingsPage extends PluginSettingTab
 
 		if (Settings.exportPreset != ExportPreset.RawDocuments)
 		{
-			SettingsPage.createDivider(contentEl);
-			let section = SettingsPage.createSection(contentEl, 'Page Features', 'Control the visibility of different page features');
+			createDivider(contentEl);
+			let section = createSection(contentEl, 'Page Features', 'Control the visibility of different page features');
 
-			SettingsPage.createToggle(section, 'Theme toggle', () => Settings.addThemeToggle, (value) => Settings.addThemeToggle = value);
-			SettingsPage.createToggle(section, 'Document outline / table of contents', () => Settings.addOutline, (value) => Settings.addOutline = value);
-			SettingsPage.createToggle(section, 'File navigation tree', () => Settings.addFileNav, (value) => Settings.addFileNav = value);
-			SettingsPage.createToggle(section, 'File & folder icons', () => Settings.showDefaultTreeIcons, (value) => Settings.showDefaultTreeIcons = value);
+			createToggle(section, 'Theme toggle', () => Settings.addThemeToggle, (value) => Settings.addThemeToggle = value);
+			createToggle(section, 'Document outline / table of contents', () => Settings.addOutline, (value) => Settings.addOutline = value);
+			createToggle(section, 'File navigation tree', () => Settings.addFileNav, (value) => Settings.addFileNav = value);
+			createToggle(section, 'File & folder icons', () => Settings.showDefaultTreeIcons, (value) => Settings.showDefaultTreeIcons = value);
 			if (Settings.exportPreset == ExportPreset.Website)
 			{
-				SettingsPage.createToggle(section, 'Search bar', () => Settings.addSearchBar, (value) => Settings.addSearchBar = value);
-				SettingsPage.createToggle(section, 'Graph view', () => Settings.addGraphView, (value) => Settings.addGraphView = value);
-				let graphViewSection = SettingsPage.createSection(section, 'Graph View Settings', 'Control the behavior of the graph view simulation');
+				createToggle(section, 'Search bar', () => Settings.addSearchBar, (value) => Settings.addSearchBar = value);
+				createToggle(section, 'Graph view', () => Settings.addGraphView, (value) => Settings.addGraphView = value);
+				let graphViewSection = createSection(section, 'Graph View Settings', 'Control the behavior of the graph view simulation');
 
 				new Setting(graphViewSection)
 					.setName('Attraction Force')
@@ -394,7 +394,7 @@ This feature does not require "File & folder icons" to be enbaled.`);
 					});
 				});
 
-			SettingsPage.createFileInput(section, () => Settings.customHeadContentPath, (value) => Settings.customHeadContentPath = value,
+			createFileInput(section, () => Settings.customHeadContentPath, (value) => Settings.customHeadContentPath = value,
 			{
 				name: 'Custom head content',
 				description: 'Custom scripts, styles, or anything else (html file).',
@@ -411,7 +411,7 @@ This feature does not require "File & folder icons" to be enbaled.`);
 					}),
 			});
 
-			SettingsPage.createFileInput(section, () => Settings.faviconPath, (value) => Settings.faviconPath = value,
+			createFileInput(section, () => Settings.faviconPath, (value) => Settings.faviconPath = value,
 			{
 				name: 'Favicon path',
 				description: 'Add a custom favicon image to the website.',
@@ -440,9 +440,9 @@ This feature does not require "File & folder icons" to be enbaled.`);
 		if (Settings.exportPreset != ExportPreset.RawDocuments)
 		{
 			
-			SettingsPage.createDivider(contentEl);
+			createDivider(contentEl);
 
-			section = SettingsPage.createSection(contentEl, 'Page Behaviors', 'Change the behavior of included page features');
+			section = createSection(contentEl, 'Page Behaviors', 'Change the behavior of included page features');
 			
 			new Setting(section)
 				.setName('Min Outline Collapse Depth')
@@ -454,19 +454,19 @@ This feature does not require "File & folder icons" to be enbaled.`);
 						await SettingsPage.saveSettings();
 			}));
 			
-			SettingsPage.createToggle(section, 'Start Outline Collapsed', () => Settings.startOutlineCollapsed, (value) => Settings.startOutlineCollapsed = value,
+			createToggle(section, 'Start Outline Collapsed', () => Settings.startOutlineCollapsed, (value) => Settings.startOutlineCollapsed = value,
 							  'All outline items will be collapsed by default.');
 
-			SettingsPage.createToggle(section, 'Relative Outline Links', () => Settings.relativeOutlineLinks, (value) => Settings.relativeOutlineLinks = value,
+			createToggle(section, 'Relative Outline Links', () => Settings.relativeOutlineLinks, (value) => Settings.relativeOutlineLinks = value,
 							  '(NOT RECCOMENDED!) Make links in the outline relative to the current page. This will break the ability to copy the header links from the outline, but allows you to move the file and still have the links work.');
 
-			SettingsPage.createToggle(section, 'Allow folding headings', () => Settings.allowFoldingHeadings, (value) => Settings.allowFoldingHeadings = value,
+			createToggle(section, 'Allow folding headings', () => Settings.allowFoldingHeadings, (value) => Settings.allowFoldingHeadings = value,
 							  'Fold headings using an arrow icon, like in Obsidian.');
 
-			SettingsPage.createToggle(section, 'Allow folding lists', () => Settings.allowFoldingLists, (value) => Settings.allowFoldingLists = value,
+			createToggle(section, 'Allow folding lists', () => Settings.allowFoldingLists, (value) => Settings.allowFoldingLists = value,
 							  'Fold lists using an arrow icon, like in Obsidian.');
 
-			SettingsPage.createToggle(section, 'Allow resizing sidebars', () => Settings.allowResizingSidebars, (value) => Settings.allowResizingSidebars = value,
+			createToggle(section, 'Allow resizing sidebars', () => Settings.allowResizingSidebars, (value) => Settings.allowResizingSidebars = value,
 							  'Allow the user to resize the sidebar width.');
 		}
 
@@ -474,10 +474,10 @@ This feature does not require "File & folder icons" to be enbaled.`);
 
 		//#region Layout Options
 
-		SettingsPage.createDivider(contentEl);
+		createDivider(contentEl);
+		
 
-
-		section = SettingsPage.createSection(contentEl, 'Layout Options', 'Set document and sidebar widths');
+		section = createSection(contentEl, 'Layout Options', 'Set document and sidebar widths');
 
 		new Setting(section)
 			.setName('Document Width')
@@ -517,16 +517,16 @@ This feature does not require "File & folder icons" to be enbaled.`);
 
 		//#region Export Options
 
-		SettingsPage.createDivider(contentEl);
+		createDivider(contentEl);
 
 
-		section = SettingsPage.createSection(contentEl, 'Export Options', 'Change the behavior of the export process.');
+		section = createSection(contentEl, 'Export Options', 'Change the behavior of the export process.');
 
-		SettingsPage.createToggle(section, 'Only export modfied files', () => Settings.onlyExportModified, (value) => Settings.onlyExportModified = value,
+		createToggle(section, 'Only export modfied files', () => Settings.onlyExportModified, (value) => Settings.onlyExportModified = value,
 						'Only generate new html for files which have been modified since the last export.');
-		SettingsPage.createToggle(section, 'Delete old files', () => Settings.deleteOldFiles, (value) => Settings.deleteOldFiles = value,
+		createToggle(section, 'Delete old files', () => Settings.deleteOldFiles, (value) => Settings.deleteOldFiles = value,
 						'Delete files from a previous export that are no longer being exported.');
-		SettingsPage.createToggle(section, 'Minify HTML', () => Settings.minifyHTML, (value) => Settings.minifyHTML = value,
+		createToggle(section, 'Minify HTML', () => Settings.minifyHTML, (value) => Settings.minifyHTML = value,
 						'Minify HTML to make it load faster.');
 
 		new Setting(section)
@@ -548,13 +548,13 @@ This feature does not require "File & folder icons" to be enbaled.`);
 
 		//#region Asset Settings
 
-		SettingsPage.createDivider(contentEl);
+		createDivider(contentEl);
 
-		section = SettingsPage.createSection(contentEl, 'Asset Options', 'Add plugin styles, or make the page offline compatible.');
+		section = createSection(contentEl, 'Asset Options', 'Add plugin styles, or make the page offline compatible.');
 
-		SettingsPage.createToggle(section, 'Make Offline Compatible', () => Settings.makeOfflineCompatible, (value) => Settings.makeOfflineCompatible = value,
+		createToggle(section, 'Make Offline Compatible', () => Settings.makeOfflineCompatible, (value) => Settings.makeOfflineCompatible = value,
 						'Download any online assets / images / scripts so the page can be viewed offline. Or so the website does not depend on a CDN.');
-		SettingsPage.createToggle(section, 'Include Svelte CSS', () => Settings.includeSvelteCSS, (value) => Settings.includeSvelteCSS = value,
+		createToggle(section, 'Include Svelte CSS', () => Settings.includeSvelteCSS, (value) => Settings.includeSvelteCSS = value,
 			'Include the CSS from any plugins that use the svelte framework. These can not be chosen individually because their styles are not associated with their respective plugins.');
 
 		new Setting(section)
@@ -592,20 +592,20 @@ This feature does not require "File & folder icons" to be enbaled.`);
 
 		//#region Advanced
 
-		SettingsPage.createDivider(contentEl);
-		section = SettingsPage.createSection(contentEl, 'Metadata', 'Control general site data and RSS feed creation');
+		createDivider(contentEl);
+		section = createSection(contentEl, 'Metadata', 'Control general site data and RSS feed creation');
 
-		SettingsPage.createText(section, 'Public site URL', () => Settings.siteURL, (value) => Settings.siteURL = ((value.endsWith("/") || value == "") ? value : value + "/").trim(),
+		createText(section, 'Public site URL', () => Settings.siteURL, (value) => Settings.siteURL = ((value.endsWith("/") || value == "") ? value : value + "/").trim(),
 					'The url that this site will be hosted at. This is needed to reference links and images in metadata and RSS. (Because these links cannot be relative)', 
 					(value) => (value.startsWith("http://") || value.startsWith("https://") || value.trim() == "") ? "" : "URL must start with 'http://' or 'https://'");	
 		
-		SettingsPage.createText(section, 'Author Name', () => Settings.authorName, (value) => Settings.authorName = value,
+		createText(section, 'Author Name', () => Settings.authorName, (value) => Settings.authorName = value,
 					'The default name of the author of the site');
 
-		SettingsPage.createText(section, 'Vault Title', () => Settings.vaultTitle, (value) => Settings.vaultTitle = value,
+		createText(section, 'Vault Title', () => Settings.vaultTitle, (value) => Settings.vaultTitle = value,
 					'The title of the vault');
 
-		SettingsPage.createToggle(section, 'Create RSS feed', () => Settings.addRSSFeed, (value) => Settings.addRSSFeed = value,
+		createToggle(section, 'Create RSS feed', () => Settings.addRSSFeed, (value) => Settings.addRSSFeed = value,
 					`Create an RSS feed for the website located at ${Settings.siteURL}lib/rss.xml`);
 
 		let summaryTutorial = new Setting(section)
@@ -615,39 +615,10 @@ This feature does not require "File & folder icons" to be enbaled.`);
 Use the 'author' property to set the author of a specific page.`);
 		summaryTutorial.infoEl.style.whiteSpace = "pre-wrap";
 
-		SettingsPage.createText(section, 'Page title property', () => Settings.titleProperty, (value) => Settings.titleProperty = value,
+		createText(section, 'Page title property', () => Settings.titleProperty, (value) => Settings.titleProperty = value,
 						"Override a specific file's title / name by defining this property in the frontmatter.");
 
 		
-		//#endregion
-
-		//#region Experimental
-		
-
-		// if (Settings.exportPreset == ExportPreset.Website)
-		// {
-		// 	let experimentalContainer = contentEl.createDiv();
-		// 	let experimentalHR1 = experimentalContainer.createEl('hr');
-		// 	let experimentalHeader = experimentalContainer.createEl('span', { text: 'Experimental' });
-		// 	let experimentalHR2 = experimentalContainer.createEl('hr');
-
-		// 	experimentalContainer.style.display = 'flex';
-		// 	experimentalContainer.style.marginTop = '5em';
-		// 	experimentalContainer.style.alignItems = 'center';
-
-		// 	experimentalHR1.style.borderColor = "var(--color-red)";
-		// 	experimentalHR2.style.borderColor = "var(--color-red)";
-		// 	experimentalHeader.style.color = "var(--color-red)";
-
-		// 	experimentalHR1.style.flexGrow = "1";
-		// 	experimentalHR2.style.flexGrow = "1";
-		// 	experimentalHeader.style.flexGrow = "0.1";
-		// 	experimentalHeader.style.textAlign = "center";
-
-		// 	let experimentalHREnd = contentEl.createEl('hr');
-		// 	experimentalHREnd.style.borderColor = "var(--color-red)";
-		// }
-
 		//#endregion
 
 	}
@@ -737,165 +708,6 @@ Use the 'author' property to set the author of a specific page.`);
 		};
 
 		return files;
-	}
-
-	public static createDivider(container: HTMLElement)
-	{
-		let hr = container.createEl("hr");
-		hr.style.marginTop = "20px";
-		hr.style.marginBottom = "20px";
-		hr.style.borderColor = "var(--interactive-accent)";
-		hr.style.opacity = "0.5";
-	}
-
-	public static createToggle(container: HTMLElement, name: string, get: () => boolean, set: (value: boolean) => void, desc: string = ""): Setting
-	{
-		let setting = new Setting(container);
-		setting.setName(name)
-		if (desc != "") setting.setDesc(desc);
-		setting.addToggle((toggle) => toggle
-			// @ts-ignore
-			.setValue(get())
-			.onChange(async (value) => {
-				// @ts-ignore
-				set(value);
-				await SettingsPage.saveSettings();
-			}));
-		return setting;
-	}
-
-	public static createText(container: HTMLElement, name: string, get: () => string, set: (value: string) => void, desc: string = "", validation?: (value: string) => string): Setting
-	{
-		let setting = new Setting(container);
-		let errorText = this.createError(container);
-
-		let value = get();
-		if (value != "") errorText.setText(validation ? validation(value) : "");
-		
-		setting.setName(name)
-		if (desc != "") setting.setDesc(desc);
-		setting.addText((text) => text
-			.setValue(value)
-			.onChange(async (value) => 
-			{
-				let error = validation ? validation(value) : "";
-				if (error == "")
-				{
-					set(value);
-					await SettingsPage.saveSettings();
-				}
-
-				errorText.setText(error);
-			}));
-
-		return setting;
-	}
-
-	public static createError(container: HTMLElement): HTMLElement
-	{
-		let error = container.createDiv({ cls: 'setting-item-description' });
-		error.style.color = "var(--color-red)";
-		error.style.marginBottom = "0.75rem";
-		return error;
-	}
-
-	public static createFileInput(container: HTMLElement, get: () => string, set: (value: string) => void, options?: {name?: string, description?: string, placeholder?: string, defaultPath?: Path, pickFolder?: boolean, validation?: (path: Path) => {valid: boolean, isEmpty: boolean, error: string}, browseButton?: boolean, onChanged?: (path: Path)=>void}): {fileInput: Setting, textInput: TextComponent, browseButton: HTMLElement | undefined}
-	{
-		let getSafe = () => new Path(get() ?? "").makePlatformSafe();
-		let setSafe = (value: string) => set(new Path(value).makePlatformSafe().path);
-
-		let name = options?.name ?? "";
-		let description = options?.description ?? "";
-		let placeholder = options?.placeholder ?? "Path to file...";
-		let defaultPath = options?.defaultPath ?? Path.vaultPath;
-		let pickFolder = options?.pickFolder ?? false;
-		let validation = options?.validation ?? ((path) => ({valid: true, isEmpty: false, error: ""}));
-		let browseButton = options?.browseButton ?? true;
-		let onChanged = options?.onChanged;
-
-		let headContentErrorMessage = this.createError(container);
-		if (!getSafe().isEmpty)
-		{
-			headContentErrorMessage.setText(validation(getSafe()).error);
-		}
-
-		let headContentInput : TextComponent | undefined = undefined;
-
-		let fileInput = new Setting(container);
-		if(name != "") fileInput.setName(name);
-		if (description != "") fileInput.setDesc(description);
-		if (name == "" && description == "") fileInput.infoEl.style.display = "none";
-
-		let textEl: TextComponent;
-		fileInput.addText((text) => 
-		{
-			textEl = text;
-			headContentInput = text;
-			text.inputEl.style.width = '100%';
-			text.setPlaceholder(placeholder)
-				.setValue(getSafe().path)
-				.onChange(async (value) => 
-				{
-					let path = new Path(value).makePlatformSafe();
-					let valid = validation(path);
-					headContentErrorMessage.setText(valid.error);
-					if (valid.valid) 
-					{
-						headContentErrorMessage.setText("");
-						setSafe(value.replaceAll("\"", ""));
-						await SettingsPage.saveSettings();
-					}
-
-					if (onChanged) onChanged(path);
-				});
-		});
-
-		let browseButtonEl = undefined;
-		if(browseButton)
-		{
-			fileInput.addButton((button) =>
-			{
-				browseButtonEl = button.buttonEl;
-				button.setButtonText('Browse').onClick(async () => 
-				{
-					let path = pickFolder ? await FileDialogs.showSelectFolderDialog(defaultPath) : await FileDialogs.showSelectFileDialog(defaultPath);
-					if (!path) return;
-					
-					setSafe(path.path);
-					let valid = validation(path);
-					headContentErrorMessage.setText(valid.error);
-					if (valid.valid)
-					{
-						await SettingsPage.saveSettings();
-					}
-
-					if (onChanged) onChanged(path);
-
-					headContentInput?.setValue(getSafe().path);
-				});
-			});
-		}
-
-		container.appendChild(headContentErrorMessage);
-
-		return {fileInput: fileInput, textInput: textEl!, browseButton: browseButtonEl};
-	}
-
-	public static createSection(container: HTMLElement, name: string, desc: string): HTMLElement
-	{
-		let section = container.createEl('details');
-		let summary = section.createEl('summary');
-		summary.style.display = "block";
-		summary.style.marginLeft = "-1em";
-		section.style.paddingLeft = "2em";
-		section.style.borderLeft = "1px solid var(--interactive-accent)";
-
-		new Setting(summary)
-			.setName(name)
-			.setDesc(desc)
-			.setHeading()
-
-		return section;
 	}
 
 	// #endregion

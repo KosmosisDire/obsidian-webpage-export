@@ -5,6 +5,7 @@ import { ExportPreset, Settings, SettingsPage } from './settings';
 import { FilePickerTree } from '../component-generators/file-picker';
 import { Path } from 'scripts/utils/path';
 import { FileDialogs } from 'scripts/utils/file-dialogs';
+import { createFileInput, createToggle } from './settings-components';
 
 export interface ExportInfo
 {
@@ -175,7 +176,7 @@ export class ExportModal extends Modal
 				));
 		exportModeSetting.descEl.style.whiteSpace = "pre-wrap";
 
-		SettingsPage.createToggle(contentEl, "Open after export", () => Settings.openAfterExport, (value) => Settings.openAfterExport = value);
+		createToggle(contentEl, "Open after export", () => Settings.openAfterExport, (value) => Settings.openAfterExport = value);
 		
 		let exportButton : ButtonComponent | undefined = undefined;
 
@@ -201,7 +202,7 @@ export class ExportModal extends Modal
 
 		let onChanged = (path: Path) => (!validatePath(path).valid) ? setExportDisabled(true) : setExportDisabled(false);
 
-		let exportPathInput = SettingsPage.createFileInput(contentEl, () => Settings.exportPath, (value) => Settings.exportPath = value,
+		let exportPathInput = createFileInput(contentEl, () => Settings.exportPath, (value) => Settings.exportPath = value,
 		{
 			name: '',
 			description: '',

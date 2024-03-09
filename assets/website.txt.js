@@ -47,6 +47,7 @@ let customType; // "kanban" | "excalidraw" | "none"
 let deviceSize; // "large-screen" | "small screen" | "tablet" | "phone"
 
 let websiteData = {};
+let webpage = {};
 
 
 let fullyInitialized = false;
@@ -159,6 +160,7 @@ async function initializePage(pageChanged = true)
 
 	parseURLParams();
 	relativePathname = getVaultRelativePath(loadedURL.href);
+	webpage = websiteData.webpages?.[relativePathname] ?? {};
 
 	if (pageChanged)
 	{
@@ -922,7 +924,7 @@ function getURLRootPath(url = window.location.pathname)
 
 function getVaultRelativePath(absolutePath)
 {
-	return absolutePath.replace(absoluteBasePath, "")
+	return absolutePath.replace(absoluteBasePath, "") || "index.html";
 }
 
 //#endregion

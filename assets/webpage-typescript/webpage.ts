@@ -12,7 +12,7 @@ enum DocumentType
 	Other
 }
 
-interface FileData
+export interface FileData
 {
 	createdTime: number;
 	modifiedTime: number;
@@ -24,7 +24,7 @@ interface FileData
 	backlinks: string[];
 }
 
-interface WebpageData extends FileData
+export interface WebpageData extends FileData
 {
 	headers: {heading: string, level: number, id: string}[];
 	aliases: string[];
@@ -41,7 +41,7 @@ interface WebpageData extends FileData
 	fullURL: string;
 }
 
-interface WebsiteData
+export interface WebsiteData
 {
 	webpages: {[targetPath: string]: WebpageData},
 	fileInfo: {[targetPath: string]: FileData},
@@ -51,10 +51,13 @@ interface WebsiteData
 	allFiles: string[];
 
 	siteName: string,
+	vaultName: string,
 	createdTime: number;
 	modifiedTime: number;
 	pluginVersion: string,
 	exportRoot: string,
+	baseURL: string,
+	
 	themeName: string,
 	bodyClasses: string,
 	addCustomHead: boolean,

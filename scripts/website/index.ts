@@ -52,10 +52,13 @@ export interface WebsiteData
 	allFiles: string[];
 
 	siteName: string,
+	vaultName: string,
 	createdTime: number;
 	modifiedTime: number;
 	pluginVersion: string,
 	exportRoot: string,
+	baseURL: string,
+	
 	themeName: string,
 	bodyClasses: string,
 	addCustomHead: boolean,
@@ -128,7 +131,9 @@ export class Index
 
 			this.websiteData.modifiedTime = Date.now();
 			this.websiteData.siteName = this.website.exportOptions.siteName ?? "";
+			this.websiteData.vaultName = app.vault.getName();
 			this.websiteData.exportRoot = this.website.exportOptions.exportRoot ?? "";
+			this.websiteData.baseURL = this.website.exportOptions.siteURL ?? "";
 			this.websiteData.pluginVersion = HTMLExportPlugin.pluginVersion;
 			this.websiteData.themeName = this.website.exportOptions.themeName ?? "Default";
 			this.websiteData.bodyClasses = this.website.bodyClasses ?? "";
@@ -257,12 +262,15 @@ export class Index
 			let newItems = Array.from(rssDocNew.querySelectorAll("item"));
 
 			// filter out deleted files and remove duplicated items favoring the new rss
-
-
+			oldItems = oldItems.filter((oldItem) => !this.deletedFiles.includes(oldItem.querySelector("guid")?.textContent ?? ""));
+			oldItems = oldItems.filter((oldItem) => !newItems.some((newItem) => newItem.querySelector("guid")?.textContent == oldItem.querySelector("guid")?.textContent));
+			
 			// remove all items from new rss
 			newItems.forEach((item) => item.remove());
-
-			// add items back to new rss
+			
+			
+			// add items back to new rss with old items
+			newItems = newItems.concat(oldItems);
 			let channel = rssDocNew.querySelector("channel");
 			newItems.forEach((item) => channel?.appendChild(item));
 
@@ -275,13 +283,53 @@ export class Index
 
 	public async addFile(file: Attachment | Webpage)
 	{
-		if (file instanceof Webpage)
+		// determine if the file is new, updated, or unchanged
+		let updatedFile = false;
+		let newFile = false;
+		let key = file.targetPath.path;
+		if(!this.hadFile(key))
 		{
-			await this.updateWebpage(file);
+			this.newFiles.push(file);
+			newFile = true;
 		}
 		else
 		{
-			this.updateAttachment(file);
+			let oldData = this.getOldFile(key);
+			if (oldData)
+			{
+				if (oldData.modifiedTime != file.sourceStat.mtime && oldData.sourceSize != file.sourceStat.size)
+				{
+					this.updatedFiles.push(file);
+					updatedFile = true;
+				}
+				else if (oldData.sourceSize != file.sourceStat.size)
+				{
+					// compare data to see if it's actually different
+					let oldData = await file.targetPath.readAsBuffer();
+					let newData = Buffer.from(file.data);
+					if (!oldData?.equals(newData))
+					{
+						this.updatedFiles.push(file);
+						updatedFile = true;
+					}
+				}
+			}
+
+			this.deletedFiles.remove(file.targetPath.path);
+
+			// if we didn't update the file make sure we don't delete the file's attachments
+			// if we did update the file we don't need to worry, because the attachments will be recreated
+			if (!updatedFile)
+			{
+				let oldWebpage = this.getOldWebpage(key);
+				if (oldWebpage)
+				{
+					for (let attachment of oldWebpage.attachments)
+					{
+						this.deletedFiles.remove(attachment);
+					}
+				}
+			}
 		}
 
 		if (!this.allFiles.includes(file))
@@ -293,49 +341,16 @@ export class Index
 		if (file.showInTree && !this.attachmentsShownInTree.includes(file))
 			this.attachmentsShownInTree.push(file);
 
-		let key = file.targetPath.path;
-		if(!this.hadFile(key))
+		// only update the index if the file is new or updated
+		if (newFile || updatedFile)
 		{
-			this.newFiles.push(file);
-		}
-		else
-		{
-			let oldData = this.getOldFile(key);
-			let updated = false;
-			if (oldData)
+			if (file instanceof Webpage)
 			{
-				if (oldData.modifiedTime != file.sourceStat.mtime && oldData.sourceSize != file.sourceStat.size)
-				{
-					this.updatedFiles.push(file);
-					updated = true;
-				}
-				else if (oldData.sourceSize != file.sourceStat.size)
-				{
-					// compare data to see if it's actually different
-					let oldData = await file.targetPath.readAsBuffer();
-					let newData = Buffer.from(file.data);
-					if (!oldData?.equals(newData))
-					{
-						this.updatedFiles.push(file);
-						updated = true;
-					}
-				}
+				await this.updateWebpage(file);
 			}
-
-			this.deletedFiles.remove(file.targetPath.path);
-
-			// if we didn't update the file make sure we don't delete the file's attachments
-			// if we did update the file we don't need to worry, because the attachments will be recreated
-			if (!updated)
+			else
 			{
-				let oldWebpage = this.getOldWebpage(key);
-				if (oldWebpage)
-				{
-					for (let attachment of oldWebpage.attachments)
-					{
-						this.deletedFiles.remove(attachment);
-					}
-				}
+				this.updateAttachment(file);
 			}
 		}
 	}
@@ -488,7 +503,7 @@ export class Index
 			webpageInfo.tags = webpage.tags;
 			webpageInfo.headers = await webpage.getStrippedHeadings();
 			webpageInfo.backlinks = webpage.backlinks.map((backlink) => backlink.targetPath.path);
-			webpageInfo.links = webpage.hrefLinks;
+			webpageInfo.links = webpage.linksToOtherFiles;
 			webpageInfo.author = webpage.author;
 			webpageInfo.coverImageURL = "";
 			webpageInfo.fullURL = webpage.fullURL;

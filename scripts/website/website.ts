@@ -43,76 +43,112 @@ export class Website
 		this.bodyClasses = await HTMLGeneration.getValidBodyClasses(true);
 
 		// Find root path
-		if (this.exportOptions.exportRoot == "" && files)
+		try
 		{
-			if (this.sourceFiles.length > 1)
-			{ 
-				let commonPath = "";
-				let paths = this.sourceFiles.map((file) => file.path.split("/"));
-				while (paths.every((path) => path[0] == paths[0][0]))
-				{
-					commonPath += paths[0][0] + "/";
-					paths = paths.map((path) => path.slice(1));
-					
-					let anyEmpty = paths.some((path) => path.length == 1);
-					if (anyEmpty) break;
+			if (this.exportOptions.exportRoot == "" && files)
+			{
+				if (this.sourceFiles.length > 1)
+				{ 
+					let commonPath = "";
+					let paths = this.sourceFiles.map((file) => file.path.split("/"));
+					while (paths.every((path) => path[0] == paths[0][0]))
+					{
+						commonPath += paths[0][0] + "/";
+						paths = paths.map((path) => path.slice(1));
+						
+						let anyEmpty = paths.some((path) => path.length == 1);
+						if (anyEmpty) break;
+					}
+					console.log("Export root path: " + commonPath);
+					this.exportOptions.exportRoot = new Path(commonPath).path + "/";
 				}
-				console.log("Export root path: " + commonPath);
-				this.exportOptions.exportRoot = new Path(commonPath).path + "/";
+				else this.exportOptions.exportRoot = this.sourceFiles[0].parent?.path ?? "";
 			}
-			else this.exportOptions.exportRoot = this.sourceFiles[0].parent?.path ?? "";
+		}
+		catch (error)
+		{
+			ExportLog.error(error, "Problem finding export root");
 		}
 
 		await AssetHandler.reloadAssets(this.exportOptions);
 		this.index = new Index();
-		await this.index.load(this, this.exportOptions);
+		try
+		{
+			await this.index.load(this, this.exportOptions);
+		}
+		catch (error)
+		{
+			ExportLog.error(error, "Problem loading index");
+		}
 
 		// create webpages
 		for (let file of this.sourceFiles)
 		{
-			let attachment: Webpage | Attachment | undefined = undefined;
-
-			if (MarkdownRendererAPI.isConvertable(file.extension))
+			try
 			{
-				attachment = new Webpage(file, file.name, this, this.exportOptions);
-			}
-			else
-			{
-				let data = Buffer.from(await app.vault.readBinary(file));
-				let path = this.getTargetPathForFile(file);
-				attachment = new Attachment(data, path, file, this.exportOptions);
-			}
+				let attachment: Webpage | Attachment | undefined = undefined;
 
-			attachment.showInTree = true;
-			await this.index.addFile(attachment);
+				if (MarkdownRendererAPI.isConvertable(file.extension))
+				{
+					attachment = new Webpage(file, file.name, this, this.exportOptions);
+				}
+				else
+				{
+					let data = Buffer.from(await app.vault.readBinary(file));
+					let path = this.getTargetPathForFile(file);
+					attachment = new Attachment(data, path, file, this.exportOptions);
+				}
+
+				attachment.showInTree = true;
+				await this.index.addFile(attachment);
+			}
+			catch (error)
+			{
+				ExportLog.error(error, "Problem initializing document: " + file.path);
+				continue;
+			}
 		}
 
-		// create file tree asset
-		if (this.exportOptions.addFileNavigation)
+		try
 		{
-			let paths = this.index.attachmentsShownInTree.map((file) => new Path(file.sourcePathRootRelative ?? ""));
-			this.fileTree = new FileTree(paths, false, true);
-			this.fileTree.makeLinksWebStyle = this.exportOptions.slugifyPaths ?? true;
-			this.fileTree.showNestingIndicator = true;
-			this.fileTree.generateWithItemsClosed = true;
-			this.fileTree.showFileExtentionTags = true;
-			this.fileTree.hideFileExtentionTags = ["md"];
-			this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
-			this.fileTree.class = "nav-files-container";
-			let tempContainer = document.createElement("div");
-			await this.fileTree.insert(tempContainer);
-			let data = tempContainer.innerHTML;
-			tempContainer.remove();
-			this.fileTreeAsset = new WebAsset("file-tree.html", data, null, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
+			// create file tree asset
+			if (this.exportOptions.addFileNavigation)
+			{
+				let paths = this.index.attachmentsShownInTree.map((file) => new Path(file.sourcePathRootRelative ?? ""));
+				this.fileTree = new FileTree(paths, false, true);
+				this.fileTree.makeLinksWebStyle = this.exportOptions.slugifyPaths ?? true;
+				this.fileTree.showNestingIndicator = true;
+				this.fileTree.generateWithItemsClosed = true;
+				this.fileTree.showFileExtentionTags = true;
+				this.fileTree.hideFileExtentionTags = ["md"];
+				this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
+				this.fileTree.class = "nav-files-container";
+				let tempContainer = document.createElement("div");
+				await this.fileTree.insert(tempContainer);
+				let data = tempContainer.innerHTML;
+				tempContainer.remove();
+				this.fileTreeAsset = new WebAsset("file-tree.html", data, null, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
+			}
+		}
+		catch (error)
+		{
+			ExportLog.error(error, "Problem creating file tree");
 		}
 
-		// create graph view asset
-		if (this.exportOptions.addGraphView)
+		try
 		{
-			this.globalGraph = new GraphView();
-			let convertableFiles = this.sourceFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
-			await this.globalGraph.init(convertableFiles, this.exportOptions);
-			this.graphAsset = new WebAsset("graph-data.js", this.globalGraph.getExportData(), null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Temporary);
+			// create graph view asset
+			if (this.exportOptions.addGraphView)
+			{
+				this.globalGraph = new GraphView();
+				let convertableFiles = this.sourceFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
+				await this.globalGraph.init(convertableFiles, this.exportOptions);
+				this.graphAsset = new WebAsset("graph-data.js", this.globalGraph.getExportData(), null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Temporary);
+			}
+		}
+		catch (error)
+		{
+			ExportLog.error(error, "Problem creating graph view");
 		}
 
 		return this;
@@ -130,6 +166,9 @@ export class Website
 		if (files) this.load(files);
 
 		console.log("Creating website with files: ", this.sourceFiles);
+
+		this.updateChangedFilesDisplay();
+		
 
 		// if body classes have changed write new body classes to existing files
 		if (this.bodyClasses != (this.index.oldWebsiteData?.bodyClasses ?? this.bodyClasses))
@@ -155,8 +194,16 @@ export class Website
 		let progress = 0;
 		for (let webpage of webpages)
 		{
-			ExportLog.progress(progress, "Rendering Documents", webpage.source.path);
-			await webpage.populateDocument();
+			if (ExportLog.isCancelled()) return;
+			try
+			{
+				ExportLog.progress(progress, "Rendering Documents", webpage.source.path);
+				await webpage.populateDocument();
+			}
+			catch (error)
+			{
+				ExportLog.error(error, "Problem rendering document: " + webpage.source.path);
+			}
 			progress += 1 / (webpages.length * 1.5);
 		}
 
@@ -165,27 +212,45 @@ export class Website
 		{
 			for (let webpage of webpages)
 			{
-				ExportLog.progress(progress, "Creating Attachments", webpage.source.path);
-				let attachments = await webpage.getAttachments();
-				this.index.addFiles(attachments);
+				if (ExportLog.isCancelled()) return;
+				try
+				{
+					ExportLog.progress(progress, "Creating Attachments", webpage.source.path);
+					let attachments = await webpage.getAttachments();
+					this.index.addFiles(attachments);
+				}
+				catch (error)
+				{
+					ExportLog.error(error, "Problem creating attachments: " + webpage.source.path);
+				}
 				progress += 1 / (webpages.length * 6);
 			}
 		}
 
 		this.index.addFiles(AssetHandler.getDownloads(this.destination, this.exportOptions));
 
+		this.updateChangedFilesDisplay();
+
 		for (let webpage of webpages)
 		{
-			ExportLog.progress(progress, "Building Website", webpage.source.path);
-			let page = await webpage.build();
-			
-			if (page)
+			if (ExportLog.isCancelled()) return;
+			try
 			{
-				await this.index.addFile(webpage);
+				ExportLog.progress(progress, "Building Website", webpage.source.path);
+				let page = await webpage.build();
+				
+				if (page)
+				{
+					await this.index.addFile(webpage);
+				}
+				else
+				{
+					this.index.removeFile(webpage);
+				}
 			}
-			else
+			catch (error)
 			{
-				this.index.removeFile(webpage);
+				ExportLog.error(error, "Problem building webpage: " + webpage.source.path);
 			}
 
 			progress += 1 / (webpages.length * 6);
@@ -193,14 +258,53 @@ export class Website
 
 		if (this.exportOptions.addRSS)
 		{
-			this.index.createRSSFeed();
+			try
+			{
+				this.index.createRSSFeed();
+			}
+			catch (error)
+			{
+				ExportLog.error(error, "Problem creating RSS feed");
+			}
 		}
 
 		console.log("Website created: ", this);
 		
-		await this.index.finalize();
+		try
+		{
+			await this.index.finalize();
+		}
+		catch (error)
+		{
+			ExportLog.error(error, "Problem finalizing index");
+		}
+
+		this.updateChangedFilesDisplay();
 
 		return this;
+	}
+
+	/** 
+	 * Display updated files on the render window
+	 * */ 
+	private updateChangedFilesDisplay()
+	{
+		try
+		{
+			let updatedNames = this.index.updatedFiles.map((file) => file.filename);
+			updatedNames.concat(this.index.newFiles.map((file) => file.filename));
+			if (updatedNames.length == 0) updatedNames = ["None Updated"];
+			ExportLog.setFileList(updatedNames, 
+			{
+				icons: "file",
+				renderAsMarkdown: false,
+				title: "Updated & New"
+			});
+		}
+		catch (error)
+		{
+			ExportLog.warning(error, "Problem updating changed files display list on render window");
+		}
 	}
 
 	private giveWarnings()

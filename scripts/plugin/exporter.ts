@@ -49,32 +49,41 @@ export class HTMLExporter
 	public static async exportFiles(files: TFile[], destination: Path, saveFiles: boolean, deleteOld: boolean) : Promise<Website | undefined>
 	{
 		MarkdownRendererAPI.beginBatch();
-		let website = await (await new Website(destination).load(files)).build();
-
-		if (!website)
+		let website = undefined;
+		try
 		{
-			new Notice("❌ Export Cancelled", 5000);
-			return;
-		}
+			website = await (await new Website(destination).load(files)).build();
 
-		if (deleteOld)
-		{
-			let i = 0;
-			for (let dFile of website.index.deletedFiles)
+			if (!website)
 			{
-				let path = new Path(dFile, destination.path);
-				await path.delete();
-				ExportLog.progress(i / website.index.deletedFiles.length, "Deleting Old Files", "Deleting: " + path.path, "var(--color-red)");
-				i++;
-			};
+				new Notice("❌ Export Cancelled", 5000);
+				return;
+			}
 
-			await Path.removeEmptyDirectories(destination.path);
+			if (deleteOld)
+			{
+				let i = 0;
+				for (let dFile of website.index.deletedFiles)
+				{
+					let path = new Path(dFile, destination.path);
+					await path.delete();
+					ExportLog.progress(i / website.index.deletedFiles.length, "Deleting Old Files", "Deleting: " + path.path, "var(--color-red)");
+					i++;
+				};
+
+				await Path.removeEmptyDirectories(destination.path);
+			}
+			
+			if (saveFiles) 
+			{
+				await Utils.downloadAttachments(website.index.newFiles);
+				await Utils.downloadAttachments(website.index.updatedFiles);
+			}
 		}
-		
-		if (saveFiles) 
+		catch (e)
 		{
-			await Utils.downloadAttachments(website.index.newFiles);
-			await Utils.downloadAttachments(website.index.updatedFiles);
+			new Notice("❌ Export Failed: " + e, 5000);
+			ExportLog.error(e, "Export Failed", true);
 		}
 
 		MarkdownRendererAPI.endBatch();

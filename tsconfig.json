@@ -21,5 +21,9 @@
   },
   "include": [
     "**/*.ts"
+  ],
+  "exclude": 
+  [
+	"assets/webpage-typescript/**"
   ]
 }

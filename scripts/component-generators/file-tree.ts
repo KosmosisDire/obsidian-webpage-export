@@ -71,6 +71,7 @@ export class FileTree extends Tree
 					child = new FileTreeItem(this, parent, depth);
 					child.title = section.basename;
 					child.isFolder = isFolder;
+					child.dataRef = section.path;
 
 					if(child.isFolder) 
 					{

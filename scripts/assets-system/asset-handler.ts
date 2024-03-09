@@ -378,4 +378,26 @@ export class AssetHandler
 
 		return content;
 	}
+
+	public static filterStyleRules(appSheet: CSSStyleSheet, discard: string[], keep: string[]): string
+	{
+		let result = "";
+		let cssRules = Array.from(appSheet.cssRules);
+		for (const element of cssRules)
+		{
+			let rule = element;
+			let selectors = rule.cssText.split("{")[0].split(",");
+			selectors = selectors.map((selector) => selector.trim());
+			selectors = selectors.filter((selector) => keep.some((keep) => selector.includes(keep)) || !discard.some((filter) => selector.includes(filter)));
+
+			if (selectors.length == 0)
+			{
+				continue;
+			}
+
+			result += rule.cssText + "\n";
+		}
+
+		return result;
+	}
 }

@@ -33,11 +33,6 @@ export namespace HTMLGeneration
 		if (_validBodyClasses) return _validBodyClasses;
 
 		let bodyClasses = Array.from(document.body.classList);
-		// filter classes
-		bodyClasses = bodyClasses.filter((value) => 
-			ObsidianStyles.stylesKeep.some(keep => value.includes(keep)) || 
-			!ObsidianStyles.stylesFilter.some(filter => value.includes(filter))
-		);
 
 		let validClasses = "";
 		validClasses += " publish ";

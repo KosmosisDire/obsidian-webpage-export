@@ -5,6 +5,7 @@ import * as electron from 'electron';
 import { DataviewGenerator } from "../component-generators/dataview-generator";
 import { Settings, SettingsPage } from "scripts/settings/settings";
 import { Path } from "scripts/utils/path";
+import { SimpleFileListGenerator } from "scripts/component-generators/simple-list-generator";
 
 export namespace MarkdownRendererAPI
 {
@@ -190,6 +191,7 @@ export namespace _MarkdownRendererInternal
 	export let batchStarted: boolean = false;
 	let logContainer: HTMLElement | undefined;
 	let loadingContainer: HTMLElement | undefined;
+	let fileListContainer: HTMLElement | undefined;
 
 	const infoColor = "var(--text-normal)";
 	const warningColor = "var(--color-yellow)";
@@ -861,7 +863,7 @@ export namespace _MarkdownRendererInternal
 			// @ts-ignore
 			renderLeaf.parent.parent.containerEl.classList.add("mod-horizontal");
 
-			let newSize = { width: 800, height: 400 };
+			let newSize = { width: 900, height: 400 };
 			obsidianWindow.resizeTo(newSize.width, newSize.height);
 			let newPosition = {x: window.screen.width / 2 - 450, y: window.screen.height - 450 - 75};
 			obsidianWindow.moveTo(newPosition.x, newPosition.y);
@@ -904,6 +906,8 @@ export namespace _MarkdownRendererInternal
 
 		electronWindow = undefined;
 		renderLeaf = undefined;
+		loadingContainer = undefined;
+		fileListContainer = undefined;
 
 		batchStarted = false;
 	}
@@ -911,18 +915,18 @@ export namespace _MarkdownRendererInternal
 	function generateLogEl(title: string, message: any, textColor: string, backgroundColor: string): HTMLElement
 	{
 		let logEl = document.createElement("div");
-		logEl.className = "html-render-log-item";
+		logEl.className = "html-progress-log-item";
 		logEl.style.display = "flex";
 		logEl.style.flexDirection = "column";
 		logEl.style.marginBottom = "2px";
 		logEl.style.fontSize = "12px";
 		logEl.innerHTML =
 		`
-		<div class="html-render-log-title" style="font-weight: bold; margin-left: 1em;"></div>
-		<div class="html-render-log-message" style="margin-left: 2em; font-size: 0.8em;white-space: pre-wrap;"></div>
+		<div class="html-progress-log-title" style="font-weight: bold; margin-left: 1em;"></div>
+		<div class="html-progress-log-message" style="margin-left: 2em; font-size: 0.8em;white-space: pre-wrap;"></div>
 		`;
-		logEl.querySelector(".html-render-log-title")!.textContent = title;
-		logEl.querySelector(".html-render-log-message")!.textContent = message.toString();
+		logEl.querySelector(".html-progress-log-title")!.textContent = title;
+		logEl.querySelector(".html-progress-log-message")!.textContent = message.toString();
 
 		logEl.style.color = textColor;
 		logEl.style.backgroundColor = backgroundColor;
@@ -937,24 +941,23 @@ export namespace _MarkdownRendererInternal
 	{
 		if (!loadingContainer) 
 		{
-			loadingContainer = document.createElement("div");
-			loadingContainer.className = `html-render-progress-container`;
-			loadingContainer.setAttribute("style", "height: 100%; min-width: 100%; display:flex; flex-direction:column; align-content: center; justify-content: center; align-items: center;");
-			loadingContainer.innerHTML = 
+			loadingContainer = document.body.createDiv();
+			loadingContainer.outerHTML = 
 			`
-			<div class="html-render-progress-container" style="height: 100%;min-width: 100%;display:flex;flex-direction:column;">
-				<div style="display: flex;height: 100%;">
-					<div style="flex-grow: 1;display: flex;flex-direction: column;align-items: center;justify-content: center;">
-						<h1 style="">Generating HTML</h1>
-						<progress class="html-render-progressbar" value="0" min="0" max="1" style="width: 300px; height: 15px; background-color: transparent; color: var(--interactive-accent);"></progress>
-						<span class="html-render-submessage" style="margin-block-start: 2em;"></span>
+			<div class="html-progress-wrapper">
+				<div class="html-progress-content">
+					<div class="html-progress-inner">
+						<h1>Generating HTML</h1>
+						<progress class="html-progress-bar" value="0" min="0" max="1"></progress>
+						<span class="html-progress-sub"></span>
 					</div>
-					<div class="html-render-log" style="display:none; flex-direction: column; border-left: 1px solid var(--divider-color); overflow-y: auto; width: 300px; max-width: 300px; min-width: 300px;">
-						<h1 style="color: var(--color-yellow);padding: 0.3em;background-color: rgba(100, 70, 20, 0.1);margin: 0;">Export Log</h1>
+					<div class="html-progress-log">
+						<h1>Export Log</h1>
 					</div>
 				</div>
 			</div>
 			`
+			loadingContainer = document.querySelector(".html-progress-wrapper") as HTMLElement;
 
 			// @ts-ignore
 			renderLeaf.parent.parent.containerEl.appendChild(loadingContainer);
@@ -964,7 +967,7 @@ export namespace _MarkdownRendererInternal
 	let logShowing = false;
 	function appendLogEl(logEl: HTMLElement)
 	{
-		logContainer = loadingContainer?.querySelector(".html-render-log") ?? undefined;
+		logContainer = loadingContainer?.querySelector(".html-progress-log") ?? undefined;
 
 		if(!logContainer || !renderLeaf)
 		{
@@ -974,7 +977,7 @@ export namespace _MarkdownRendererInternal
 
 		if (!logShowing) 
 		{
-			renderLeaf.view.containerEl.win.resizeTo(900, 500);
+			renderLeaf.view.containerEl.win.resizeTo(1000, 500);
 			logContainer.style.display = "flex";
 			logShowing = true;
 		}
@@ -992,7 +995,7 @@ export namespace _MarkdownRendererInternal
 		if (!renderLeaf?.parent?.parent) return;
 
 		// @ts-ignore
-		let loadingContainer = renderLeaf.parent.parent.containerEl.querySelector(`.html-render-progress-container`);
+		let loadingContainer = renderLeaf.parent.parent.containerEl.querySelector(`.html-progress-wrapper`);
 		if (!loadingContainer) return;
 
 		let progressBar = loadingContainer.querySelector("progress");
@@ -1010,13 +1013,25 @@ export namespace _MarkdownRendererInternal
 			messageElement.innerText = message;
 		}
 
-		let subMessageElement = loadingContainer.querySelector("span.html-render-submessage") as HTMLElement;
+		let subMessageElement = loadingContainer.querySelector("span.html-progress-sub") as HTMLElement;
 		if (subMessageElement)
 		{
 			subMessageElement.innerText = subMessage;
 		}
 
 		electronWindow?.setProgressBar(fraction);
+	}
+
+	export async function _setFileList(items: string[], options: {icons?: string[] | string, renderAsMarkdown?: boolean, title?: string})
+	{
+		let contaienr = loadingContainer?.querySelector(".html-progress-content") as HTMLElement;
+		if (!contaienr) return;
+		
+		let fileList = new SimpleFileListGenerator(items, options);
+		let fileListEl = fileList.insert(contaienr);
+		contaienr.prepend(fileListEl);
+		if (fileListContainer) fileListContainer.remove();
+		fileListContainer = fileListEl;
 	}
 
 	export async function _reportError(messageTitle: string, message: any, fatal: boolean)
@@ -1145,6 +1160,11 @@ export namespace ExportLog
         _MarkdownRendererInternal._reportProgress(fraction, message, subMessage, progressColor);
     }
 
+	export function setFileList(items: string[], options: {icons?: string[] | string, renderAsMarkdown?: boolean, title?: string})
+	{
+		_MarkdownRendererInternal._setFileList(items, options);		
+	}
+
     function pullPathLogs()
     {
         let logs = Path.dequeueLog();
@@ -1193,5 +1213,10 @@ export namespace ExportLog
             throw new Error("Test error");
         }
     }
+
+	export function isCancelled()
+	{
+		return _MarkdownRendererInternal.checkCancelled();
+	}
 }
 

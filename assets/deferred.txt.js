@@ -3,7 +3,7 @@ async function loadIncludes()
 	if (location.protocol != "file:") 
 	{
 		// replace include tags with the contents of the file
-		let includeTags = document.querySelectorAll("div[data-include]");
+		let includeTags = document.querySelectorAll("meta[data-include]");
 		for (const includeTag of includeTags)
 		{
 			let includePath = includeTag.getAttribute("data-include");
@@ -47,7 +47,7 @@ async function loadIncludes()
 	}
 	else
 	{
-		let e = document.querySelectorAll("div[data-include]");
+		let e = document.querySelectorAll("meta[data-include]");
 		if (e.length > 0)
 		{
 			var error = document.createElement("div");
