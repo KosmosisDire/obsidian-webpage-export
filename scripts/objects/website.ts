@@ -30,14 +30,14 @@ export class Website
 	private globalGraph: GraphView;
 	private fileTree: FileTree;
 	private fileTreeHtml: string = "";
-	
+
 	public graphDataAsset: Asset;
 	public fileTreeAsset: Asset;
-	
-	
+
+
 	public static validBodyClasses: string;
 	public exportOptions: MarkdownWebpageRendererAPIOptions;
-	
+
 	/**
 	 * Create a new website with the given files and options.
 	 * @param files The files to include in the website.
@@ -61,12 +61,12 @@ export class Website
 			if(MarkdownRendererAPI.checkCancelled()) return;
 			ExportLog.progress(this.progress, this.batchFiles.length, "Generating HTML", "Exporting: " + file.path, "var(--interactive-accent)");
 			this.progress++;
-			
+
 			let filename = new Path(file.path).basename;
 			let webpage = new Webpage(file, destination, filename, this, this.exportOptions);
 			let shouldExportPage = (useIncrementalExport && this.index.isFileChanged(file)) || !useIncrementalExport;
 			if (!shouldExportPage) continue;
-			
+
 			let createdPage = await webpage.create();
 			if(!createdPage) continue;
 
@@ -88,9 +88,9 @@ export class Website
 		{
 			this.createRSS();
 		}
-		
+
 		console.log("Website created: ", this);
-			
+
 		return this;
 	}
 
@@ -114,7 +114,7 @@ export class Website
 		if (app.plugins.enabledPlugins.has("obsidian-excalidraw-plugin"))
 		{
 			// @ts-ignore
-			let embedMode = app.plugins.plugins['obsidian-excalidraw-plugin']?.settings['previewImageType'] ?? "";		
+			let embedMode = app.plugins.plugins['obsidian-excalidraw-plugin']?.settings['previewImageType'] ?? "";
 			if (embedMode != "SVG")
 			{
 				ExportLog.warning("For Excalidraw embed support, set the embed mode to \"Native SVG\" in the Excalidraw plugin settings.");
@@ -159,7 +159,7 @@ export class Website
 			this.globalGraph = new GraphView();
 			await this.globalGraph.init(convertableFiles, this.exportOptions);
 		}
-		
+
 		if (this.exportOptions.addFileNavigation)
 		{
 			ExportLog.progress(0, 1, "Initialize Export", "Generating file tree", "var(--color-yellow)");
@@ -220,7 +220,7 @@ export class Website
 			custom_elements:
 			[
 				{ "dc:creator": author },
-				
+
 			]
 		});
 
@@ -242,11 +242,11 @@ export class Website
 			if (!description)
 			{
 				let content = page.viewElement.cloneNode(true) as HTMLElement;
-				content.querySelectorAll(`h1, h2, h3, h4, h5, h6, .mermaid, table, mjx-container, style, script, 
+				content.querySelectorAll(`h1, h2, h3, h4, h5, h6, .mermaid, table, mjx-container, style, script,
 .mod-header, .mod-footer, .metadata-container, .frontmatter, img[src^="data:"]`).forEach((heading) => heading.remove());
 
 				// update image links
-				content.querySelectorAll("[src]").forEach((el: HTMLImageElement) => 
+				content.querySelectorAll("[src]").forEach((el: HTMLImageElement) =>
 				{
 					let src = el.src;
 					if (!src) return;
@@ -258,7 +258,7 @@ export class Website
 				});
 
 				// update normal links
-				content.querySelectorAll("[href]").forEach((el: HTMLAnchorElement) => 
+				content.querySelectorAll("[href]").forEach((el: HTMLAnchorElement) =>
 				{
 					let href = el.href;
 					if (!href) return;
@@ -271,12 +271,12 @@ export class Website
 
 				// console.log("Content: ", content.outerHTML);
 
-				function keepTextLinksImages(element: HTMLElement) 
+				function keepTextLinksImages(element: HTMLElement)
 				{
 					let walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
 					let node;
 					let nodes = [];
-					while (node = walker.nextNode()) 
+					while (node = walker.nextNode())
 					{
 						if (node.nodeType == Node.ELEMENT_NODE)
 						{
@@ -295,7 +295,7 @@ export class Website
 								}
 							}
 
-							if (element.tagName == "LI") 
+							if (element.tagName == "LI")
 							{
 								nodes.push(document.createElement("br"));
 							}
@@ -315,7 +315,7 @@ export class Website
 				description = content.innerHTML;
 				content.remove();
 			}
-			
+
 			// add tags to top of description
 			let tags = page.tags.map((t) => t).map((tag) => `<a class="tag" href="${this.exportOptions.siteURL}?query=tag:${tag.replace("#", "")}">${tag}</a>`).join(" ");
 			let tagContainer = document.body.createDiv();
@@ -323,7 +323,7 @@ export class Website
 			tagContainer.style.display = "flex";
 			tagContainer.style.gap = "0.4em";
 
-			tagContainer.querySelectorAll("a.tag").forEach((tag: HTMLElement) => 
+			tagContainer.querySelectorAll("a.tag").forEach((tag: HTMLElement) =>
 			{
 				tag.style.backgroundColor = "#046c74";
 				tag.style.color = "white";
@@ -337,7 +337,7 @@ export class Website
 			tagContainer.remove();
 
 			this.rss.item(
-			{ 
+			{
 				title: title,
 				description: description,
 				url: url,
@@ -345,7 +345,7 @@ export class Website
 				date: date,
 				enclosure: hasMedia ? { url: media } : undefined,
 				author: author,
-				custom_elements: 
+				custom_elements:
 				[
 					hasMedia ? { "content:encoded": `<figure><img src="${media}"></figure>` } : undefined,
 				]
@@ -382,27 +382,27 @@ export class Website
 		let rss = new Asset("rss.xml", result, AssetType.Other, InlinePolicy.Download, false, Mutability.Temporary);
 		rss.download(this.destination);
 	}
-	
+
 	private filterDownloads(onlyDuplicates: boolean = false)
 	{
 		// remove duplicates from the dependencies and downloads
 		this.dependencies = this.dependencies.filter((file, index) => this.dependencies.findIndex((f) => f.relativePath.asString == file.relativePath.asString) == index);
 		this.downloads = this.downloads.filter((file, index) => this.downloads.findIndex((f) => f.relativePath.asString == file.relativePath.asString) == index);
-		
+
 		// remove files that have not been modified since last export
 		if (!this.index.shouldApplyIncrementalExport() || onlyDuplicates) return;
-		
+
 		let localThis = this;
 		function filterFunction(file: Downloadable)
 		{
 			// always include .html files
-			if (file.filename.endsWith(".html")) return true; 
+			if (file.filename.endsWith(".html")) return true;
 
 			// always exclude fonts if they exist
-			if 
+			if
 			(
 				localThis.index.hasFileByPath(file.relativePath.asString) &&
-				file.filename.endsWith(".woff") || 
+				file.filename.endsWith(".woff") ||
 				file.filename.endsWith(".woff2") ||
 				file.filename.endsWith(".otf") ||
 				file.filename.endsWith(".ttf")
@@ -413,9 +413,9 @@ export class Website
 
 			// always include files that have been modified since last export
 			let metadata = localThis.index.getMetadataForPath(file.relativePath.copy.makeUnixStyle().asString);
-			if (metadata && (file.modifiedTime > metadata.modifiedTime || metadata.sourceSize != file.content.length)) 
+			if (metadata && (file.modifiedTime > metadata.modifiedTime || metadata.sourceSize != file.content.length))
 				return true;
-			
+
 			console.log("Excluding: " + file.relativePath.asString);
 			return false;
 		}
@@ -439,13 +439,12 @@ export class Website
 		{
 			const fileCache = app.metadataCache.getFileCache(file);
 			const frontmatter = fileCache?.frontmatter;
-			const titleFromFrontmatter = frontmatter?.[titleProperty] ?? frontmatter?.banner_header; // banner plugin support
-			title = titleFromFrontmatter ?? file.basename;
+			title = (frontmatter?.[titleProperty] ?? frontmatter?.banner_header)?.toString() ?? file.basename;
 			if (title != file.basename) isDefaultTitle = false;
 			if (title.endsWith(".excalidraw")) title = title.substring(0, title.length - 11);
-			
+
 			iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support
-			if (!iconProperty && Settings.showDefaultTreeIcons) 
+			if (!iconProperty && Settings.showDefaultTreeIcons)
 			{
 				useDefaultIcon = true;
 				let isMedia = Asset.extentionToType(file.extension) == AssetType.Media;
@@ -474,7 +473,7 @@ export class Website
 			//@ts-ignore
 			let fileToIconName = app.plugins.plugins['obsidian-icon-folder'].data;
 			let noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;
-			
+
 			// only add icon if rendering note icons is enabled
 			// because that is what we rely on to get the icon
 			if (noteIconsEnabled)
