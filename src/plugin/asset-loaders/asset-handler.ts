@@ -1,15 +1,15 @@
-import graphViewJS from "src/frontend/assets/graph-view.txt.js";
-import graphWASMJS from "src/frontend/assets/graph-wasm.txt.js";
-import renderWorkerJS from "src/frontend/assets/graph-render-worker.txt.js";
-import graphWASM from "src/frontend/assets/graph-wasm.wasm";
+import graphViewJS from "src/frontend/graph-view/graph-view.txt.js";
+import graphWASMJS from "src/frontend/graph-view/graph-wasm.txt.js";
+import renderWorkerJS from "src/frontend/graph-view/graph-render-worker.txt.js";
+import graphWASM from "src/frontend/graph-view/graph-wasm.wasm";
 import websiteJS from "src/frontend/assets/website.txt.js";
 import webpageStyles from "src/frontend/assets/plugin-styles.txt.css";
 import deferredJS from "src/frontend/assets/deferred.txt.js";
 import deferredCSS from "src/frontend/assets/deferred.txt.css";
 import themeLoadJS from "src/frontend/assets/theme-load.txt.js";
 
-import tinyColorJS from "src/frontend/assets/tinycolor.txt.js";
-import pixiJS from "src/frontend/assets/pixi.txt.js";
+import tinyColorJS from "src/frontend/graph-view/tinycolor.txt.js";
+import pixiJS from "src/frontend/graph-view/pixi.txt.js";
 import minisearchJS from "src/frontend/assets/minisearch.txt.js";
 
 import { Path } from "src/plugin/utils/path.js";
