@@ -2,7 +2,7 @@ import { Callout } from "./callouts";
 import { WebpageData, DocumentType } from "./data";
 import { Header } from "./headers";
 import { LinkHandler } from "./links";
-import { Website } from "./website";
+import { Website } from "./website.txt";
 
 export class WebpageDocument
 {
@@ -41,7 +41,7 @@ export class WebpageDocument
 		this.queryParameters = parsedURL.searchParams;
 
 		// load webpage data
-		this.info = Website.getWebpageData(this.pathname);
+		this.info = Website.getWebpageData(this.pathname) as WebpageData;
 		if (!this.info)
 		{
 			console.error("Failed to load webpage data for", this.pathname);
@@ -124,7 +124,9 @@ window.setActiveDocument = (url, showInTree, changeURL, animate = true) =>
 window.getPointerPosition = (event) =>
 {
 	let touches: any = event.touches ? Array.from(event.touches) : [];
+	// @ts-ignore
 	let x = touches.length > 0 ? (touches.reduce((acc, cur) => acc + cur.clientX, 0) / event.touches.length) : event.clientX;
+	// @ts-ignore
 	let y = touches.length > 0 ? (touches.reduce((acc, cur) => acc + cur.clientY, 0) / event.touches.length) : event.clientY;
 	return {x: x, y: y};
 }

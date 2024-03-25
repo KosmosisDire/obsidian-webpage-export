@@ -29,10 +29,10 @@ export class Callout
 	constructor(calloutEl: HTMLElement, initEvents: boolean = true)
 	{
 		this.calloutEl = calloutEl;
-		this.titleEl = calloutEl.querySelector(".callout-title-inner");
-		this.contentEl = calloutEl.querySelector(".callout-content");
-		this.iconEl = calloutEl.querySelector(".callout-icon");
-		this.foldIconEl = calloutEl.querySelector(".callout-fold");
+		this.titleEl = calloutEl.querySelector(".callout-title-inner") as HTMLElement;
+		this.contentEl = calloutEl.querySelector(".callout-content") as HTMLElement;
+		this.iconEl = calloutEl.querySelector(".callout-icon") as HTMLElement;
+		this.foldIconEl = calloutEl.querySelector(".callout-fold") as HTMLElement;
 
 		var fold = calloutEl.getAttribute("data-callout-fold");
 		switch (fold)

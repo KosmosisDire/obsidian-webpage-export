@@ -1,5 +1,5 @@
 import { WebpageDocument } from "./webpage";
-import { Website } from "./website";
+import { Website } from "./website.txt";
 
 export class LinkHandler
 {

@@ -1,6 +1,6 @@
 import { LinkHandler } from "./links";
 import { getTextNodes } from "./utils";
-import { Website } from "./website";
+import { Website } from "./website.txt";
 
 export enum SearchType
 {
@@ -61,7 +61,7 @@ export class Search
 		});
 		
 		// filter results for the best matches and generate extra metadata
-		let showPaths = [];
+		let showPaths: string[] = [];
 		let headerLinks = [];
 		for (let result of results)
 		{
@@ -72,7 +72,7 @@ export class Search
 			showPaths.push(result.path);
 
 			// generate matching header links to display under the search result
-			let headers = [];
+			let headers: any[] = [];
 			let breakEarly = false;
 			for (let match in result.match)
 			{
@@ -108,10 +108,9 @@ export class Search
 		if (!Website.fileTree)
 		{
 			const list = document.createElement('div');
-			results.filter(result => result.path.endsWith(".html"))
-					.slice(0, 20).forEach(result => 
+			results.filter((result: any) => result.path.endsWith(".html"))
+					.slice(0, 20).forEach((result: any) => 
 					{
-
 						const item = document.createElement('div');
 						item.classList.add('search-result');
 
@@ -142,8 +141,8 @@ export class Search
 
 	public async init(): Promise<Search | undefined>
 	{
-		this.input = document.querySelector('input[type="search"]');
-		this.container = this.input?.closest("#search-container");
+		this.input = document.querySelector('input[type="search"]') as HTMLInputElement;
+		this.container = this.input?.closest("#search-container") as HTMLElement;
 		if (!this.input || !this.container) return;
 
 		const indexResp = await fetch('lib/search-index.json');
@@ -165,7 +164,7 @@ export class Search
 		}
 
 		const inputClear = document.querySelector('#search-clear-button');
-		inputClear.addEventListener('click', (event) => 
+		inputClear?.addEventListener('click', (event) => 
 		{
 			this.clear();
 		});
@@ -199,9 +198,9 @@ export class Search
 		textNodes.forEach(async node =>
 		{
 			const content = node.nodeValue;
-			const newContent = content.replace(new RegExp(query, 'gi'), match => `<mark>${match}</mark>`);
+			const newContent = content?.replace(new RegExp(query, 'gi'), match => `<mark>${match}</mark>`);
 
-			if (newContent !== content) 
+			if (newContent && newContent !== content) 
 			{
 				const tempDiv = document.createElement('div');
 				tempDiv.innerHTML = newContent;
@@ -214,10 +213,10 @@ export class Search
 					{
 						(newNode as Element)?.setAttribute('class', 'search-mark');
 					}
-					node.parentNode.insertBefore(newNode, node);
+					node?.parentNode?.insertBefore(newNode, node);
 				});
 		
-				node.parentNode.removeChild(node);
+				node?.parentNode?.removeChild(node);
 			}
 		});
 

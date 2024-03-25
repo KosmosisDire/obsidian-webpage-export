@@ -11,7 +11,7 @@ export class Sidebar
 	get sidebarID(): string { return this._sidebarID; }
 	private _isLeft: boolean;
 	get isLeft(): boolean { return this._isLeft; }
-	private _resizing;
+	private _resizing: boolean;
 	get resizing(): boolean { return this._resizing; }
 	private _collapsed: boolean;
 	get collapsed(): boolean { return this._collapsed; }
@@ -36,7 +36,7 @@ export class Sidebar
 		this.topbarEl = container.querySelector(".sidebar-topbar") as HTMLElement;
 		this.collapseEl = container.querySelector(".sidebar-collapse-icon") as HTMLElement;
 		this.topbarContentEl = container.querySelector(".topbar-content") as HTMLElement;
-		this.resizeHandleEl = container.querySelector(".sidebar-handle");
+		this.resizeHandleEl = container.querySelector(".sidebar-handle") as HTMLElement ?? undefined;
 		this._isLeft = container.classList.contains("sidebar-left");
 		this._sidebarID = container.classList.contains("sidebar-left") ? "sidebar-left" : "sidebar-right";
 
@@ -53,14 +53,14 @@ export class Sidebar
 		if (!this.resizeHandleEl) return;
 
 		let minWidthEm = 15;
-		let minResizeWidth = parseFloat(getComputedStyle(this.resizeHandleEl.parentElement).fontSize) * minWidthEm;
+		let minResizeWidth = parseFloat(getComputedStyle(this.resizeHandleEl.parentElement ?? this.resizeHandleEl).fontSize) * minWidthEm;
 		let collapseWidth = minResizeWidth / 4.0;
 
 		let savedWidth = localStorage.getItem(`${this.sidebarID}-width`);
 		if (savedWidth) this.containerEl.style.setProperty('--sidebar-width', savedWidth);
 
 		let localThis = this;
-		function resizeMove(e)
+		function resizeMove(e: PointerEvent)
 		{
 			if (!localThis.resizing) return;
 			var distance = localThis.isLeft ? e.clientX : window.innerWidth - e.clientX;
@@ -79,7 +79,7 @@ export class Sidebar
 			}
 		}
 
-		function handleClick(e) 
+		function handleClick(e: PointerEvent) 
 		{
 			localThis._resizing = true;
 			localThis.containerEl.classList.add('is-resizing');
@@ -97,7 +97,7 @@ export class Sidebar
 		this.resizeHandleEl.addEventListener('pointerdown', handleClick);
 
 		// reset sidebar width on double click
-		function resetSidebarEvent(e)
+		function resetSidebarEvent(e: MouseEvent)
 		{
 			localThis.containerEl.style.removeProperty('transition-duration');
 			localThis.containerEl.style.removeProperty('--sidebar-width');
@@ -107,10 +107,10 @@ export class Sidebar
 		this.resizeHandleEl.addEventListener('dblclick', resetSidebarEvent);
 	}
 
-	private clickOutsideCollapse(event)
+	private clickOutsideCollapse(event: MouseEvent)
 	{
 		// don't allow bubbling into sidebar
-		if (event.target.closest(".sidebar")) return;
+		if ((event.target as HTMLElement)?.closest(".sidebar")) return;
 		this.collapsed = true;
 	}
 }

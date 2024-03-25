@@ -45,8 +45,8 @@ export class Website
 		}
  
 		this.bodyEl = document.body;
-		this.websiteEl = document.querySelector("#layout");
-		this.centerContentEl = document.querySelector("#center-content");
+		this.websiteEl = document.querySelector("#layout") as HTMLElement;
+		this.centerContentEl = document.querySelector("#center-content") as HTMLElement;
 
 		let fileTreeEl = document.querySelector("#file-explorer") as HTMLElement;
 		let outlineTreeEl = document.querySelector("#outline-tree") as HTMLElement;
@@ -59,7 +59,7 @@ export class Website
 		if (rightSidebarEl) this.rightSidebar = new Sidebar(rightSidebarEl); 
 		this.search = await new Search().init();
 
-		let pathname = document.querySelector("meta[name='pathname']").getAttribute("content");
+		let pathname = document.querySelector("meta[name='pathname']")?.getAttribute("content") ?? "unknown";
 		this.document = new WebpageDocument(pathname);
 
 		this.entryPage = pathname;

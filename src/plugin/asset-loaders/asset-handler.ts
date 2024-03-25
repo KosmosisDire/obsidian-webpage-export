@@ -2,7 +2,7 @@ import graphViewJS from "src/frontend/graph-view/graph-view.txt.js";
 import graphWASMJS from "src/frontend/graph-view/graph-wasm.txt.js";
 import renderWorkerJS from "src/frontend/graph-view/graph-render-worker.txt.js";
 import graphWASM from "src/frontend/graph-view/graph-wasm.wasm";
-import websiteJS from "src/frontend/assets/website.txt.js";
+import websiteJS from "src/frontend/dist/website.txt.js";
 import webpageStyles from "src/frontend/assets/plugin-styles.txt.css";
 import deferredJS from "src/frontend/assets/deferred.txt.js";
 import deferredCSS from "src/frontend/assets/deferred.txt.css";

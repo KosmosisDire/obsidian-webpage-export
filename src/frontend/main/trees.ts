@@ -1,5 +1,5 @@
 import { slideDown, slideUp } from "./utils";
-import { Website } from "./website";
+import { Website } from "./website.txt";
 
 export class TreeItem
 {
@@ -12,7 +12,7 @@ export class TreeItem
 	get path(): string { return this.selfEl.getAttribute("href") ?? ""; }
 
 	public children: TreeItem[];
-	public parent: TreeItem | Tree;
+	public parent: TreeItem | undefined;
 
 	private _isFolder: boolean;
 	private _isLink: boolean;
@@ -53,7 +53,7 @@ export class TreeItem
 	{
 		this.itemEl = itemEl;
 		this.selfEl = itemEl.querySelector(".tree-item-self") as HTMLElement;
-		this.collapseIconEl = itemEl.querySelector(".collapse-icon");
+		this.collapseIconEl = itemEl.querySelector(".collapse-icon") as HTMLElement | undefined;
 		this.innerEl = itemEl.querySelector(".tree-item-inner") as HTMLElement;
 		this.childrenEl = itemEl.querySelector(".tree-item-children") as HTMLElement;
 
@@ -137,7 +137,7 @@ export class TreeItem
 	{
 		this.itemEl.classList.remove("sorted");
 
-		this.sort((a, b) => Website.getWebpageData(a.path)?.treeOrder - Website.getWebpageData(b.path)?.treeOrder ?? 0);
+		this.sort((a, b) => (Website.getWebpageData(a.path)?.treeOrder ?? 0) - (Website.getWebpageData(b.path)?.treeOrder ?? 0));
 	}
 
 	/**
