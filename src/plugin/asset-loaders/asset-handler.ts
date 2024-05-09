@@ -1,18 +1,18 @@
-import graphViewJS from "src/frontend/graph-view/graph-view.txt.js";
-import graphWASMJS from "src/frontend/graph-view/graph-wasm.txt.js";
-import renderWorkerJS from "src/frontend/graph-view/graph-render-worker.txt.js";
-import graphWASM from "src/frontend/graph-view/graph-wasm.wasm";
-import websiteJS from "src/frontend/dist/website.txt.js";
-import webpageStyles from "src/frontend/assets/plugin-styles.txt.css";
-import deferredJS from "src/frontend/assets/deferred.txt.js";
-import deferredCSS from "src/frontend/assets/deferred.txt.css";
-import themeLoadJS from "src/frontend/assets/theme-load.txt.js";
+// import graphViewJS from "frontend/dist/graph-view/index.txt.js";
+import graphWASMJS from "frontend/graph-view/graph-wasm.txt.js";
+import renderWorkerJS from "frontend/graph-view/graph-render-worker.txt.js";
+import graphWASM from "frontend/graph-view/graph-wasm.wasm";
+import websiteJS from "frontend/dist/index.txt.js";
+import webpageStyles from "assets/plugin-styles.txt.css";
+import deferredJS from "assets/deferred.txt.js";
+import deferredCSS from "assets/deferred.txt.css";
+import themeLoadJS from "assets/theme-load.txt.js";
 
-import tinyColorJS from "src/frontend/graph-view/tinycolor.txt.js";
-import pixiJS from "src/frontend/graph-view/pixi.txt.js";
-import minisearchJS from "src/frontend/assets/minisearch.txt.js";
+import tinyColorJS from "frontend/graph-view/tinycolor.txt.js";
+import pixiJS from "frontend/graph-view/pixi.txt.js";
+import minisearchJS from "assets/minisearch.txt.js";
 
-import { Path } from "src/plugin/utils/path.js";
+import { Path } from "plugin/utils/path.js";
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { ObsidianStyles } from "./obsidian-styles.js";
@@ -25,9 +25,9 @@ import { GlobalVariableStyles } from "./global-variable-styles.js";
 import { Favicon } from "./favicon.js";
 import { FetchBuffer } from "./local-fetch-buffer.js";
 import { SupportedPluginStyles } from "./supported-plugin-styles.js";
+import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options.js";
+import { ExportLog } from "plugin/render-api/render-api.js";
 import { fileTypeFromBuffer } from "file-type";
-import { MarkdownWebpageRendererAPIOptions } from "src/plugin/render-api/api-options.js";
-import { ExportLog } from "src/plugin/render-api/render-api.js";
 const mime = require('mime');
 
 
@@ -99,7 +99,7 @@ export class AssetHandler
 
 	// scripts
 	public static websiteJS: AssetLoader = new AssetLoader("webpage.js", websiteJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async);
-	public static graphViewJS: AssetLoader = new AssetLoader("graph-view.js", graphViewJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+	// public static graphViewJS: AssetLoader = new AssetLoader("graph-view.js", graphViewJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
 	public static graphWASMJS: AssetLoader = new AssetLoader("graph-wasm.js", graphWASMJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
 	public static graphWASM: AssetLoader = new AssetLoader("graph-wasm.wasm", Buffer.from(graphWASM), null, AssetType.Script, InlinePolicy.Download, false, Mutability.Static);
 	public static renderWorkerJS: AssetLoader = new AssetLoader("graph-render-worker.js", renderWorkerJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
@@ -136,15 +136,15 @@ export class AssetHandler
 
 		this.allAssets.sort((a, b) => a.loadPriority - b.loadPriority);
 		
-		let loadPromises = []
-		for (let asset of this.allAssets)
+		const loadPromises = []
+		for (const asset of this.allAssets)
 		{
 			loadPromises.push(asset.load());
 		}
 		await Promise.all(loadPromises);
 
-		let graphViewJSPath = this.graphViewJS.getAssetPath();
-		this.graphViewJS.getHTML = () => `<script type="module" async id="graph-view-script" src="${graphViewJSPath}"></script>`;
+		// let graphViewJSPath = this.graphViewJS.getAssetPath();
+		// this.graphViewJS.getHTML = () => `<script type="module" async id="graph-view-script" src="${graphViewJSPath}"></script>`;
 	}
 
 	public static async reloadAssets(options: MarkdownWebpageRendererAPIOptions)
@@ -157,10 +157,10 @@ export class AssetHandler
 
 		let i = 0;
 
-		let loadPromises = []
-		for (let asset of this.dynamicAssets)
+		const loadPromises = []
+		for (const asset of this.dynamicAssets)
 		{
-			let loadPromise = asset.load();
+			const loadPromise = asset.load();
 			loadPromise.then(() =>
 			{
 				i++;
@@ -189,7 +189,8 @@ export class AssetHandler
 	{
 		if (!options.addGraphView || !options.addSidebars)
 		{
-			downloads = downloads.filter(asset => ![this.graphViewJS, this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS, this.pixiJS].includes(asset));
+			// downloads = downloads.filter(asset => ![this.graphViewJS, this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS, this.pixiJS].includes(asset));
+			downloads = downloads.filter(asset => ![this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS, this.pixiJS].includes(asset));
 		}
 
 		if (!options.addSearch || !options.addSidebars)
@@ -253,7 +254,7 @@ export class AssetHandler
 		referenceAssets = this.filterDownloads(referenceAssets, options);
 		referenceAssets.sort((a, b) => b.loadPriority - a.loadPriority);
 
-		for (let asset of referenceAssets)
+		for (const asset of referenceAssets)
 		{
 			head += asset.getHTML(options);
 		}
@@ -274,8 +275,8 @@ export class AssetHandler
 		urls = urls.filter((url, index, self) => self.findIndex((t) => t[0] === url[0]) === index);
 
 		// use this mutability for child assets
-        let promises = [];
-		for (let urlObj of urls)
+        const promises = [];
+		for (const urlObj of urls)
 		{
 			let url = urlObj[1] || urlObj[2];
 			url = url.trim();
@@ -308,23 +309,23 @@ export class AssetHandler
 						return 4294967296 * (2097151 & h2) + (h1 >>> 0);
 					}
 
-					let splitData = url.split(",")
-					let data = splitData.slice(1).join(",");
+					const splitData = url.split(",")
+					const data = splitData.slice(1).join(",");
 					let extension = AssetLoader.mimeToExtention(splitData[0].split(":")[1].split(";")[0]);
-					let buffer = Buffer.from(data, "base64");
-					let dataHash = hash(data);
+					const buffer = Buffer.from(data, "base64");
+					const dataHash = hash(data);
 					let filename = `${dataHash}.${extension}`;
 					if (extension == '') 
 					{
-						let type = await fileTypeFromBuffer(buffer);
+						const type = await fileTypeFromBuffer(buffer);
 						if (type) extension = type.ext;
 						filename = `${dataHash}.${extension}`;						
 					}
-					let type = AssetLoader.extentionToType(extension);
+					const type = AssetLoader.extentionToType(extension);
 
-					let childAsset = new AssetLoader(filename, buffer, null, type, InlinePolicy.Download, false, Mutability.Child);
+					const childAsset = new AssetLoader(filename, buffer, null, type, InlinePolicy.Download, false, Mutability.Child);
 					asset.childAssets.push(childAsset);
-					let loadPromise = childAsset.load();
+					const loadPromise = childAsset.load();
 					promises.push(loadPromise);
 					loadPromise.then(() =>
 					{
@@ -333,19 +334,19 @@ export class AssetHandler
 							return;
 						}
 
-						let newPath = childAsset.getAssetPath(asset.getAssetPath());
+						const newPath = childAsset.getAssetPath(asset.getAssetPath());
 						content = content.replaceAll(url, newPath.path);
 					});
 				}
 				continue;
 			} 
 
-			let path = new Path(url);
-			let type = AssetLoader.extentionToType(path.extension);
-			let childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.Download, false, Mutability.Child);
+			const path = new Path(url);
+			const type = AssetLoader.extentionToType(path.extension);
+			const childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.Download, false, Mutability.Child);
 			asset.childAssets.push(childAsset);
 
-			let loadPromise = childAsset.load();
+			const loadPromise = childAsset.load();
 			promises.push(loadPromise);
 			loadPromise.then(() => 
 			{
@@ -356,7 +357,7 @@ export class AssetHandler
 
 				function addAsBase64()
 				{
-					let base64 = childAsset.data.toString("base64");
+					const base64 = childAsset.data.toString("base64");
 					content = content.replaceAll(url, `data:${mime.getType(url)};base64,${base64}`);
 				}
 
@@ -368,7 +369,7 @@ export class AssetHandler
 					addAsBase64();
 				else
 				{
-					let newPath = childAsset.getAssetPath(asset.getAssetPath());
+					const newPath = childAsset.getAssetPath(asset.getAssetPath());
 					content = content.replaceAll(url, newPath.path);
 				}
 			});
@@ -382,10 +383,10 @@ export class AssetHandler
 	public static filterStyleRules(appSheet: CSSStyleSheet, discard: string[], keep: string[]): string
 	{
 		let result = "";
-		let cssRules = Array.from(appSheet.cssRules);
+		const cssRules = Array.from(appSheet.cssRules);
 		for (const element of cssRules)
 		{
-			let rule = element;
+			const rule = element;
 			let selectors = rule.cssText.split("{")[0].split(",");
 			selectors = selectors.map((selector) => selector.trim());
 			selectors = selectors.filter((selector) => keep.some((keep) => selector.includes(keep)) || !discard.some((filter) => selector.includes(filter)));

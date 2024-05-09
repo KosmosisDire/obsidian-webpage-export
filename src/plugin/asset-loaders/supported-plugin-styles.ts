@@ -1,7 +1,7 @@
-import { Settings } from "src/plugin/settings/settings";
+import { Settings } from "plugin/settings/settings";
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { ExportLog } from "src/plugin/render-api/render-api";
+import { ExportLog } from "plugin/render-api/render-api";
 
 export class SupportedPluginStyles extends AssetLoader
 {
@@ -13,12 +13,12 @@ export class SupportedPluginStyles extends AssetLoader
     override async load()
     {
         this.data = "";
-        let stylesheets = document.styleSheets;
+        const stylesheets = document.styleSheets;
 
 		for(let i = 1; i < stylesheets.length; i++) 
         {
             // @ts-ignore
-            let styleID = stylesheets[i].ownerNode?.id;
+            const styleID = stylesheets[i].ownerNode?.id;
 
             if 
 			(
@@ -30,9 +30,9 @@ export class SupportedPluginStyles extends AssetLoader
 			)
             {
                 ExportLog.log("Including stylesheet: " + styleID);
-                let style = stylesheets[i].cssRules;
+                const style = stylesheets[i].cssRules;
 
-                for(let item in style) 
+                for(const item in style) 
                 {
                     if(style[item].cssText != undefined)
                     {
@@ -51,9 +51,9 @@ export class SupportedPluginStyles extends AssetLoader
 	getStylesheetContent(stylesheet: CSSStyleSheet): string
 	{
 		let content = "";
-		let style = stylesheet.cssRules;
+		const style = stylesheet.cssRules;
 
-		for(let item in style) 
+		for(const item in style) 
 		{
 			if(style[item].cssText != undefined)
 			{
@@ -68,12 +68,12 @@ export class SupportedPluginStyles extends AssetLoader
 	{
 		if(stylesheet.ownerNode == undefined) return false;
 		// @ts-ignore
-		let styleID = stylesheet.ownerNode.id;
+		const styleID = stylesheet.ownerNode.id;
 
 		if (styleID.contains("svelte")) return true;
 
-		let sheetContent = this.getStylesheetContent(stylesheet);
-		let first1000 = sheetContent.substring(0, 1000);
+		const sheetContent = this.getStylesheetContent(stylesheet);
+		const first1000 = sheetContent.substring(0, 1000);
 		if (first1000.contains(".svelte-")) 
 		{
 			return true;

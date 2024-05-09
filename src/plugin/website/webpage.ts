@@ -1,15 +1,16 @@
 import { FrontMatterCache, TFile } from "obsidian";
-import { Path } from "src/plugin/utils/path";
-import { Attachment } from "src/plugin/utils/downloadable";
-import { OutlineTree } from "src/plugin/component-generators/outline-tree";
+import { Path } from "plugin/utils/path";
+import { Attachment } from "plugin/utils/downloadable";
+import { OutlineTree } from "plugin/component-generators/outline-tree";
 import { Website } from "./website";
-import { AssetHandler } from "src/plugin/asset-loaders/asset-handler";
-import { HTMLGeneration } from "src/plugin/render-api/html-generation-helpers";
-import { Utils } from "src/plugin/utils/utils";
-import { ExportLog } from "src/plugin/render-api/render-api";
-import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
-import { MarkdownWebpageRendererAPIOptions } from "src/plugin/render-api/api-options";
-import { SearchInput } from "src/plugin/component-generators/search-input";
+import { AssetHandler } from "plugin/asset-loaders/asset-handler";
+import { HTMLGeneration } from "plugin/render-api/html-generation-helpers";
+import { Utils } from "plugin/utils/utils";
+import { ExportLog } from "plugin/render-api/render-api";
+import { MarkdownRendererAPI } from "plugin/render-api/render-api";
+import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
+import { SearchInput } from "plugin/component-generators/search-input";
+import { DocumentType } from "shared/website-data";
 
 export class Webpage extends Attachment
 {
@@ -26,7 +27,7 @@ export class Webpage extends Attachment
 	public website: Website;
 	public document: Document | undefined = undefined;
 	public attachments: Attachment[] = [];
-	public viewType: string = "markdown";
+	public type: DocumentType = DocumentType.Markdown;
 	public title: string = "";
 	public icon: string = "";
 	public titleInfo: {title: string, icon: string, isDefaultTitle: boolean, isDefaultIcon: boolean} = {title: "", icon: "", isDefaultTitle: true, isDefaultIcon: true};
@@ -42,7 +43,7 @@ export class Webpage extends Attachment
 	{
 		if (!MarkdownRendererAPI.isConvertable(file.extension)) throw new Error("File type not supported: " + file.extension);
 
-		let targetPath = website.getTargetPathForFile(file, filename);
+		const targetPath = website.getTargetPathForFile(file, filename);
 		options = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
 
 		super("", targetPath, file, options);
@@ -60,7 +61,7 @@ export class Webpage extends Attachment
 	 */
 	get html(): string
 	{
-		let htmlString = "<!DOCTYPE html> " + this.document?.documentElement.outerHTML;
+		const htmlString = "<!DOCTYPE html> " + this.document?.documentElement.outerHTML;
 		return htmlString;
 	}
 
@@ -74,7 +75,7 @@ export class Webpage extends Attachment
 			return undefined;
 		}
 
-		return this.document.querySelector("#document") as HTMLElement;
+		return this.document.querySelector(".document") as HTMLElement;
 	}
 
 	/**
@@ -82,7 +83,7 @@ export class Webpage extends Attachment
 	 */
 	get sizerElement(): HTMLElement | undefined
 	{
-		return (this.document?.querySelector("#sizer") ?? this.document?.querySelector("#document")) as HTMLElement | undefined;
+		return (this.document?.querySelector(".sizer") ?? this.document?.querySelector(".document")) as HTMLElement | undefined;
 	}
 
 	/**
@@ -90,20 +91,20 @@ export class Webpage extends Attachment
 	 */
 	get pathToRoot(): Path
 	{
-		let ptr = Path.getRelativePath(this.targetPath, new Path(this.targetPath.workingDirectory), true);
+		const ptr = Path.getRelativePath(this.targetPath, new Path(this.targetPath.workingDirectory), true);
 		return ptr;
 	}
 
 	get tags(): string[]
 	{
-		let tagCaches = app.metadataCache.getFileCache(this.source)?.tags?.values();
-		let tags = [];
+		const tagCaches = app.metadataCache.getFileCache(this.source)?.tags?.values();
+		const tags = [];
 		if (tagCaches)
 		{
 			tags.push(...Array.from(tagCaches).map((tag) => tag.tag));
 		}
 
-		let frontmatterTags = this.frontmatter?.tags ?? [];
+		const frontmatterTags = this.frontmatter?.tags ?? [];
 		tags.push(...frontmatterTags);
 
 		return tags;
@@ -111,14 +112,14 @@ export class Webpage extends Attachment
 
 	get headings(): {heading: string, level: number, id: string, headingEl: HTMLElement}[]
 	{
-		let headers: {heading: string, level: number, id: string, headingEl: HTMLElement}[] = [];
+		const headers: {heading: string, level: number, id: string, headingEl: HTMLElement}[] = [];
 		if (this.document)
 		{
 			this.document.querySelectorAll(".heading").forEach((headerEl: HTMLElement) =>
 			{
 				let level = parseInt(headerEl.tagName[1]);
 				if (headerEl.closest("[class^='block-language-']") || headerEl.closest(".markdown-embed.inline-embed")) level += 6;
-				let heading = headerEl.getAttribute("data-heading") ?? headerEl.innerText ?? "";
+				const heading = headerEl.getAttribute("data-heading") ?? headerEl.innerText ?? "";
 				headers.push({heading, level, id: headerEl.id, headingEl: headerEl});
 			});
 		}
@@ -128,14 +129,14 @@ export class Webpage extends Attachment
 
 	public async getStrippedHeadings(): Promise<{ heading: string; level: number; id: string; }[]>
 	{
-		let headings = this.headings.map((header) => {return {heading: header.heading, level: header.level, id: header.id}});
+		const headings = this.headings.map((header) => {return {heading: header.heading, level: header.level, id: header.id}});
 		
-		for (let header of headings)
+		for (const header of headings)
 		{
-			let tempContainer = document.body.createDiv();
+			const tempContainer = document.body.createDiv();
 			await MarkdownRendererAPI.renderMarkdownSimpleEl(header.heading, tempContainer);
 			// @ts-ignore
-			let h = tempContainer.innerText ?? header.heading;
+			const h = tempContainer.innerText ?? header.heading;
 			header.heading = h;
 			tempContainer.remove();
 		}
@@ -145,7 +146,7 @@ export class Webpage extends Attachment
 
 	get aliases(): string[]
 	{
-		let aliases = this.frontmatter?.aliases ?? [];
+		const aliases = this.frontmatter?.aliases ?? [];
 		return aliases;
 	}
 
@@ -161,7 +162,7 @@ export class Webpage extends Attachment
 		if (!description)
 		{
 			if(!this.viewElement) return "";
-			let content = this.viewElement.cloneNode(true) as HTMLElement;
+			const content = this.viewElement.cloneNode(true) as HTMLElement;
 			content.querySelectorAll(`h1, h2, h3, h4, h5, h6, .mermaid, table, mjx-container, style, script, 
 .mod-header, .mod-footer, .metadata-container, .frontmatter, img[src^="data:"]`).forEach((heading) => heading.remove());
 
@@ -178,7 +179,7 @@ export class Webpage extends Attachment
 				}
 				src = src.replace("app://obsidian", "");
 				src = src.replace(".md", "");
-				let path = Path.joinStrings(this.exportOptions.siteURL ?? "", src);
+				const path = Path.joinStrings(this.exportOptions.siteURL ?? "", src);
 				el.src = path.path;
 			});
 
@@ -190,20 +191,20 @@ export class Webpage extends Attachment
 				if (href.startsWith("http") || href.startsWith("data:")) return;
 				href = href.replace("app://obsidian", "");
 				href = href.replace(".md", "");
-				let path = Path.joinStrings(this.exportOptions.siteURL ?? "", href);
+				const path = Path.joinStrings(this.exportOptions.siteURL ?? "", href);
 				el.href = path.path;
 			});
 
 			function keepTextLinksImages(element: HTMLElement) 
 			{
-				let walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+				const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
 				let node;
-				let nodes = [];
+				const nodes = [];
 				while (node = walker.nextNode()) 
 				{
 					if (node.nodeType == Node.ELEMENT_NODE)
 					{
-						let element = node as HTMLElement;
+						const element = node as HTMLElement;
 						if (element.tagName == "A" || element.tagName == "IMG" || element.tagName == "BR")
 						{
 							nodes.push(element);
@@ -211,7 +212,7 @@ export class Webpage extends Attachment
 
 						if (element.tagName == "DIV")
 						{
-							let classes = element.parentElement?.classList;
+							const classes = element.parentElement?.classList;
 							if (classes?.contains("heading-children") || classes?.contains("markdown-preview-sizer"))
 							{
 								nodes.push(document.createElement("br"));
@@ -240,14 +241,14 @@ export class Webpage extends Attachment
 			//remove subsequent br tags
 			content.querySelectorAll("br").forEach((br: HTMLElement) => 
 			{
-				let next = br.nextElementSibling;
+				const next = br.nextElementSibling;
 				if (next?.tagName == "BR") br.remove();
 			});
 
 			// remove br tags at the start and end of the content
-			let first = content.firstElementChild;
+			const first = content.firstElementChild;
 			if (first?.tagName == "BR") first.remove();
-			let last = content.lastElementChild;
+			const last = content.lastElementChild;
 			if (last?.tagName == "BR") last.remove();
 
 			description = content.innerHTML;
@@ -264,10 +265,10 @@ export class Webpage extends Attachment
 	{
 		let tagsHTML = "";
 
-		let tags = this.tags.map((tag) => `<a class="tag" href="${this.exportOptions.siteURL}?query=tag:${tag.replace("#", "")}">${tag.startsWith("#") ? tag : "#" + tag}</a>`).join(" ");
+		const tags = this.tags.map((tag) => `<a class="tag" href="${this.exportOptions.siteURL}?query=tag:${tag.replace("#", "")}">${tag.startsWith("#") ? tag : "#" + tag}</a>`).join(" ");
 		if (tags.length > 0)
 		{
-			let tagContainer = document.body.createDiv();
+			const tagContainer = document.body.createDiv();
 			tagContainer.innerHTML = tags;
 			tagContainer.style.display = "flex";
 			tagContainer.style.gap = "0.4em";
@@ -296,14 +297,14 @@ export class Webpage extends Attachment
 
 	get fullURL(): string
 	{
-		let url = Path.joinStrings(this.exportOptions.siteURL ?? "", this.targetPath.path).path;
+		const url = Path.joinStrings(this.exportOptions.siteURL ?? "", this.targetPath.path).path;
 		return url;
 	}
 
 	get backlinks(): Webpage[]
 	{
 		// @ts-ignore
-		let backlinks = Object.keys(app.metadataCache.getBacklinksForFile(this.source)?.data) ?? [];
+		const backlinks = Object.keys(app.metadataCache.getBacklinksForFile(this.source)?.data) ?? [];
 		let linkedWebpages = backlinks.map((path) => this.website.index.getWebpage(path)) as Webpage[];
 		linkedWebpages = linkedWebpages.filter((page) => page != undefined);
 		return linkedWebpages;
@@ -314,12 +315,12 @@ export class Webpage extends Attachment
 		if (!this.viewElement) return undefined;
 		let mediaPathStr = this.viewElement.querySelector("img")?.getAttribute("src") ?? "";
 		if (mediaPathStr.startsWith("data:")) return undefined;
-		let hasMedia = mediaPathStr.length > 0;
+		const hasMedia = mediaPathStr.length > 0;
 		if (!hasMedia) return undefined;
 
 		if (!mediaPathStr.startsWith("http") && !mediaPathStr.startsWith("data:"))
 		{
-			let mediaPath = Path.joinStrings(this.exportOptions.siteURL ?? "", mediaPathStr);
+			const mediaPath = Path.joinStrings(this.exportOptions.siteURL ?? "", mediaPathStr);
 			mediaPathStr = mediaPath.path;
 		}
 
@@ -328,38 +329,38 @@ export class Webpage extends Attachment
 
 	get frontmatter(): FrontMatterCache
 	{
-		let frontmatter = app.metadataCache.getFileCache(this.source)?.frontmatter ?? {};
+		const frontmatter = app.metadataCache.getFileCache(this.source)?.frontmatter ?? {};
 		return frontmatter;
 	}
 
 	get srcLinks(): string[]
 	{
 		if (!this.document) return [];
-		let srcEls = this.srcLinkElements.map((item) => item.getAttribute("src")) as string[];
+		const srcEls = this.srcLinkElements.map((item) => item.getAttribute("src")) as string[];
 		return srcEls;
 	}
 	get hrefLinks(): string[]
 	{
 		if (!this.document) return [];
-		let hrefEls = this.hrefLinkElements.map((item) => item.getAttribute("href")) as string[];
+		const hrefEls = this.hrefLinkElements.map((item) => item.getAttribute("href")) as string[];
 		return hrefEls;
 	}
 	get srcLinkElements(): HTMLImageElement[]
 	{
 		if (!this.document) return [];
-		let srcEls = (Array.from(this.document.querySelectorAll("[src]:not(head *):not(span, div)")) as HTMLImageElement[]);
+		const srcEls = (Array.from(this.document.querySelectorAll("[src]:not(head *)")) as HTMLImageElement[]);
 		return srcEls;
 	}
 	get hrefLinkElements(): HTMLAnchorElement[]
 	{
 		if (!this.document) return [];
-		let hrefEls = (Array.from(this.document.querySelectorAll("[href]:not(head *):not(span, div)")) as HTMLAnchorElement[]);
+		const hrefEls = (Array.from(this.document.querySelectorAll("[href]:not(head *)")) as HTMLAnchorElement[]);
 		return hrefEls;
 	}
 	get linksToOtherFiles(): string[]
 	{
-		let links = this.hrefLinks;
-		let otherFiles = links.filter((link) => !link.includes("#") && !link.startsWith("http") && !link.startsWith("data:"));
+		const links = this.hrefLinks;
+		const otherFiles = links.filter((link) => !link.startsWith("#") && !link.startsWith("lib/") && !link.startsWith("http") && !link.startsWith("data:"));
 		return otherFiles;
 	}
 
@@ -371,10 +372,12 @@ export class Webpage extends Attachment
 		this.titleInfo = await Website.getTitleAndIcon(this.source);
 		this.title = this.titleInfo.title;
 		this.icon = this.titleInfo.icon;
-		let iconRenderContainer = document.body.createDiv();
+		const iconRenderContainer = document.body.createDiv();
 		await MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, iconRenderContainer);
 		this.icon = iconRenderContainer.innerHTML;
 		iconRenderContainer.remove();
+
+		this.viewElement?.setAttribute("data-type", this.type);
 
 		if (this.exportOptions.fixLinks)
 		{
@@ -394,7 +397,7 @@ export class Webpage extends Attachment
 		// add math styles to the document. They are here and not in <head> because they are unique to each document
 		if (this.exportOptions.addMathjaxStyles)
 		{
-			let mathStyleEl = document.createElement("style");
+			const mathStyleEl = document.createElement("style");
 			mathStyleEl.id = "MJX-CHTML-styles";
 			await AssetHandler.mathjaxStyles.load();
 			mathStyleEl.innerHTML = AssetHandler.mathjaxStyles.data as string;
@@ -403,12 +406,12 @@ export class Webpage extends Attachment
 
 		if (this.exportOptions.addSidebars)
 		{
-			let innerContent = this.document.body.innerHTML;
+			const innerContent = this.document.body.innerHTML;
 			this.document.body.innerHTML = "";
-			let layout = this.generateWebpageLayout(innerContent);
+			const layout = this.generateWebpageLayout(innerContent);
 			this.document.body.appendChild(layout.container);
-			let rightSidebar = layout.right;
-			let leftSidebar = layout.left;
+			const rightSidebar = layout.right;
+			const leftSidebar = layout.left;
 
 			// inject graph view
 			if (this.exportOptions.addGraphView)
@@ -419,7 +422,7 @@ export class Webpage extends Attachment
 			// inject outline
 			if (this.exportOptions.addOutline)
 			{
-				let headerTree = new OutlineTree(this, 1);
+				const headerTree = new OutlineTree(this, 1);
 				headerTree.id = "outline";
 				headerTree.title = "Table Of Contents";
 				headerTree.showNestingIndicator = false;
@@ -448,14 +451,14 @@ export class Webpage extends Attachment
 				// if the file will be opened locally, un-collapse the tree containing this file
 				if (this.exportOptions.openNavFileLocation)
 				{
-					let sidebar = leftSidebar.querySelector("#file-explorer");
-					let unixPath = this.targetPath.path;
+					const sidebar = leftSidebar.querySelector("#file-explorer");
+					const unixPath = this.targetPath.path;
 					let fileElement: HTMLElement = sidebar?.querySelector(`[href="${unixPath}"]`) as HTMLElement;
 					fileElement = fileElement?.closest(".tree-item") as HTMLElement;
 					while (fileElement)
 					{
 						fileElement?.classList.remove("is-collapsed");
-						let children = fileElement?.querySelector(".tree-item-children") as HTMLElement;
+						const children = fileElement?.querySelector(".tree-item-children") as HTMLElement;
 						if(children) children.style.display = "block";
 						fileElement = fileElement?.parentElement?.closest(".tree-item") as HTMLElement;
 					}
@@ -465,7 +468,7 @@ export class Webpage extends Attachment
 
 		if (this.exportOptions.includeJS)
 		{
-			let bodyScript = this.document.body.createEl("script");
+			const bodyScript = this.document.body.createEl("script");
 			bodyScript.setAttribute("defer", "");
 			bodyScript.innerText = AssetHandler.themeLoadJS.data.toString();
 			this.document.body.prepend(bodyScript);
@@ -485,25 +488,29 @@ export class Webpage extends Attachment
 			return undefined;
 		}
 		
-		let body = this.document.body;
+		const body = this.document.body;
 		if (this.exportOptions.addBodyClasses)
 			body.setAttribute("class", this.website.bodyClasses || await HTMLGeneration.getValidBodyClasses(false));
 		
-		let options = {...this.exportOptions, container: body};
-		let renderInfo = await MarkdownRendererAPI.renderFile(this.source, options);
-		let contentEl = renderInfo?.contentEl;
-		this.viewType = renderInfo?.viewType ?? "markdown";
+		// render the file
+		const options = {...this.exportOptions, container: body};
+		const renderInfo = await MarkdownRendererAPI.renderFile(this.source, options);
+		const contentEl = renderInfo?.contentEl;
 
+		// set the document's type
+		this.type = (renderInfo?.viewType as DocumentType) ?? DocumentType.Markdown;
+
+		// if the render was cancelled, return undefined
 		if (!contentEl) return undefined;
 		if (MarkdownRendererAPI.checkCancelled()) return undefined;
 
-		if (this.viewType == "markdown")
-		{ 
+		if (this.type == "markdown")
+		{
 			contentEl.classList.toggle("allow-fold-headings", this.exportOptions.allowFoldingHeadings);
 			contentEl.classList.toggle("allow-fold-lists", this.exportOptions.allowFoldingLists);
 			contentEl.classList.add("is-readable-line-width");
 
-			let cssclasses = this.frontmatter['cssclasses'];
+			const cssclasses = this.frontmatter['cssclasses'];
 			if (cssclasses && cssclasses.length > 0) contentEl.classList.add(...cssclasses);
 		}
 
@@ -518,14 +525,14 @@ export class Webpage extends Attachment
 	{
 		if (!this.document) return [];
 
-		let sources = this.srcLinks;
-		for (let src of sources)
+		const sources = this.srcLinks;
+		for (const src of sources)
 		{
 			if ((!src.startsWith("app://") && /\w+:(\/\/|\\\\)/.exec(src)) || // link is a URL except for app://
 				src.startsWith("data:")) // link is a data URL
 			continue;
 
-			let sourcePath = this.website.getFilePathFromSrc(src, this.source.path).pathname;
+			const sourcePath = this.website.getFilePathFromSrc(src, this.source.path).pathname;
 			let attachment = this.attachments.find((attachment) => attachment.sourcePath == sourcePath);
 			attachment ??= this.website.index.getFile(sourcePath);
 			attachment ??= await this.website.createAttachmentFromSrc(src, this.source);
@@ -567,9 +574,9 @@ export class Webpage extends Attachment
 			return hrefValue;
 		}
 
-		let linkSplit = link.split("#")[0].split("?")[0];
-		let attachmentPath = this.website.getFilePathFromSrc(linkSplit, this.source.path).pathname;
-		let attachment = this.website.index.getFile(attachmentPath);
+		const linkSplit = link.split("#")[0].split("?")[0];
+		const attachmentPath = this.website.getFilePathFromSrc(linkSplit, this.source.path).pathname;
+		const attachment = this.website.index.getFile(attachmentPath);
 		if (!attachment)
 		{
 			return;
@@ -591,11 +598,11 @@ export class Webpage extends Attachment
 			headerEl.setAttribute("id", this.headingTextToID(headerEl.getAttribute("data-heading") ?? headerEl.textContent));
 		});
 
-		let links = this.hrefLinkElements;
-		for (let link of links)
+		const links = this.hrefLinkElements;
+		for (const link of links)
 		{
-			let href = link.getAttribute("href");
-			let newHref = this.resolveLink(href);
+			const href = link.getAttribute("href");
+			const newHref = this.resolveLink(href);
 			link.setAttribute("href", newHref ?? href ?? "");
 			link.setAttribute("target", "_self");
 			link.classList.toggle("is-unresolved", !newHref);
@@ -606,11 +613,11 @@ export class Webpage extends Attachment
 	{
 		if (!this.document) return;
 
-		let links = this.srcLinkElements;
-		for (let link of links)
+		const links = this.srcLinkElements;
+		for (const link of links)
 		{
-			let src = link.getAttribute("src");
-			let newSrc = this.resolveLink(src);
+			const src = link.getAttribute("src");
+			const newSrc = this.resolveLink(src);
 			link.setAttribute("src", newSrc ?? src ?? "");
 			link.setAttribute("target", "_self");
 			link.classList.toggle("is-unresolved", !newSrc);
@@ -620,7 +627,7 @@ export class Webpage extends Attachment
 	private generateWebpageLayout(middleContent: HTMLElement | Node | string): {container: HTMLElement, left: HTMLElement, leftBar: HTMLElement, right: HTMLElement, rightBar: HTMLElement, center: HTMLElement}
 	{
 		if (!this.document) throw new Error("Document is not defined");
-		let collapseSidebarIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M21 3H3C1.89543 3 1 3.89543 1 5V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19V5C23 3.89543 22.1046 3 21 3Z"></path><path d="M10 4V20"></path><path d="M4 7H7"></path><path d="M4 10H7"></path><path d="M4 13H7"></path></svg>`;
+		const collapseSidebarIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M21 3H3C1.89543 3 1 3.89543 1 5V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19V5C23 3.89543 22.1046 3 21 3Z"></path><path d="M10 4V20"></path><path d="M4 7H7"></path><path d="M4 10H7"></path><path d="M4 13H7"></path></svg>`;
 
 		/*
 		div#layout
@@ -680,29 +687,29 @@ export class Webpage extends Attachment
 
 	private async addTitle() 
 	{
-		if (!this.document || !this.sizerElement || this.viewType != "markdown") return;
+		if (!this.document || !this.sizerElement || this.type != "markdown") return;
 		
 		// remove inline title
-		let inlineTitle = this.document.querySelector(".inline-title");
+		const inlineTitle = this.document.querySelector(".inline-title");
 		inlineTitle?.remove();
 
 		// remove make.md title
-		let makeTitle = this.document.querySelector(".mk-inline-context");
+		const makeTitle = this.document.querySelector(".mk-inline-context");
 		makeTitle?.remove();
 
 		// remove mod-header
-		let modHeader = this.document.querySelector(".mod-header");
+		const modHeader = this.document.querySelector(".mod-header");
 		modHeader?.remove();
 
 		// if the first header element is basically the same as the title, use it's text and remove it
-		let firstHeader = this.document.querySelector(":is(h1, h2, h3, h4, h5, h6):not(.markdown-embed-content *)");
+		const firstHeader = this.document.querySelector(":is(h1, h2, h3, h4, h5, h6):not(.markdown-embed-content *)");
 		if (firstHeader)
 		{
-			let firstHeaderText = (firstHeader.getAttribute("data-heading") ?? firstHeader.textContent)?.toLowerCase() ?? "";
-			let lowerTitle = this.title.toLowerCase();
-			let titleDiff = Utils.levenshteinDistance(firstHeaderText, lowerTitle) / lowerTitle.length;
-			let basenameDiff = Utils.levenshteinDistance(firstHeaderText, this.source.basename.toLowerCase()) / this.source.basename.length;
-			let difference = Math.min(titleDiff, basenameDiff);
+			const firstHeaderText = (firstHeader.getAttribute("data-heading") ?? firstHeader.textContent)?.toLowerCase() ?? "";
+			const lowerTitle = this.title.toLowerCase();
+			const titleDiff = Utils.levenshteinDistance(firstHeaderText, lowerTitle) / lowerTitle.length;
+			const basenameDiff = Utils.levenshteinDistance(firstHeaderText, this.source.basename.toLowerCase()) / this.source.basename.length;
+			const difference = Math.min(titleDiff, basenameDiff);
 
 			if ((firstHeader.tagName == "H1" && difference < 0.2) || (firstHeader.tagName == "H2" && difference < 0.1))
 			{
@@ -721,11 +728,11 @@ export class Webpage extends Attachment
 			else if (firstHeader.tagName == "H1" && !this.document.body.classList.contains("show-inline-title"))
 			{
 				// if the difference is too large but the first header is an h1 and it's the first element in the body and there is no inline title, use it as the title
-				let headerEl = firstHeader.closest(".heading-wrapper") ?? firstHeader;
-				let headerParent = headerEl.parentElement;
+				const headerEl = firstHeader.closest(".heading-wrapper") ?? firstHeader;
+				const headerParent = headerEl.parentElement;
 				if (headerParent && headerParent.classList.contains("markdown-preview-sizer"))
 				{
-					let childPosition = Array.from(headerParent.children).indexOf(headerEl);
+					const childPosition = Array.from(headerParent.children).indexOf(headerEl);
 					if (childPosition <= 2)
 					{
 						if(this.titleInfo.isDefaultTitle) 
@@ -749,7 +756,7 @@ export class Webpage extends Attachment
 		this.document.querySelector(".banner-header")?.remove();
 
 		// Create h1 inline title
-		let titleEl = this.document.createElement("h1");
+		const titleEl = this.document.createElement("h1");
 		titleEl.classList.add("page-title", "heading");
 		if (this.document?.body.classList.contains("show-inline-title")) titleEl.classList.add("inline-title");
 		titleEl.id = this.title;
@@ -780,7 +787,7 @@ export class Webpage extends Attachment
 
 		let rootPath = this.pathToRoot.slugified(this.exportOptions.slugifyPaths).path;
 		if (rootPath == "") rootPath = "./";
-		let description = this.description || (this.exportOptions.siteName + " - " + this.titleInfo.title);
+		const description = this.description || (this.exportOptions.siteName + " - " + this.titleInfo.title);
 		let head =
 `
 <title>${this.titleInfo.title}</title>
@@ -804,7 +811,7 @@ export class Webpage extends Attachment
 
 		if (this.exportOptions.addRSS)
 		{
-			let rssURL = this.website.index.rssURL ?? "";
+			const rssURL = this.website.index.rssURL ?? "";
 			head += `<link rel="alternate" type="application/rss+xml" title="RSS Feed" href="${rssURL}">`;
 		}
 
@@ -817,20 +824,20 @@ export class Webpage extends Attachment
 	{
 		if (!this.document) return;
 
-		let elements = Array.from(this.document.querySelectorAll("[src]:not(head [src])"))
-		for (let mediaEl of elements)
+		const elements = Array.from(this.document.querySelectorAll("[src]:not(head [src])"))
+		for (const mediaEl of elements)
 		{
-			let rawSrc = mediaEl.getAttribute("src") ?? "";
-			let filePath = this.website.getFilePathFromSrc(rawSrc, this.source.path);
+			const rawSrc = mediaEl.getAttribute("src") ?? "";
+			const filePath = this.website.getFilePathFromSrc(rawSrc, this.source.path);
 			if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
 
-			let base64 = await filePath.readAsString("base64");
+			const base64 = await filePath.readAsString("base64");
 			if (!base64) return;
 
 			let ext = filePath.extensionName;
 
 			//@ts-ignore
-			let type = app.viewRegistry.typeByExtension[ext] ?? "audio";
+			const type = app.viewRegistry.typeByExtension[ext] ?? "audio";
 
 			if(ext === "svg") ext += "+xml";
 			

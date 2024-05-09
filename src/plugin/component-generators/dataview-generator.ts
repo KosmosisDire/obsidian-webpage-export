@@ -1,6 +1,6 @@
 import { MarkdownPreviewView, TFile } from "obsidian";
 import { DataviewApi, getAPI } from "obsidian-dataview";
-import { ComponentGenerator } from "src/plugin/component-generators/component-generator";
+import { ComponentGenerator } from "plugin/component-generators/component-generator";
 
 export class DataviewGenerator implements ComponentGenerator
 {
@@ -43,12 +43,12 @@ export class DataviewGenerator implements ComponentGenerator
 
 	public static getDataviewFromHTML(sectionContainer: HTMLElement): { query: string, preEl: HTMLElement, keyword: string } | undefined
 	{
-		let dataviewEl = sectionContainer.querySelector(`pre:has(:is(.language-dataview, .block-language-dataview, .language-${DataviewGenerator.jsKeyword}, .block-language-${DataviewGenerator.jsKeyword}))`) as HTMLElement;
+		const dataviewEl = sectionContainer.querySelector(`pre:has(:is(.language-dataview, .block-language-dataview, .language-${DataviewGenerator.jsKeyword}, .block-language-${DataviewGenerator.jsKeyword}))`) as HTMLElement;
 		if (!dataviewEl) return;
 
-		let code = dataviewEl.querySelector("code") ?? dataviewEl;
-		let query = code.innerText;
-		let keyword = code.className.contains(DataviewGenerator.jsKeyword) ? DataviewGenerator.jsKeyword : "dataview";
+		const code = dataviewEl.querySelector("code") ?? dataviewEl;
+		const query = code.innerText;
+		const keyword = code.className.contains(DataviewGenerator.jsKeyword) ? DataviewGenerator.jsKeyword : "dataview";
 		return { query, preEl: dataviewEl, keyword: keyword};
 	}
 }

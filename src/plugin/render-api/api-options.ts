@@ -1,4 +1,5 @@
-import { ExportPreset, Settings } from "src/plugin/settings/settings";
+import { ExportPreset, Settings } from "plugin/settings/settings";
+import { DEFAULT_GRAPH_VIEW_OPTIONS, GraphViewOptions } from "shared/website-data";
 
 /**
  * General options for the MarkdownRendererAPI
@@ -11,7 +12,7 @@ export class MarkdownRendererAPIOptions
 	container?: HTMLElement = undefined;
 
 	/**
-	 * Create a #document container element.
+	 * Create a .document container element.
 	 */
 	createDocumentContainer?: boolean = true;
 
@@ -29,17 +30,11 @@ export class MarkdownRendererAPIOptions
 	 * Display a window with a log and progress bar.
 	 */
 	displayProgress?: boolean = true;
-}
 
-export class GraphViewOptions
-{
-	attractionForce = 1;
-	linkLength = 10;
-	repulsionForce = 150;
-	centralForce = 3;
-	edgePruning = 100;
-	minNodeRadius = 3;
-	maxNodeRadius = 7;
+	/**
+	 * Inline / embed other HTML directly into the HTML.
+	 */
+	inlineHTML?: boolean = Settings.inlineAssets;
 }
 
 /**
@@ -105,7 +100,7 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	/**
 	 * The options controlling the behavior of the gaph view.
 	 */
-	graphViewOptions?: GraphViewOptions = new GraphViewOptions();
+	graphViewOptions?: GraphViewOptions = DEFAULT_GRAPH_VIEW_OPTIONS;
 	
 	/**
 	 * Allows lists with sub-items to be folded / collpased.
@@ -145,6 +140,7 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	 */
 	relativeHeaderLinks?: boolean = Settings.relativeOutlineLinks;
 
+
 	/**
 	 * Include javascript in the export (both inline or external)
 	 */
@@ -171,11 +167,6 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	inlineJS?: boolean = Settings.inlineAssets;
 
 	/**
-	 * Inline / embed other HTML directly into the HTML.
-	 */
-	inlineHTML?: boolean = Settings.inlineAssets;
-
-	/**
 	 * Inline / embed fonts directly into the HTML.
 	 */
 	inlineFonts?: boolean = Settings.inlineAssets;
@@ -184,6 +175,11 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	 * Inline / embed other files directly into the HTML.
 	 */
 	inlineOther?: boolean = Settings.inlineAssets;
+
+	/**
+	 * Combine the whole export into a single .html file.
+	 */
+	combineAsSingleFile?: boolean = Settings.combineAsSingleFile;
 
 	/**
 	 * Do not leave any online urls, download them and embed them into the HTML.
@@ -232,4 +228,55 @@ export class MarkdownWebpageRendererAPIOptions extends MarkdownRendererAPIOption
 	 * The relative path in the vault that will be considered the root of the export. Anything outside of this path will either be moved or not included.
 	 */
 	exportRoot?: string = "";
+}
+
+export const DEFAULT_MARKDOWN_RENDERER_API_OPTIONS = 
+{
+	container: undefined,
+	createDocumentContainer: true,
+	makeHeadersTrees: true,
+	postProcess: true,
+	displayProgress: true,
+	inlineHTML: Settings.inlineAssets
+};
+
+export const DEFAULT_MARKDOWN_WEBPAGE_RENDERER_API_OPTIONS =
+{
+	...DEFAULT_MARKDOWN_RENDERER_API_OPTIONS,
+	addSidebars: true,
+	addThemeToggle: true,
+	addFileNavigation: true,
+	addOutline: true,
+	addSearch: true,
+	addGraphView: true,
+	addBodyClasses: true,
+	addMathjaxStyles: true,
+	addHeadTag: true,
+	addRSS: true,
+	addTitle: true,
+	graphViewOptions: DEFAULT_GRAPH_VIEW_OPTIONS,
+	allowFoldingLists: true,
+	allowFoldingHeadings: true,
+	allowResizeSidebars: true,
+	openNavFileLocation: true,
+	startOutlineCollapsed: false,
+	minOutlineCollapsibleLevel: 2,
+	relativeHeaderLinks: false,
+	includeJS: true,
+	includeCSS: true,
+	inlineMedia: false,
+	inlineCSS: false,
+	inlineJS: false,
+	inlineFonts: false,
+	inlineOther: false,
+	combineAsSingleFile: false,
+	offlineResources: false,
+	themeName: "Default",
+	slugifyPaths: true,
+	flattenExportPaths: false,
+	fixLinks: true,
+	siteURL: '',
+	siteName: app.vault.getName(),
+	authorName: '',
+	exportRoot: '',
 }

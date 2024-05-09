@@ -1,6 +1,6 @@
 import {  TFile } from "obsidian";
 import { Tree, TreeItem } from "./tree";
-import { Webpage } from "src/plugin/website/webpage";
+import { Webpage } from "plugin/website/webpage";
 
 export class OutlineTree extends Tree
 {
@@ -12,7 +12,7 @@ export class OutlineTree extends Tree
 
 	private createTreeItem(heading: {heading: string, level: number, headingEl: HTMLElement}, parent: OutlineTreeItem | OutlineTree): OutlineTreeItem
 	{
-		let item = new OutlineTreeItem(this, parent, heading);
+		const item = new OutlineTreeItem(this, parent, heading);
 		item.title = heading.heading;
 		return item;
 	}
@@ -25,17 +25,17 @@ export class OutlineTree extends Tree
 		this.file = webpage.source;
 		this.minDepth = minDepth;
 
-		let headings = webpage.headings;
+		const headings = webpage.headings;
 		this.depth = Math.min(...headings.map(h => h.level)) - 1;
 
 		let parent: OutlineTreeItem | OutlineTree = this;
-		for (let heading of headings)
+		for (const heading of headings)
 		{
 			if (heading.level < minDepth) continue;
 			
 			if (heading.level > parent.depth)
 			{
-				let child = this.createTreeItem(heading, parent);
+				const child = this.createTreeItem(heading, parent);
 				parent.children.push(child);
 				if(heading.level == parent.depth + 1) parent = child;
 			}
@@ -43,7 +43,7 @@ export class OutlineTree extends Tree
 			{
 				if(parent instanceof OutlineTreeItem) 
 				{
-					let child = this.createTreeItem(heading, parent.parent);
+					const child = this.createTreeItem(heading, parent.parent);
 					parent.parent.children.push(child);
 					parent = child;
 				}
@@ -52,14 +52,14 @@ export class OutlineTree extends Tree
 			{
 				if (parent instanceof OutlineTreeItem)
 				{
-					let levelChange = parent.depth - heading.level;
+					const levelChange = parent.depth - heading.level;
 					let backParent: OutlineTreeItem | OutlineTree = (parent.parent as OutlineTreeItem | OutlineTree) ?? parent;
 					for (let i = 0; i < levelChange; i++)
 					{
 						if (backParent instanceof OutlineTreeItem) backParent = (backParent.parent as OutlineTreeItem | OutlineTree) ?? backParent;
 					}
 					
-					let child = this.createTreeItem(heading, backParent);
+					const child = this.createTreeItem(heading, backParent);
 					backParent.children.push(child);
 					parent = child;
 				}
@@ -93,7 +93,7 @@ export class OutlineTreeItem extends TreeItem
 
 	protected override async insertInner(container: HTMLElement): Promise<HTMLDivElement> 
 	{
-		let linkEl = await super.insertInner(container);
+		const linkEl = await super.insertInner(container);
 		linkEl?.setAttribute("heading-name", this.heading);
 		linkEl.classList.add("heading-link");
 

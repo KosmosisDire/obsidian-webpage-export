@@ -1,17 +1,17 @@
 import { Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder, TextComponent, getIcon } from 'obsidian';
-import { Path } from 'src/plugin/utils/path';
-import pluginStylesBlacklist from 'src/frontend/assets/third-party-styles-blacklist.txt';
-import { FlowList } from 'src/plugin/component-generators/flow-list';
+import { Path } from 'plugin/utils/path';
+import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
+import { FlowList } from 'plugin/component-generators/flow-list';
 import { migrateSettings } from './settings-migration';
-import { ExportLog } from 'src/plugin/render-api/render-api';
+import { ExportLog } from 'plugin/render-api/render-api';
 import { createDivider, createFileInput, createSection, createText, createToggle }  from './settings-components';
 
 // #region Settings Definition
 
 export enum ExportPreset
 {
-	Website = "website",
-	Documents = "documents",
+	Online = "online",
+	Local = "local",
 	RawDocuments = "raw-documents",
 }
 
@@ -31,6 +31,7 @@ export class Settings
 	// Asset Options
 	public static makeOfflineCompatible: boolean;
 	public static inlineAssets: boolean;
+	public static combineAsSingleFile: boolean;
 	public static includePluginCSS: string[];
 	public static includeSvelteCSS: boolean;
 	public static titleProperty: string;
@@ -94,7 +95,7 @@ export class Settings
 	public static filePickerBlacklist: string[];
 	public static filePickerWhitelist: string[];
 
-	public static async websitePreset()
+	public static async onlinePreset()
 	{
 		Settings.inlineAssets = false;
 		Settings.makeNamesWebStyle = true;
@@ -102,10 +103,11 @@ export class Settings
 		Settings.addFileNav = true;
 		Settings.addSearchBar = true;
 		Settings.addRSSFeed = true;
+		Settings.combineAsSingleFile = false;
 		await SettingsPage.saveSettings();
 	}
 
-	public static async documentsPreset()
+	public static async localPreset()
 	{
 		Settings.inlineAssets = true;
 		Settings.makeNamesWebStyle = false;
@@ -113,6 +115,7 @@ export class Settings
 		Settings.addGraphView = false;
 		Settings.addSearchBar = false;
 		Settings.addRSSFeed = false;
+		Settings.combineAsSingleFile = true;
 		await SettingsPage.saveSettings();
 	}
 
@@ -124,6 +127,7 @@ export class Settings
 		Settings.addFileNav = false;
 		Settings.addSearchBar = false;
 		Settings.addRSSFeed = false;
+		Settings.combineAsSingleFile = false;
 		await SettingsPage.saveSettings();
 	}
 }
@@ -173,7 +177,7 @@ export const DEFAULT_SETTINGS: Settings =
 	siteURL: '',
 	authorName: '',
 	vaultTitle: app.vault.getName(),
-	exportPreset: ExportPreset.Website,
+	exportPreset: ExportPreset.Online,
 	openAfterExport: false,
 
 	// Graph View Settings
@@ -211,20 +215,20 @@ export class SettingsPage extends PluginSettingTab
 
 		contentEl.empty();
 
-		let header = contentEl.createEl('h2', { text: 'HTML Export Settings' });
+		const header = contentEl.createEl('h2', { text: 'HTML Export Settings' });
 		header.style.display = 'block';
 		header.style.marginBottom = '15px';
 
-		let supportContainer = contentEl.createDiv();
+		const supportContainer = contentEl.createDiv();
 		supportContainer.style.marginBottom = '15px';
-		let supportLink = contentEl.createEl('a');
-		let buttonColor = "3ebba4";
-		let buttonTextColor = "ffffff";
+		const supportLink = contentEl.createEl('a');
+		const buttonColor = "3ebba4";
+		const buttonTextColor = "ffffff";
 		// @ts-ignore
 		supportLink.href = `href="https://www.buymeacoffee.com/nathangeorge"`;
 		supportLink.style.height = "40px"
 		supportLink.innerHTML = `<img style="height:40px;" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=${buttonColor}&font_colour=${buttonTextColor}&font_family=Poppins&outline_colour=${buttonTextColor}&coffee_colour=FFDD00">`;
-		let supportHeader = contentEl.createDiv({ text: 'Support the continued development of this plugin.', cls: "setting-item-description" });
+		const supportHeader = contentEl.createDiv({ text: 'Support the continued development of this plugin.', cls: "setting-item-description" });
 		supportHeader.style.display = 'block';
 
 		supportContainer.style.display = 'grid';
@@ -233,13 +237,13 @@ export class SettingsPage extends PluginSettingTab
 		supportContainer.appendChild(supportLink);
 
 		// debug info button
-		let debugInfoButton = contentEl.createEl('button');
-		let bugIcon = getIcon('bug');
+		const debugInfoButton = contentEl.createEl('button');
+		const bugIcon = getIcon('bug');
 		if (bugIcon) debugInfoButton.appendChild(bugIcon);
 		debugInfoButton.style.height = '100%';
 		debugInfoButton.style.aspectRatio = '1/1';
 		debugInfoButton.style.justifySelf = 'end';
-		let debugHeader = contentEl.createDiv({ text: 'Copy debug info to clipboard', cls: "setting-item-description" });
+		const debugHeader = contentEl.createDiv({ text: 'Copy debug info to clipboard', cls: "setting-item-description" });
 		debugHeader.style.display = 'block';
 		debugHeader.style.justifySelf = 'end';
 		debugInfoButton.addEventListener('click', () => {
@@ -258,17 +262,17 @@ export class SettingsPage extends PluginSettingTab
 		if (Settings.exportPreset != ExportPreset.RawDocuments)
 		{
 			createDivider(contentEl);
-			let section = createSection(contentEl, 'Page Features', 'Control the visibility of different page features');
+			const section = createSection(contentEl, 'Page Features', 'Control the visibility of different page features');
 
 			createToggle(section, 'Theme toggle', () => Settings.addThemeToggle, (value) => Settings.addThemeToggle = value);
 			createToggle(section, 'Document outline / table of contents', () => Settings.addOutline, (value) => Settings.addOutline = value);
 			createToggle(section, 'File navigation tree', () => Settings.addFileNav, (value) => Settings.addFileNav = value);
 			createToggle(section, 'File & folder icons', () => Settings.showDefaultTreeIcons, (value) => Settings.showDefaultTreeIcons = value);
-			if (Settings.exportPreset == ExportPreset.Website)
+			if (Settings.exportPreset == ExportPreset.Online)
 			{
 				createToggle(section, 'Search bar', () => Settings.addSearchBar, (value) => Settings.addSearchBar = value);
 				createToggle(section, 'Graph view', () => Settings.addGraphView, (value) => Settings.addGraphView = value);
-				let graphViewSection = createSection(section, 'Graph View Settings', 'Control the behavior of the graph view simulation');
+				const graphViewSection = createSection(section, 'Graph View Settings', 'Control the behavior of the graph view simulation');
 
 				new Setting(graphViewSection)
 					.setName('Attraction Force')
@@ -279,7 +283,7 @@ export class SettingsPage extends PluginSettingTab
 						.setDynamicTooltip()
 						.onChange(async (value) => {
 							// remap to 0 - 2;
-							let remapMultiplier = 2 / 100;
+							const remapMultiplier = 2 / 100;
 							Settings.graphAttractionForce = value * remapMultiplier;
 							await SettingsPage.saveSettings();
 						})
@@ -323,7 +327,7 @@ export class SettingsPage extends PluginSettingTab
 						.setDynamicTooltip()
 						.onChange(async (value) => {
 							// remap to 0 - 5;
-							let remapMultiplier = 5 / 100;
+							const remapMultiplier = 5 / 100;
 							Settings.graphCentralForce = value * remapMultiplier;
 							await SettingsPage.saveSettings();
 						})
@@ -374,7 +378,7 @@ export class SettingsPage extends PluginSettingTab
 			
 			}
 
-			let iconTutorial = new Setting(section)
+			const iconTutorial = new Setting(section)
 			.setName('Custom icons')
 			.setDesc(
 `Use the 'Iconize' plugin to add custom icons to your files and folders.
@@ -386,7 +390,7 @@ This feature does not require "File & folder icons" to be enbaled.`);
 				.setName('Icon emoji style')
 				.addDropdown((dropdown) =>
 				{
-					for (let style in EmojiStyle) dropdown.addOption(style, style);
+					for (const style in EmojiStyle) dropdown.addOption(style, style);
 					dropdown.setValue(Settings.emojiStyle);
 					dropdown.onChange(async (value) => {
 						Settings.emojiStyle = value as EmojiStyle;
@@ -561,26 +565,26 @@ This feature does not require "File & folder icons" to be enbaled.`);
 			.setName('Include CSS from Plugins')
 			.setDesc('Include the CSS from the following plugins in the exported HTML. If plugin features aren\'t rendering correctly, try adding the plugin to this list. Avoid adding plugins unless you specifically notice a problem, because more CSS will increase the loading time of your page.')
 
-		let pluginsList = new FlowList();
+		const pluginsList = new FlowList();
 		pluginsList.insert(section);
 		this.getPluginIDs().forEach(async (plugin) => 
 		{
 			//@ts-ignore
-			let pluginManifest = app.plugins.manifests[plugin];
+			const pluginManifest = app.plugins.manifests[plugin];
 			if (!pluginManifest) return;
 
 			if ((await this.getBlacklistedPluginIDs()).contains(pluginManifest.id)) {
 				return;
 			}
 
-			let pluginDir = pluginManifest.dir;
+			const pluginDir = pluginManifest.dir;
 			if (!pluginDir) return;
-			let pluginPath = new Path(pluginDir);
+			const pluginPath = new Path(pluginDir);
 
-			let hasCSS = pluginPath.joinString('styles.css').exists;
+			const hasCSS = pluginPath.joinString('styles.css').exists;
 			if (!hasCSS) return;
 
-			let isChecked = Settings.includePluginCSS.contains(plugin);
+			const isChecked = Settings.includePluginCSS.contains(plugin);
 
 			pluginsList.addItem(pluginManifest.name, plugin, isChecked, (value) => {
 				Settings.includePluginCSS = pluginsList.checkedList;
@@ -608,7 +612,7 @@ This feature does not require "File & folder icons" to be enbaled.`);
 		createToggle(section, 'Create RSS feed', () => Settings.addRSSFeed, (value) => Settings.addRSSFeed = value,
 					`Create an RSS feed for the website located at ${Settings.siteURL}lib/rss.xml`);
 
-		let summaryTutorial = new Setting(section)
+		const summaryTutorial = new Setting(section)
 		.setName('Metadata Properties')
 		.setDesc(
 `Use the 'description' or 'summary' property to set a custom summary of a page.
@@ -647,7 +651,7 @@ Use the 'author' property to set the author of a specific page.`);
 	getPluginIDs(): string[]
 	{
 		/*@ts-ignore*/
-		let pluginsArray: string[] = Array.from(app.plugins.enabledPlugins.values()) as string[];
+		const pluginsArray: string[] = Array.from(app.plugins.enabledPlugins.values()) as string[];
 		for (let i = 0; i < pluginsArray.length; i++)
 		{
 			/*@ts-ignore*/
@@ -663,7 +667,7 @@ Use the 'author' property to set the author of a specific page.`);
 
 	static async loadSettings() 
 	{
-		let loadedSettings = await SettingsPage.plugin.loadData();
+		const loadedSettings = await SettingsPage.plugin.loadData();
 		Object.assign(Settings, DEFAULT_SETTINGS, loadedSettings);
 		await migrateSettings();
 		SettingsPage.loaded = true;
@@ -675,10 +679,10 @@ Use the 'author' property to set the author of a specific page.`);
 
 	static renameFile(file: TFile, oldPath: string)
 	{
-		let oldPathParsed = new Path(oldPath).path;
+		const oldPathParsed = new Path(oldPath).path;
 		Settings.filesToExport.forEach((fileList) =>
 		{
-			let index = fileList.indexOf(oldPathParsed);
+			const index = fileList.indexOf(oldPathParsed);
 			if (index >= 0)
 			{
 				fileList[index] = file.path;
@@ -690,19 +694,19 @@ Use the 'author' property to set the author of a specific page.`);
 
 	static getFilesToExport(): TFile[]
 	{
-		let files: TFile[] = [];
+		const files: TFile[] = [];
 
-		let allFiles = app.vault.getFiles();
-		let exportPaths = Settings.filesToExport[0];
+		const allFiles = app.vault.getFiles();
+		const exportPaths = Settings.filesToExport[0];
 		if (!exportPaths) return [];
 
-		for (let path of exportPaths)
+		for (const path of exportPaths)
 		{
-			let file = app.vault.getAbstractFileByPath(path);
+			const file = app.vault.getAbstractFileByPath(path);
 			if (file instanceof TFile) files.push(file);
 			else if (file instanceof TFolder)
 			{
-				let newFiles = allFiles.filter((f) => f.path.startsWith(file?.path ?? "*"));
+				const newFiles = allFiles.filter((f) => f.path.startsWith(file?.path ?? "*"));
 				files.push(...newFiles);
 			}
 		};

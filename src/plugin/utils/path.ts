@@ -14,7 +14,7 @@ export class Path
 	}
 	public static dequeueLog(): { title: string, message: any, type: "info" | "warn" | "error" | "fatal" }[]
 	{
-		let queue = this.logQueue;
+		const queue = this.logQueue;
 		this.logQueue = [];
 		return queue;
 	}
@@ -48,7 +48,7 @@ export class Path
 		let parsed = Path.parsePath(path);
 		if (path == "") parsed = { root: "", dir: "", parent: "", base: "", ext: "", name: "", fullPath: ""}
 
-		for (let key in parsed)
+		for (const key in parsed)
 		{
 			if (this._useBackslashes)
 			{
@@ -156,14 +156,14 @@ export class Path
 	 */
 	normalize(): Path
 	{
-		let fullPath = pathTools.normalizeSafe(this.absoluted().path);
+		const fullPath = pathTools.normalizeSafe(this.absoluted().path);
 		let newWorkingDir = "";
 		let newFullPath = "";
 		let reachedEndOfWorkingDir = false;
 		for (let i = 0; i < fullPath.length; i++)
 		{
-			let fullChar = fullPath.charAt(i);
-			let workingChar = this.workingDirectory.charAt(i);
+			const fullChar = fullPath.charAt(i);
+			const workingChar = this.workingDirectory.charAt(i);
 			if (fullChar == workingChar && !reachedEndOfWorkingDir)
 			{
 				newWorkingDir += fullChar;
@@ -213,7 +213,7 @@ export class Path
 	backslashify(): Path
 	{
 		this._useBackslashes = true;
-		let path = this.path.replaceAll("/", "\\");
+		const path = this.path.replaceAll("/", "\\");
 		this.reparse(path);
 		return this;
 	}
@@ -294,7 +294,7 @@ export class Path
 	 */
 	get directory(): Path
 	{
-		let newPath = this.copy;
+		const newPath = this.copy;
 		newPath.reparse(this._dir);
 		newPath.setWorkingDirectory(this._workingDirectory);
 		return newPath;
@@ -315,7 +315,7 @@ export class Path
 	get parent(): Path | undefined
 	{
 		if (this._parent == "") return;
-		let newPath = this.copy;
+		const newPath = this.copy;
 		newPath.reparse(this._parent);
 		return newPath;
 	}
@@ -397,7 +397,7 @@ export class Path
 	get depth(): number
 	{
 		let depth = 0;
-		let splits = this.path.split("/");
+		const splits = this.path.split("/");
 
 		for (let i = 0; i < splits.length-1; i++)
 		{
@@ -428,7 +428,7 @@ export class Path
 		let initialDirection = 0;
 		let maxDepth = 0;
 		let depth = 0;
-		let splits = this.path.split("/");
+		const splits = this.path.split("/");
 
 		for (let i = 0; i < splits.length-1; i++)
 		{
@@ -525,7 +525,7 @@ export class Path
 		{
 			try
 			{
-				let absPath = this.absoluted().pathname;
+				const absPath = this.absoluted().pathname;
 				this._exists = Path.pathExists(absPath);
 			}
 			catch (error)
@@ -548,7 +548,7 @@ export class Path
 		try
 		{
 		
-			let stat = statSync(this.absoluted().pathname);
+			const stat = statSync(this.absoluted().pathname);
 			return stat;
 		}
 		catch (error)
@@ -595,7 +595,7 @@ export class Path
 	 */
 	get copy(): Path
 	{
-		let newPath = new Path(this.path, this._workingDirectory);
+		const newPath = new Path(this.path, this._workingDirectory);
 		newPath._useBackslashes = this._useBackslashes;
 		newPath.reparse(this.path);
 		return newPath;
@@ -605,11 +605,11 @@ export class Path
 	{
 		let error = "";
 		let valid = true;
-		let isEmpty = this.sourceString.trim() == "";
+		const isEmpty = this.sourceString.trim() == "";
 
 		// remove dots from requireExtention
 		options.requireExtentions = options.requireExtentions?.map(e => e.replace(".", "")) ?? [];
-		let dottedExtention = options.requireExtentions.map(e => "." + e);
+		const dottedExtention = options.requireExtentions.map(e => "." + e);
 
 		if (!options.allowEmpty && isEmpty)
 		{
@@ -664,7 +664,7 @@ export class Path
 	{
 		if (!this.exists)
 		{
-			let path = this.absoluted().directory.path;
+			const path = this.absoluted().directory.path;
 
 			try
 			{
@@ -686,7 +686,7 @@ export class Path
 
 		try
 		{
-			let data = await fs.readFile(this.absoluted().pathname, { encoding: encoding });
+			const data = await fs.readFile(this.absoluted().pathname, { encoding: encoding });
 			return data;
 		}
 		catch (error)
@@ -706,7 +706,7 @@ export class Path
 
 		try
 		{
-			let data = await fs.readFile(this.absoluted().pathname);
+			const data = await fs.readFile(this.absoluted().pathname);
 			return data;
 		}
 		catch (error)
@@ -727,7 +727,7 @@ export class Path
 		}
 		catch (error)
 		{
-			let dirExists = await this.createDirectory();
+			const dirExists = await this.createDirectory();
 			if (!dirExists) return false;
 
 			try
@@ -761,7 +761,7 @@ export class Path
 
 	private static parsePath(path: string): { root: string, dir: string, parent: string, base: string, ext: string, name: string, fullPath: string }
 	{
-		let args = path.split("?")[1] ?? "";
+		const args = path.split("?")[1] ?? "";
 		path = path.split("?")[0];
 
 		if (process.platform === "win32")
@@ -788,7 +788,7 @@ export class Path
 			}
 		}
 
-		let parsed = pathTools.parse(path) as { root: string, dir: string, base: string, ext: string, name: string };
+		const parsed = pathTools.parse(path) as { root: string, dir: string, base: string, ext: string, name: string };
 		
 		if (parsed.ext.contains(" "))
 		{
@@ -809,7 +809,7 @@ export class Path
 			if (path.endsWith("/") || path.endsWith("\\")) path = path.substring(0, path.length - 1);
 
 			parsed.dir = pathTools.normalizeSafe(path);
-			let items = parsed.dir.split("/");
+			const items = parsed.dir.split("/");
 			parsed.name = items[items.length - 1];
 			parsed.base = parsed.name;
 			parsed.ext = "";
@@ -828,7 +828,7 @@ export class Path
 		else if(fullPath.startsWith("https:")) parsed.root = "https://"; 
 
 		// make sure that protocols use two slashes
-		let protocolRegex = /(https?)[:][\\/](?![\\/])/g;
+		const protocolRegex = /(https?)[:][\\/](?![\\/])/g;
 		parsed.dir = parsed.dir.replace(protocolRegex, "$1://");
 		parent = parent.replace(protocolRegex, "$1://");
 		fullPath = fullPath.replace(protocolRegex, "$1://");
@@ -878,10 +878,10 @@ export class Path
 	 */
 	public static getRelativePath(from: Path, to: Path, useAbsolute: boolean = false): Path
 	{
-		let fromUse = useAbsolute ? from.absoluted() : from;
-		let toUse = useAbsolute ? to.absoluted() : to;
-		let relative = pathTools.relative(fromUse.directory.path, toUse.path);
-		let workingDir = from.absoluted().directory.path;
+		const fromUse = useAbsolute ? from.absoluted() : from;
+		const toUse = useAbsolute ? to.absoluted() : to;
+		const relative = pathTools.relative(fromUse.directory.path, toUse.path);
+		const workingDir = from.absoluted().directory.path;
 		return new Path(relative, workingDir);
 	}
 
@@ -895,10 +895,10 @@ export class Path
 	{
 		if (this.vaultPathCache != undefined) return this.vaultPathCache;
 
-		let adapter = app.vault.adapter;
+		const adapter = app.vault.adapter;
 		if (adapter instanceof FileSystemAdapter) 
 		{
-			let basePath = adapter.getBasePath() ?? "";
+			const basePath = adapter.getBasePath() ?? "";
 			this.vaultPathCache = new Path(basePath, "");
 			return this.vaultPathCache;
 		}
@@ -934,8 +934,8 @@ export class Path
 
 	static equal(path1: string, path2: string): boolean
 	{
-		let path1Parsed = new Path(path1).slugify().path;
-		let path2Parsed = new Path(path2).slugify().path;
+		const path1Parsed = new Path(path1).slugify().path;
+		const path2Parsed = new Path(path2).slugify().path;
 		return path1Parsed == path2Parsed;
 	}
 
@@ -950,13 +950,13 @@ export class Path
 	 */
 	public static async removeEmptyDirectories(directory: string): Promise<void>
 	{
-		let path = new Path(directory);
+		const path = new Path(directory);
 		if (!path.isDirectory || !path.exists || path.isFile) 
 			return;
 
 		try
 		{
-			let stats = await fs.stat(directory);
+			const stats = await fs.stat(directory);
 			if (!stats?.isDirectory()) 
 				return;
 
@@ -964,7 +964,7 @@ export class Path
 			if (fileNames.length > 0) {
 				const recursiveRemovalPromises = fileNames.map((fileName) => 
 				{
-					let newPath = path.joinString(fileName).path;
+					const newPath = path.joinString(fileName).path;
 					return this.removeEmptyDirectories(newPath);
 				});
 				await Promise.all(recursiveRemovalPromises);

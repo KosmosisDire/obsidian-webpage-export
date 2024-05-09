@@ -3,10 +3,10 @@ async function loadIncludes()
 	if (location.protocol != "file:") 
 	{
 		// replace include tags with the contents of the file
-		let includeTags = document.querySelectorAll("meta[data-include]");
+		let includeTags = document.querySelectorAll("link[itemprop='include']");
 		for (const includeTag of includeTags)
 		{
-			let includePath = includeTag.getAttribute("data-include");
+			let includePath = includeTag.getAttribute("href");
 
 			try
 			{
@@ -47,7 +47,7 @@ async function loadIncludes()
 	}
 	else
 	{
-		let e = document.querySelectorAll("meta[data-include]");
+		let e = document.querySelectorAll("link[itemprop='include']");
 		if (e.length > 0)
 		{
 			var error = document.createElement("div");
@@ -76,22 +76,33 @@ let isFileProtocol = location.protocol == "file:";
 function waitLoadScripts(scriptNames, callback)
 {
 	let scripts = scriptNames.map(name => document.getElementById(name + "-script"));
-	let index = 0;
 
-	function loadNext()
+	function loadNext(index)
 	{
 		let script = scripts[index];
-		index++;
+		let nextIndex = index + 1;
+		if (!script)
+		{
+			if (index < scripts.length)
+				loadNext(nextIndex);
+			else
+			{
+				callback();
+			}
+			return;
+		}
 
 		if (!script || script.getAttribute('loaded') == "true") // if already loaded 
 		{
 			if (index < scripts.length)
-				loadNext();
+				loadNext(nextIndex);
 		}
 		
-		if (index < scripts.length) script.addEventListener("load", loadNext);
-		else callback();
+		if (index < scripts.length) 
+		{
+			script.addEventListener("load", () => loadNext(nextIndex));
+		}
 	}
 
-	loadNext();
+	loadNext(0);
 }

@@ -1,11 +1,13 @@
 import { ButtonComponent, Modal, Setting, TFile } from 'obsidian';
-import { Utils } from 'src/plugin/utils/utils';
-import HTMLExportPlugin from 'src/plugin/main';
+import { Utils } from 'plugin/utils/utils';
+import HTMLExportPlugin from 'plugin/main';
 import { ExportPreset, Settings, SettingsPage } from './settings';
-import { FilePickerTree } from 'src/plugin/component-generators/file-picker';
-import { Path } from 'src/plugin/utils/path';
-import { FileDialogs } from 'src/plugin/utils/file-dialogs';
+import { FilePickerTree } from 'plugin/component-generators/file-picker';
+import { Path } from 'plugin/utils/path';
+import { FileDialogs } from 'plugin/utils/file-dialogs';
 import { createFileInput, createToggle } from './settings-components';
+import { Website } from 'plugin/website/website';
+import { Index } from 'plugin/website';
 
 export interface ExportInfo
 {
@@ -60,7 +62,7 @@ export class ExportModal extends Modal
 			this.filePickerModalEl.style.maxHeight = "80%";
 			this.filePickerModalEl.style.boxShadow = "0 0 7px 1px inset #00000060";
 			
-			let scrollArea = this.filePickerModalEl.createDiv({ cls: 'tree-scroll-area' });
+			const scrollArea = this.filePickerModalEl.createDiv({ cls: 'tree-scroll-area' });
 			scrollArea.style.height = "100%";
 			scrollArea.style.width = "100%";
 			scrollArea.style.overflowY = "auto";
@@ -68,7 +70,7 @@ export class ExportModal extends Modal
 			scrollArea.style.padding = "1em";
 			scrollArea.style.boxShadow = "0 0 7px 1px inset #00000060";
 
-			let paths = app.vault.getFiles().map(file => new Path(file.path));
+			const paths = app.vault.getFiles().map(file => new Path(file.path));
 			this.filePicker = new FilePickerTree(paths, true, true);
 			this.filePicker.regexBlacklist.push(...Settings.filePickerBlacklist);
 			this.filePicker.regexBlacklist.push(...[Settings.customHeadContentPath, Settings.faviconPath]);
@@ -83,11 +85,11 @@ export class ExportModal extends Modal
 			
 			if((this.pickedFiles?.length ?? 0 > 0) || Settings.filesToExport[0].length > 0) 
 			{
-				let filesToPick = this.pickedFiles?.map(file => file.path) ?? Settings.filesToExport[0];
+				const filesToPick = this.pickedFiles?.map(file => file.path) ?? Settings.filesToExport[0];
 				this.filePicker.setSelectedFiles(filesToPick);
 			}
 
-			let saveFiles = new Setting(this.filePickerModalEl).addButton((button) => 
+			const saveFiles = new Setting(this.filePickerModalEl).addButton((button) => 
 			{
 				button.setButtonText("Save").onClick(async () =>
 				{
@@ -110,7 +112,7 @@ export class ExportModal extends Modal
 		if (HTMLExportPlugin.updateInfo.updateAvailable) 
 		{
 			// create red notice showing the update is available
-			let updateNotice = contentEl.createEl('strong', { text: `Update Available: ${HTMLExportPlugin.updateInfo.currentVersion} ⟶ ${HTMLExportPlugin.updateInfo.latestVersion}` });
+			const updateNotice = contentEl.createEl('strong', { text: `Update Available: ${HTMLExportPlugin.updateInfo.currentVersion} ⟶ ${HTMLExportPlugin.updateInfo.latestVersion}` });
 			updateNotice.setAttribute("style",
 				`margin-block-start: calc(var(--h3-size)/2);
 			background-color: var(--interactive-normal);
@@ -123,7 +125,7 @@ export class ExportModal extends Modal
 			width: fit-content;`)
 
 			// create normal block with update notes
-			let updateNotes = contentEl.createEl('div', { text: HTMLExportPlugin.updateInfo.updateNote });
+			const updateNotes = contentEl.createEl('div', { text: HTMLExportPlugin.updateInfo.updateNote });
 			updateNotes.setAttribute("style",
 				`margin-block-start: calc(var(--h3-size)/2);
 			background-color: var(--background-secondary-alt);
@@ -138,33 +140,33 @@ export class ExportModal extends Modal
 			white-space: pre-wrap;`)
 		}
 
-		let modeDescriptions = 
+		const modeDescriptions = 
 		{
-			"website": "This will export a file structure suitable for uploading to your own web server.",
-			"documents": "This will export self-contained, but slow loading and large, html documents.",
-			"raw-documents": "This will export raw, self-contained documents without the website layout. This is useful for sharing individual notes, or printing."
+			"online": "Use this if your files will be accessed online (via an http server).",
+			"local": "This will export a single (large) html file containing the whole export. Only use this for offline sharing.",
+			"raw-documents": "Export plain html documents with simple style and scripts but no additional features."
 		}
 
-		let exportModeSetting = new Setting(contentEl)
+		const exportModeSetting = new Setting(contentEl)
 			.setName('Export Mode')
 			// @ts-ignore
 			.setDesc(modeDescriptions[Settings.exportPreset] + "\n\nSome options are only available in certain modes.")
 			.setHeading()
 			.addDropdown((dropdown) => dropdown
-				.addOption('website', 'Online Web Server')
-				.addOption('documents', 'HTML Documents')
+				.addOption('online', 'Online Website')
+				.addOption('local', 'Local Website')
 				.addOption('raw-documents', 'Raw HTML Documents')
-				.setValue(["website", "documents", "raw-documents"].contains(Settings.exportPreset) ? Settings.exportPreset : 'website')
+				.setValue(["online", "local", "raw-documents"].contains(Settings.exportPreset) ? Settings.exportPreset : 'website')
 				.onChange(async (value) =>
 				{
 					Settings.exportPreset = value as ExportPreset;
 
 					switch (value) {
-						case 'website':
-							await Settings.websitePreset();
+						case 'online':
+							await Settings.onlinePreset();
 							break;
-						case 'documents':
-							await Settings.documentsPreset();
+						case 'local':
+							await Settings.localPreset();
 							break;
 						case 'raw-documents':
 							await Settings.rawDocumentsPreset();
@@ -190,7 +192,7 @@ export class ExportModal extends Modal
 			}
 		}
 
-		let validatePath = (path: Path) => path.validate(
+		const validatePath = (path: Path) => path.validate(
 			{
 				allowEmpty: false,
 				allowRelative: false,
@@ -200,9 +202,9 @@ export class ExportModal extends Modal
 				requireExists: true
 			});
 
-		let onChanged = (path: Path) => (!validatePath(path).valid) ? setExportDisabled(true) : setExportDisabled(false);
+		const onChangedValidate = (path: Path) => (!validatePath(path).valid) ? setExportDisabled(true) : setExportDisabled(false);
 
-		let exportPathInput = createFileInput(contentEl, () => Settings.exportPath, (value) => Settings.exportPath = value,
+		const exportPathInput = createFileInput(contentEl, () => Settings.exportPath, (value) => Settings.exportPath = value,
 		{
 			name: '',
 			description: '',
@@ -210,10 +212,10 @@ export class ExportModal extends Modal
 			defaultPath: FileDialogs.idealDefaultPath(),
 			pickFolder: true,
 			validation: validatePath,
-			onChanged: onChanged
+			onChanged: onChangedValidate
 		});
 
-		let { fileInput } = exportPathInput;
+		const { fileInput } = exportPathInput;
 		
 		fileInput.addButton((button) => {
 			exportButton = button;
@@ -224,6 +226,45 @@ export class ExportModal extends Modal
 				this.close();
 			});
 		});
+
+		// add description of export at this path
+		const exportDescription = contentEl.createEl('div', { text: '', cls: 'setting-item-description'});
+		exportDescription.style.marginBottom = "1em";
+		const onChanged = async (path: Path) =>
+		{
+			onChangedValidate(path);
+			const valid = validatePath(path);
+			this.validPath = valid.valid;
+			if (!valid)
+			{
+				exportDescription.setText("");
+				return
+			}
+
+			const website = new Website(path);
+			const index = new Index();
+			await index.load(website, website.exportOptions)
+
+			if (!index.oldWebsiteData)
+			{
+				exportDescription.setText("This path currently contains no exported website.");
+				return;
+			}
+
+			const lastExportDate = new Date(index.oldWebsiteData.modifiedTime).toLocaleString();
+			const lastExportFiles = index.oldWebsiteData.allFiles.length;
+			const lastExportName = index.oldWebsiteData.siteName;
+
+			exportDescription.setText(`Path contains site: "${lastExportName}" with ${lastExportFiles} files last exported on ${lastExportDate}.`);
+		}
+		exportPathInput.textInput.onChange(() => onChanged(new Path(exportPathInput.textInput.getValue())));
+
+		onChanged(new Path(exportPathInput.textInput.getValue()));
+
+		// add purge export button
+
+
+		
 
 		new Setting(contentEl)
 			.setDesc("More options located on the plugin settings page.")

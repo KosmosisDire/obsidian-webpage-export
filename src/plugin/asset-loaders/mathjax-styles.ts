@@ -21,7 +21,7 @@ export class MathjaxStyles extends AssetLoader
 		}
 
         // @ts-ignore
-        let changed = this.mathjaxStylesheet?.ownerNode.getAttribute("data-change");
+        const changed = this.mathjaxStylesheet?.ownerNode.getAttribute("data-change");
         if (changed != this.lastMathjaxChanged)
         {
             this.data = "";

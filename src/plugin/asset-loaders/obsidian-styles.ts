@@ -1,4 +1,4 @@
-import obsidianStyleOverrides from "src/frontend/assets/obsidian-styles.txt.css";
+import obsidianStyleOverrides from "assets/obsidian-styles.txt.css";
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { AssetHandler } from "./asset-handler.js";
@@ -30,7 +30,7 @@ export class ObsidianStyles extends AssetLoader
         this.data = "";
 
         let appSheet = document.styleSheets[1];
-        let stylesheets = Array.from(document.styleSheets);
+        const stylesheets = Array.from(document.styleSheets);
         for (const element of stylesheets)
         {
             if (element.href && element.href?.includes("app.css"))

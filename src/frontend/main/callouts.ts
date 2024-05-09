@@ -1,5 +1,5 @@
 import { slideDown, slideUp } from "./utils";
-import { WebpageDocument } from "./webpage";
+import { WebpageDocument } from "./document";
 
 export enum CalloutType
 {
@@ -34,7 +34,7 @@ export class Callout
 		this.iconEl = calloutEl.querySelector(".callout-icon") as HTMLElement;
 		this.foldIconEl = calloutEl.querySelector(".callout-fold") as HTMLElement;
 
-		var fold = calloutEl.getAttribute("data-callout-fold");
+		const fold = calloutEl.getAttribute("data-callout-fold");
 		switch (fold)
 		{
 			case "+":

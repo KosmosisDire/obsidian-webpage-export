@@ -1,6 +1,6 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { ExportLog } from "src/plugin/render-api/render-api";
+import { ExportLog } from "plugin/render-api/render-api";
 import { AssetHandler } from "./asset-handler.js";
 
 export class ThemeStyles extends AssetLoader
@@ -21,32 +21,25 @@ export class ThemeStyles extends AssetLoader
     {
         if (themeName == "Default") return "/* Using default theme. */";
 		
-        let themePath = AssetHandler.vaultPluginsPath.joinString(`../themes/${themeName}/theme.css`).absoluted();
+        const themePath = AssetHandler.vaultPluginsPath.joinString(`../themes/${themeName}/theme.css`).absoluted();
         if (!themePath.exists)
         {
             ExportLog.warning("Cannot find theme at path: \n\n" + themePath);
             return "";
         }
-        let themeContent = await themePath.readAsString() ?? "";
+        const themeContent = await themePath.readAsString() ?? "";
 
         return themeContent;
-    }
-
-    private static getCurrentThemeName(): string
-    {
-        /*@ts-ignore*/
-        let themeName = app.vault.config?.cssTheme;
-        return (themeName ?? "") == "" ? "Default" : themeName;
     }
     
     override async load()
     {
-        let themeName = ThemeStyles.getCurrentThemeName();
+        const themeName = this.exportOptions.themeName ?? "Default";
         if (themeName == this.lastThemeName && this.data != "") 
 		{
 			return;
 		}
-        let themeCSS = await ThemeStyles.getThemeContent(themeName);
+        const themeCSS = await ThemeStyles.getThemeContent(themeName);
 		const themeStylesheet = new CSSStyleSheet();
 		// @ts-ignore
 		await themeStylesheet.replace(themeCSS);

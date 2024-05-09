@@ -1,8 +1,8 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { Path } from "src/plugin/utils/path";
-import { Settings, SettingsPage } from "src/plugin/settings/settings";
-import { ExportLog } from "src/plugin/render-api/render-api";
+import { Path } from "plugin/utils/path";
+import { Settings, SettingsPage } from "plugin/settings/settings";
+import { ExportLog } from "plugin/render-api/render-api";
 
 export class CustomHeadContent extends AssetLoader
 {
@@ -15,14 +15,14 @@ export class CustomHeadContent extends AssetLoader
     {
 		if (!SettingsPage.loaded) return;
 
-        let customHeadPath = new Path(Settings.customHeadContentPath);
+        const customHeadPath = new Path(Settings.customHeadContentPath);
 		if (customHeadPath.isEmpty)
 		{
 			this.data = "";
 			return;
 		}
 
-        let validation = customHeadPath.validate(
+        const validation = customHeadPath.validate(
 			{
 				allowEmpty: false,
 				allowFiles: true,
@@ -41,7 +41,7 @@ export class CustomHeadContent extends AssetLoader
 		this.source = app.vault.getFileByPath(customHeadPath.path);
 		if (!this.source)
 		{
-			let stat = customHeadPath.stat;
+			const stat = customHeadPath.stat;
 			if (stat)
 			{
 				this.sourceStat = {ctime: stat.ctimeMs, mtime: stat.mtimeMs, size: stat.size};

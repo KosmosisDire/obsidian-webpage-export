@@ -1,6 +1,6 @@
-import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
-import { Path } from "src/plugin/utils/path";
-import { ComponentGenerator } from "src/plugin/component-generators/component-generator";
+import { MarkdownRendererAPI } from "plugin/render-api/render-api";
+import { Path } from "plugin/utils/path";
+import { ComponentGenerator } from "plugin/component-generators/component-generator";
 
 export class Tree implements ComponentGenerator
 {
@@ -20,11 +20,11 @@ export class Tree implements ComponentGenerator
 	protected async buildTreeRecursive(tree: TreeItem, container: HTMLElement, minDepth:number = 1, closeAllItems: boolean = false): Promise<void>
 	{
 		tree.minCollapsableDepth = this.minCollapsableDepth;
-		let treeItem = await tree.insert(container, closeAllItems);
+		const treeItem = await tree.insert(container, closeAllItems);
 		
 		if(!tree.childContainer) return;
 
-		for (let item of tree.children)
+		for (const item of tree.children)
 		{
 			if(item.depth < minDepth) continue;
 			await this.buildTreeRecursive(item, tree.childContainer, minDepth, closeAllItems);
@@ -34,7 +34,7 @@ export class Tree implements ComponentGenerator
 	//**Generate the raw tree with no extra containers or buttons*/
 	protected async generateTree(container: HTMLElement)
 	{
-		for (let item of this.children)
+		for (const item of this.children)
 		{
 			await this.buildTreeRecursive(item, container, this.minDepth, this.generateWithItemsClosed);
 		}
@@ -66,23 +66,23 @@ export class Tree implements ComponentGenerator
 		*/
 
 		this.container = container;
-		let wrapper = container.createDiv({ attr: {id: this.id, class: this.class + " tree-container"} });
-			let root = wrapper.createDiv("tree-item nav-folder mod-root");
+		const wrapper = container.createDiv({ attr: {id: this.id, class: this.class + " tree-container"} });
+			const root = wrapper.createDiv("tree-item nav-folder mod-root");
 				root.setAttribute("data-depth", "0");
 				if (this.title || this.addCollapseAllButton){
-					let title = root.createDiv("tree-item-self nav-folder-title");
+					const title = root.createDiv("tree-item-self nav-folder-title");
 					if (this.title){
-						let titleInner = title.createDiv("tree-item-inner nav-folder-title-content");
+						const titleInner = title.createDiv("tree-item-inner nav-folder-title-content");
 							titleInner.textContent = this.title;
 					}
 					if (this.addCollapseAllButton){
-						let collapseAllEl = title.createEl('button', { cls: "clickable-icon nav-action-button tree-collapse-all" });
+						const collapseAllEl = title.createEl('button', { cls: "clickable-icon nav-action-button tree-collapse-all" });
 							collapseAllEl.setAttribute("aria-label", "Collapse All");
 							collapseAllEl.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'></svg>";
 							if (this.generateWithItemsClosed) collapseAllEl.classList.add("is-collapsed");
 					}
 				}
-				let children = root.createDiv("tree-item-children nav-folder-children");
+				const children = root.createDiv("tree-item-children nav-folder-children");
 					children.createDiv("nav-folder-spacer");
 
 		if (this.showNestingIndicator) root.classList.add("mod-nav-indicator");
@@ -93,7 +93,7 @@ export class Tree implements ComponentGenerator
 	public sortAlphabetically(reverse: boolean = false)
 	{
 		this.children.sort((a, b) => reverse ? b.title.localeCompare(a.title, undefined, { numeric: true }) : a.title.localeCompare(b.title, undefined, { numeric: true }));
-		for (let child of this.children)
+		for (const child of this.children)
 		{
 			child.sortAlphabetically();
 		}
@@ -101,7 +101,7 @@ export class Tree implements ComponentGenerator
 
 	public forAllChildren(func: (child: TreeItem) => void, recursive: boolean = true)
 	{
-		for (let child of this.children)
+		for (const child of this.children)
 		{
 			func(child);
 			if (recursive) child.forAllChildren(func);
@@ -147,7 +147,7 @@ export class TreeItem
 
 	public forAllChildren(func: (child: TreeItem) => void, recursive: boolean = true)
 	{
-		for (let child of this.children)
+		for (const child of this.children)
 		{
 			func(child);
 			if (recursive) child.forAllChildren(func);
@@ -159,7 +159,7 @@ export class TreeItem
 		if (!this.isCollapsible()) return;
 		if (!this.itemEl || !this.itemEl.classList.contains("mod-collapsible")) return;
 
-		let children = this.itemEl.querySelector(".tree-item-children") as HTMLElement;
+		const children = this.itemEl.querySelector(".tree-item-children") as HTMLElement;
 
 		if (children == null) return;
 
@@ -190,7 +190,7 @@ export class TreeItem
 	public sortAlphabetically(reverse: boolean = false)
 	{
 		this.children.sort((a, b) => reverse ? b.title.localeCompare(a.title, undefined, { numeric: true }) : a.title.localeCompare(b.title, undefined, { numeric: true }));
-		for (let child of this.children)
+		for (const child of this.children)
 		{
 			child.sortAlphabetically();
 		}
@@ -203,7 +203,7 @@ export class TreeItem
 
 	protected insertItem(container: HTMLElement): HTMLDivElement
 	{
-		let itemEl = container.createDiv("tree-item");
+		const itemEl = container.createDiv("tree-item");
 		itemEl.setAttribute("data-depth", this.depth.toString());
 		if (this.isCollapsible()) itemEl.classList.add("mod-collapsible");
 		if (this.isCollapsed) itemEl.classList.add("is-collapsed");
@@ -212,7 +212,7 @@ export class TreeItem
 
 	protected async insertInner(container: HTMLElement): Promise<HTMLDivElement>
 	{
-		let itemContentsEl = container.createDiv("tree-item-inner");
+		const itemContentsEl = container.createDiv("tree-item-inner");
 
 		if (this.tree.renderMarkdownTitles) MarkdownRendererAPI.renderMarkdownSimpleEl(this.title, itemContentsEl);
 		else itemContentsEl.innerText = this.title;
@@ -220,7 +220,7 @@ export class TreeItem
 		// remove a tags from the title
 		itemContentsEl.querySelectorAll("a").forEach((a) => 
 		{
-			let span = a.ownerDocument.createElement("span");
+			const span = a.ownerDocument.createElement("span");
 			span.innerHTML = a.innerHTML;
 			a.replaceWith(span);
 		});
@@ -231,7 +231,7 @@ export class TreeItem
 	protected async insertSelf(container: HTMLElement): Promise<HTMLElement>
 	{
 		if (this.tree.makeLinksWebStyle && this.href) this.href = Path.slugify(this.href);
-		let itemLinkEl = container.createEl(this.href ? "a" : "div", { cls: "tree-item-self is-clickable" });
+		const itemLinkEl = container.createEl(this.href ? "a" : "div", { cls: "tree-item-self is-clickable" });
 
 		if (this.href) 
 			itemLinkEl.setAttribute("href", this.href);
@@ -261,7 +261,7 @@ export class TreeItem
 	{
 		if (this.icon.trim() == "") return undefined;
 		
-		let itemIconEl = container.createDiv("tree-icon iconize-icon");
+		const itemIconEl = container.createDiv("tree-icon iconize-icon");
 
 		if (this.tree.renderMarkdownTitles) MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, itemIconEl);
 		else itemIconEl.innerText = this.icon;
@@ -307,7 +307,7 @@ export class TreeItem
 		let display = window.getComputedStyle(target).display;
 		if (display === 'none') display = 'block';
 		target.style.display = display;
-		let height = target.offsetHeight;
+		const height = target.offsetHeight;
 		target.style.overflow = 'hidden';
 		target.style.height = "0";
 		target.style.paddingTop = "0";

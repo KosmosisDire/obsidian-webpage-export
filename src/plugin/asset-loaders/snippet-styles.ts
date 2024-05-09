@@ -1,6 +1,6 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { Path } from "src/plugin/utils/path";
+import { Path } from "plugin/utils/path";
 
 export class SnippetStyles extends AssetLoader
 {
@@ -17,11 +17,11 @@ export class SnippetStyles extends AssetLoader
 
     private static async getStyleSnippetsContent(): Promise<string[]>
     {
-        let snippetContents : string[] = [];
-        let enabledSnippets = this.getEnabledSnippets();
+        const snippetContents : string[] = [];
+        const enabledSnippets = this.getEnabledSnippets();
         for (let i = 0; i < enabledSnippets.length; i++)
         {
-            let path = new Path(`.obsidian/snippets/${enabledSnippets[i]}.css`).absoluted();
+            const path = new Path(`.obsidian/snippets/${enabledSnippets[i]}.css`).absoluted();
             if (path.exists) snippetContents.push(await path.readAsString() ?? "\n");
         }
         return snippetContents;
@@ -30,7 +30,7 @@ export class SnippetStyles extends AssetLoader
     
     override async load()
     {
-        let snippetsList = await SnippetStyles.getStyleSnippetsContent();
+        const snippetsList = await SnippetStyles.getStyleSnippetsContent();
         let snippets = "\n";
         for (let i = 0; i < snippetsList.length; i++)
         {

@@ -1,6 +1,6 @@
 import { LinkHandler } from "./links";
 import { getTextNodes } from "./utils";
-import { Website } from "./website.txt";
+import { ObsidianWebsite } from "./website";
 
 export enum SearchType
 {
@@ -12,7 +12,7 @@ export enum SearchType
 	Content,
 }
 
-let allSearch = SearchType.Title | SearchType.Aliases | SearchType.Headers | SearchType.Tags | SearchType.Path | SearchType.Content;
+const allSearch = SearchType.Title | SearchType.Aliases | SearchType.Headers | SearchType.Tags | SearchType.Path | SearchType.Content;
 
 export class Search
 {
@@ -43,7 +43,7 @@ export class Search
 			this.input.style.color = "";
 		}
 
-		let searchFields = [];
+		const searchFields: string[] = [];
 		if (type & SearchType.Title) searchFields.push('title');
 		if (type & SearchType.Aliases) searchFields.push('aliases');
 		if (type & SearchType.Headers) searchFields.push('headers');
@@ -52,18 +52,21 @@ export class Search
 		if (type & SearchType.Content) searchFields.push('content');
 	
 		
-		const results = this.index.search(query, 
+		const results: Array<any> = this.index.search(query, 
 		{ 
 			prefix: true, 
-			fuzzy: 0.3, 
+			fuzzy: 0.2, 
 			boost: { title: 2, aliases: 1.8, headers: 1.5, tags: 1.3, path: 1.1 }, 
 			fields: searchFields 
 		});
+
+		// clamp results to at most the top 50
+		if (results.length > 50) results.splice(50);
 		
 		// filter results for the best matches and generate extra metadata
-		let showPaths: string[] = [];
-		let headerLinks = [];
-		for (let result of results)
+		const showPaths: string[] = [];
+		const headerLinks: any[] = [];
+		for (const result of results)
 		{
 			// only show the most relevant results
 			if ((result.score < results[0].score * 0.30 && showPaths.length > 4) || result.score < results[0].score * 0.1) 
@@ -72,13 +75,13 @@ export class Search
 			showPaths.push(result.path);
 
 			// generate matching header links to display under the search result
-			let headers: any[] = [];
+			const headers: any[] = [];
 			let breakEarly = false;
-			for (let match in result.match)
+			for (const match in result.match)
 			{
 				if (result.match[match].includes("headers"))
 				{
-					for (let header of result.headers)
+					for (const header of result.headers)
 					{
 						if (header.toLowerCase().includes(match.toLowerCase()))
 						{
@@ -98,14 +101,14 @@ export class Search
 			headerLinks.push(headers);
 		}
 
-		Website.fileTree?.filter(showPaths);
-		Website.fileTree?.sort((a, b) =>
+		ObsidianSite.fileTree?.filter(showPaths);
+		ObsidianSite.fileTree?.sort((a, b) =>
 		{
 			if (!a || !b) return 0;
 			return showPaths.findIndex((path) => a.path == path) - showPaths.findIndex((path) => b.path == path);
 		});
 
-		if (!Website.fileTree)
+		if (!ObsidianSite.fileTree)
 		{
 			const list = document.createElement('div');
 			results.filter((result: any) => result.path.endsWith(".html"))
@@ -136,7 +139,7 @@ export class Search
 		this.container?.classList.remove("has-content");
 		this.input.value = "";
 		this.clearCurrentDocumentSearch();
-		Website.fileTree?.unfilter();
+		ObsidianSite.fileTree?.unfilter();
 	}
 
 	public async init(): Promise<Search | undefined>
@@ -145,8 +148,8 @@ export class Search
 		this.container = this.input?.closest("#search-container") as HTMLElement;
 		if (!this.input || !this.container) return;
 
-		const indexResp = await fetch('lib/search-index.json');
-		if (!indexResp.ok)
+		const indexResp = await ObsidianSite.fetch('lib/search-index.json');
+		if (!indexResp?.ok)
 		{
 			console.error("Failed to fetch search index");
 			return;
@@ -181,7 +184,7 @@ export class Search
 			this.search(query);
 		});
 
-		if (!Website.fileTree)
+		if (!ObsidianSite.fileTree)
 		{
 			this.dedicatedSearchResultsList = document.createElement('div');
 			this.dedicatedSearchResultsList.setAttribute('id', 'search-results');
@@ -193,9 +196,9 @@ export class Search
 	private async searchCurrentDocument(query: string)
 	{
 		this.clearCurrentDocumentSearch();
-		const textNodes = getTextNodes(Website.document.sizerEl);
+		const textNodes = getTextNodes(ObsidianSite.document.sizerEl);
 
-		textNodes.forEach(async node =>
+		textNodes.forEach(async (node) =>
 		{
 			const content = node.nodeValue;
 			const newContent = content?.replace(new RegExp(query, 'gi'), match => `<mark>${match}</mark>`);
@@ -220,12 +223,12 @@ export class Search
 			}
 		});
 
-		let firstMark = document.querySelector(".search-mark");
+		const firstMark = document.querySelector(".search-mark");
 
 		// wait for page to fade in
 		setTimeout(() => 
 		{
-			if(firstMark) Website.scrollTo(firstMark);
+			if(firstMark) ObsidianSite.scrollTo(firstMark);
 		}, 500);
 	}
 

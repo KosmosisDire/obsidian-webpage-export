@@ -1,17 +1,18 @@
-import { Attachment } from "src/plugin/utils/downloadable";
+import { Attachment } from "plugin/utils/downloadable";
 import { Webpage } from "./webpage";
-import { FileTree } from "src/plugin/component-generators/file-tree";
-import { AssetHandler } from "src/plugin/asset-loaders/asset-handler";
+import { FileTree } from "plugin/component-generators/file-tree";
+import { AssetHandler } from "plugin/asset-loaders/asset-handler";
 import {  TAbstractFile, TFile, TFolder } from "obsidian";
-import {  Settings } from "src/plugin/settings/settings";
-import { GraphView } from "src/plugin/component-generators/graph-view";
-import { Path } from "src/plugin/utils/path";
-import { ExportLog, MarkdownRendererAPI } from "src/plugin/render-api/render-api";
-import { AssetLoader } from "src/plugin/asset-loaders/base-asset";
-import { AssetType, InlinePolicy, Mutability } from "src/plugin/asset-loaders/asset-types.js";
-import { HTMLGeneration } from "src/plugin/render-api/html-generation-helpers";
-import { MarkdownWebpageRendererAPIOptions } from "src/plugin/render-api/api-options";
-import { Index, WebpageData } from "src/plugin/website/index";
+import {  Settings } from "plugin/settings/settings";
+import { GraphView } from "plugin/component-generators/graph-view";
+import { Path } from "plugin/utils/path";
+import { ExportLog, MarkdownRendererAPI } from "plugin/render-api/render-api";
+import { AssetLoader } from "plugin/asset-loaders/base-asset";
+import { AssetType, InlinePolicy, Mutability } from "plugin/asset-loaders/asset-types.js";
+import { HTMLGeneration } from "plugin/render-api/html-generation-helpers";
+import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
+import { Index } from "plugin/website/index";
+import { WebpageData } from "plugin/../shared/website-data";
 
 export class Website
 {
@@ -56,7 +57,7 @@ export class Website
 						commonPath += paths[0][0] + "/";
 						paths = paths.map((path) => path.slice(1));
 						
-						let anyEmpty = paths.some((path) => path.length == 1);
+						const anyEmpty = paths.some((path) => path.length == 1);
 						if (anyEmpty) break;
 					}
 					console.log("Export root path: " + commonPath);
@@ -82,7 +83,7 @@ export class Website
 		}
 
 		// create webpages
-		for (let file of this.sourceFiles)
+		for (const file of this.sourceFiles)
 		{
 			try
 			{
@@ -94,8 +95,8 @@ export class Website
 				}
 				else
 				{
-					let data = Buffer.from(await app.vault.readBinary(file));
-					let path = this.getTargetPathForFile(file);
+					const data = Buffer.from(await app.vault.readBinary(file));
+					const path = this.getTargetPathForFile(file);
 					attachment = new Attachment(data, path, file, this.exportOptions);
 				}
 
@@ -114,7 +115,7 @@ export class Website
 			// create file tree asset
 			if (this.exportOptions.addFileNavigation)
 			{
-				let paths = this.index.attachmentsShownInTree.map((file) => new Path(file.sourcePathRootRelative ?? ""));
+				const paths = this.index.attachmentsShownInTree.map((file) => new Path(file.sourcePathRootRelative ?? ""));
 				this.fileTree = new FileTree(paths, false, true);
 				this.fileTree.makeLinksWebStyle = this.exportOptions.slugifyPaths ?? true;
 				this.fileTree.showNestingIndicator = true;
@@ -123,9 +124,9 @@ export class Website
 				this.fileTree.hideFileExtentionTags = ["md"];
 				this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
 				this.fileTree.id = "file-explorer";
-				let tempContainer = document.createElement("div");
+				const tempContainer = document.createElement("div");
 				await this.fileTree.insert(tempContainer);
-				let data = tempContainer.innerHTML;
+				const data = tempContainer.innerHTML;
 				tempContainer.remove();
 				this.fileTreeAsset = new AssetLoader("file-tree.html", data, null, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
 			}
@@ -141,7 +142,7 @@ export class Website
 			if (this.exportOptions.addGraphView)
 			{
 				this.globalGraph = new GraphView();
-				let convertableFiles = this.sourceFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
+				const convertableFiles = this.sourceFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
 				await this.globalGraph.init(convertableFiles, this.exportOptions);
 				this.graphAsset = new AssetLoader("graph-data.js", this.globalGraph.getExportData(), null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Temporary);
 			}
@@ -192,7 +193,7 @@ export class Website
 		});
 
 		let progress = 0;
-		for (let webpage of webpages)
+		for (const webpage of webpages)
 		{
 			if (ExportLog.isCancelled()) return;
 			try
@@ -210,13 +211,13 @@ export class Website
 		// create attachments from the webpages if we are not inlining media
 		if (!this.exportOptions.inlineMedia)
 		{
-			for (let webpage of webpages)
+			for (const webpage of webpages)
 			{
 				if (ExportLog.isCancelled()) return;
 				try
 				{
 					ExportLog.progress(progress, "Creating Attachments", webpage.source.path);
-					let attachments = await webpage.getAttachments();
+					const attachments = await webpage.getAttachments();
 					this.index.addFiles(attachments);
 				}
 				catch (error)
@@ -231,13 +232,13 @@ export class Website
 
 		this.updateChangedFilesDisplay();
 
-		for (let webpage of webpages)
+		for (const webpage of webpages)
 		{
 			if (ExportLog.isCancelled()) return;
 			try
 			{
 				ExportLog.progress(progress, "Building Website", webpage.source.path);
-				let page = await webpage.build();
+				const page = await webpage.build();
 				
 				if (page)
 				{
@@ -314,8 +315,8 @@ export class Website
 		if (app.plugins?.enabledPlugins?.has("obsidian-icon-folder"))
 		{
 			// @ts-ignore
-			let fileToIconName = app.plugins?.plugins?.['obsidian-icon-folder']?.data;
-			let noteIconsEnabled = fileToIconName?.settings?.iconsInNotesEnabled ?? false;
+			const fileToIconName = app.plugins?.plugins?.['obsidian-icon-folder']?.data;
+			const noteIconsEnabled = fileToIconName?.settings?.iconsInNotesEnabled ?? false;
 			if (!noteIconsEnabled)
 			{
 				ExportLog.warning("For Iconize plugin support, enable \"Toggle icons while editing notes\" in the Iconize plugin settings.");
@@ -327,7 +328,7 @@ export class Website
 		if (app.plugins?.enabledPlugins?.has("obsidian-excalidraw-plugin"))
 		{
 			// @ts-ignore
-			let embedMode = app.plugins?.plugins?.['obsidian-excalidraw-plugin']?.settings?.['previewImageType'] ?? "";		
+			const embedMode = app.plugins?.plugins?.['obsidian-excalidraw-plugin']?.settings?.['previewImageType'] ?? "";		
 			if (embedMode != "SVG")
 			{
 				ExportLog.warning("For Excalidraw embed support, set the embed mode to \"Native SVG\" in the Excalidraw plugin settings.");
@@ -339,7 +340,7 @@ export class Website
 		if (app.plugins?.enabledPlugins?.has("obsidian-banners"))
 		{
 			// @ts-ignore
-			let bannerPlugin = app.plugins?.plugins?.['obsidian-banners'];
+			const bannerPlugin = app.plugins?.plugins?.['obsidian-banners'];
 			let version = bannerPlugin?.manifest?.version ?? "0.0.0";
 			version = version?.substring(0, 5);
 			if (version < "2.0.5")
@@ -358,7 +359,7 @@ export class Website
 
 	public getTargetPathForFile(file: TFile, filename?: string): Path
 	{
-		let targetPath = new Path(file.path);
+		const targetPath = new Path(file.path);
 		if (filename) targetPath.fullName = filename;
 		targetPath.setWorkingDirectory((this.destination ?? Path.vaultPath.joinString("Web Export")).path);
 		targetPath.slugify(this.exportOptions.slugifyPaths);
@@ -388,7 +389,7 @@ export class Website
 			if (!iconProperty && Settings.showDefaultTreeIcons) 
 			{
 				useDefaultIcon = true;
-				let isMedia = AssetLoader.extentionToType(file.extension) == AssetType.Media;
+				const isMedia = AssetLoader.extentionToType(file.extension) == AssetType.Media;
 				iconProperty = isMedia ? Settings.defaultMediaIcon : Settings.defaultFileIcon;
 				if (file.extension == "canvas") iconProperty = "lucide//layout-dashboard";
 			}
@@ -405,21 +406,21 @@ export class Website
 		iconOutput = await HTMLGeneration.getIcon(iconProperty ?? "");
 
 		// add iconize icon as frontmatter if iconize exists
-		let isUnchangedNotEmojiNotHTML = (iconProperty == iconOutput && iconOutput.length < 40) && !/\p{Emoji}/u.test(iconOutput) && !iconOutput.includes("<") && !iconOutput.includes(">");
+		const isUnchangedNotEmojiNotHTML = (iconProperty == iconOutput && iconOutput.length < 40) && !/\p{Emoji}/u.test(iconOutput) && !iconOutput.includes("<") && !iconOutput.includes(">");
 		let parsedAsIconize = false;
 
 		//@ts-ignore
 		if ((useDefaultIcon || !iconProperty || isUnchangedNotEmojiNotHTML) && app.plugins.enabledPlugins.has("obsidian-icon-folder"))
 		{
 			//@ts-ignore
-			let fileToIconName = app.plugins.plugins['obsidian-icon-folder'].data;
-			let noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;
+			const fileToIconName = app.plugins.plugins['obsidian-icon-folder'].data;
+			const noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;
 			
 			// only add icon if rendering note icons is enabled
 			// because that is what we rely on to get the icon
 			if (noteIconsEnabled)
 			{
-				let iconIdentifier = fileToIconName.settings.iconIdentifier ?? ":";
+				const iconIdentifier = fileToIconName.settings.iconIdentifier ?? ":";
 				let iconProperty = fileToIconName[file.path];
 
 				if (iconProperty && typeof iconProperty != "string")
@@ -448,20 +449,20 @@ export class Website
 
 	public async createAttachmentFromSrc(src: string, sourceFile: TFile): Promise<Attachment | undefined>
 	{
-		let attachedFile = this.getFilePathFromSrc(src, sourceFile.path);
+		const attachedFile = this.getFilePathFromSrc(src, sourceFile.path);
 		if (attachedFile.isDirectory) return;
 
-		let file = app.vault.getFileByPath(attachedFile.pathname);
+		const file = app.vault.getFileByPath(attachedFile.pathname);
 		let path = file?.path ?? "";
 		if (!file) path = AssetHandler.mediaPath.joinString(attachedFile.fullName).path;
-		let data: Buffer | undefined = await attachedFile.readAsBuffer();
+		const data: Buffer | undefined = await attachedFile.readAsBuffer();
 
 		if (!data) return;
 
-		let target = new Path(path, this.destination.path)
+		const target = new Path(path, this.destination.path)
 							.slugify(this.exportOptions.slugifyPaths);
 
-		let attachment = new Attachment(data, target, file, this.exportOptions);
+		const attachment = new Attachment(data, target, file, this.exportOptions);
 		if (!attachment.sourcePath) attachment.sourcePath = attachedFile.pathname;
 		return attachment;
 	}
@@ -494,10 +495,10 @@ export class Website
 		}
 		else
 		{
-			let split = src.split("#");
+			const split = src.split("#");
 
-			let hash = split[1]?.trim();
-			let path = split[0];
+			const hash = split[1]?.trim();
+			const path = split[0];
 			pathString = app.metadataCache.getFirstLinkpathDest(path, exportingFilePath)?.path ?? "";
 			if (hash) 
 			{
@@ -508,6 +509,29 @@ export class Website
 		pathString = pathString ?? "";
 
 		return new Path(pathString);
+	}
+
+	public async getCombinedHTML(): Promise<string>
+	{
+		// get index.html
+		var index = this.index.webpages.find((file) => file.filename == "index.html");
+		if (!index?.html) throw new Error("Index file not found");
+
+		let html = new DOMParser().parseFromString(index.html, "text/html");
+
+		// define metadata 
+		let metadataScript = html.head.createEl("data");
+		metadataScript.id = "website-metadata";
+		metadataScript.setAttribute("value", encodeURI(JSON.stringify(this.index.websiteData)));
+
+		return `<!DOCTYPE html>\n${html.documentElement.outerHTML}`;
+	}
+
+	public async saveAsCombinedHTML(): Promise<void>
+	{
+		const html = await this.getCombinedHTML();
+		const path = this.destination.joinString("index.html");
+		await path.write(html);
 	}
 
 

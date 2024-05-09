@@ -1,7 +1,7 @@
 import {  MarkdownView, TextFileView } from 'obsidian';
 import { Path } from './path';
 import { Attachment } from './downloadable';
-import { ExportLog } from 'src/plugin/render-api/render-api';
+import { ExportLog } from 'plugin/render-api/render-api';
 
 export namespace Utils
 {
@@ -17,7 +17,7 @@ export namespace Utils
 
 	export function includesAny(str: string, substrings: string[]): boolean
 	{
-		for (let substring of substrings)
+		for (const substring of substrings)
 		{
 			if (str.includes(substring)) return true;
 		}
@@ -38,19 +38,19 @@ export namespace Utils
 
 	export function sampleCSSColorHex(variable: string, testParentEl: HTMLElement): { a: number, hex: string }
 	{
-		let testEl = document.createElement('div');
+		const testEl = document.createElement('div');
 		testEl.style.setProperty('display', 'none');
 		testEl.style.setProperty('color', 'var(' + variable + ')');
 		testParentEl.appendChild(testEl);
 
-		let col = getComputedStyle(testEl).color;
-		let opacity = getComputedStyle(testEl).opacity;
+		const col = getComputedStyle(testEl).color;
+		const opacity = getComputedStyle(testEl).opacity;
 
 		testEl.remove();
 
 		function toColorObject(str: string)
 		{
-			var match = str.match(/rgb?\((\d+),\s*(\d+),\s*(\d+)\)/);
+			const match = str.match(/rgb?\((\d+),\s*(\d+),\s*(\d+)\)/);
 			return match ? {
 				red: parseInt(match[1]),
 				green: parseInt(match[2]),
@@ -84,7 +84,7 @@ export namespace Utils
 		
 		for (let i = 0; i < files.length; i++)
 		{
-			let file = files[i];
+			const file = files[i];
 
 			try
 			{
@@ -106,7 +106,7 @@ export namespace Utils
 		
 		return new Promise((resolve, reject) => {
 			let timer = 0;
-			let intervalId = setInterval(() => {
+			const intervalId = setInterval(() => {
 				if (condition()) {
 					clearInterval(intervalId);
 					resolve(true);
@@ -123,7 +123,7 @@ export namespace Utils
 
 	export function getActiveTextView(): TextFileView | null
 	{
-		let view = app.workspace.getActiveViewOfType(TextFileView);
+		const view = app.workspace.getActiveViewOfType(TextFileView);
 		if (!view)
 		{
 			return null;

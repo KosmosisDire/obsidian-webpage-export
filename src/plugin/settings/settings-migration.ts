@@ -1,6 +1,6 @@
-import HTMLExportPlugin from "src/plugin/main"
+import HTMLExportPlugin from "plugin/main"
 import { DEFAULT_SETTINGS, Settings, SettingsPage } from "./settings"
-import { ExportLog } from "src/plugin/render-api/render-api";
+import { ExportLog } from "plugin/render-api/render-api";
 import { Notice } from "obsidian";
 
 
@@ -18,13 +18,13 @@ export async function migrateSettings()
 			Settings.includePluginCSS = Settings.includePluginCSS.split("\n");
 		}
 
-		let validSettings = Object.keys(DEFAULT_SETTINGS);
+		const validSettings = Object.keys(DEFAULT_SETTINGS);
 
 		const savedSettings = JSON.parse(JSON.stringify(Object.assign({}, Settings)));
 		Object.assign(Settings, DEFAULT_SETTINGS);
 		for (const settingName of validSettings)
 		{
-			let savedSetting = savedSettings[settingName];
+			const savedSetting = savedSettings[settingName];
 			// @ts-ignore
 			Settings[settingName] = savedSetting === undefined ? DEFAULT_SETTINGS[settingName] : savedSetting;
  
@@ -46,11 +46,11 @@ export async function migrateSettings()
 	// reapply export preset
 	switch (Settings.exportPreset)
 	{
-		case 'website':
-			await Settings.websitePreset();
+		case 'online':
+			await Settings.onlinePreset();
 			break;
-		case 'documents':
-			await Settings.documentsPreset();
+		case 'local':
+			await Settings.localPreset();
 			break;
 		case 'raw-documents':
 			await Settings.rawDocumentsPreset();

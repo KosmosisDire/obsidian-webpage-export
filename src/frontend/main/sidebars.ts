@@ -1,5 +1,9 @@
 export class Sidebar
 {
+	readonly minWidthEm = 15;
+	readonly minResizeWidth;
+	readonly collapseWidth;
+
 	public containerEl: HTMLElement;
 	public contentEl: HTMLElement;
 	public topbarEl: HTMLElement;
@@ -19,13 +23,41 @@ export class Sidebar
 	{
 		this._collapsed = collapse;	
 
-		if (!collapse && document.body.classList.contains("floating-sidebars"))
+		if (!collapse && this.floating)
 		{
 			document.body.addEventListener("click", this.clickOutsideCollapse);
 		}
 		if (collapse) document.body.removeEventListener("click", this.clickOutsideCollapse);
 
 		this.containerEl.classList.toggle("is-collapsed", collapse);
+	}
+	private _floating: boolean;
+	get floating(): boolean { return this._floating; }
+	set floating(floating: boolean)
+	{
+		this._floating = floating;
+		this.containerEl.classList.toggle("floating", floating);
+	}
+
+	get width(): number
+	{
+		return this.containerEl.offsetWidth;
+	}
+	set width(width: number)
+	{
+		const newWidth = `min(max(${width}px, ${this.minWidthEm}em), 40vw)`;
+
+		if (width < this.collapseWidth)
+		{
+			this.collapsed = true;
+			this.containerEl.style.removeProperty('transition-duration');
+		} 
+		else 
+		{
+			this.collapsed = false;
+			this.containerEl.style.setProperty('--sidebar-width', newWidth);
+			if (width > this.minResizeWidth) this.containerEl.style.transitionDuration = "0s";
+		}
 	}
 
 	constructor(container: HTMLElement)
@@ -37,13 +69,16 @@ export class Sidebar
 		this.collapseEl = container.querySelector(".sidebar-collapse-icon") as HTMLElement;
 		this.topbarContentEl = container.querySelector(".topbar-content") as HTMLElement;
 		this.resizeHandleEl = container.querySelector(".sidebar-handle") as HTMLElement ?? undefined;
-		this._isLeft = container.classList.contains("sidebar-left");
-		this._sidebarID = container.classList.contains("sidebar-left") ? "sidebar-left" : "sidebar-right";
+		this._isLeft = container.id == "left-sidebar";
+		this._sidebarID = container.id;
 
 		this.collapseEl.addEventListener("click", () =>
 		{
 			this.collapsed = !this.collapsed;
 		});
+
+		this.minResizeWidth = parseFloat(getComputedStyle(this.resizeHandleEl.parentElement ?? this.resizeHandleEl).fontSize) * this.minWidthEm;
+		this.collapseWidth = this.minResizeWidth / 4.0;
 
 		this.setupSidebarResize();
 	}
@@ -52,31 +87,15 @@ export class Sidebar
 	{
 		if (!this.resizeHandleEl) return;
 
-		let minWidthEm = 15;
-		let minResizeWidth = parseFloat(getComputedStyle(this.resizeHandleEl.parentElement ?? this.resizeHandleEl).fontSize) * minWidthEm;
-		let collapseWidth = minResizeWidth / 4.0;
-
-		let savedWidth = localStorage.getItem(`${this.sidebarID}-width`);
+		const savedWidth = localStorage.getItem(`${this.sidebarID}-width`);
 		if (savedWidth) this.containerEl.style.setProperty('--sidebar-width', savedWidth);
 
-		let localThis = this;
+		const localThis = this;
 		function resizeMove(e: PointerEvent)
 		{
 			if (!localThis.resizing) return;
-			var distance = localThis.isLeft ? e.clientX : window.innerWidth - e.clientX;
-			var newWidth = `min(max(${distance}px, ${minWidthEm}em), 40vw)`;
-
-			if (distance < collapseWidth)
-			{
-				localThis.collapsed = true;
-				localThis.containerEl.style.removeProperty('transition-duration');
-			} 
-			else 
-			{
-				localThis.collapsed = false;
-				localThis.containerEl.style.setProperty('--sidebar-width', newWidth);
-				if (distance > minResizeWidth) localThis.containerEl.style.transitionDuration = "0s";
-			}
+			const distance = localThis.isLeft ? e.clientX : window.innerWidth - e.clientX;
+			localThis.width = distance;
 		}
 
 		function handleClick(e: PointerEvent) 
@@ -99,12 +118,17 @@ export class Sidebar
 		// reset sidebar width on double click
 		function resetSidebarEvent(e: MouseEvent)
 		{
-			localThis.containerEl.style.removeProperty('transition-duration');
-			localThis.containerEl.style.removeProperty('--sidebar-width');
-			localStorage.removeItem(`${localThis.sidebarID}-width`);
+			localThis.resetWidth();
 		}
 
 		this.resizeHandleEl.addEventListener('dblclick', resetSidebarEvent);
+	}
+
+	public resetWidth()
+	{
+		this.containerEl.style.removeProperty('transition-duration');
+		this.containerEl.style.removeProperty('--sidebar-width');
+		localStorage.removeItem(`${this.sidebarID}-width`);
 	}
 
 	private clickOutsideCollapse(event: MouseEvent)

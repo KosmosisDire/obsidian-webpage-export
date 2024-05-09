@@ -1,11 +1,11 @@
 import { Setting, TextComponent } from "obsidian";
 import { SettingsPage } from "./settings";
-import { Path } from "src/plugin/utils/path";
-import { FileDialogs } from "src/plugin/utils/file-dialogs";
+import { Path } from "plugin/utils/path";
+import { FileDialogs } from "plugin/utils/file-dialogs";
 
 export function createDivider(container: HTMLElement)
 {
-	let hr = container.createEl("hr");
+	const hr = container.createEl("hr");
 	hr.style.marginTop = "20px";
 	hr.style.marginBottom = "20px";
 	hr.style.borderColor = "var(--interactive-accent)";
@@ -14,7 +14,7 @@ export function createDivider(container: HTMLElement)
 
 export function createToggle(container: HTMLElement, name: string, get: () => boolean, set: (value: boolean) => void, desc: string = ""): Setting
 {
-	let setting = new Setting(container);
+	const setting = new Setting(container);
 	setting.setName(name)
 	if (desc != "") setting.setDesc(desc);
 	setting.addToggle((toggle) => toggle
@@ -30,10 +30,10 @@ export function createToggle(container: HTMLElement, name: string, get: () => bo
 
 export function createText(container: HTMLElement, name: string, get: () => string, set: (value: string) => void, desc: string = "", validation?: (value: string) => string): Setting
 {
-	let setting = new Setting(container);
-	let errorText = createError(container);
+	const setting = new Setting(container);
+	const errorText = createError(container);
 
-	let value = get();
+	const value = get();
 	if (value != "") errorText.setText(validation ? validation(value) : "");
 	
 	setting.setName(name)
@@ -42,7 +42,7 @@ export function createText(container: HTMLElement, name: string, get: () => stri
 		.setValue(value)
 		.onChange(async (value) => 
 		{
-			let error = validation ? validation(value) : "";
+			const error = validation ? validation(value) : "";
 			if (error == "")
 			{
 				set(value);
@@ -57,7 +57,7 @@ export function createText(container: HTMLElement, name: string, get: () => stri
 
 export function createError(container: HTMLElement): HTMLElement
 {
-	let error = container.createDiv({ cls: 'setting-item-description' });
+	const error = container.createDiv({ cls: 'setting-item-description' });
 	error.style.color = "var(--color-red)";
 	error.style.marginBottom = "0.75rem";
 	return error;
@@ -65,19 +65,19 @@ export function createError(container: HTMLElement): HTMLElement
 
 export function createFileInput(container: HTMLElement, get: () => string, set: (value: string) => void, options?: {name?: string, description?: string, placeholder?: string, defaultPath?: Path, pickFolder?: boolean, validation?: (path: Path) => {valid: boolean, isEmpty: boolean, error: string}, browseButton?: boolean, onChanged?: (path: Path)=>void}): {fileInput: Setting, textInput: TextComponent, browseButton: HTMLElement | undefined}
 {
-	let getSafe = () => new Path(get() ?? "").makePlatformSafe();
-	let setSafe = (value: string) => set(new Path(value).makePlatformSafe().path);
+	const getSafe = () => new Path(get() ?? "").makePlatformSafe();
+	const setSafe = (value: string) => set(new Path(value).makePlatformSafe().path);
 
-	let name = options?.name ?? "";
-	let description = options?.description ?? "";
-	let placeholder = options?.placeholder ?? "Path to file...";
-	let defaultPath = options?.defaultPath ?? Path.vaultPath;
-	let pickFolder = options?.pickFolder ?? false;
-	let validation = options?.validation ?? ((path) => ({valid: true, isEmpty: false, error: ""}));
-	let browseButton = options?.browseButton ?? true;
-	let onChanged = options?.onChanged;
+	const name = options?.name ?? "";
+	const description = options?.description ?? "";
+	const placeholder = options?.placeholder ?? "Path to file...";
+	const defaultPath = options?.defaultPath ?? Path.vaultPath;
+	const pickFolder = options?.pickFolder ?? false;
+	const validation = options?.validation ?? ((path) => ({valid: true, isEmpty: false, error: ""}));
+	const browseButton = options?.browseButton ?? true;
+	const onChanged = options?.onChanged;
 
-	let headContentErrorMessage = createError(container);
+	const headContentErrorMessage = createError(container);
 	if (!getSafe().isEmpty)
 	{
 		headContentErrorMessage.setText(validation(getSafe()).error);
@@ -85,7 +85,7 @@ export function createFileInput(container: HTMLElement, get: () => string, set: 
 
 	let headContentInput : TextComponent | undefined = undefined;
 
-	let fileInput = new Setting(container);
+	const fileInput = new Setting(container);
 	if(name != "") fileInput.setName(name);
 	if (description != "") fileInput.setDesc(description);
 	if (name == "" && description == "") fileInput.infoEl.style.display = "none";
@@ -100,8 +100,8 @@ export function createFileInput(container: HTMLElement, get: () => string, set: 
 			.setValue(getSafe().path)
 			.onChange(async (value) => 
 			{
-				let path = new Path(value).makePlatformSafe();
-				let valid = validation(path);
+				const path = new Path(value).makePlatformSafe();
+				const valid = validation(path);
 				headContentErrorMessage.setText(valid.error);
 				if (valid.valid) 
 				{
@@ -122,11 +122,11 @@ export function createFileInput(container: HTMLElement, get: () => string, set: 
 			browseButtonEl = button.buttonEl;
 			button.setButtonText('Browse').onClick(async () => 
 			{
-				let path = pickFolder ? await FileDialogs.showSelectFolderDialog(defaultPath) : await FileDialogs.showSelectFileDialog(defaultPath);
+				const path = pickFolder ? await FileDialogs.showSelectFolderDialog(defaultPath) : await FileDialogs.showSelectFileDialog(defaultPath);
 				if (!path) return;
 				
 				setSafe(path.path);
-				let valid = validation(path);
+				const valid = validation(path);
 				headContentErrorMessage.setText(valid.error);
 				if (valid.valid)
 				{
@@ -147,8 +147,8 @@ export function createFileInput(container: HTMLElement, get: () => string, set: 
 
 export function createSection(container: HTMLElement, name: string, desc: string): HTMLElement
 {
-	let section = container.createEl('details');
-	let summary = section.createEl('summary');
+	const section = container.createEl('details');
+	const summary = section.createEl('summary');
 	summary.style.display = "block";
 	summary.style.marginLeft = "-1em";
 	section.style.paddingLeft = "2em";

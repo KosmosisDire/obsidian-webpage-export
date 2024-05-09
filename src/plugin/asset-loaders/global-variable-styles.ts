@@ -1,6 +1,6 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { Settings } from "src/plugin/settings/settings";
+import { Settings } from "plugin/settings/settings";
 
 export class GlobalVariableStyles extends AssetLoader
 {
@@ -11,13 +11,13 @@ export class GlobalVariableStyles extends AssetLoader
     
     override async load()
     {
-        let bodyStyle = (document.body.getAttribute("style") ?? "").replaceAll("\"", "'").replaceAll("; ", " !important;\n\t");
+        const bodyStyle = (document.body.getAttribute("style") ?? "").replaceAll("\"", "'").replaceAll("; ", " !important;\n\t");
 		let lineWidth = Settings.documentWidth || "40em";
 		let sidebarWidth = Settings.sidebarWidth || "20em";
 		if (!isNaN(Number(lineWidth))) lineWidth += "px";
 		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
 
-		let lineWidthCss = `min(${lineWidth}, calc(100vw - 2em))`;
+		const lineWidthCss = `min(${lineWidth}, calc(100vw - 2em))`;
 		this.data = 
         `
         :root body

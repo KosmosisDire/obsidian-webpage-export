@@ -2,12 +2,12 @@
 import { Notice, Plugin, TFile, TFolder, requestUrl} from 'obsidian';
 
 // modules that are part of the plugin
-import { AssetHandler } from 'src/plugin/asset-loaders/asset-handler';
-import { Settings, SettingsPage } from 'src/plugin/settings/settings';
-import { HTMLExporter } from 'src/plugin/plugin/exporter';
-import { Path } from 'src/plugin/utils/path';
-import { ExportModal } from 'src/plugin/settings/export-modal';
-import { ExportLog, MarkdownRendererAPI } from 'src/plugin/render-api/render-api';
+import { AssetHandler } from 'plugin/asset-loaders/asset-handler';
+import { Settings, SettingsPage } from 'plugin/settings/settings';
+import { HTMLExporter } from 'plugin/exporter';
+import { Path } from 'plugin/utils/path';
+import { ExportModal } from 'plugin/settings/export-modal';
+import { ExportLog, MarkdownRendererAPI } from 'plugin/render-api/render-api';
 import { DataviewGenerator } from './component-generators/dataview-generator';
 import { Website } from './website/website';
 
@@ -57,7 +57,7 @@ export default class HTMLExportPlugin extends Plugin
 			name: 'Export only current file using previous settings',
 			callback: () =>
 			{
-				let file = this.app.workspace.getActiveFile();
+				const file = this.app.workspace.getActiveFile();
 
 				if (!file) 
 				{
@@ -96,7 +96,7 @@ export default class HTMLExportPlugin extends Plugin
 						}
 						else if(file instanceof TFolder)
 						{
-							let filesInFolder = this.app.vault.getFiles().filter((f) => new Path(f.path).directory.path.startsWith(file.path));
+							const filesInFolder = this.app.vault.getFiles().filter((f) => new Path(f.path).directory.path.startsWith(file.path));
 							HTMLExporter.export(false, filesInFolder);
 						}
 						else
@@ -112,18 +112,18 @@ export default class HTMLExportPlugin extends Plugin
 
 	async checkForUpdates(): Promise<{updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string}>
 	{	
-		let currentVersion = this.manifest.version;
+		const currentVersion = this.manifest.version;
 
 		try
 		{
 			let url = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/manifest.json?cache=" + Date.now() + "";
 			if (this.manifest.version.endsWith("b")) url = "https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/manifest-beta.json?cache=" + Date.now() + "";
-			let manifestResp = await requestUrl(url);
+			const manifestResp = await requestUrl(url);
 			if (manifestResp.status != 200) throw new Error("Could not fetch manifest");
-			let manifest = manifestResp.json;
-			let latestVersion = manifest.version ?? currentVersion;
-			let updateAvailable = currentVersion < latestVersion;
-			let updateNote = manifest.updateNote ?? "";
+			const manifest = manifestResp.json;
+			const latestVersion = manifest.version ?? currentVersion;
+			const updateAvailable = currentVersion < latestVersion;
+			const updateNote = manifest.updateNote ?? "";
 			
 			HTMLExportPlugin.updateInfo = {updateAvailable: updateAvailable, latestVersion: latestVersion, currentVersion: currentVersion, updateNote: updateNote};
 			

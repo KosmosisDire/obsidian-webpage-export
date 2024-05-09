@@ -12,6 +12,7 @@
 	"author": "Nathan George",
 	"license": "GPL-3.0",
 	"devDependencies": {
+		"@eslint/js": "^9.1.1",
 		"@types/mime": "^3.0.4",
 		"@types/node": "^16.11.6",
 		"@types/rss": "^0.0.32",
@@ -20,16 +21,21 @@
 		"builtin-modules": "3.3.0",
 		"electron": "^26.1.0",
 		"esbuild": "0.14.47",
+		"eslint": "^8.57.0",
+		"globals": "^15.0.0",
 		"obsidian": "^1.4.11",
 		"obsidian-dataview": "^0.5.64",
 		"tslib": "2.4.0",
-		"typescript": "4.7.4"
+		"typescript": "4.7.4",
+		"typescript-eslint": "^7.7.0"
 	},
 	"dependencies": {
+		"@pixi/webworker": "^7.4.2",
 		"file-type": "^19.0.0",
 		"html-minifier-terser": "^7.2.0",
 		"mime": "^3.0.0",
 		"minisearch": "^6.3.0",
+		"pixi.js": "^8.0.4",
 		"rss": "^1.2.2",
 		"upath": "^2.0.1"
 	}

@@ -1,9 +1,9 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { Path } from "src/plugin/utils/path";
-import { ExportLog } from "src/plugin/render-api/render-api";
+import { Path } from "plugin/utils/path";
+import { ExportLog } from "plugin/render-api/render-api";
 import { RequestUrlResponse, requestUrl } from "obsidian";
-import { Utils } from "src/plugin/utils/utils";
+import { Utils } from "plugin/utils/utils";
 import { fileTypeFromBuffer } from "file-type";
 
 export class FetchBuffer extends AssetLoader
@@ -16,7 +16,7 @@ export class FetchBuffer extends AssetLoader
         super(filename, "", null, type, inlinePolicy, minify, mutability, LoadMethod.Default, loadPriority);
         this.url = url;
 		
-		let stringURL = this.url instanceof Path ? this.url.path : this.url;
+		const stringURL = this.url instanceof Path ? this.url.path : this.url;
 		if (stringURL.startsWith("http")) this.onlineURL = stringURL;
     }
     
@@ -47,7 +47,7 @@ export class FetchBuffer extends AssetLoader
 			if (this.url.startsWith("http"))
 			{
 				// first ping with a fetch "no-cors" request to see if the server is available
-				let testResp = await Utils.urlAvailable(this.url);
+				const testResp = await Utils.urlAvailable(this.url);
 
 				if (testResp.type == "opaque")
 					res = await requestUrl(this.url);
@@ -89,7 +89,7 @@ export class FetchBuffer extends AssetLoader
 
 		if (this.targetPath.extension == '')
 		{
-			let type = await fileTypeFromBuffer(this.data);
+			const type = await fileTypeFromBuffer(this.data);
 			if (type)
 			{
 				this.targetPath.setExtension(type.ext);

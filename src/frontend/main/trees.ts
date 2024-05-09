@@ -1,5 +1,5 @@
+import { LinkHandler } from "./links";
 import { slideDown, slideUp } from "./utils";
-import { Website } from "./website.txt";
 
 export class TreeItem
 {
@@ -9,21 +9,50 @@ export class TreeItem
 	public innerEl: HTMLElement;
 	public childrenEl: HTMLElement;
 
-	get path(): string { return this.selfEl.getAttribute("href") ?? ""; }
+	protected _path = "";
+	get path(): string { return this._path; }
+	set path(path: string)
+	{
+		if (this.root.pathToItem)
+		{
+			this.root.pathToItem.delete(this._path);
+			this.root.pathToItem.set(path, this);
+		}
+
+		this._path = path;
+		this.selfEl.setAttribute("href", path);
+	}
+
+	get title(): string { return this.innerEl.innerHTML; }
+	set title(title: string)
+	{
+		this.innerEl.innerHTML = title;
+	}
 
 	public children: TreeItem[];
 	public parent: TreeItem | undefined;
+	public root: Tree;
 
-	private _isFolder: boolean;
-	private _isLink: boolean;
-	private _isCollapsible: boolean;
-	private _collapsed: boolean;
+	protected _isFolder: boolean;
+	protected _isLink: boolean;
+	protected _isCollapsible: boolean;
+	protected _collapsed: boolean;
 	get isFolder(): boolean { return this._isFolder; }
 	get isLink(): boolean { return this._isLink; }
+	/**
+	 * Can this item be collapsed?
+	 */
 	get collapsable(): boolean { return this._isCollapsible; }
+	/**
+	 * Is the item collapsed?
+	 */
 	get collapsed(): boolean { return this._collapsed; }
+	/**
+	 * Collapse or uncollapse the item
+	 */
 	set collapsed(collapse: boolean)
 	{
+		if (this.collapsed == collapse) return;
 		// open parents if we are opening this one and it is hidden
 		if (!collapse && this.parent instanceof TreeItem && this.parent.collapsed)
 		{
@@ -33,33 +62,91 @@ export class TreeItem
 		this._collapsed = collapse;
 		this.itemEl.classList.toggle("is-collapsed", collapse);
 		this.collapseIconEl?.classList.toggle("is-collapsed", collapse);
-		if (collapse) slideUp(this.childrenEl, 150);
-		else slideDown(this.childrenEl, 150);
+		if (collapse) slideUp(this.childrenEl, this.collapseAnimationLength);
+		else slideDown(this.childrenEl, this.collapseAnimationLength);
+
+		this.parent?._checkAnyChildrenOpen();
 	}
 
-	private _allCollapsed: boolean;
-	get allCollapsed(): boolean { return this._allCollapsed; }
-	set allCollapsed(collapse: boolean)
+	protected _collapsedRecursive: boolean;
+	get collapsedRecursive(): boolean { return this._collapsedRecursive; }
+	/**
+	 * Collapse or uncollapse all children recursively
+	 */
+	set collapsedRecursive(collapse: boolean)
 	{
-		this.collapsed = collapse;
-		this._allCollapsed = collapse;
+		if (this.collapsedRecursive == collapse) return;
+		this._collapsedRecursive = collapse;
 		this.children.forEach((child) =>
 		{
 			child.collapsed = collapse;
+			child.collapsedRecursive = collapse;
+		});
+	}
+
+	private _anyChildrenOpen: boolean;
+	/**
+	 * Are any immediate children uncollapsed / open?
+	 */
+	get anyChildrenOpen(): boolean { return this._anyChildrenOpen; }
+	public _checkAnyChildrenOpen() // seperate since this isn't supposed to be set by the user but has to be public
+	{
+		this._anyChildrenOpen = this.children.some((child) => !child.collapsed && child.collapsable);
+		this._collapsedRecursive = !this._anyChildrenOpen;
+		return this._anyChildrenOpen;
+	}
+
+	public forAllChildren(callback: (item: TreeItem) => void)
+	{
+		this.children.forEach((child) =>
+		{
+			callback(child);
+			child.forAllChildren(callback);
+		});
+	}
+
+	// allow to either set the animation length destructively or temporarily override it
+	private collapseAnimationLength: number = 150;
+	private _oldAnimationLength: number = this.collapseAnimationLength;
+	/**
+	 * Temporarily override the animation length for this and all children (use restoreAnimationLength to reset it)
+	 */
+	public overrideAnimationLength(length: number)
+	{
+		this._oldAnimationLength = this.collapseAnimationLength;
+		this.collapseAnimationLength = length;
+		this.children.forEach((child) =>
+		{
+			child.overrideAnimationLength(length);
+		});
+	}
+	/**
+	 * Reset the animation length to the item's old value for this and all children
+	 */
+	public restoreAnimationLength()
+	{
+		this.collapseAnimationLength = this._oldAnimationLength;
+		this.children.forEach((child) =>
+		{
+			child.restoreAnimationLength();
 		});
 	}
 
 	constructor(itemEl: HTMLElement, parent: TreeItem | undefined)
 	{
+		this.root = (this instanceof Tree ? this : (parent?.root ?? (parent instanceof Tree ? parent : undefined))) as Tree;
+		this.parent = parent;
+
 		this.itemEl = itemEl;
 		this.selfEl = itemEl.querySelector(".tree-item-self") as HTMLElement;
-		this.collapseIconEl = itemEl.querySelector(".collapse-icon") as HTMLElement | undefined;
-		this.innerEl = itemEl.querySelector(".tree-item-inner") as HTMLElement;
+		this.collapseIconEl = this.selfEl.querySelector(".collapse-icon") as HTMLElement | undefined;
+		this.innerEl = this.selfEl.querySelector(".tree-item-inner") as HTMLElement;
 		this.childrenEl = itemEl.querySelector(".tree-item-children") as HTMLElement;
 
-		this.parent = parent;
+		const hrefAttr = this.selfEl.getAttribute("href");
+		if (hrefAttr) this.path = hrefAttr;
 		this.children = [];
-		let childItems = Array.from(this.childrenEl.children).filter((el) => el.classList.contains("tree-item"));
+		const childItems = Array.from(this.childrenEl.children).filter((el) => el.classList.contains("tree-item"));
 		childItems.forEach((child) =>
 		{
 			this.children.push(new TreeItem(child as HTMLElement, this));
@@ -72,34 +159,56 @@ export class TreeItem
 
 		if (this._isCollapsible)
 		{
-			let clickItem = this.isLink ? this.collapseIconEl ?? this.selfEl : this.selfEl;
+			const clickItem = this.isLink ? this.collapseIconEl ?? this.selfEl : this.selfEl;
 			clickItem.addEventListener("click", () =>
 			{
 				this.collapsed = !this.collapsed;
 			});
 		}
+
+		this._checkAnyChildrenOpen();
 	}
 
-	public filter(showPaths: string[])
+	public setActive()
 	{
+		if (this.root.activeItem) this.root.activeItem.selfEl.classList.remove("is-active");
+		this.root.activeItem = this;
+		this.selfEl.classList.add("is-active");
+	}
+
+	public setFiltered(filteredOut: boolean)
+	{
+		if (filteredOut)
+		{
+			this.itemEl.classList.add("filtered-out");
+		}
+		else
+		{
+			this.itemEl.classList.remove("filtered-out");
+			this.parent?.setFiltered(false);
+		}
+	}
+
+	public filter(paths: string[])
+	{
+		this.overrideAnimationLength(0);
 		this.itemEl.classList.add("filtered");
+		
 
 		// uncollapse all items
-		this.allCollapsed = false;
+		this.collapsedRecursive = false;
 
 		// hide all items
-		let allItems = Array.from(this.itemEl.querySelectorAll(".tree-item:not(.filtered-out)"));
-		allItems.push(this.itemEl);
-		for (let item of allItems)
+		this.forAllChildren((child) =>
 		{
-			item.classList.add("filtered-out");
-		}
+			child.setFiltered(true);
+		});
 
 		// unhide items that match the search
-		showPaths.forEach((path) =>
+		paths.forEach((path) =>
 		{
-			let item = this.find((child) => child.selfEl.getAttribute("href") == path);
-			if (item) item.itemEl.classList.remove("filtered-out");
+			const item = this.findByPath(path);
+			if (item) item.setFiltered(false);
 		});
 	}
 
@@ -107,14 +216,14 @@ export class TreeItem
 	{
 		this.itemEl.classList.remove("filtered");
 
-		let filteredItems = Array.from(this.itemEl.querySelectorAll(".tree-item.filtered-out"));
-		filteredItems.push(this.itemEl);
-		for (let item of filteredItems)
+		// unhide all items
+		this.forAllChildren((child) =>
 		{
-			item.classList.remove("filtered-out");
-		}
+			child.setFiltered(false);
+		});
 
-		this.allCollapsed = true;
+		this.collapsedRecursive = true;
+		this.restoreAnimationLength();
 	}
 
 	public sort(sortFunction: (a: TreeItem, b: TreeItem) => number)
@@ -137,7 +246,7 @@ export class TreeItem
 	{
 		this.itemEl.classList.remove("sorted");
 
-		this.sort((a, b) => (Website.getWebpageData(a.path)?.treeOrder ?? 0) - (Website.getWebpageData(b.path)?.treeOrder ?? 0));
+		this.sort((a, b) => (ObsidianSite.getWebpageData(a.path)?.treeOrder ?? 0) - (ObsidianSite.getWebpageData(b.path)?.treeOrder ?? 0));
 	}
 
 	/**
@@ -148,26 +257,48 @@ export class TreeItem
 	public find(predicate: (item: TreeItem) => boolean): TreeItem | undefined
 	{
 		if (predicate(this)) return this;
-		for (let child of this.children)
+		for (const child of this.children)
 		{
-			let found = child.find(predicate);
+			const found = child.find(predicate);
 			if (found) return found;
 		}
 		return undefined;
+	}
+
+	public findByPath(path: string): TreeItem | undefined
+	{
+		return this.root.pathToItem.get(path);
 	}
 }
 
 
 export class Tree extends TreeItem
 {
+	public activeItem: TreeItem | undefined;
 	public wrapperEl: HTMLElement;
 	public rootEl: HTMLElement;
 	public titleEl: HTMLElement;
 	public collapseAllEl: HTMLElement;
 
+	private collapsePath1: SVGPathElement;
+	private collapsePath2: SVGPathElement;
+
+	static readonly collapsePaths = ["m7 15 5 5 5-5", "m7 9 5-5 5 5"]; // path 1, path 2 - svg paths
+	static readonly uncollapsePaths = ["m7 20 5-5 5 5", "m7 4 5 5 5-5"]; // path 1, path 2 - svg paths
+
+	public pathToItem: Map<string, TreeItem> = new Map();
+
+	// set the collapse all icon state depending on the children
+	public override _checkAnyChildrenOpen(): boolean 
+	{
+		const open = super._checkAnyChildrenOpen();
+		this.setCollapseIcon(!open);
+		return open;
+	}
+
 	constructor(container: HTMLElement)
 	{
-		let wrapperEl = container.classList.contains("tree-container") ? container : container.querySelector(".tree-container") as HTMLElement;
+		const wrapperEl = container.classList.contains("tree-container") ? container : container.querySelector(".tree-container") as HTMLElement;
 		if (wrapperEl == null) throw new Error("Invalid tree container");
 		super(wrapperEl, undefined);
 		this.wrapperEl = wrapperEl;
@@ -179,17 +310,47 @@ export class Tree extends TreeItem
 		this.innerEl = this.titleEl;
 		this.childrenEl = this.wrapperEl.querySelector(".mod-root > .nav-folder-children") as HTMLElement;
 		this.collapseAllEl = this.wrapperEl.querySelector(".tree-collapse-all") as HTMLElement;
-		
-		this.children = [];
-		let childItems = Array.from(this.childrenEl.children).filter((el) => el.classList.contains("tree-item"));
-		childItems.forEach((child) =>
+		const collapseSvg = this.collapseAllEl.querySelector("svg");
+		if (collapseSvg) 
 		{
-			this.children.push(new TreeItem(child as HTMLElement, this));
+			collapseSvg.innerHTML = "<path d></path><path d></path>";
+			this.collapsePath1 = collapseSvg.querySelector("path") as SVGPathElement;
+			this.collapsePath2 = collapseSvg.querySelector("path:last-child") as SVGPathElement;
+		}
+
+		this.forAllChildren((child) =>
+		{
+			if (child.path != "")
+				this.pathToItem.set(child.path, child);
 		});
 
 		this.collapseAllEl.addEventListener("click", () =>
 		{
-			this.allCollapsed = !this.allCollapsed;
+			this.setCollapseIcon(!this.collapsedRecursive);
+			this.collapsedRecursive = !this.collapsedRecursive;
 		});
+
+		LinkHandler.initializeLinks(this.wrapperEl);
+	}
+
+	private setCollapseIcon(collapsed: boolean)
+	{
+		if (collapsed)
+		{
+			this.collapsePath1?.setAttribute("d", Tree.collapsePaths[0]);
+			this.collapsePath2?.setAttribute("d", Tree.collapsePaths[1]);
+		}
+		else
+		{
+			this.collapsePath1?.setAttribute("d", Tree.uncollapsePaths[0]);
+			this.collapsePath2?.setAttribute("d", Tree.uncollapsePaths[1]);
+		}
+	}
+
+	public revealPath(path: string)
+	{
+		const item = this.findByPath(path);
+		if (!item) return;
+		item.collapsed = false;
 	}
 }

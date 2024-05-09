@@ -1,4 +1,4 @@
-import { Settings, SettingsPage } from "src/plugin/settings/settings";
+import { Settings, SettingsPage } from "plugin/settings/settings";
 import { Path } from "./path";
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;
@@ -10,10 +10,10 @@ export namespace FileDialogs
 		defaultPath.makePlatformSafe();
 
 		// get paths
-		let absoluteDefaultPath = defaultPath.directory.absoluted().joinString(defaultFileName);
+		const absoluteDefaultPath = defaultPath.directory.absoluted().joinString(defaultFileName);
 		
 		// add filters
-		let filters = [{
+		const filters = [{
 			name: this.trimStart(absoluteDefaultPath.extension, ".").toUpperCase() + " Files",
 			extensions: [this.trimStart(absoluteDefaultPath.extension, ".")]
 		}];
@@ -27,7 +27,7 @@ export namespace FileDialogs
 		}
 
 		// show picker
-		let picker = await dialog.showSaveDialog({
+		const picker = await dialog.showSaveDialog({
 			defaultPath: absoluteDefaultPath.path,
 			filters: filters,
 			properties: ["showOverwriteConfirmation"]
@@ -35,7 +35,7 @@ export namespace FileDialogs
 
 		if (picker.canceled || !picker.filePath) return;
 		
-		let pickedPath = new Path(picker.filePath).makePlatformSafe();
+		const pickedPath = new Path(picker.filePath).makePlatformSafe();
 		Settings.exportPath = pickedPath.path;
 		SettingsPage.saveSettings();
 		
@@ -48,14 +48,14 @@ export namespace FileDialogs
 		defaultPath.makePlatformSafe();
 
 		// show picker
-		let picker = await dialog.showOpenDialog({
+		const picker = await dialog.showOpenDialog({
 			defaultPath: defaultPath.directory.path,
 			properties: ["openDirectory"]
 		});
 
 		if (picker.canceled) return;
 
-		let path = new Path(picker.filePaths[0]).makePlatformSafe();
+		const path = new Path(picker.filePaths[0]).makePlatformSafe();
 		Settings.exportPath = path.directory.path;
 		SettingsPage.saveSettings();
 
@@ -68,14 +68,14 @@ export namespace FileDialogs
 		defaultPath.makePlatformSafe();
 
 		// show picker
-		let picker = await dialog.showOpenDialog({
+		const picker = await dialog.showOpenDialog({
 			defaultPath: defaultPath.directory.path,
 			properties: ["openFile"]
 		});
 
 		if (picker.canceled) return;
 
-		let path = new Path(picker.filePaths[0]).makePlatformSafe();
+		const path = new Path(picker.filePaths[0]).makePlatformSafe();
 		return path;
 	}
 

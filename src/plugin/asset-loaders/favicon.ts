@@ -1,8 +1,8 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { Settings } from "src/plugin/settings/settings";
-import { Path } from "src/plugin/utils/path";
-import defaultIcon from "src/frontend/assets/icon.png";
+import { Settings } from "plugin/settings/settings";
+import { Path } from "plugin/utils/path";
+import defaultIcon from "assets/icon.png";
 
 export class Favicon extends AssetLoader
 {
@@ -15,11 +15,11 @@ export class Favicon extends AssetLoader
     {
         if (Settings.faviconPath == "") this.data = Buffer.from(defaultIcon);
 
-        let iconPath = new Path(Settings.faviconPath);
+        const iconPath = new Path(Settings.faviconPath);
 		if (iconPath.isEmpty) 
 			return;
         
-		let icon = await iconPath.readAsBuffer();
+		const icon = await iconPath.readAsBuffer();
         if (icon) 
         {
             this.data = icon;
@@ -27,7 +27,7 @@ export class Favicon extends AssetLoader
 			this.source = app.vault.getFileByPath(iconPath.path);
 			if (!this.source)
 			{
-				let stat = iconPath.stat;
+				const stat = iconPath.stat;
 				if (stat)
 				{
 					this.sourceStat = {ctime: stat.ctimeMs, mtime: stat.mtimeMs, size: stat.size};

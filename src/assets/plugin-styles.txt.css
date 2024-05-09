@@ -83,7 +83,7 @@ a.tree-item-self.is-clickable
 {
 	display: flex !important;
 	align-items: center !important;
-}
+}     
 
 .tree-item-self .tree-item-icon
 {
@@ -169,7 +169,7 @@ h1 li {
 }
 
 /* high specificity in order to override other style */
-html > body > #layout > #center-content > #document >  #sizer > div
+html > body > #layout > #center-content > .document >  .sizer > div:not(.footer)
 {
 	margin-inline: 0 !important;
     margin: 0 !important;
@@ -271,7 +271,7 @@ div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
 	z-index: -1;
 }
 
-.markdown-embed .markdown-embed-content #document .heading-wrapper-span 
+.markdown-embed .markdown-embed-content .document .heading-wrapper-span 
 {
     width: 100%;
 }
@@ -530,26 +530,35 @@ body:is(.is-phone, .is-tablet) .graph-view-container.expanded
 
 .graph-icon 
 {
+	position: absolute;
     cursor: pointer;
     color: var(--text-muted);
+	transition: color 0.2s ease-in-out;
 }
 
-.graph-view-container .graph-icon>svg {
-    width: 24px;
-    height: 24px;
-
-    background-color: var(--color-base-00);
-    outline-width: 6px;
-    outline-color: var(--color-base-00);
-    outline-offset: -1px;
-    outline-style: solid;
-    border-radius: 100px;
-    margin: 10px;
-	
-    transition: outline-color, background-color;
-    transition-timing-function: ease-in-out;
-    transition-duration: var(--color-fade-speed);
+.graph-icon svg
+{
+	width: 20px;
+	height: 20px;
 }
+
+.graph-icon:hover
+{
+	color: var(--interactive-accent);
+}
+
+.graph-icon.graph-expand 
+{
+    top: 6px;
+    right: 6px;
+}
+
+.graph-icon.graph-global 
+{
+    top: 6px;
+    right: 32px;
+}
+
 
 .graph-view-placeholder 
 {
@@ -579,12 +588,6 @@ body:is(.is-phone, .is-tablet) .graph-view-container.expanded
     transform: scale(1);
 }
 
-.graph-expand 
-{
-    position: absolute;
-    top: 5px;
-    right: 5px;
-}
 
 
 
@@ -752,12 +755,12 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 		display: none !important;
 	}
 
-	:root, html body.publish > :is(#layout, #center-content, #document):not(script, style, include)
+	:root, html body.publish > :is(#layout, #center-content, .document):not(script, style, include)
 	{
 		display: contents !important;
 	}
 
-	:root, html body.publish #center-content > #document
+	:root, html body.publish #center-content > .document
 	{
 		background-color: transparent !important;
 	}
@@ -768,7 +771,7 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 		background: var(--background-primary);
 	}
 
-	#center-content > #document > #sizer
+	#center-content > .document > .sizer
 	{
 		padding: 0 !important;
 		margin: 0 !important;
@@ -776,7 +779,7 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 		padding-bottom: 0 !important;
 	}
 
-	html body.publish :is(#center-content, #document)
+	html body.publish :is(#center-content, .document)
 	{
 		margin: 0 !important;
 		padding: 0 !important;
@@ -961,6 +964,58 @@ input[type=search] {
 
 /*#endregion */
 
+/*#region Backlinks */
+
+.backlinks-container {
+    border: 1px solid var(--background-modifier-border);
+    border-radius: var(--radius-m);
+	transition: opacity 0.2s ease-in-out;
+}
+
+.backlinks-title {
+    border-bottom: 1px solid;
+    border-color: inherit;
+    padding: var(--size-4-2);
+    padding-left: var(--size-4-3);
+}
+
+.backlinks-content {
+    padding: var(--size-4-1);
+    gap: var(--size-4-1);
+    display: flex;
+    flex-direction: column;
+}
+
+a.backlink {
+    display: flex;
+    gap: 0.5em;
+    color: var(--text-muted);
+    text-decoration: none;
+    padding: var(--size-4-1);
+    padding-left: var(--size-4-2);
+    border-radius: var(--radius-s);
+}
+
+a.backlink:hover {
+    background-color: var(--background-modifier-hover);
+    text-decoration: underline;
+}
+
+.backlink-icon
+{
+	display: flex;
+    align-items: center;
+}
+
+/*#endregion */
+
+.footer:not(:empty)
+{
+    border-top: 1px solid var(--background-modifier-border);
+    padding-top: var(--size-4-6);
+    margin-top: var(--size-4-6);
+}
+
 /* Plugins: */
 
 /*#region Kanban */
@@ -1067,7 +1122,7 @@ body.theme-light .excalidraw-svg svg.light, body.theme-light .excalidraw-plugin 
 	display: none;
 }
 
-#document:has(.obsidian-banner-wrapper)
+.document:has(.obsidian-banner-wrapper)
 {
 	padding-top: 0 !important;
 }
@@ -1076,12 +1131,12 @@ body.theme-light .excalidraw-svg svg.light, body.theme-light .excalidraw-plugin 
 
 /*#region Mind Map  */
 
-#document:not([data-type='markdown']):has(.mm-mindmap)
+.document:not([data-type='markdown']):has(.mm-mindmap)
 {
 	overflow-y: none;
 }
 
-#document:not([data-type='markdown'])  .mm-mindmap
+.document:not([data-type='markdown'])  .mm-mindmap
 {
 	transform: scale(1);
 	translate: -4000px -4000px;

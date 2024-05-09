@@ -1,69 +1,18 @@
-import { Attachment } from "src/plugin/utils/downloadable";
+import { Attachment } from "plugin/utils/downloadable";
 import { Website } from "./website";
 import { Webpage } from "./webpage";
-import { TFile } from "obsidian";
-import { MarkdownWebpageRendererAPIOptions } from "src/plugin/render-api/api-options";
-import { AssetHandler } from "src/plugin/asset-loaders/asset-handler";
-import { ExportLog } from "src/plugin/render-api/render-api";
+import { Notice, TFile } from "obsidian";
+import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
+import { AssetHandler } from "plugin/asset-loaders/asset-handler";
+import { ExportLog } from "plugin/render-api/render-api";
 import Minisearch from 'minisearch';
-import { Path } from "src/plugin/utils/path";
-import HTMLExportPlugin from "src/plugin/main";
-import { Settings } from "src/plugin/settings/settings";
-import { AssetType } from "src/plugin/asset-loaders/asset-types";
+import { Path } from "plugin/utils/path";
+import HTMLExportPlugin from "plugin/main";
+import { Settings } from "plugin/settings/settings";
+import { AssetType } from "plugin/asset-loaders/asset-types";
 import RSS from 'rss';
-import { AssetLoader } from "src/plugin/asset-loaders/base-asset";
-
-export interface FileData
-{
-	createdTime: number;
-	modifiedTime: number;
-	sourceSize: number;
-	sourcePath: string;
-	exportPath: string;
-	showInTree: boolean;
-	treeOrder: number;
-	backlinks: string[];
-}
-
-export interface WebpageData extends FileData
-{
-	headers: {heading: string, level: number, id: string}[];
-	aliases: string[];
-	tags: string[];
-	links: string[];
-	attachments: string[];
-
-	title: string;
-	pathToRoot: string;
-	icon: string;
-	description: string;
-	author: string;
-	coverImageURL: string;
-	fullURL: string;
-}
-
-export interface WebsiteData
-{
-	webpages: {[targetPath: string]: WebpageData},
-	fileInfo: {[targetPath: string]: FileData},
-	sourceToTarget: {[sourcePath: string]: string},
-	attachments: string[];
-	shownInTree: string[];
-	allFiles: string[];
-
-	siteName: string,
-	vaultName: string,
-	createdTime: number;
-	modifiedTime: number;
-	pluginVersion: string,
-	exportRoot: string,
-	baseURL: string,
-
-	themeName: string,
-	bodyClasses: string,
-	addCustomHead: boolean,
-	addFavicon: boolean
-}
+import { AssetLoader } from "plugin/asset-loaders/base-asset";
+import { DEFAULT_GRAPH_VIEW_OPTIONS, FileData, WebpageData, WebsiteData } from "shared/website-data";
 
 export class Index
 {
@@ -104,11 +53,12 @@ export class Index
 		this.website = website;
 		this.exportOptions = options;
 
-		// try to load website data
 		try
 		{
-			let metadataPath = this.website.destination.join(AssetHandler.libraryPath).joinString("metadata.json");
-			let metadata = Settings.onlyExportModified ? await metadataPath.readAsString() : undefined; // only load metadata if we will use it
+			// try to load website data
+			const metadataPath = this.website.destination.join(AssetHandler.libraryPath).joinString("metadata.json");
+	
+			const metadata = await metadataPath.readAsString();
 			if (metadata) 
 			{
 				this.oldWebsiteData = JSON.parse(metadata) as WebsiteData;
@@ -118,17 +68,31 @@ export class Index
 			}
 			else
 			{
+				console.log("No metadata found. Creating new metadata.");
 				this.websiteData = {} as WebsiteData;
 				this.websiteData.createdTime = Date.now();
 			}
-
+			
+			// default values
 			if (!this.websiteData.shownInTree) this.websiteData.shownInTree = [];
 			if (!this.websiteData.attachments) this.websiteData.attachments = [];
 			if (!this.websiteData.allFiles) this.websiteData.allFiles = [];
 			if (!this.websiteData.webpages) this.websiteData.webpages = {};
 			if (!this.websiteData.fileInfo) this.websiteData.fileInfo = {};
 			if (!this.websiteData.sourceToTarget) this.websiteData.sourceToTarget = {};
-
+			if (!this.websiteData.featureOptions) this.websiteData.featureOptions = 
+			{
+				backlinks: { show: true, displayTitle: "Backlinks", parentSelector: ".footer" },
+				tags: { show: true, displayTitle: "Tags", parentSelector: ".header" },
+				alias: { show: true, displayTitle: "Aliases", parentSelector: ".header" },
+				properties: { show: true, displayTitle: "Properties", parentSelector: ".header" },
+				fileNavigation: { show: options.addFileNavigation ?? false, displayTitle: "File Navigation", parentSelector: ".left-sidebar" },
+				search: { show: options.addSearch ?? false, displayTitle: "Search", parentSelector: ".left-sidebar" },
+				outline: { show: options.addOutline ?? false, displayTitle: "Outline", parentSelector: ".sidebar-right" },
+				graphView: { show: options.addGraphView ?? false, displayTitle: "Graph View", parentSelector: ".sidebar-right", graphViewSettings: DEFAULT_GRAPH_VIEW_OPTIONS }
+			}
+			
+			// set global values
 			this.websiteData.modifiedTime = Date.now();
 			this.websiteData.siteName = this.website.exportOptions.siteName ?? "";
 			this.websiteData.vaultName = app.vault.getName();
@@ -137,20 +101,19 @@ export class Index
 			this.websiteData.pluginVersion = HTMLExportPlugin.pluginVersion;
 			this.websiteData.themeName = this.website.exportOptions.themeName ?? "Default";
 			this.websiteData.bodyClasses = this.website.bodyClasses ?? "";
-			this.websiteData.addCustomHead = Settings.customHeadContentPath != "";
-			this.websiteData.addFavicon = Settings.faviconPath != "";
+			this.websiteData.hasCustomHead = Settings.customHeadContentPath != "";
+			this.websiteData.hasFavicon = Settings.faviconPath != "";
 		}
 		catch (e)
 		{
 			ExportLog.warning(e, "Failed to load metadata.json. Recreating metadata.");
 		}
 
-		// try to load minisearch
+		// load current index or create a new one if it doesn't exist
 		try
-		{
-			// load current index or create a new one if it doesn't exist
-			let indexPath = this.website.destination.join(AssetHandler.libraryPath).joinString("search-index.json");
-			let indexJson = await indexPath.readAsString();
+		{			
+			const indexPath = this.website.destination.join(AssetHandler.libraryPath).joinString("search-index.json");
+			const indexJson = await indexPath.readAsString();
 			if (indexJson)
 			{
 				this.minisearch = Minisearch.loadJSON(indexJson, this.minisearchOptions);
@@ -169,11 +132,14 @@ export class Index
 
 	public async finalize()
 	{
+		if (!this.exportOptions.inlineOther)
+			await this.indexSelf();
+
 		this.websiteData.shownInTree = this.attachmentsShownInTree.map((attachment) => attachment.targetPath.path);
 		this.websiteData.allFiles = this.allFiles.map((file) => file.targetPath.path);
 
 		// remove deleted files from website data
-		for (let file of this.deletedFiles)
+		for (const file of this.deletedFiles)
 		{
 			delete this.websiteData.fileInfo[file];
 			delete this.websiteData.webpages[file];
@@ -182,8 +148,8 @@ export class Index
 			this.websiteData.allFiles.remove(file);
 			this.websiteData.shownInTree.remove(file);
 
-			let webpages = Object.values(this.websiteData.webpages);
-			for (let webpage of webpages)
+			const webpages = Object.values(this.websiteData.webpages);
+			for (const webpage of webpages)
 			{
 				webpage.attachments.remove(file);
 				webpage.backlinks.remove(file);
@@ -196,6 +162,43 @@ export class Index
 		console.log("Deleted: ", this.deletedFiles);
 		console.log("New: ", this.newFiles);
 		console.log("Updated: ", this.updatedFiles);
+	}
+
+	/**
+	 * This will delete all exported files from the filesystem! Use with caution!
+	 */
+	public async purge()
+	{
+		if (!this.oldWebsiteData) return;
+
+		function allPromisesProgress<T>(promises: Promise<T>[], callback: (progress: number) => void): Promise<T[]>
+		{
+			let d = 0;
+			callback(0);
+			for (const p of promises) {
+			  p.then(()=> {    
+				d ++;
+				callback( (d * 100) / promises.length );
+			  });
+			}
+			return Promise.all(promises);
+		}
+
+		//@ts-ignore
+		app.loadProgress.setMessage("Deleting website data. This may take a minute.");
+		//@ts-ignore
+		app.loadProgress.show();
+
+		const files = this.oldWebsiteData.allFiles.map((file) => new Path(file).setWorkingDirectory(this.website.destination.path));
+
+		const promises = files.map((file) => file.delete());
+		// @ts-ignore
+		await allPromisesProgress(promises, (progress) => app.loadProgress.setProgress(progress, 1));
+
+		Path.removeEmptyDirectories(this.website.destination.path);
+
+		//@ts-ignore
+		app.loadProgress.hide();
 	}
 
 	public async createRSSFeed()
@@ -219,19 +222,19 @@ export class Index
 			]
 		});
 		
-		for (let page of this.webpages)
+		for (const page of this.webpages)
 		{
 			// only include pages with content
 			if ((page.sizerElement?.innerText.length ?? 0) < 5) continue;
 
-			let title = page.title;
-			let url = Path.joinStrings(this.exportOptions.siteURL ?? "", page.targetPath.path).path;
-			let guid = page.source.path;
-			let date = new Date(page.source.stat.mtime);
+			const title = page.title;
+			const url = Path.joinStrings(this.exportOptions.siteURL ?? "", page.targetPath.path).path;
+			const guid = page.source.path;
+			const date = new Date(page.source.stat.mtime);
 			author = page.author ?? author;
-			let media = page.coverImageURL ?? "";
-			let hasMedia = media != "";
-			let description = page.descriptionOrShortenedContent;
+			const media = page.coverImageURL ?? "";
+			const hasMedia = media != "";
+			const description = page.descriptionOrShortenedContent;
 
 			this.rssFeed.item(
 			{ 
@@ -251,11 +254,11 @@ export class Index
 
 		let rssXML = this.rssFeed.xml();
 
-		let rssFileOld = await this.rssPath.readAsString();
+		const rssFileOld = await this.rssPath.readAsString();
 		if (rssFileOld)
 		{
-			let rssDocOld = new DOMParser().parseFromString(rssFileOld, "text/xml");
-			let rssDocNew = new DOMParser().parseFromString(rssXML, "text/xml");
+			const rssDocOld = new DOMParser().parseFromString(rssFileOld, "text/xml");
+			const rssDocNew = new DOMParser().parseFromString(rssXML, "text/xml");
 
 			// insert old items into new rss and remove duplicates
 			let oldItems = Array.from(rssDocOld.querySelectorAll("item"));
@@ -271,13 +274,13 @@ export class Index
 			
 			// add items back to new rss with old items
 			newItems = newItems.concat(oldItems);
-			let channel = rssDocNew.querySelector("channel");
+			const channel = rssDocNew.querySelector("channel");
 			newItems.forEach((item) => channel?.appendChild(item));
 
 			rssXML = rssDocNew.documentElement.outerHTML;
 		}
 
-		let rssAsset = new Attachment(rssXML, this.rssPath, null, this.exportOptions);
+		const rssAsset = new Attachment(rssXML, this.rssPath, null, this.exportOptions);
 		this.addFile(rssAsset);
 	}
 
@@ -286,7 +289,7 @@ export class Index
 		// determine if the file is new, updated, or unchanged
 		let updatedFile = false;
 		let newFile = false;
-		let key = file.targetPath.path;
+		const key = file.targetPath.path;
 		if(!this.hadFile(key))
 		{
 			this.newFiles.push(file);
@@ -294,7 +297,7 @@ export class Index
 		}
 		else
 		{
-			let oldData = this.getOldFile(key);
+			const oldData = this.getOldFile(key);
 			if (oldData)
 			{
 				if (oldData.modifiedTime != file.sourceStat.mtime && oldData.sourceSize != file.sourceStat.size)
@@ -305,8 +308,8 @@ export class Index
 				else if (oldData.sourceSize != file.sourceStat.size)
 				{
 					// compare data to see if it's actually different
-					let oldData = await file.targetPath.readAsBuffer();
-					let newData = Buffer.from(file.data);
+					const oldData = await file.targetPath.readAsBuffer();
+					const newData = Buffer.from(file.data);
 					if (!oldData?.equals(newData))
 					{
 						this.updatedFiles.push(file);
@@ -321,10 +324,10 @@ export class Index
 			// if we did update the file we don't need to worry, because the attachments will be recreated
 			if (!updatedFile)
 			{
-				let oldWebpage = this.getOldWebpage(key);
+				const oldWebpage = this.getOldWebpage(key);
 				if (oldWebpage)
 				{
-					for (let attachment of oldWebpage.attachments)
+					for (const attachment of oldWebpage.attachments)
 					{
 						this.deletedFiles.remove(attachment);
 					}
@@ -332,12 +335,14 @@ export class Index
 			}
 		}
 
+		// add the file to the list of all files
 		if (!this.allFiles.includes(file))
 		{
 			this.allFiles.push(file);
 			this.allFiles.sort((a, b) => (b.source?.stat.mtime ?? 0) - (a.source?.stat.mtime ?? 0));
 		}
 
+		// add the file to the list of files shown in the tree
 		if (file.showInTree && !this.attachmentsShownInTree.includes(file))
 			this.attachmentsShownInTree.push(file);
 
@@ -357,7 +362,7 @@ export class Index
 
 	public async addFiles(files: (Attachment | Webpage)[])
 	{
-		for (let file of files)
+		for (const file of files)
 		{
 			this.addFile(file);
 		}
@@ -377,7 +382,7 @@ export class Index
 
 	public async removeFiles(files: (Attachment | Webpage)[])
 	{
-		for (let file of files)
+		for (const file of files)
 		{
 			this.removeFile(file);
 		}
@@ -385,7 +390,7 @@ export class Index
 
 	public getFileFromSrc(src: string, sourceFile: TFile): Attachment | undefined
 	{
-		let attachedFile = this.website.getFilePathFromSrc(src, sourceFile.path);
+		const attachedFile = this.website.getFilePathFromSrc(src, sourceFile.path);
 		return this.getFile(attachedFile.pathname);
 	}
 
@@ -426,18 +431,18 @@ export class Index
 
 	public async applyToOldWebpages(callback: (document: Document, oldData: WebpageData) => Promise<any>)
 	{
-		let promises: Promise<any>[] = [];
+		const promises: Promise<any>[] = [];
 
 		if (this.oldWebsiteData)
 		{
-			let webpages = Object.entries(this.oldWebsiteData.webpages);
-			for (let [path, data] of webpages)
+			const webpages = Object.entries(this.oldWebsiteData.webpages);
+			for (const [path, data] of webpages)
 			{
-				let filePath = new Path(path, this.website.destination.path);
-				let fileData = await filePath.readAsBuffer();
+				const filePath = new Path(path, this.website.destination.path);
+				const fileData = await filePath.readAsBuffer();
 				if (fileData)
 				{
-					let document = new DOMParser().parseFromString(fileData.toString(), "text/html");
+					const document = new DOMParser().parseFromString(fileData.toString(), "text/html");
 					await callback(document, data);
 					promises.push(filePath.write(`<!DOCTYPE html>\n${document.documentElement.outerHTML}`));
 				}
@@ -447,15 +452,15 @@ export class Index
 		Promise.all(promises);
 	}
 
-	private getPlainText(webpage: Webpage): string 
+	private getSearchContent(webpage: Webpage): string 
 	{
-		let contentElement = webpage.sizerElement ?? webpage.viewElement ?? webpage.document?.body;
+		const contentElement = webpage.sizerElement ?? webpage.viewElement ?? webpage.document?.body;
 		if (!contentElement)
 		{
 			return "";
 		}
 
-		let skipSelector = ".math, svg, img, .frontmatter, .metadata-container, .heading-after, style, script";
+		const skipSelector = ".math, svg, img, .frontmatter, .metadata-container, .heading-after, style, script";
 		function getTextNodes(element: HTMLElement): Node[]
 		{
 			const textNodes = [];
@@ -495,20 +500,20 @@ export class Index
 	{
 		if (webpage.sourcePath && this.websiteData)
 		{
-			let webpageInfo: WebpageData = {} as WebpageData;
+			const webpageInfo: WebpageData = {} as WebpageData;
 			webpageInfo.title = webpage.title;
 			webpageInfo.icon = webpage.icon;
 			webpageInfo.description = webpage.descriptionOrShortenedContent;
 			webpageInfo.aliases = webpage.aliases;
 			webpageInfo.tags = webpage.tags;
 			webpageInfo.headers = await webpage.getStrippedHeadings();
-			webpageInfo.backlinks = webpage.backlinks.map((backlink) => backlink.targetPath.path);
 			webpageInfo.links = webpage.linksToOtherFiles;
 			webpageInfo.author = webpage.author;
 			webpageInfo.coverImageURL = "";
 			webpageInfo.fullURL = webpage.fullURL;
 			webpageInfo.pathToRoot = webpage.pathToRoot.path;
-
+			webpageInfo.attachments = webpage.attachments.map((download) => download.targetPath.path);
+			
 			webpageInfo.createdTime = webpage.source.stat.ctime;
 			webpageInfo.modifiedTime = webpage.source.stat.mtime;
 			webpageInfo.sourceSize = webpage.source.stat.size;
@@ -516,18 +521,25 @@ export class Index
 			webpageInfo.exportPath = webpage.targetPath.path;
 			webpageInfo.showInTree = webpage.showInTree;
 			webpageInfo.treeOrder = webpage.treeOrder;
-			webpageInfo.attachments = webpage.attachments.map((download) => download.targetPath.path);
+			webpageInfo.backlinks = webpage.backlinks.map((backlink) => backlink.targetPath.path);
+			webpageInfo.type = webpage.type;
 
 			// get file info version of the webpage
-			let fileInfo: FileData = {} as FileData;
+			const fileInfo: FileData = {} as FileData;
 			fileInfo.createdTime = webpageInfo.createdTime;
 			fileInfo.modifiedTime = webpageInfo.modifiedTime;
 			fileInfo.sourceSize = webpageInfo.sourceSize;
 			fileInfo.sourcePath = webpageInfo.sourcePath;
 			fileInfo.exportPath = webpageInfo.exportPath;
-			fileInfo.backlinks = webpageInfo.backlinks;
 			fileInfo.showInTree = webpageInfo.showInTree;
 			fileInfo.treeOrder = webpageInfo.treeOrder;
+			fileInfo.backlinks = webpageInfo.backlinks;
+			fileInfo.type = webpageInfo.type;
+			fileInfo.data = null;
+			if (this.exportOptions.combineAsSingleFile)
+			{
+				fileInfo.data = webpage.data.toString();
+			}
 
 			this.websiteData.webpages[webpageInfo.exportPath] = webpageInfo;
 			this.websiteData.fileInfo[webpageInfo.exportPath] = fileInfo;
@@ -545,9 +557,9 @@ export class Index
 				this.minisearch.discard(webpagePath);
 			}
 
-			let headersInfo = await webpage.getStrippedHeadings();
+			const headersInfo = await webpage.getStrippedHeadings();
 			if (headersInfo.length > 0 && headersInfo[0].level == 1 && headersInfo[0].heading == webpage.title) headersInfo.shift();
-			let headers = headersInfo.map((header) => header.heading);
+			const headers = headersInfo.map((header) => header.heading);
 
 			this.minisearch.add({
 				title: webpage.title,
@@ -555,7 +567,7 @@ export class Index
 				headers: headers,
 				tags: webpage.tags,
 				path: webpagePath,
-				content: webpage.description + " " + this.getPlainText(webpage),
+				content: webpage.description + " " + this.getSearchContent(webpage),
 			});
 		}
 	}
@@ -579,12 +591,12 @@ export class Index
 
 	private addAttachmentToWebsiteData(attachment: Attachment): string
 	{
-		let exportPath = attachment.targetPath.path;
-		let key = exportPath;
+		const exportPath = attachment.targetPath.path;
+		const key = exportPath;
 
 		if (this.websiteData)
 		{
-			let fileInfo: FileData = {} as FileData;
+			const fileInfo: FileData = {} as FileData;
 			fileInfo.createdTime = attachment.sourceStat.ctime;
 			fileInfo.modifiedTime = attachment.sourceStat.mtime;
 			fileInfo.sourceSize = attachment.sourceStat.size;
@@ -593,6 +605,12 @@ export class Index
 			fileInfo.showInTree = attachment.showInTree;
 			fileInfo.treeOrder = attachment.treeOrder;
 			fileInfo.backlinks = [];
+			fileInfo.type = AssetLoader.extentionToType(attachment.targetPath.extension);
+			fileInfo.data = null;
+			if (this.exportOptions.combineAsSingleFile)
+			{
+				fileInfo.data = attachment.data.toString();
+			}
 
 			this.websiteData.fileInfo[key] = fileInfo;
 			if (!this.websiteData.attachments.includes(key)) this.websiteData.attachments.push(key);
@@ -606,7 +624,7 @@ export class Index
 	{
 		this.addAttachmentToWebsiteData(attachment);
 
-		let key = attachment.sourcePath ?? attachment.targetPath.path;
+		const key = attachment.sourcePath ?? attachment.targetPath.path;
 		if (!this.sourceToAttachment.has(key))
 		{
 			this.sourceToAttachment.set(key, attachment);
@@ -626,7 +644,7 @@ export class Index
 			this.sourceToWebpage.delete(webpage.sourcePath);
 		}
 
-		let key = webpage.targetPath.path;
+		const key = webpage.targetPath.path;
 		delete this.websiteData.webpages[key];
 		delete this.websiteData.fileInfo[key];
 
@@ -646,20 +664,20 @@ export class Index
 			this.sourceToAttachment.delete(attachment.sourcePath);
 		}
 
-		let key = attachment.targetPath.path;
+		const key = attachment.targetPath.path;
 		delete this.websiteData.fileInfo[key];
 	}
 
 	private async indexSelf()
 	{
-		let websiteDataString = JSON.stringify(this.websiteData);
-		let indexDataString = JSON.stringify(this.minisearch);
+		const websiteDataString = JSON.stringify(this.websiteData);
+		const indexDataString = JSON.stringify(this.minisearch);
 
-		let websiteDataPath = AssetHandler.generateSavePath("metadata.json", AssetType.Other, this.website.destination);
-		let indexDataPath = AssetHandler.generateSavePath("search-index.json", AssetType.Other, this.website.destination);
+		const websiteDataPath = AssetHandler.generateSavePath("metadata.json", AssetType.Other, this.website.destination);
+		const indexDataPath = AssetHandler.generateSavePath("search-index.json", AssetType.Other, this.website.destination);
 
-		let websiteDataAttachment = new Attachment(websiteDataString, websiteDataPath, null, this.exportOptions);
-		let indexDataAttachment = new Attachment(indexDataString, indexDataPath, null, this.exportOptions);
+		const websiteDataAttachment = new Attachment(websiteDataString, websiteDataPath, null, this.exportOptions);
+		const indexDataAttachment = new Attachment(indexDataString, indexDataPath, null, this.exportOptions);
 		
 		await this.addFiles([websiteDataAttachment, indexDataAttachment]);
 

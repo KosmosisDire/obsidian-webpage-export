@@ -1,4 +1,4 @@
-import { Settings } from "src/plugin/settings/settings";
+import { Settings } from "plugin/settings/settings";
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { AssetHandler } from "./asset-handler.js";
@@ -21,10 +21,10 @@ export class OtherPluginStyles extends AssetLoader
         {
             if (!Settings.includePluginCSS[i] || (Settings.includePluginCSS[i] && !(/\S/.test(Settings.includePluginCSS[i])))) continue;
             
-            let path = AssetHandler.vaultPluginsPath.joinString(Settings.includePluginCSS[i].replace("\n", ""), "styles.css");
+            const path = AssetHandler.vaultPluginsPath.joinString(Settings.includePluginCSS[i].replace("\n", ""), "styles.css");
             if (!path.exists) continue;
             
-            let style = await path.readAsString();
+            const style = await path.readAsString();
             if (style)
             {
                 this.data += style;

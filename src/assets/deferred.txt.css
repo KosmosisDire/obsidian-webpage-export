@@ -41,7 +41,7 @@ body
     max-width: 0;
 }
 
-body.floating-sidebars .sidebar {
+.sidebar.floating {
 	position: absolute;
 }
 
@@ -187,7 +187,6 @@ body
 
 #center-content 
 {
-	opacity: 1;
     flex-basis: 100%;
     max-width: 100%;
     width: 100%;
@@ -201,13 +200,14 @@ body
 
 .hide
 {
-	opacity: 0;
+	opacity: 0 !important;
 	transition: opacity 0.2s ease-in-out;
 }
 
-#center-content > #document 
+#center-content>.document 
 {
-	margin: var(--sidebar-margin);
+	padding-left: 1em;
+	padding-right: 1em;
 	margin-bottom: 0;
 	width: 100%;
 	width: -webkit-fill-available;
@@ -224,7 +224,7 @@ body
 	contain: inline-size;
 }
 
-#center-content>#document>#sizer 
+#center-content>.document>.sizer 
 {
     padding-bottom: 80vh !important;
     width: 100% !important;
@@ -234,14 +234,14 @@ body
 	contain: inline-size;
 }
 
-#document:not([data-type='markdown']) img:not([width]), .markdown-rendered img:not([width]) 
+.document:not([data-type='markdown']) img:not([width]), .markdown-rendered img:not([width]) 
 {
     max-width: 100%;
     outline: none;
 }
 
 /* If the markdown view is displaying a raw file or embed then increase it's size to make everything as large as possible */
-#center-content > #document:not([data-type='markdown']).embed {
+#center-content > .document:not([data-type='markdown']).embed {
     display: flex;
     padding: 1em;
     height: 100%;
@@ -250,7 +250,7 @@ body
     justify-content: center;
 }
 
-#center-content > #document:not([data-type='markdown']).embed > *
+#center-content > .document:not([data-type='markdown']).embed > *
 {
 	max-width: 100%;
 	max-height: 100%;
@@ -263,7 +263,7 @@ body
 }
 
 /* For custom view exports */
-#center-content > #document:not([data-type='markdown'])
+#center-content > .document:not([data-type='markdown'])
 {
 	overflow-x: auto;
 	contain: content;

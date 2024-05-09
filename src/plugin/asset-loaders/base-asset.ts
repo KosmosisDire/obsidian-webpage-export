@@ -1,10 +1,11 @@
-import { Path } from "src/plugin/utils/path";
-import { Attachment } from "src/plugin/utils/downloadable";
+import { Path } from "plugin/utils/path";
+import { Attachment } from "plugin/utils/downloadable";
 import { AssetHandler } from "./asset-handler";
-import { MarkdownWebpageRendererAPIOptions } from "src/plugin/render-api/api-options";
+import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { TFile } from "obsidian";
 import  mime from "mime";
+import { IncludeGenerator } from "plugin/component-generators/include";
 const { minify: runMinify } = require('html-minifier-terser');
 
 export class AssetLoader extends Attachment 
@@ -22,7 +23,7 @@ export class AssetLoader extends Attachment
     {
 		if (source && options == undefined) throw new Error("WebAsset options cannot be empty if source is not empty");
 		options = Object.assign({}, new MarkdownWebpageRendererAPIOptions(), options ?? {});
-		let targetPath = AssetLoader.typeToDir(type).joinString(filename).slugify(options.slugifyPaths);
+		const targetPath = AssetLoader.typeToDir(type).joinString(filename).slugify(options.slugifyPaths);
         super(data, targetPath, source, options);
 
         this.type = type;
@@ -59,7 +60,7 @@ export class AssetLoader extends Attachment
 		"\\.leaf>.leaf-content": ".leaf .leaf-content",
 		"\\.markdown-reading-view": "#center-content",
 		"\\.markdown-preview-view|\\.markdown-rendered|\\.view-content": ".document",
-		"\\.markdown-preview-sizer": "#sizer",
+		"\\.markdown-preview-sizer": ".sizer",
 		"\\.horizontal-main-container|\\.workspace": "#layout",
 	}
 
@@ -71,7 +72,7 @@ export class AssetLoader extends Attachment
             this.data = await AssetHandler.getStyleChildAssets(this, false);
 
 			// replacements
-			for (let key in AssetLoader.replacements)
+			for (const key in AssetLoader.replacements)
 			{
 				this.data = this.data.replace(new RegExp(key, "g"), AssetLoader.replacements[key]);
 			}
@@ -130,8 +131,8 @@ export class AssetLoader extends Attachment
     async minifyAsset()
 	{
 		if (this.type == AssetType.HTML || typeof this.data != "string") return;
-		let isJS = this.type == AssetType.Script;
-		let isCSS = this.type == AssetType.Style;
+		const isJS = this.type == AssetType.Script;
+		const isCSS = this.type == AssetType.Style;
 
 		let tempContent = this.data;
 
@@ -161,8 +162,8 @@ export class AssetLoader extends Attachment
 		if (this.isInlineFormat(this.exportOptions)) return new Path("");
 		
 		if (relativeFrom == undefined) relativeFrom = Path.rootPath;
-		let toRoot = Path.getRelativePath(relativeFrom, Path.rootPath);
-		let newPath = toRoot.join(this.targetPath);
+		const toRoot = Path.getRelativePath(relativeFrom, Path.rootPath);
+		const newPath = toRoot.join(this.targetPath);
 		newPath.slugify(this.exportOptions.slugifyPaths);
 		
 		return newPath;
@@ -170,7 +171,7 @@ export class AssetLoader extends Attachment
 
 	protected isInlineFormat(options: MarkdownWebpageRendererAPIOptions): boolean
 	{
-		let isInlineFormat = this.inlinePolicy == InlinePolicy.Inline || 
+		const isInlineFormat = this.inlinePolicy == InlinePolicy.Inline || 
 							 this.inlinePolicy == InlinePolicy.InlineHead || 
 							 ((this.inlinePolicy == InlinePolicy.Auto || this.inlinePolicy == InlinePolicy.AutoHead) && 
 							 (
@@ -186,7 +187,7 @@ export class AssetLoader extends Attachment
 
 	protected isRefFormat(options: MarkdownWebpageRendererAPIOptions): boolean
 	{
-		let isRefFormat = this.inlinePolicy == InlinePolicy.Download || 
+		const isRefFormat = this.inlinePolicy == InlinePolicy.Download || 
 						  this.inlinePolicy == InlinePolicy.DownloadHead ||
 						  ((this.inlinePolicy == InlinePolicy.Auto || this.inlinePolicy == InlinePolicy.AutoHead) && 
 						  !(
@@ -248,7 +249,7 @@ export class AssetLoader extends Attachment
 					include = `<style>@font-face{font-family:'${this.basename}';src:url('${path}') format('woff2');}</style>`;
                     return include;
 				case AssetType.HTML:
-					return `<meta data-include="${path}"></meta>`
+					return IncludeGenerator.generate(path, false);
                 default:
                     return "";
             }
@@ -273,9 +274,9 @@ export class AssetLoader extends Attachment
 
 	public getContentBase64(): string
 	{
-		let extension = this.extensionName;
-		let mimeType = mime.getType(extension) || "text/plain";
-		let base64 = this.data.toString("base64");
+		const extension = this.extensionName;
+		const mimeType = mime.getType(extension) || "text/plain";
+		const base64 = this.data.toString("base64");
 		return `data:${mimeType};base64,${base64}`;
 	}
 
@@ -294,7 +295,7 @@ export class AssetLoader extends Attachment
 		}
 		
 		// media
-		let extension = this.extensionName;
+		const extension = this.extensionName;
 		const extToTag: {[key: string]: string} = {"png": "img", "jpg": "img", "jpeg": "img", "tiff": "img", "bmp": "img", "avif": "img", "apng": "img", "gif": "img", "svg": "img", "webp": "img", "ico": "img", "mp4": "video", "webm": "video", "ogg": "video", "3gp": "video", "mov": "video", "mpeg": "video", "mp3": "audio", "wav": "audio", "flac": "audio", "aac": "audio", "m4a": "audio", "opus": "audio", "pdf": "embed"};
 		return extToTag[extension] || "img";
 	}

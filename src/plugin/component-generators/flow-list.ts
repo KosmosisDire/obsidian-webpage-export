@@ -14,8 +14,8 @@ export class FlowList implements ComponentGenerator
 	}
 
 	addItem(name: string, key: string, value: boolean, onChange: (value: boolean) => void): HTMLElement {
-		let item = this.flowListEl.createDiv({ cls: 'flow-item' });
-		let checkbox = item.createEl('input', { type: 'checkbox' });
+		const item = this.flowListEl.createDiv({ cls: 'flow-item' });
+		const checkbox = item.createEl('input', { type: 'checkbox' });
 		checkbox.checked = value;
 		if (checkbox.checked) this.checkedList.push(key)
 
@@ -43,7 +43,7 @@ export class FlowList implements ComponentGenerator
 			checkbox.checked = !checkbox.checked;
 		}
 
-		let label = item.createDiv({ cls: 'flow-label' });
+		const label = item.createDiv({ cls: 'flow-label' });
 		label.setText(name);
 
 		return item;

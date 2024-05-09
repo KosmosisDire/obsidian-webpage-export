@@ -1,4 +1,4 @@
-import { MarkdownWebpageRendererAPIOptions } from "src/plugin/render-api/api-options";
+import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
 import { Path } from "./path";
 import { FileStats, TFile } from "obsidian";
 
@@ -64,7 +64,7 @@ export class Attachment
 	private removeRootFromPath(path: Path, allowSlugify: boolean = true)
 	{
 		// remove the export root from the target path
-		let root = new Path(this.exportOptions.exportRoot ?? "").slugify(allowSlugify && this.exportOptions.slugifyPaths).path + "/";
+		const root = new Path(this.exportOptions.exportRoot ?? "").slugify(allowSlugify && this.exportOptions.slugifyPaths).path + "/";
 		if (path.path.startsWith(root))
 		{
 			path.reparse(path.path.substring(root.length));
@@ -80,7 +80,7 @@ export class Attachment
 			throw new Error("(working dir) Target should be a relative path with the working directory set to the root: " + this.targetPath.absoluted().path);
 		}
 
-		let data = this.data instanceof Buffer ? this.data : Buffer.from(this.data.toString());
+		const data = this.data instanceof Buffer ? this.data : Buffer.from(this.data.toString());
 		await this.targetPath.write(data);
 	}
 }

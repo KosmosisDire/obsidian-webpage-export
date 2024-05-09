@@ -1,8 +1,8 @@
 import { TFile } from "obsidian";
-import { FileTree, FileTreeItem } from "src/plugin/component-generators/file-tree";
-import { Path } from "src/plugin/utils/path";
-import { Website } from "src/plugin/website/website";
-import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
+import { FileTree, FileTreeItem } from "plugin/component-generators/file-tree";
+import { Path } from "plugin/utils/path";
+import { Website } from "plugin/website/website";
+import { MarkdownRendererAPI } from "plugin/render-api/render-api";
 
 export class FilePickerTree extends FileTree
 {
@@ -21,9 +21,9 @@ export class FilePickerTree extends FileTree
 		this.regexBlacklist = this.regexBlacklist.filter((pattern) => pattern.trim() != "");
 		let filteredFiles = this.files.filter((file) => this.regexBlacklist.every((pattern) => !file.path.match(new RegExp(pattern))));
 		filteredFiles = filteredFiles.filter((file) => this.regexWhitelist.every((pattern) => file.path.match(new RegExp(pattern))));
-		for (let file of filteredFiles)
+		for (const file of filteredFiles)
 		{
-			let pathSections: Path[] = [];
+			const pathSections: Path[] = [];
 
 			let parentFile: Path = file.copy;
 			while (parentFile != undefined)
@@ -38,9 +38,9 @@ export class FilePickerTree extends FileTree
 			let parent: FilePickerTreeItem | FilePickerTree = this;
 			for (let i = 0; i < pathSections.length; i++)
 			{
-				let section = pathSections[i];
-				let depth = i+1;
-				let isFolder = section.isDirectory;
+				const section = pathSections[i];
+				const depth = i+1;
+				const isFolder = section.isDirectory;
 
 				// make sure this section hasn't already been added
 				let child = parent.children.find(sibling => sibling.title == section.fullName && sibling.isFolder == isFolder && sibling.depth == depth) as FilePickerTreeItem | undefined;
@@ -57,7 +57,7 @@ export class FilePickerTree extends FileTree
 					}
 					else 
 					{
-						let tfile = app.vault.getFileByPath(section.path);
+						const tfile = app.vault.getFileByPath(section.path);
 						if (tfile) child.file = tfile;
 					}
 
@@ -68,8 +68,8 @@ export class FilePickerTree extends FileTree
 			
 			if (parent instanceof FilePickerTreeItem)
 			{
-				let path = file.copy;
-				let tfile = app.vault.getAbstractFileByPath(path.path);
+				const path = file.copy;
+				const tfile = app.vault.getAbstractFileByPath(path.path);
 
 				if (file.isDirectory) path.folderize();
 				else 
@@ -81,7 +81,7 @@ export class FilePickerTree extends FileTree
 				parent.dataRef = path.path;
 				if (tfile)
 				{
-					let titleInfo = await Website.getTitleAndIcon(tfile, true);
+					const titleInfo = await Website.getTitleAndIcon(tfile, true);
 					parent.title = titleInfo.title;
 				}
 			}
@@ -99,12 +99,12 @@ export class FilePickerTree extends FileTree
 		await super.generateTree(container);
 
 		// add a select all button at the top
-		let selectAllButton = new FilePickerTreeItem(this, this, 0);
+		const selectAllButton = new FilePickerTreeItem(this, this, 0);
 		selectAllButton.title = "Select All";
 		let selectAllEl = await selectAllButton.insert(container);
 
 		// remove all event listeners from the select all button
-		let oldItemEl = selectAllEl;
+		const oldItemEl = selectAllEl;
 		selectAllEl = selectAllEl.cloneNode(true) as HTMLDivElement;
 		selectAllButton.checkbox = selectAllEl.querySelector("input") as HTMLInputElement;
 		selectAllButton.itemEl = selectAllEl;
@@ -113,14 +113,14 @@ export class FilePickerTree extends FileTree
 		container.prepend(selectAllEl);
 		oldItemEl.remove();
 
-		let root = this.container?.querySelector(".mod-root");
+		const root = this.container?.querySelector(".mod-root");
 		if (root) root.classList.remove("tree-item");
 
 
-		let localThis = this;
+		const localThis = this;
 		function selectAll()
 		{
-			let checked = selectAllButton.checkbox.checked;
+			const checked = selectAllButton.checkbox.checked;
 			selectAllButton.check(!checked);
 			localThis.forAllChildren((child) => child.check(!checked));
 		}
@@ -142,7 +142,7 @@ export class FilePickerTree extends FileTree
 	
 	public getSelectedFiles(): TFile[]
 	{
-		let selectedFiles: TFile[] = [];
+		const selectedFiles: TFile[] = [];
 		
 		this.forAllChildren((child) =>
 		{
@@ -202,7 +202,7 @@ export class FilePickerTree extends FileTree
 		{
 			if(child.isFolder)
 			{
-				let uncheckedChildren = child?.itemEl?.querySelectorAll(".nav-file .file-checkbox:not(.checked)");
+				const uncheckedChildren = child?.itemEl?.querySelectorAll(".nav-file .file-checkbox:not(.checked)");
 
 				if (!child.checked && uncheckedChildren?.length == 0)
 				{
@@ -236,7 +236,7 @@ export class FilePickerTreeItem extends FileTreeItem
 
 	protected override async insertSelf(container: HTMLElement): Promise<HTMLElement>
 	{
-		let self = await super.insertSelf(container);
+		const self = await super.insertSelf(container);
 
 		this.checkbox = self.createEl("input");
 		self.prepend(this.checkbox);
@@ -250,7 +250,7 @@ export class FilePickerTreeItem extends FileTreeItem
 			this.tree.evaluateFolderChecks();
 		});
 
-		let localThis = this;
+		const localThis = this;
 		self?.addEventListener("click", function(event)
 		{
 			if(localThis.isFolder) localThis.toggleCollapse();
@@ -286,7 +286,7 @@ export class FilePickerTreeItem extends FileTreeItem
 
 	public getSelectedFilesSavePaths(): string[]
 	{
-		let selectedFiles: string[] = [];
+		const selectedFiles: string[] = [];
 
 		if (this.checked) 
 		{

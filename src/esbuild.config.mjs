@@ -11,6 +11,18 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === 'production');
 
+esbuild.build
+({
+	entryPoints: ["frontend/main/index.txt.ts"],
+	bundle: true,
+	minify: false,
+	treeShaking: true,
+	platform: 'browser',
+	outdir: "frontend/dist",
+	tsconfig: "tsconfig.frontend.json",
+	watch: !prod,
+});
+
 esbuild.build({
 	loader: {
 		'.txt.js': 'text',
@@ -21,7 +33,7 @@ esbuild.build({
 	banner: {
 		js: banner,
 	},
-	entryPoints: ['src/plugin/main.ts'],
+	entryPoints: ['plugin/main.ts'],
 	bundle: true,
 	external: [
 		'obsidian',
@@ -46,5 +58,7 @@ esbuild.build({
 	logLevel: "info",
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
-	outfile: 'main.js'
+	outfile: '../main.js'
 }).catch(() => process.exit(1));
+
+

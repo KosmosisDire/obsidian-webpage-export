@@ -157,12 +157,14 @@ if( 'function' === typeof importScripts)
 	}
 
     let hoverFade = 0;
-    let hoverFadeSpeed = 0.2;
+    let hoverFadeSpeed = 0.04;
+	let hoverFadeSecondary = 0;
+	let hoverFadeSecondarySpeed = 0.08;
 	let hoverFontSize = 15;
 	let normalFontSize = 12;
 	let fontRatio = hoverFontSize / normalFontSize;
 
-	function showLabel(index, fade, hovered = false)
+	function showLabel(index, fade, hoverFade = 0)
 	{
 		let label = pixiLabels[index];
 		if (!label) return;
@@ -175,12 +177,10 @@ if( 'function' === typeof importScripts)
 			return;
 		}
 
-		if (hovered) label.style.fontSize = hoverFontSize;
-		else label.style.fontSize = normalFontSize;
-
+		label.style.fontSize = lerp(normalFontSize, hoverFontSize, hoverFade);
 
 		let nodePos = vecToScreenSpace(getPosition(index));
-		let width = (labelWidths[index] * (hovered ? fontRatio : 1)) / 2;
+		let width = labelWidths[index] * lerp(1, fontRatio, hoverFade) / 2;
 		label.x = nodePos.x - width;
 		label.y = nodePos.y + getNodeScreenRadius(radii[index]) + 9;
 		label.alpha = fade;
@@ -206,10 +206,12 @@ if( 'function' === typeof importScripts)
         if (hoveredNode != -1 || grabbedNode != -1)
         {
             hoverFade = Math.min(1, hoverFade + hoverFadeSpeed);
+			hoverFadeSecondary = Math.min(1, hoverFadeSecondary + hoverFadeSecondarySpeed);
         }
         else
         {
             hoverFade = Math.max(0, hoverFade - hoverFadeSpeed);
+			hoverFadeSecondary = Math.max(0, hoverFadeSecondary - hoverFadeSecondarySpeed);
         }
 
         graphics.lineStyle(1, mixColors(colors.link, colors.background, hoverFade * 50), 0.7);
@@ -315,7 +317,7 @@ if( 'function' === typeof importScripts)
             graphics.drawCircle(pos.x, pos.y, getNodeScreenRadius(radii[index]));
             graphics.endFill();
 
-            showLabel(index, Math.max(hoverFade, labelFade[index]), true);
+            showLabel(index, Math.max(hoverFade, labelFade[index]), hoverFadeSecondary);
         }
 
 		
@@ -384,14 +386,26 @@ if( 'function' === typeof importScripts)
             labels = event.data.labels;
             linkLength = event.data.linkLength;
             edgePruning = event.data.edgePruning;
+			positions = new Float32Array(nodeCount);
 
-            app = new PIXI.Application({... event.data.options, antialias: true, resolution: 2, backgroundAlpha: 0, transparent: true});
-            container = new PIXI.Container();
-            graphics = new PIXI.Graphics();
-            app.stage.addChild(container);
-            container.addChild(graphics);
+			if (!app)
+			{
+				app = new PIXI.Application({... event.data.options, antialias: true, resolution: 2, backgroundAlpha: 0, transparent: true});
+				container = new PIXI.Container();
+				graphics = new PIXI.Graphics();
+				app.stage.addChild(container);
+				container.addChild(graphics);
+			}
+
+			// destroy old labels
+			for (let label of pixiLabels)
+			{
+				label.destroy();
+			}
 
             pixiLabels = [];
+			labelWidths = [];
+			labelFade = [];
 			for (let i = 0; i < nodeCount; i++)
 			{
 				let label = new PIXI.Text(labels[i], {fontFamily : 'Arial', fontSize: 12, fontWeight: "normal", fill : invertColor(colors.background, true), align : 'center', anchor: 0.5});
@@ -408,10 +422,5 @@ if( 'function' === typeof importScripts)
         }
     }
 }
-
-
-
-
-
 
 

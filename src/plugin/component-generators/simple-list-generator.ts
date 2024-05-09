@@ -1,6 +1,6 @@
 import { getIcon } from "obsidian";
 import { ComponentGenerator } from "./component-generator";
-import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
+import { MarkdownRendererAPI } from "plugin/render-api/render-api";
 
 export class SimpleFileListGenerator implements ComponentGenerator
 {
@@ -15,20 +15,20 @@ export class SimpleFileListGenerator implements ComponentGenerator
 
 	insert(container: HTMLElement): HTMLElement 
 	{
-		let listWrapperEl = container.createDiv("file-list-wrapper");
-		let titleEl = listWrapperEl.createDiv("file-list-title");
+		const listWrapperEl = container.createDiv("file-list-wrapper");
+		const titleEl = listWrapperEl.createDiv("file-list-title");
 		if (this.options.title) titleEl.setText(this.options.title);
-		let listContainerEl = listWrapperEl.createDiv("file-list");
+		const listContainerEl = listWrapperEl.createDiv("file-list");
 
 		let i = 0;
-		for (let item of this.items)
+		for (const item of this.items)
 		{
-			let itemEl = listContainerEl.createDiv("file-list-item");
+			const itemEl = listContainerEl.createDiv("file-list-item");
 
 			if (this.options.icons)
 			{
-				let icon = this.options.icons instanceof Array ? this.options.icons[i] : this.options.icons;
-				let iconEl = getIcon(icon);
+				const icon = this.options.icons instanceof Array ? this.options.icons[i] : this.options.icons;
+				const iconEl = getIcon(icon);
 
 				if (iconEl)
 				{
@@ -37,7 +37,7 @@ export class SimpleFileListGenerator implements ComponentGenerator
 				}
 			}
 
-			let itemTitleEl = itemEl.createDiv("file-list-item-title");
+			const itemTitleEl = itemEl.createDiv("file-list-item-title");
 
 			if (this.options.renderAsMarkdown)
 			{

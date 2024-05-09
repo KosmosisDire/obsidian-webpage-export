@@ -97,7 +97,7 @@ async function initializePage(pageChanged = true)
 
 	canvasBackground = document.querySelector(".canvas-background") ?? canvasBackground;
 	canvasBackgroundPattern = document.querySelector(".canvas-background pattern") ?? canvasBackgroundPattern;
-	viewContent = document.querySelector("#center-content > #document:not([data-type='markdown'])") ?? document.querySelector("#center-content > #document") ?? viewContent ?? documentContainer;
+	viewContent = document.querySelector("#center-content > .document:not([data-type='markdown'])") ?? document.querySelector("#center-content > .document") ?? viewContent ?? documentContainer;
 	outlineTreeItems = Array.from(document.querySelectorAll(".tree-container.outline-tree .tree-item"));
 
 	if(!fullyInitialized)
@@ -184,7 +184,7 @@ function initializePageEvents(setupOnNode)
 
 function initializeDocumentTypes(fromDocument)
 {
-	if (fromDocument.querySelector("#center-content > #document")) documentType = "markdown";
+	if (fromDocument.querySelector("#center-content > .document")) documentType = "markdown";
 	else if (fromDocument.querySelector(".canvas-wrapper")) documentType = "canvas";
 	else 
 	{
@@ -1654,7 +1654,7 @@ function setupCanvas(setupOnNode)
 					let mouseVert = Math.abs(deltaY) > Math.abs(deltaX * 1.5);
 
 					// only skip if the focused node can be scrolled in the direction of mouse movement
-					let sizer = focusedCanvasNode.querySelector("#sizer");
+					let sizer = focusedCanvasNode.querySelector(".sizer");
 					if(sizer)
 					{
 						let scrollableVert = sizer.scrollHeight > sizer.parentElement.clientHeight + 1;
@@ -1754,7 +1754,7 @@ function setupCanvas(setupOnNode)
 		if (focusedCanvasNode)
 		{
 			// only skip if the focused node can be scrolled
-			let sizer = focusedCanvasNode.querySelector("#sizer");
+			let sizer = focusedCanvasNode.querySelector(".sizer");
 			if(sizer && sizer.scrollHeight > sizer.parentElement.clientHeight) return;
 		}
 
@@ -2247,7 +2247,7 @@ function setupSidebarResize()
 	let collapseWidth = minResizeWidth / 4.0;
 
 	let rightWidth = localStorage.getItem('sidebar-right-width');
-	let leftWidth = localStorage.getItem('sidebar-left-width');
+	let leftWidth = localStorage.getItem('left-sidebar-width');
 	if (rightWidth) document.querySelector('#right-sidebar').style.setProperty('--sidebar-width', rightWidth);
 	if (leftWidth) document.querySelector('#left-sidebar').style.setProperty('--sidebar-width', leftWidth);
 
@@ -2255,7 +2255,7 @@ function setupSidebarResize()
 	{
 		if (!resizingSidebar) return;
 		
-		let isLeft = resizingSidebar.classList.contains("sidebar-left");
+		let isLeft = resizingSidebar.classList.contains("left-sidebar");
 		var distance = isLeft ? e.clientX : window.innerWidth - e.clientX;
 		var newWidth = `min(max(${distance}px, 15em), 40vw)`; // 15em is minResizeWidth
 
@@ -2282,8 +2282,8 @@ function setupSidebarResize()
 			document.removeEventListener('pointermove', resizeMove);
 			var finalWidth = getComputedStyle(resizingSidebar).getPropertyValue('--sidebar-width');
 
-			let isLeft = resizingSidebar.classList.contains("sidebar-left");
-			localStorage.setItem(isLeft ? 'sidebar-left-width' : 'sidebar-right-width', finalWidth);
+			let isLeft = resizingSidebar.classList.contains("left-sidebar");
+			localStorage.setItem(isLeft ? 'left-sidebar-width' : 'sidebar-right-width', finalWidth);
 			resizingSidebar.classList.remove('is-resizing');
 			resizingSidebar.style.removeProperty('transition-duration');
 		});
@@ -2300,8 +2300,8 @@ function setupSidebarResize()
 		{
 			sidebar.style.removeProperty('transition-duration');
 			sidebar.style.removeProperty('--sidebar-width');
-			let isLeft = sidebar.classList.contains("sidebar-left");
-			localStorage.removeItem(isLeft ? 'sidebar-left-width' : 'sidebar-right-width');
+			let isLeft = sidebar.classList.contains("left-sidebar");
+			localStorage.removeItem(isLeft ? 'left-sidebar-width' : 'sidebar-right-width');
 		}
 	}
 
@@ -2459,7 +2459,7 @@ function setupScroll(setupOnNode)
 	// hide elements clipped by scrollable areas in markdown-preview-view elements
 	if(documentType != "canvas") return;
 
-	let markdownViews = Array.from(setupOnNode.querySelectorAll("#document"));
+	let markdownViews = Array.from(setupOnNode.querySelectorAll(".document"));
 	let nextMarkdownViewId = 0;
 
 	let marginMultiplier = 0.1;
@@ -2741,7 +2741,7 @@ function startsWithAny(string, prefixes)
 async function searchCurrentDocument(query)
 {
 	clearCurrentDocumentSearch();
-	const textNodes = getTextNodes(document.querySelector("#sizer") ?? documentContainer);
+	const textNodes = getTextNodes(document.querySelector(".sizer") ?? documentContainer);
 
 	textNodes.forEach(async node =>
 	{

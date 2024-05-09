@@ -1,11 +1,9 @@
-import { WebpageDocument } from "./webpage";
-import { Website } from "./website.txt";
 
 export class LinkHandler
 {
 	public static initializeLinks(onElement: HTMLElement)
 	{
-		onElement?.querySelectorAll(".internal-link, a.tag, .tree-item-self, .footnote-link").forEach(function(link)
+		onElement?.querySelectorAll(".internal-link, a.tag, a.tree-item-self, a.footnote-link").forEach(function(link)
 		{
 			link.addEventListener("click", function(event)
 			{
@@ -20,11 +18,18 @@ export class LinkHandler
 					return;
 				}
 				
-				let relativePathnameStrip = Website.document.pathname.split("#")[0].split("?")[0];
+				const relativePathnameStrip = ObsidianSite.document.pathname.split("#")[0].split("?")[0];
 	
 				if(target.startsWith("#") || target.startsWith("?")) target = relativePathnameStrip + target;
-				new WebpageDocument(target).load();
+				ObsidianSite.loadURL(target);
 			});
 		});
+	}
+
+	public static getPathnameFromURL(url: string): string
+	{
+		if(url == "" || url == "/" || url == "\\") return "/index.html";
+		if(url.startsWith("#") || url.startsWith("?")) return ObsidianSite.document.pathname + url;
+		return url.split("?")[0].split("#")[0];
 	}
 }
