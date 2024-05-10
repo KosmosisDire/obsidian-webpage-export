@@ -8,13 +8,13 @@ import { MarkdownRendererAPI } from "./render-api";
 
 export class HTMLExporter
 {
-	public static async export(usePreviousSettings: boolean = true, overrideFiles: TFile[] | undefined = undefined)
+	public static async export(usePreviousSettings: boolean = true, overrideFiles: TFile[] | undefined = undefined, overrideExportPath: Path | undefined = undefined)
 	{
 		let info = await SettingsPage.updateSettings(usePreviousSettings, overrideFiles);
 		if ((!info && !usePreviousSettings) || (info && info.canceled)) return;
 
 		let files = info?.pickedFiles ?? overrideFiles ?? SettingsPage.getFilesToExport();
-		let exportPath = info?.exportPath ?? new Path(Settings.exportPath);
+		let exportPath = overrideExportPath ?? info?.exportPath ?? new Path(Settings.exportPath);
 
 		let website = await HTMLExporter.exportFiles(files, exportPath, true, Settings.deleteOldFiles);
 
