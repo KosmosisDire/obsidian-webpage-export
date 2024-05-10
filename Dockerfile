@@ -48,6 +48,7 @@ RUN mkdir -p /root/.config/obsidian
 RUN mkdir /output
 RUN echo '{"vaults":{"94349b4f2b2e057a":{"path":"/vault","ts":1715257568671,"open":true}}}' > /root/.config/obsidian/obsidian.json
 
+RUN mkdir -p /vault/.obsidian/plugins/obsidian-remote-plugin/
 RUN cp /plugin/main.js /vault/.obsidian/plugins/obsidian-remote-plugin/main.js
 RUN cp /plugin/styles.css /vault/.obsidian/plugins/obsidian-remote-plugin/styles.css
 RUN cp /plugin/manifest.json /vault/.obsidian/plugins/obsidian-remote-plugin/manifest.json
