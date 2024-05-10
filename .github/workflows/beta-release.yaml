@@ -109,6 +109,6 @@ jobs:
         with:
             platforms: linux/arm64,linux/amd64
             push: true
-            tags: KosmosisDire/obsidian-webpage-export:dev
+            tags: KosmosisDire/obsidian-webpage-export:beta
             cache-from: type=gha
             cache-to: type=gha,mode=max
