@@ -45,7 +45,8 @@ RUN echo "if [ -f /config.json ]; then cp /config.json /vault/.obsidian/data.jso
 RUN echo "cp /plugin/main.js /vault/.obsidian/plugins/webpage-html-export/main.js" >> ~/.xinitrc
 RUN echo "cp /plugin/styles.css /vault/.obsidian/plugins/webpage-html-export/styles.css" >> ~/.xinitrc
 RUN echo "cp /plugin/manifest.json /vault/.obsidian/plugins/webpage-html-export/manifest.json" >> ~/.xinitrc
-RUN echo "exec python3 -m electron_inject -r ./inject-enable.js - obsidian --remote-allow-origins=* --no-sandbox --no-xshm --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer" >> ~/.xinitrc
+RUN echo "python3 -m electron_inject -r ./inject-enable.js - obsidian --remote-allow-origins=* --no-sandbox --no-xshm --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --remote-debugging-port=37941" >> ~/.xinitrc
+RUN echo "x11vnc -forever -nopw -create" >> ~/.xinitrc
 RUN chmod +x ~/.xinitrc
 
 # Set up the vault
@@ -53,4 +54,4 @@ RUN mkdir -p /root/.config/obsidian
 RUN mkdir /output
 RUN echo '{"vaults":{"94349b4f2b2e057a":{"path":"/vault","ts":1715257568671,"open":true}}}' > /root/.config/obsidian/obsidian.json
 
-CMD x11vnc -ncache 10 -create -forever -ncache_cr
+CMD xvfb-run ~/.xinitrc
