@@ -6,3 +6,4 @@ services:
 
     volumes:
       - ./vault:/vault
+      - ./output:/output

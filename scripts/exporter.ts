@@ -10,7 +10,7 @@ export class HTMLExporter
 {
 	public static async export(usePreviousSettings: boolean = true, overrideFiles: TFile[] | undefined = undefined, overrideExportPath: Path | undefined = undefined)
 	{
-		let info = await SettingsPage.updateSettings(usePreviousSettings, overrideFiles);
+		let info = await SettingsPage.updateSettings(usePreviousSettings, overrideFiles, overrideExportPath);
 		if ((!info && !usePreviousSettings) || (info && info.canceled)) return;
 
 		let files = info?.pickedFiles ?? overrideFiles ?? SettingsPage.getFilesToExport();
