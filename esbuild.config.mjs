@@ -11,7 +11,7 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === 'production');
 
-esbuild.context({
+esbuild.build({
 	loader: {
 		'.txt.js': 'text',
 		'.txt.css': 'text',
@@ -41,17 +41,10 @@ esbuild.context({
 		'node:stream',
 		...builtins],
 	format: 'cjs',
+	watch: !prod,
 	target: 'es2018',
 	logLevel: "info",
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
-	outfile: 'main.js',
-}).then(async ctx => {
-	if(!prod) {
-		await ctx.watch();
-	} else {
-		await ctx.rebuild()
-	}
-
-	ctx.dispose();
+	outfile: 'main.js'
 }).catch(() => process.exit(1));
