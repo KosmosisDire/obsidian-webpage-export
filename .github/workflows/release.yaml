@@ -92,6 +92,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
+      - name: Get the version
+        id: get_version
+        run: echo ::set-output name=tag_name::$(git tag --sort version:refname | tail -n 1)
       
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v2
@@ -110,6 +114,6 @@ jobs:
         with:
           platforms: linux/arm64,linux/amd64
           push: true
-          tags: KosmosisDire/obsidian-webpage-export:latest
+          tags: KosmosisDire/obsidian-webpage-export:latest , KosmosisDire/obsidian-webpage-export:${{ steps.get_version.outputs.tag_name }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
