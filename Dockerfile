@@ -41,7 +41,7 @@ COPY docker/inject-enable.js /inject-enable.js
 
 # Copy the plugin and config to the vault, inject script and start Obsidian on startup
 RUN echo "mkdir -p /vault/.obsidian/plugins/webpage-html-export" >> ~/.xinitrc
-RUN echo "if [ -f /config.json ]; then cp /config.json /vault/.obsidian/data.json; fi" >> ~/.xinitrc
+RUN echo "if [ -f /config.json ]; then cp /config.json /vault/.obsidian/plugins/webpage-html-export/data.json; fi" >> ~/.xinitrc
 RUN echo "cp /plugin/main.js /vault/.obsidian/plugins/webpage-html-export/main.js" >> ~/.xinitrc
 RUN echo "cp /plugin/styles.css /vault/.obsidian/plugins/webpage-html-export/styles.css" >> ~/.xinitrc
 RUN echo "cp /plugin/manifest.json /vault/.obsidian/plugins/webpage-html-export/manifest.json" >> ~/.xinitrc
