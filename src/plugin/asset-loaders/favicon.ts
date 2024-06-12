@@ -13,9 +13,9 @@ export class Favicon extends AssetLoader
     
     override async load()
     {
-        if (Settings.faviconPath == "") this.data = Buffer.from(defaultIcon);
+        if (this.exportOptions.faviconPath == "") this.data = Buffer.from(defaultIcon);
 
-        const iconPath = new Path(Settings.faviconPath);
+        const iconPath = new Path(this.exportOptions.faviconPath);
 		if (iconPath.isEmpty) 
 			return;
         
@@ -40,7 +40,7 @@ export class Favicon extends AssetLoader
 
     public override getHTML(): string
     {
-        if (Settings.inlineAssets)
+        if (this.exportOptions.inlineMedia)
         {
             return `<link rel="icon" href="data:image/png;base64,${this.data.toString("base64")}">`;
         }

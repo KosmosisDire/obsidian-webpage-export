@@ -2,5 +2,5 @@
 
 export interface ComponentGenerator
 {
-	insert(container: HTMLElement): void;
+	generate(container?: HTMLElement): Promise<HTMLElement>;
 }

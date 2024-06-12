@@ -11,21 +11,21 @@ import { AssetLoader } from "plugin/asset-loaders/base-asset";
 import { AssetType, InlinePolicy, Mutability } from "plugin/asset-loaders/asset-types.js";
 import { HTMLGeneration } from "plugin/render-api/html-generation-helpers";
 import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
-import { Index } from "plugin/website/index";
+import { Index as WebsiteIndex } from "plugin/website/index";
 import { WebpageData } from "plugin/../shared/website-data";
+import { WebpageTemplate } from "./webpage-template";
 
 export class Website
 {
-	public progress: number = 0;
 	public destination: Path;
-	public index: Index;
+	public index: WebsiteIndex;
 	
 	private sourceFiles: TFile[] = [];
 
-	public globalGraph: GraphView;
 	public fileTree: FileTree;
 	public fileTreeAsset: AssetLoader;
-	private graphAsset: AssetLoader;
+	private _webpageTemplate: HTMLElement;
+	public get webpageTemplate(): HTMLElement { return this._webpageTemplate.cloneNode(true) as HTMLElement; }
 	
 	public bodyClasses: string;
 	public exportOptions: MarkdownWebpageRendererAPIOptions;
@@ -33,7 +33,7 @@ export class Website
 	constructor(destination: Path | string, options?: MarkdownWebpageRendererAPIOptions)
 	{
 		if (typeof destination == "string") destination = new Path(destination);
-		this.exportOptions = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
+		this.exportOptions = Object.assign(Settings.exportOptions, options);
 		if (destination.isFile) throw new Error("Website destination must be a folder: " + destination.path);
 		this.destination = destination;
 	}
@@ -72,7 +72,7 @@ export class Website
 		}
 
 		await AssetHandler.reloadAssets(this.exportOptions);
-		this.index = new Index();
+		this.index = new WebsiteIndex();
 		try
 		{
 			await this.index.load(this, this.exportOptions);
@@ -80,6 +80,15 @@ export class Website
 		catch (error)
 		{
 			ExportLog.error(error, "Problem loading index");
+		}
+
+		try
+		{
+			this._webpageTemplate = WebpageTemplate.createWebpageTemplate(this.exportOptions);
+		}
+		catch (error)
+		{
+			ExportLog.error(error, "Problem creating webpage template");
 		}
 
 		// create webpages
@@ -113,7 +122,7 @@ export class Website
 		try
 		{
 			// create file tree asset
-			if (this.exportOptions.addFileNavigation)
+			if (this.exportOptions.fileNavigationOptions.enabled)
 			{
 				const paths = this.index.attachmentsShownInTree.map((file) => new Path(file.sourcePathRootRelative ?? ""));
 				this.fileTree = new FileTree(paths, false, true);
@@ -125,7 +134,7 @@ export class Website
 				this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
 				this.fileTree.id = "file-explorer";
 				const tempContainer = document.createElement("div");
-				await this.fileTree.insert(tempContainer);
+				await this.fileTree.generate(tempContainer);
 				const data = tempContainer.innerHTML;
 				tempContainer.remove();
 				this.fileTreeAsset = new AssetLoader("file-tree.html", data, null, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
@@ -134,22 +143,6 @@ export class Website
 		catch (error)
 		{
 			ExportLog.error(error, "Problem creating file tree");
-		}
-
-		try
-		{
-			// create graph view asset
-			if (this.exportOptions.addGraphView)
-			{
-				this.globalGraph = new GraphView();
-				const convertableFiles = this.sourceFiles.filter((file) => MarkdownRendererAPI.isConvertable(file.extension));
-				await this.globalGraph.init(convertableFiles, this.exportOptions);
-				this.graphAsset = new AssetLoader("graph-data.js", this.globalGraph.getExportData(), null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Temporary);
-			}
-		}
-		catch (error)
-		{
-			ExportLog.error(error, "Problem creating graph view");
 		}
 
 		return this;
@@ -168,7 +161,7 @@ export class Website
 
 		console.log("Creating website with files: ", this.sourceFiles);
 
-		this.updateChangedFilesDisplay();
+		this.refreshUpdatedFilesList();
 		
 
 		// if body classes have changed write new body classes to existing files
@@ -182,7 +175,7 @@ export class Website
 		}
 
 		await MarkdownRendererAPI.beginBatch(this.exportOptions);
-		this.giveWarnings();
+		this.validateSettings();
 
 		// render the documents with bare html
 		let webpages = this.index.webpages;
@@ -230,7 +223,7 @@ export class Website
 
 		this.index.addFiles(AssetHandler.getDownloads(this.destination, this.exportOptions));
 
-		this.updateChangedFilesDisplay();
+		this.refreshUpdatedFilesList();
 
 		for (const webpage of webpages)
 		{
@@ -280,7 +273,7 @@ export class Website
 			ExportLog.error(error, "Problem finalizing index");
 		}
 
-		this.updateChangedFilesDisplay();
+		this.refreshUpdatedFilesList();
 
 		return this;
 	}
@@ -288,7 +281,7 @@ export class Website
 	/** 
 	 * Display updated files on the render window
 	 * */ 
-	private updateChangedFilesDisplay()
+	private refreshUpdatedFilesList()
 	{
 		try
 		{
@@ -308,7 +301,7 @@ export class Website
 		}
 	}
 
-	private giveWarnings()
+	private validateSettings()
 	{
 		// if iconize plugin is installed, warn if note icons are not enabled
 		// @ts-ignore
@@ -366,40 +359,31 @@ export class Website
 		return targetPath;
 	}
 
-	// TODO: Seperate the icon and title into seperate functions
-	public static async getTitleAndIcon(file: TAbstractFile, skipIcon:boolean = false): Promise<{ title: string; icon: string; isDefaultIcon: boolean; isDefaultTitle: boolean }>
+	public static async getIcon(file: TAbstractFile): Promise<{ icon: string; isDefault: boolean }>
 	{
-		if (!file) return { title: "", icon: "", isDefaultIcon: true, isDefaultTitle: true };
+		if (!file) return { icon: "", isDefault: true };
 
 		let iconOutput = "";
 		let iconProperty: string | undefined = "";
-		let title = file.name;
-		let isDefaultTitle = true;
 		let useDefaultIcon = false;
+
 		if (file instanceof TFile)
 		{
 			const fileCache = app.metadataCache.getFileCache(file);
 			const frontmatter = fileCache?.frontmatter;
-			const titleFromFrontmatter = frontmatter?.[Settings.titleProperty] ?? frontmatter?.["banner_header"]; // banner plugin support
-			title = (titleFromFrontmatter ?? file.basename).toString() ?? "";
-			if (title != file.basename) isDefaultTitle = false;
-			if (title.endsWith(".excalidraw")) title = title.substring(0, title.length - 11);
-			
 			iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support
-			if (!iconProperty && Settings.showDefaultTreeIcons) 
+			if (!iconProperty && Settings.exportOptions.fileNavigationOptions.showDefaultFileIcons) 
 			{
 				useDefaultIcon = true;
 				const isMedia = AssetLoader.extentionToType(file.extension) == AssetType.Media;
-				iconProperty = isMedia ? Settings.defaultMediaIcon : Settings.defaultFileIcon;
+				iconProperty = isMedia ? Settings.exportOptions.fileNavigationOptions.defaultMediaIcon : Settings.exportOptions.fileNavigationOptions.defaultFileIcon;
 				if (file.extension == "canvas") iconProperty = "lucide//layout-dashboard";
 			}
 		}
-
-		if (skipIcon) return { title: title, icon: "", isDefaultIcon: true, isDefaultTitle: isDefaultTitle };
-
-		if (file instanceof TFolder && Settings.showDefaultTreeIcons)
+		
+		if (file instanceof TFolder && Settings.exportOptions.fileNavigationOptions.showDefaultFolderIcons)
 		{
-			iconProperty = Settings.defaultFolderIcon;
+			iconProperty = Settings.exportOptions.fileNavigationOptions.defaultFolderIcon;
 			useDefaultIcon = true;
 		}
 
@@ -444,7 +428,38 @@ export class Website
 
 		if (!parsedAsIconize && isUnchangedNotEmojiNotHTML) iconOutput = "";
 
-		return { title: title, icon: iconOutput, isDefaultIcon: useDefaultIcon, isDefaultTitle: isDefaultTitle };
+		return { icon: iconOutput, isDefault: useDefaultIcon };
+	}
+
+	public static async getTitle(file: TAbstractFile): Promise<{ title: string; isDefault: boolean }>
+	{
+		let title = file.name;
+		let isDefaultTitle = true;
+		if (file instanceof TFile)
+		{
+			const fileCache = app.metadataCache.getFileCache(file);
+			const frontmatter = fileCache?.frontmatter;
+			const titleFromFrontmatter = frontmatter?.[Settings.titleProperty] ?? frontmatter?.["banner_header"]; // banner plugin support
+			title = (titleFromFrontmatter ?? file.basename).toString() ?? "";
+
+			if (title.endsWith(".excalidraw")) 
+			{
+				title = title.substring(0, title.length - 11);
+			}
+
+			if (title != file.basename) 
+			{
+				isDefaultTitle = false;
+			}
+		}
+
+		if (file instanceof TFolder)
+		{
+			title = file.name;
+			isDefaultTitle = true;
+		}
+
+		return { title: title, isDefault: isDefaultTitle };
 	}
 
 	public async createAttachmentFromSrc(src: string, sourceFile: TFile): Promise<Attachment | undefined>

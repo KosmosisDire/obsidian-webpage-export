@@ -78,8 +78,7 @@ export class FileTree extends Tree
 						const tfolder = app.vault.getFolderByPath(section.path);
 						if (tfolder)
 						{
-							const titleInfo = await Website.getTitleAndIcon(tfolder);
-							child.icon = titleInfo.icon;
+							child.icon = (await Website.getIcon(tfolder)).icon;
 						}
 					}
 
@@ -106,9 +105,8 @@ export class FileTree extends Tree
 				parent.href = path.path;
 				if (tfile)
 				{
-					const titleInfo = await Website.getTitleAndIcon(tfile);
-					parent.title = titleInfo.title;
-					parent.icon = titleInfo.icon || "";
+					parent.title = (await Website.getTitle(tfile)).title;
+					parent.icon = (await Website.getIcon(tfile)).icon;
 				}
 			}
 		}

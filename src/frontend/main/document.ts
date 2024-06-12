@@ -7,6 +7,7 @@ import { LinkHandler } from "./links";
 import { List } from "./lists";
 import { Bounds } from "./utils";
 import { Notice } from "./notifications";
+import { Tags } from "./tags";
 
 export class WebpageDocument
 {
@@ -15,6 +16,7 @@ export class WebpageDocument
 	public callouts: Callout[] = [];
 	public lists: List[] = [];
 	public backlinkList: BacklinkList;
+	public tags: Tags;
 	public children: WebpageDocument[] = [];
 	public parent: WebpageDocument | null;
 	public canvas: Canvas;
@@ -24,6 +26,7 @@ export class WebpageDocument
 	public documentEl: HTMLElement;
 	public sizerEl: HTMLElement;
 	public footerEl: HTMLElement;
+	public headerEl: HTMLElement;
 	public info: WebpageData;
 
 	// url stuff
@@ -86,6 +89,14 @@ export class WebpageDocument
 		// set title
 		this.title = this.info.title;
 	}
+
+	private findElements()
+	{
+		this.sizerEl = this.containerEl.closest(".sizer") as HTMLElement ?? this.containerEl.querySelector(".sizer") as HTMLElement;
+		this.documentEl = this.containerEl.closest(".document") as HTMLElement ?? this.containerEl.querySelector(".document") as HTMLElement;
+		this.headerEl = this.containerEl.closest(".header") as HTMLElement ?? this.containerEl.querySelector(".header") as HTMLElement;
+		this.footerEl = this.containerEl.closest(".footer") as HTMLElement ?? this.containerEl.querySelector(".footer") as HTMLElement;
+	}
  
 	public async init(): Promise<WebpageDocument>
 	{
@@ -93,9 +104,8 @@ export class WebpageDocument
 		this.initialized = true;
 
 		if (!this.containerEl) this.containerEl = ObsidianSite.centerContentEl;
-
-		this.sizerEl = this.containerEl.querySelector(".sizer") as HTMLElement;
-		this.documentEl = this.containerEl.querySelector(".document") as HTMLElement;
+		
+		this.findElements();
 
 		if (this.isRootDocument)
 		{
@@ -174,16 +184,7 @@ export class WebpageDocument
 				document.querySelector("#outline")?.replaceWith(newOutlineEl);
 			}
 
-			this.sizerEl = this.containerEl.querySelector(".sizer") as HTMLElement;
-			this.documentEl = this.containerEl.querySelector(".document") as HTMLElement;
-
-			this.footerEl = document.createElement("div");
-			this.footerEl.classList.add("footer");
-			(this.sizerEl ?? this.documentEl).appendChild(this.footerEl);
-
-			if (ObsidianSite.metadata.featureOptions.backlinks.show) 
-				this.createBacklinks();
-
+			await this.postLoadInit()
 			await this.loadChildDocuments();
 
 			this.initialized = false;
@@ -196,6 +197,19 @@ export class WebpageDocument
 		}
 
 		await ObsidianSite.showLoading(false, containerEl);
+		return this;
+	}
+
+	public async postLoadInit(): Promise<WebpageDocument>
+	{
+		this.findElements();
+
+		if (ObsidianSite.metadata.featureOptions.backlinks.enabled) 
+			this.createBacklinks();
+
+		if (ObsidianSite.metadata.featureOptions.tags.enabled) 
+			this.createTags();
+
 		return this;
 	}
 
@@ -223,12 +237,21 @@ export class WebpageDocument
 	{
 		const backlinks = this.info.backlinks?.filter(b => b != this.pathname);
 		if (!backlinks || backlinks.length == 0) return;
+		this.backlinkList = new BacklinkList(backlinks);
+	}
 
-		let parent = document.querySelector(ObsidianSite.metadata.featureOptions.backlinks.parentSelector) as HTMLElement;
-		if (!parent) parent = this.footerEl ?? this.sizerEl ?? this.documentEl;
-		const title = ObsidianSite.metadata.featureOptions.backlinks.displayTitle;
+	public createTags()
+	{
+		const tags = [];
 
-		this.backlinkList = new BacklinkList(parent, title, backlinks);
+		if (ObsidianSite.metadata.featureOptions.tags.showInlineTags && this.info.inlineTags)
+			tags.push(...this.info.inlineTags);
+		if (ObsidianSite.metadata.featureOptions.tags.showFrontmatterTags && this.info.frontmatterTags)
+			tags.push(...this.info.frontmatterTags);
+
+		if (tags.length == 0) return;
+
+		this.tags = new Tags(tags);
 	}
 
 	public async loadChildDocuments()

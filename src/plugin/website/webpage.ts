@@ -11,6 +11,10 @@ import { MarkdownRendererAPI } from "plugin/render-api/render-api";
 import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
 import { SearchInput } from "plugin/component-generators/search-input";
 import { DocumentType } from "shared/website-data";
+import { Settings } from "plugin/settings/settings";
+import { GraphView } from "plugin/component-generators/graph-view";
+import { WebpageTemplate } from "./webpage-template";
+import { ThemeToggle } from "plugin/component-generators/theme-toggle";
 
 export class Webpage extends Attachment
 {
@@ -44,7 +48,7 @@ export class Webpage extends Attachment
 		if (!MarkdownRendererAPI.isConvertable(file.extension)) throw new Error("File type not supported: " + file.extension);
 
 		const targetPath = website.getTargetPathForFile(file, filename);
-		options = Object.assign(new MarkdownWebpageRendererAPIOptions(), options);
+		options = Object.assign(Settings.exportOptions, options);
 
 		super("", targetPath, file, options);
 		this.targetPath.setExtension("html");
@@ -87,6 +91,22 @@ export class Webpage extends Attachment
 	}
 
 	/**
+	 * The header eleent which holds the title and various other non-body text info
+	 */
+	get headerElement(): HTMLElement | undefined
+	{
+		return this.document?.querySelector(".header") as HTMLElement | undefined;
+	}
+
+	/**
+	 * The footer element which holds the footer text
+	 */
+	get footerElement(): HTMLElement | undefined
+	{
+		return this.document?.querySelector(".footer") as HTMLElement | undefined;
+	}
+
+	/**
 	 * The relative path from exportPath to rootFolder
 	 */
 	get pathToRoot(): Path
@@ -95,17 +115,37 @@ export class Webpage extends Attachment
 		return ptr;
 	}
 
-	get tags(): string[]
+	get allTags(): string[]
+	{
+		const tags = this.frontmatterTags.concat(this.inlineTags);
+
+		// remove duplicates
+		const uniqueTags = tags.filter((tag, index) => tags.indexOf(tag) == index);
+
+		return uniqueTags;
+	}
+
+	get frontmatterTags(): string[]
+	{
+		const tags: string[] = this.frontmatter?.tags ?? [];
+		
+		// if a tag doesn't start with a #, add it
+		tags.forEach((tag, index) =>
+		{
+			if (!tag.startsWith("#")) tags[index] = "#" + tag;
+		});
+		
+		return tags;
+	}
+
+	get inlineTags(): string[]
 	{
 		const tagCaches = app.metadataCache.getFileCache(this.source)?.tags?.values();
-		const tags = [];
+		const tags: string[] = [];
 		if (tagCaches)
 		{
 			tags.push(...Array.from(tagCaches).map((tag) => tag.tag));
 		}
-
-		const frontmatterTags = this.frontmatter?.tags ?? [];
-		tags.push(...frontmatterTags);
 
 		return tags;
 	}
@@ -265,7 +305,7 @@ export class Webpage extends Attachment
 	{
 		let tagsHTML = "";
 
-		const tags = this.tags.map((tag) => `<a class="tag" href="${this.exportOptions.siteURL}?query=tag:${tag.replace("#", "")}">${tag.startsWith("#") ? tag : "#" + tag}</a>`).join(" ");
+		const tags = this.allTags.map((tag) => `<a class="tag" href="${this.exportOptions.siteURL}?query=tag:${tag.replace("#", "")}">${tag.startsWith("#") ? tag : "#" + tag}</a>`).join(" ");
 		if (tags.length > 0)
 		{
 			const tagContainer = document.body.createDiv();
@@ -369,9 +409,8 @@ export class Webpage extends Attachment
 		if (!this.document) throw new Error("Must populate the document before building the webpage");
 
 		// get title and icon
-		this.titleInfo = await Website.getTitleAndIcon(this.source);
-		this.title = this.titleInfo.title;
-		this.icon = this.titleInfo.icon;
+		this.title = (await Website.getTitle(this.source)).title;
+		this.icon = (await Website.getIcon(this.source)).icon;
 		const iconRenderContainer = document.body.createDiv();
 		await MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, iconRenderContainer);
 		this.icon = iconRenderContainer.innerHTML;
@@ -384,6 +423,11 @@ export class Webpage extends Attachment
 			this.remapLinks();
 			this.remapEmbedLinks();
 		}
+
+		// create header and footer
+		this.sizerElement?.createDiv({cls: "header"});
+		this.sizerElement?.createDiv({cls: "footer"});
+		this.sizerElement?.prepend(this.headerElement!);
 
 		if (this.exportOptions.inlineMedia) 
 			await this.inlineMedia();
@@ -404,54 +448,59 @@ export class Webpage extends Attachment
 			this.viewElement?.prepend(mathStyleEl);
 		}
 
-		if (this.exportOptions.addSidebars)
+		if (this.exportOptions.sidebarOptions.enabled)
 		{
-			const innerContent = this.document.body.innerHTML;
+			const layout = this.website.webpageTemplate;
+			const centerContent = layout.querySelector("#center-content");
+			if (!centerContent) return;
+
+			centerContent.innerHTML = this.document.body.innerHTML;
 			this.document.body.innerHTML = "";
-			const layout = this.generateWebpageLayout(innerContent);
-			this.document.body.appendChild(layout.container);
-			const rightSidebar = layout.right;
-			const leftSidebar = layout.left;
+			this.document.body.append(layout);
 
 			// inject graph view
-			if (this.exportOptions.addGraphView)
+			if (this.exportOptions.graphViewOptions.enabled)
 			{
-				this.website.globalGraph.insert(rightSidebar);
+				WebpageTemplate.insertFeature(await new GraphView().generate(), this.exportOptions.graphViewOptions, layout);
 			}
 
 			// inject outline
-			if (this.exportOptions.addOutline)
+			if (this.exportOptions.outlineOptions.enabled)
 			{
 				const headerTree = new OutlineTree(this, 1);
 				headerTree.id = "outline";
 				headerTree.title = "Table Of Contents";
 				headerTree.showNestingIndicator = false;
-				headerTree.generateWithItemsClosed = this.exportOptions.startOutlineCollapsed === true;
-				headerTree.minCollapsableDepth = this.exportOptions.minOutlineCollapsibleLevel ?? 2;
-				await headerTree.insert(rightSidebar);
+				headerTree.generateWithItemsClosed = this.exportOptions.outlineOptions.startCollapsed === true;
+				headerTree.minCollapsableDepth = this.exportOptions.outlineOptions.minCollapseDepth ?? 2;
+				WebpageTemplate.insertFeature(await headerTree.generate(), this.exportOptions.graphViewOptions, layout);
 			}
 
 			// inject darkmode toggle
-			if (this.exportOptions.addThemeToggle)
+			if (this.exportOptions.themeToggleOptions.enabled)
 			{
-				HTMLGeneration.createThemeToggle(layout.leftBar);
+				WebpageTemplate.insertFeature(await new ThemeToggle().generate(), this.exportOptions.themeToggleOptions, layout);
 			}
 
 			// inject search bar
-			if (this.exportOptions.addSearch)
+			if (this.exportOptions.searchOptions.enabled)
 			{
-				new SearchInput().insert(leftSidebar);
+				WebpageTemplate.insertFeature(await new SearchInput().generate(), this.exportOptions.searchOptions, layout);
 			}
 
 			// inject file tree
-			if (this.website && this.exportOptions.addFileNavigation)
+			if (this.website && this.exportOptions.fileNavigationOptions.enabled)
 			{
-				leftSidebar.createDiv().outerHTML = this.website.fileTreeAsset.getHTML(this.exportOptions);
+				const fileTreeElContainer = this.document.body.createDiv();
+				fileTreeElContainer.innerHTML = this.website.fileTreeAsset.getHTML(this.exportOptions);
+				const fileTreeEl = fileTreeElContainer.firstElementChild as HTMLElement;
+				WebpageTemplate.insertFeature(fileTreeEl, this.exportOptions.fileNavigationOptions, layout);
+				fileTreeElContainer.remove();
 				
-				// if the file will be opened locally, un-collapse the tree containing this file
-				if (this.exportOptions.openNavFileLocation)
+				// if html will be inlined, un-collapse the tree containing this file
+				if (this.exportOptions.fileNavigationOptions.exposeStartingPath && this.exportOptions.inlineHTML)
 				{
-					const sidebar = leftSidebar.querySelector("#file-explorer");
+					const sidebar = layout.querySelector("#file-explorer");
 					const unixPath = this.targetPath.path;
 					let fileElement: HTMLElement = sidebar?.querySelector(`[href="${unixPath}"]`) as HTMLElement;
 					fileElement = fileElement?.closest(".tree-item") as HTMLElement;
@@ -506,8 +555,8 @@ export class Webpage extends Attachment
 
 		if (this.type == "markdown")
 		{
-			contentEl.classList.toggle("allow-fold-headings", this.exportOptions.allowFoldingHeadings);
-			contentEl.classList.toggle("allow-fold-lists", this.exportOptions.allowFoldingLists);
+			contentEl.classList.toggle("allow-fold-headings", this.exportOptions.fileOptions.allowFoldingHeadings);
+			contentEl.classList.toggle("allow-fold-lists", this.exportOptions.fileOptions.allowFoldingLists);
 			contentEl.classList.add("is-readable-line-width");
 
 			const cssclasses = this.frontmatter['cssclasses'];
@@ -623,68 +672,7 @@ export class Webpage extends Attachment
 			link.classList.toggle("is-unresolved", !newSrc);
 		}
 	}
-
-	private generateWebpageLayout(middleContent: HTMLElement | Node | string): {container: HTMLElement, left: HTMLElement, leftBar: HTMLElement, right: HTMLElement, rightBar: HTMLElement, center: HTMLElement}
-	{
-		if (!this.document) throw new Error("Document is not defined");
-		const collapseSidebarIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M21 3H3C1.89543 3 1 3.89543 1 5V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19V5C23 3.89543 22.1046 3 21 3Z"></path><path d="M10 4V20"></path><path d="M4 7H7"></path><path d="M4 10H7"></path><path d="M4 13H7"></path></svg>`;
-
-		/*
-		div#layout
-			div#left-content.leaf
-				div#left-sidebar.sidebar
-					div.sidebar-handle
-					div.sidebar-topbar
-						div.topbar-content
-						div.sidebar-collapse-icon
-					div.sidebar-content-wrapper
-						div#left-sidebar-content.leaf-content
-						
-			div#center-content.leaf
-				
-			div#right-content.leaf
-				div#right-sidebar.sidebar
-					div.sidebar-handle
-					div.sidebar-topbar
-						div.topbar-content
-						div.sidebar-collapse-icon
-					div.sidebar-content-wrapper
-						div#right-sidebar-content.leaf-content
-		*/
-
-		const layout = this.document.body.createDiv({attr: {id: "layout"}});
-			const leftContent = layout.createDiv({attr: {id: "left-content", class: "leaf"}});
-				const leftSidebar = leftContent.createDiv({attr: {id: "left-sidebar", class: "sidebar"}});
-					const leftSidebarHandle = leftSidebar.createDiv({attr: {class: "sidebar-handle"}});
-					const leftTopbar = leftSidebar.createDiv({attr: {class: "sidebar-topbar"}});
-						const leftTopbarContent = leftTopbar.createDiv({attr: {class: "topbar-content"}});
-						const leftCollapseIcon = leftTopbar.createDiv({attr: {class: "clickable-icon sidebar-collapse-icon"}});
-							leftCollapseIcon.innerHTML = collapseSidebarIcon;
-					const leftSidebarContentWrapper = leftSidebar.createDiv({attr: {class: "sidebar-content-wrapper"}});
-						const leftSidebarContent = leftSidebarContentWrapper.createDiv({attr: {id: "left-sidebar-content", class: "leaf-content"}});
-			const centerContent = layout.createDiv({attr: {id: "center-content", class: "leaf"}});
-			const rightContent = layout.createDiv({attr: {id: "right-content", class: "leaf"}});
-				const rightSidebar = rightContent.createDiv({attr: {id: "right-sidebar", class: "sidebar"}});
-					const rightSidebarHandle = rightSidebar.createDiv({attr: {class: "sidebar-handle"}});
-					const rightTopbar = rightSidebar.createDiv({attr: {class: "sidebar-topbar"}});
-						const rightTopbarContent = rightTopbar.createDiv({attr: {class: "topbar-content"}});
-						const rightCollapseIcon = rightTopbar.createDiv({attr: {class: "clickable-icon sidebar-collapse-icon"}});
-							rightCollapseIcon.innerHTML = collapseSidebarIcon;
-					const rightSidebarContentWrapper = rightSidebar.createDiv({attr: {class: "sidebar-content-wrapper"}});
-						const rightSidebarContent = rightSidebarContentWrapper.createDiv({attr: {id: "right-sidebar-content", class: "leaf-content"}});
-
-		if (middleContent instanceof HTMLElement || middleContent instanceof Node)
-		{
-			centerContent.appendChild(middleContent);
-		}
-		else
-		{
-			centerContent.innerHTML = middleContent;
-		}
-
-		return {container: layout, left: leftSidebarContent, leftBar: leftTopbarContent, right: rightSidebarContent, rightBar: rightTopbarContent, center: centerContent};
-	}
-
+ 
 	private async addTitle() 
 	{
 		if (!this.document || !this.sizerElement || this.type != "markdown") return;
@@ -778,7 +766,7 @@ export class Webpage extends Attachment
 		}
 
 		// Insert title into the document
-		this.sizerElement.prepend(titleEl);
+		(this.headerElement ?? this.sizerElement).prepend(titleEl);
 	}
 
 	private async addHead()

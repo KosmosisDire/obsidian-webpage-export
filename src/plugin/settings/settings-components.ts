@@ -1,7 +1,9 @@
-import { Setting, TextComponent } from "obsidian";
+import { Modal, Setting, TextComponent } from "obsidian";
 import { SettingsPage } from "./settings";
 import { Path } from "plugin/utils/path";
 import { FileDialogs } from "plugin/utils/file-dialogs";
+import { FeatureOptions } from "shared/website-data";
+import { descriptions as settingDescriptions } from "./setting-descriptions";
 
 export function createDivider(container: HTMLElement)
 {
@@ -55,6 +57,22 @@ export function createText(container: HTMLElement, name: string, get: () => stri
 	return setting;
 }
 
+export function createDropdown(container: HTMLElement, name: string, get: () => string, set: (value: string) => void, options: Record<string, string>, desc: string = ""): Setting
+{
+	const setting = new Setting(container);
+	setting.setName(name)
+	if (desc != "") setting.setDesc(desc);
+	setting.addDropdown((dropdown) => dropdown
+		.addOptions(options)
+		.setValue(get())
+		.onChange(async (value) => 
+		{
+			set(value);
+			await SettingsPage.saveSettings();
+		}));
+	return setting;
+}
+
 export function createError(container: HTMLElement): HTMLElement
 {
 	const error = container.createDiv({ cls: 'setting-item-description' });
@@ -77,13 +95,13 @@ export function createFileInput(container: HTMLElement, get: () => string, set: 
 	const browseButton = options?.browseButton ?? true;
 	const onChanged = options?.onChanged;
 
-	const headContentErrorMessage = createError(container);
+	const errorMessage = createError(container);
 	if (!getSafe().isEmpty)
 	{
-		headContentErrorMessage.setText(validation(getSafe()).error);
+		errorMessage.setText(validation(getSafe()).error);
 	}
 
-	let headContentInput : TextComponent | undefined = undefined;
+	let textInput : TextComponent | undefined = undefined;
 
 	const fileInput = new Setting(container);
 	if(name != "") fileInput.setName(name);
@@ -94,7 +112,7 @@ export function createFileInput(container: HTMLElement, get: () => string, set: 
 	fileInput.addText((text) => 
 	{
 		textEl = text;
-		headContentInput = text;
+		textInput = text;
 		text.inputEl.style.width = '100%';
 		text.setPlaceholder(placeholder)
 			.setValue(getSafe().path)
@@ -102,10 +120,10 @@ export function createFileInput(container: HTMLElement, get: () => string, set: 
 			{
 				const path = new Path(value).makePlatformSafe();
 				const valid = validation(path);
-				headContentErrorMessage.setText(valid.error);
+				errorMessage.setText(valid.error);
 				if (valid.valid) 
 				{
-					headContentErrorMessage.setText("");
+					errorMessage.setText("");
 					setSafe(value.replaceAll("\"", ""));
 					await SettingsPage.saveSettings();
 				}
@@ -127,20 +145,21 @@ export function createFileInput(container: HTMLElement, get: () => string, set: 
 				
 				setSafe(path.path);
 				const valid = validation(path);
-				headContentErrorMessage.setText(valid.error);
+				errorMessage.setText(valid.error);
 				if (valid.valid)
 				{
 					await SettingsPage.saveSettings();
 				}
 
+				textInput?.setValue(getSafe().path);
+				
 				if (onChanged) onChanged(path);
-
-				headContentInput?.setValue(getSafe().path);
+				textInput?.onChanged();
 			});
 		});
 	}
 
-	container.appendChild(headContentErrorMessage);
+	container.appendChild(errorMessage);
 
 	return {fileInput: fileInput, textInput: textEl!, browseButton: browseButtonEl};
 }
@@ -162,3 +181,73 @@ export function createSection(container: HTMLElement, name: string, desc: string
 	return section;
 }
 
+export function generateSettingsFromObject(obj: any, container: HTMLElement, pullDescription: boolean = true)
+{
+	for (const key in obj)
+	{
+		const value = obj[key];
+		const type = typeof value;
+
+		let description = "no description";
+		if (pullDescription)
+		{
+			const desc = settingDescriptions[key];
+			if (desc) description = desc;
+			else 
+			{
+				console.warn(`No description found for setting, ${key}`);
+			}
+		}
+		
+		let name = key;
+		if (name == "enabled" || name == "includePath" || name == "parentSelector") continue;
+
+		// convert name from camel case to sentence case
+		name = name.replace(/([A-Z][a-z0-9])/gm, " $1").toLowerCase();
+		name = name.charAt(0).toUpperCase() + name.substring(1)
+
+		switch (type)
+		{
+			case "boolean":
+				createToggle(container, name, () => value, (v) => obj[key] = v, description);
+				break;
+			case "string":
+				createText(container, name, () => value, (v) => obj[key] = v, description);
+				break;
+			case "number":
+				createText(container, name, () => value.toString(), (v) => obj[key] = parseFloat(v), description);
+				break;
+			case "object":
+				this.generateSettingsFromObject(value, createSection(container, name, description), pullDescription);
+				break;
+		}
+	}
+}
+
+export function createFeatureSetting(container: HTMLElement, name: string, feature: FeatureOptions, desc: string)
+{
+	new Setting(container).setName(name).setDesc(desc)
+		.addToggle(toggle => 
+		{
+			toggle.setValue(feature.enabled)
+			toggle.onChange((value) => 
+			{
+				feature.enabled = value;
+				SettingsPage.saveSettings();
+			});
+		})
+		.addExtraButton(button => 
+			{
+				button.setIcon("settings")
+				button.onClick(() => 
+				{
+					// create a modal with all the feature's properties as settings
+					let modal = new Modal(app);
+					let contentEl = modal.contentEl;
+					modal.open()
+					contentEl.createEl("h2", {text: name});
+					generateSettingsFromObject(feature, contentEl);
+				})
+			}
+		)
+}

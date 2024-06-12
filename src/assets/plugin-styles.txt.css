@@ -972,7 +972,7 @@ input[type=search] {
 	transition: opacity 0.2s ease-in-out;
 }
 
-.backlinks-title {
+.backlinks-container .feature-title {
     border-bottom: 1px solid;
     border-color: inherit;
     padding: var(--size-4-2);
@@ -1008,6 +1008,19 @@ a.backlink:hover {
 }
 
 /*#endregion */
+
+/*#region Features */
+
+.feature-title
+{
+    text-transform: uppercase;
+    letter-spacing: .06em;
+}
+
+/*#endregion */
+
+
+
 
 .footer:not(:empty)
 {

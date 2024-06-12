@@ -81,8 +81,7 @@ export class FilePickerTree extends FileTree
 				parent.dataRef = path.path;
 				if (tfile)
 				{
-					const titleInfo = await Website.getTitleAndIcon(tfile, true);
-					parent.title = titleInfo.title;
+					parent.title = (await Website.getTitle(tfile)).title;
 				}
 			}
 		}

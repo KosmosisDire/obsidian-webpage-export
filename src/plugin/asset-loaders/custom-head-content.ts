@@ -13,9 +13,13 @@ export class CustomHeadContent extends AssetLoader
     
     override async load()
     {
-		if (!SettingsPage.loaded) return;
+		if (!SettingsPage.loaded) 
+		{
+			return;
+		}
 
-        const customHeadPath = new Path(Settings.customHeadContentPath);
+        const customHeadPath = new Path(this.exportOptions.customHeadPath);
+		
 		if (customHeadPath.isEmpty)
 		{
 			this.data = "";

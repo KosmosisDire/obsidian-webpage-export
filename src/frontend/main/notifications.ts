@@ -1,15 +1,15 @@
 
 export class Notice
 {
-	static container: HTMLElement;
+	private static container: HTMLElement;
 	public notification: HTMLElement;
 
 	constructor(public message: string, public duration: number = 5000)
 	{
-		this.createNotification();
+		this.show();
 	}
 
-	private createNotification()
+	public show()
 	{
 		if (!Notice.container)
 		{

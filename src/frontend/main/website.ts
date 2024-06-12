@@ -81,9 +81,9 @@ export class ObsidianWebsite
 		const pathname = document.querySelector("meta[name='pathname']")?.getAttribute("content") ?? "unknown";
 		this.entryPage = pathname;
 
-		this.document = await new WebpageDocument(pathname).init();
+		this.document = await (await new WebpageDocument(pathname).init()).postLoadInit();
 		
-		if (ObsidianSite.metadata.featureOptions.graphView.show)
+		if (ObsidianSite.metadata.featureOptions.graphView.enabled)
 		{
 			this.loadGraphView().then(() => this.graphView?.showGraph([pathname]));
 		}

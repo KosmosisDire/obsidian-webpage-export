@@ -72,7 +72,7 @@ export class GraphView
 	constructor()
 	{
 		this.graphSim = new GraphWASMHelper();
-		this.options = ObsidianSite.metadata.featureOptions.graphView.graphViewSettings;
+		this.options = ObsidianSite.metadata.featureOptions.graphView;
 		this.graphContainer = document.querySelector(".graph-view-container") as HTMLElement;
 		this.globalGraphButton = document.querySelector(".graph-global.graph-icon") as HTMLElement;
 		this.expandGraphButton = document.querySelector(".graph-expand.graph-icon") as HTMLElement;

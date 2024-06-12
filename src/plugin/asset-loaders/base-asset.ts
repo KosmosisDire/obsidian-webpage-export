@@ -6,6 +6,7 @@ import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.j
 import { TFile } from "obsidian";
 import  mime from "mime";
 import { IncludeGenerator } from "plugin/component-generators/include";
+import { Settings } from "plugin/settings/settings";
 const { minify: runMinify } = require('html-minifier-terser');
 
 export class AssetLoader extends Attachment 
@@ -22,7 +23,7 @@ export class AssetLoader extends Attachment
 	constructor(filename: string, data: string | Buffer, source: TFile | undefined | null, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async, loadPriority: number = 100, cdnPath: string | undefined = undefined, options: MarkdownWebpageRendererAPIOptions | undefined = undefined)
     {
 		if (source && options == undefined) throw new Error("WebAsset options cannot be empty if source is not empty");
-		options = Object.assign({}, new MarkdownWebpageRendererAPIOptions(), options ?? {});
+		options = Object.assign(Settings.exportOptions, options ?? {});
 		const targetPath = AssetLoader.typeToDir(type).joinString(filename).slugify(options.slugifyPaths);
         super(data, targetPath, source, options);
 

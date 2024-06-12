@@ -11,6 +11,7 @@
 		"isolatedModules": true,
 		"esModuleInterop": true,
 		"strictNullChecks": true,
+		"removeComments": false,
 		"lib": [
 			"DOM",
 			"ES5",

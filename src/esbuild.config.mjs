@@ -35,6 +35,7 @@ esbuild.build({
 	},
 	entryPoints: ['plugin/main.ts'],
 	bundle: true,
+	tsconfig: 'tsconfig.json',
 	external: [
 		'obsidian',
 		'electron',

@@ -24,9 +24,9 @@ export class DataviewGenerator implements ComponentGenerator
 
 	
 
-	public async insert(container: HTMLElement)
+	public async generate(container?: HTMLElement): Promise<HTMLElement>
 	{
-		this.container = container;
+		this.container = container ?? document.body;
 		if (this.keyword == "dataview") 
 			await DataviewGenerator.api.execute(this.query, container, this.view, this.file.path);
 		else
@@ -39,6 +39,7 @@ export class DataviewGenerator implements ComponentGenerator
 		await delay(100);
 		
 		this.rendered = true;
+		return this.container;
 	}
 
 	public static getDataviewFromHTML(sectionContainer: HTMLElement): { query: string, preEl: HTMLElement, keyword: string } | undefined

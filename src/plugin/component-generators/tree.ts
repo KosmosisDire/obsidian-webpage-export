@@ -46,8 +46,9 @@ export class Tree implements ComponentGenerator
 	}
 	
 	//**Generate a tree with a title and full tree collapse button*/
-	public async insert(container: HTMLElement)
+	public async generate(container?: HTMLElement): Promise<HTMLElement>
 	{
+		container = container ?? document.body;
 		/*
 		- div.tree-header
 				- span.sidebar-section-header
@@ -88,6 +89,8 @@ export class Tree implements ComponentGenerator
 		if (this.showNestingIndicator) root.classList.add("mod-nav-indicator");
 
 		await this.generateTree(children);
+
+		return wrapper;
 	}
 
 	public sortAlphabetically(reverse: boolean = false)

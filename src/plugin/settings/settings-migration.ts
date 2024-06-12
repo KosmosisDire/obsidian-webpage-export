@@ -12,12 +12,6 @@ export async function migrateSettings()
 
 	try
 	{
-		if (typeof Settings.includePluginCSS == "string")
-		{
-			// @ts-ignore
-			Settings.includePluginCSS = Settings.includePluginCSS.split("\n");
-		}
-
 		const validSettings = Object.keys(DEFAULT_SETTINGS);
 
 		const savedSettings = JSON.parse(JSON.stringify(Object.assign({}, Settings)));

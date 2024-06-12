@@ -1,7 +1,7 @@
 import { Attachment } from "plugin/utils/downloadable";
 import { Website } from "./website";
 import { Webpage } from "./webpage";
-import { Notice, TFile } from "obsidian";
+import { TFile } from "obsidian";
 import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
 import { AssetHandler } from "plugin/asset-loaders/asset-handler";
 import { ExportLog } from "plugin/render-api/render-api";
@@ -12,7 +12,8 @@ import { Settings } from "plugin/settings/settings";
 import { AssetType } from "plugin/asset-loaders/asset-types";
 import RSS from 'rss';
 import { AssetLoader } from "plugin/asset-loaders/base-asset";
-import { DEFAULT_GRAPH_VIEW_OPTIONS, FileData, WebpageData, WebsiteData } from "shared/website-data";
+import { FileData, WebpageData, WebsiteData } from "shared/website-data";
+import { Utils } from "plugin/utils/utils";
 
 export class Index
 {
@@ -80,17 +81,20 @@ export class Index
 			if (!this.websiteData.webpages) this.websiteData.webpages = {};
 			if (!this.websiteData.fileInfo) this.websiteData.fileInfo = {};
 			if (!this.websiteData.sourceToTarget) this.websiteData.sourceToTarget = {};
-			if (!this.websiteData.featureOptions) this.websiteData.featureOptions = 
+			this.websiteData.featureOptions = 
 			{
-				backlinks: { show: true, displayTitle: "Backlinks", parentSelector: ".footer" },
-				tags: { show: true, displayTitle: "Tags", parentSelector: ".header" },
-				alias: { show: true, displayTitle: "Aliases", parentSelector: ".header" },
-				properties: { show: true, displayTitle: "Properties", parentSelector: ".header" },
-				fileNavigation: { show: options.addFileNavigation ?? false, displayTitle: "File Navigation", parentSelector: ".left-sidebar" },
-				search: { show: options.addSearch ?? false, displayTitle: "Search", parentSelector: ".left-sidebar" },
-				outline: { show: options.addOutline ?? false, displayTitle: "Outline", parentSelector: ".sidebar-right" },
-				graphView: { show: options.addGraphView ?? false, displayTitle: "Graph View", parentSelector: ".sidebar-right", graphViewSettings: DEFAULT_GRAPH_VIEW_OPTIONS }
-			}
+				backlinks: options.backlinkOptions,
+				tags: options.tagOptions,
+				alias: options.aliasOptions,
+				properties: options.propertiesOptions,
+				fileNavigation: options.fileNavigationOptions,
+				search: options.searchOptions,
+				outline: options.outlineOptions,
+				themeToggle: options.themeToggleOptions,
+				graphView: options.graphViewOptions,
+				sidebar: options.sidebarOptions,
+				customHead: options.customHead,
+			};
 			
 			// set global values
 			this.websiteData.modifiedTime = Date.now();
@@ -101,8 +105,7 @@ export class Index
 			this.websiteData.pluginVersion = HTMLExportPlugin.pluginVersion;
 			this.websiteData.themeName = this.website.exportOptions.themeName ?? "Default";
 			this.websiteData.bodyClasses = this.website.bodyClasses ?? "";
-			this.websiteData.hasCustomHead = Settings.customHeadContentPath != "";
-			this.websiteData.hasFavicon = Settings.faviconPath != "";
+			this.websiteData.hasFavicon = this.exportOptions.faviconPath != "";
 		}
 		catch (e)
 		{
@@ -189,16 +192,34 @@ export class Index
 		//@ts-ignore
 		app.loadProgress.show();
 
+		await Utils.delay(500);
+
 		const files = this.oldWebsiteData.allFiles.map((file) => new Path(file).setWorkingDirectory(this.website.destination.path));
 
 		const promises = files.map((file) => file.delete());
-		// @ts-ignore
-		await allPromisesProgress(promises, (progress) => app.loadProgress.setProgress(progress, 1));
+		await allPromisesProgress(promises, async (progress) => 
+		{
+			// @ts-ignore
+			app.loadProgress.setProgress(progress, 1);
+			await Utils.delay(0);
+		});
 
 		Path.removeEmptyDirectories(this.website.destination.path);
-
+		
 		//@ts-ignore
 		app.loadProgress.hide();
+	}
+
+	/**
+	 * Simply deletes metadata.json and search-index.json
+	 */
+	public async clearCache()
+	{
+		const metadataPath = this.website.destination.join(AssetHandler.libraryPath).joinString("metadata.json");
+		const indexPath = this.website.destination.join(AssetHandler.libraryPath).joinString("search-index.json");
+
+		await metadataPath.delete();
+		await indexPath.delete();
 	}
 
 	public async createRSSFeed()
@@ -505,7 +526,8 @@ export class Index
 			webpageInfo.icon = webpage.icon;
 			webpageInfo.description = webpage.descriptionOrShortenedContent;
 			webpageInfo.aliases = webpage.aliases;
-			webpageInfo.tags = webpage.tags;
+			webpageInfo.inlineTags = webpage.inlineTags;
+			webpageInfo.frontmatterTags = webpage.frontmatterTags;
 			webpageInfo.headers = await webpage.getStrippedHeadings();
 			webpageInfo.links = webpage.linksToOtherFiles;
 			webpageInfo.author = webpage.author;
@@ -565,7 +587,7 @@ export class Index
 				title: webpage.title,
 				aliases: webpage.aliases,
 				headers: headers,
-				tags: webpage.tags,
+				tags: webpage.allTags,
 				path: webpagePath,
 				content: webpage.description + " " + this.getSearchContent(webpage),
 			});

@@ -1,30 +1,13 @@
-import { EmojiStyle, Settings } from "plugin/settings/settings";
+import { Settings } from "plugin/settings/settings";
 import { AssetHandler } from "plugin/asset-loaders/asset-handler";
 import { ExportLog } from "plugin/render-api/render-api";
 import { getIcon as getObsidianIcon, requestUrl } from "obsidian";
 import { Utils } from "plugin/utils/utils";
-import { ObsidianStyles } from "plugin/asset-loaders/obsidian-styles";
 import { AssetType } from "plugin/asset-loaders/asset-types";
+import { EmojiStyle } from "shared/website-data";
 
 export namespace HTMLGeneration
 {
-	export function createThemeToggle(container: HTMLElement) : HTMLElement
-	{
-		const label = container.createEl("label");
-		const input = label.createEl("input");
-		const div = label.createDiv();
-
-		label.classList.add("theme-toggle-container");
-		label.setAttribute("for", "theme_toggle");
-
-		input.classList.add("theme-toggle-input");
-		input.setAttribute("type", "checkbox");
-		input.setAttribute("id", "theme_toggle");
-
-		div.classList.add("toggle-background");
-
-		return label;
-	}
 
 	let _validBodyClasses: string | undefined = undefined;
 	export async function getValidBodyClasses(cleanCache: boolean): Promise<string>
@@ -135,7 +118,7 @@ export namespace HTMLGeneration
 		{
 			const codepoint = [...iconName].map(e => e.codePointAt(0)!.toString(16)).join(`-`);
 
-			switch (Settings.emojiStyle)
+			switch (Settings.exportOptions.iconEmojiStyle)
 			{
 				case EmojiStyle.Twemoji:
 					return `<img src="https://cdnjs.cloudflare.com/ajax/libs/twemoji/14.0.2/svg/${codepoint}.svg" class="emoji" />`;

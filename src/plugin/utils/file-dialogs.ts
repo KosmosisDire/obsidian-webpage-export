@@ -36,7 +36,7 @@ export namespace FileDialogs
 		if (picker.canceled || !picker.filePath) return;
 		
 		const pickedPath = new Path(picker.filePath).makePlatformSafe();
-		Settings.exportPath = pickedPath.path;
+		Settings.exportOptions.exportPath = pickedPath.path;
 		SettingsPage.saveSettings();
 		
 		return pickedPath;
@@ -56,7 +56,7 @@ export namespace FileDialogs
 		if (picker.canceled) return;
 
 		const path = new Path(picker.filePaths[0]).makePlatformSafe();
-		Settings.exportPath = path.directory.path;
+		Settings.exportOptions.exportPath = path.directory.path;
 		SettingsPage.saveSettings();
 
 		return path;
@@ -81,7 +81,7 @@ export namespace FileDialogs
 
 	export function idealDefaultPath() : Path
 	{
-		let lastPath = new Path(Settings.exportPath);
+		let lastPath = new Path(Settings.exportOptions.exportPath);
 
 		if (lastPath.path != "" && lastPath.exists)
 		{

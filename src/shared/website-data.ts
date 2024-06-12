@@ -1,3 +1,12 @@
+export enum EmojiStyle
+{
+	Native = "Native",
+	Twemoji = "Twemoji",
+	OpenMoji = "OpenMoji",
+	OpenMojiOutline = "OpenMojiOutline",
+	FluentUI = "FluentUI",
+}
+
 export enum DocumentType
 {
 	Markdown = "markdown",
@@ -25,7 +34,8 @@ export interface WebpageData extends FileData
 {
 	headers: {heading: string, level: number, id: string}[];
 	aliases: string[];
-	tags: string[];
+	inlineTags: string[];
+	frontmatterTags: string[];
 	links: string[];
 	attachments: string[];
 
@@ -40,14 +50,30 @@ export interface WebpageData extends FileData
 
 export interface FeatureOptions
 {
-	displayTitle: string;
-	show: boolean;
-	parentSelector: string;
-	insertOrder?: number;
-	includePath?: string;
+	enabled: boolean;
 }
 
-export interface GraphViewOptions
+export enum RelationType
+{
+	Before = "before",
+	After = "after",
+	Child = "child",
+}
+
+export interface InsertedFeatureOptions extends FeatureOptions
+{
+	displayTitle: string;
+	relationSelector: string;
+	relationType: RelationType;
+	insertOrder?: number;
+}
+
+export interface FetchedFeatureOptions extends InsertedFeatureOptions
+{
+	includePath: string;
+}
+
+export interface GraphViewOptions extends InsertedFeatureOptions
 {
 	attractionForce: number;
 	linkLength: number;
@@ -58,32 +84,117 @@ export interface GraphViewOptions
 	maxNodeRadius: number;
 }
 
-export const DEFAULT_GRAPH_VIEW_OPTIONS: GraphViewOptions = 
+export interface OutlineOptions extends InsertedFeatureOptions
 {
-	attractionForce: 1,
-	linkLength: 10,
-	repulsionForce: 150,
-	centralForce: 3,
-	edgePruning: 100,
-	minNodeRadius: 3,
-	maxNodeRadius: 7
+	startCollapsed: boolean;
+	minCollapseDepth: number;
 }
 
-export interface GraphViewFeatureOptions extends FeatureOptions
+export interface FileNavigationOptions extends FetchedFeatureOptions
 {
-	graphViewSettings: GraphViewOptions;
+	showDefaultFolderIcons: boolean;
+	showDefaultFileIcons: boolean;
+	defaultFolderIcon: string;
+	defaultFileIcon: string;
+	defaultMediaIcon: string;
+	exposeStartingPath: boolean;
 }
+
+export interface SidebarOptions extends FeatureOptions
+{
+	allowResizing: boolean;
+	allowCollapsing: boolean;
+	rightDefaultWidth: string;
+	leftDefaultWidth: string;
+}
+
+export interface PropertiesOptions extends InsertedFeatureOptions
+{
+	hideProperties: string[];
+}
+
+export interface TagsOptions extends InsertedFeatureOptions
+{
+	showInlineTags: boolean;
+	showFrontmatterTags: boolean;
+}
+
+export interface FileOptions 
+{
+	/**
+	 * Allows lists with sub-items to be folded / collpased.
+	 */
+	allowFoldingLists: boolean;
+
+	/**
+	 * Allows headings to be folded / collapsed.
+	 */
+	allowFoldingHeadings: boolean;
+
+	/**
+	 * The width of the document
+	 */
+	documentWidth: string;
+}
+
+
 
 export interface WebsiteOptions
 {
-	backlinks: FeatureOptions,
-	tags: FeatureOptions,
-	alias: FeatureOptions,
-	properties: FeatureOptions,
-	graphView: GraphViewFeatureOptions,
-	fileNavigation: FeatureOptions,
-	search: FeatureOptions,
-	outline: FeatureOptions,
+	/**
+	 * The options for the backlinks feature.
+	 */
+	backlinks: InsertedFeatureOptions;
+
+	/**
+	 * The options for the tags feature.
+	 */
+	tags: TagsOptions;
+
+	/**
+	 * The options for the aliases feature.
+	 */
+	alias: InsertedFeatureOptions;
+
+	/**
+	 * The options for the properties feature.
+	 */
+	properties: PropertiesOptions;
+
+	/**
+	 * The options for the file navigation feature.
+	 */
+	fileNavigation: FileNavigationOptions;
+
+	/**
+	 * The options for the search feature.
+	 */
+	search: InsertedFeatureOptions;
+
+	/**
+	 * The options for the outline feature.
+	 */
+	outline: OutlineOptions;
+
+	/**
+	 * The options for the theme toggle feature.
+	 */
+	themeToggle: InsertedFeatureOptions;
+
+	/**
+	 * The options for the graph view feature.
+	 */
+	graphView: GraphViewOptions;
+
+	/**
+	 * The options for the sidebar feature.
+	 */
+	sidebar: SidebarOptions;
+
+	/**
+	 * Custom head content options
+	 */
+	customHead: FetchedFeatureOptions;
 }
 
 export interface WebsiteData
@@ -105,7 +216,6 @@ export interface WebsiteData
 
 	themeName: string,
 	bodyClasses: string,
-	hasCustomHead: boolean,
 	hasFavicon: boolean,
 	featureOptions: WebsiteOptions,
 }

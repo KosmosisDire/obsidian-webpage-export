@@ -26,7 +26,7 @@ export class SupportedPluginStyles extends AssetLoader
 				styleID == "css-settings-manager" ||
 				styleID == "colored-tags-wrangler" ||
 				styleID == "highlightr-styles" ||
-				(Settings.includeSvelteCSS && this.isSvelteStylesheet(stylesheets[i]))
+				(Settings.exportOptions.includeSvelteCSS && this.isSvelteStylesheet(stylesheets[i]))
 			)
             {
                 ExportLog.log("Including stylesheet: " + styleID);

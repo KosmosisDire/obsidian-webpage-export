@@ -1,6 +1,5 @@
 import { WebpageData } from "shared/website-data";
-import { WebpageDocument } from "./document";
-import { ObsidianWebsite } from "./website";
+import { PageFeature } from "./page-feature";
 
 // this is for backlinks but it can actually be used to display any link technically
 
@@ -50,32 +49,14 @@ export class Backlink
 	}
 }
 
-export class BacklinkList
+export class BacklinkList extends PageFeature
 {
-	public containerEl: HTMLElement;
-	public titleEl: HTMLElement;
-	public contentEl: HTMLElement;
 	public backlinks: Backlink[];
 
-	constructor(parent: HTMLElement, title: string, backlinks: string[])
+	constructor(backlinkPaths: string[])
 	{
-		this.containerEl = document.createElement("div");
-		this.containerEl.classList.add("backlinks-container");
-		this.containerEl.classList.add("hide");
-		parent.appendChild(this.containerEl);
+		super(ObsidianSite.metadata.featureOptions.backlinks, "backlinks");
 
-		this.titleEl = document.createElement("div");
-		this.titleEl.classList.add("backlinks-title");
-		this.titleEl.innerText = title;
-		this.containerEl.appendChild(this.titleEl);
-
-		this.contentEl = document.createElement("div");
-		this.contentEl.classList.add("backlinks-content");
-		this.containerEl.appendChild(this.contentEl);
-
-		this.backlinks = backlinks.map(url => new Backlink(this.contentEl, url));
-
-		// unhide
-		setTimeout(() => this.containerEl.classList.remove("hide"), 0);
+		this.backlinks = backlinkPaths.map(url => new Backlink(this.contentEl, url));
 	}
 }

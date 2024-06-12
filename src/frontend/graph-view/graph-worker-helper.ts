@@ -1,5 +1,4 @@
-import { Bounds, Vector2 } from "frontend/main/utils";
-import { GraphWASMHelper } from "./graph-wasm-helper";
+import { Vector2 } from "frontend/main/utils";
 import { GraphView } from "../main/graph-view";
 
 // colors in hex
@@ -103,7 +102,7 @@ export class GraphRenderWorker
 			console.log("Failed to transfer control to offscreen canvas");
 		}
 		
-        this.worker = new Worker(new URL("lib/scripts/graph-render-worker.js", ObsidianSite.metadata.baseURL).pathname);
+        this.worker = new Worker(new URL(ObsidianSite.document.info.pathToRoot + "/lib/scripts/graph-render-worker.js", window.location.href).pathname);
 
         this._cameraOffset = new Vector2(0, 0);
         this._cameraScale = 1;

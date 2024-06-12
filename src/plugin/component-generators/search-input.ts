@@ -8,8 +8,9 @@ export class SearchInput implements ComponentGenerator
 	public inputEl: HTMLInputElement;
 	public clearButtonEl: HTMLElement;
 
-	insert(container: HTMLElement): SearchInput 
+	async generate(container?: HTMLElement): Promise<HTMLElement> 
 	{
+		container = container ?? document.body;
 		this.inputContainerEl = container.createDiv({ attr: {id: "search-container"} });
 		this.inputWrapperEl = this.inputContainerEl.createDiv({ attr: {id: "search-wrapper"} });
 		this.inputEl = this.inputWrapperEl.createEl("input");
@@ -19,7 +20,7 @@ export class SearchInput implements ComponentGenerator
 		this.inputEl.setAttribute("placeholder", "Search...");
 		this.clearButtonEl = this.inputWrapperEl.createDiv({ attr: { "aria-label": "Clear search", id: "search-clear-button" } });
 
-		return this;
+		return this.inputContainerEl;
 	}
 	
 }

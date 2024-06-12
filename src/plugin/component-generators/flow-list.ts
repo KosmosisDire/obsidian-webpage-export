@@ -7,10 +7,11 @@ export class FlowList implements ComponentGenerator
 	flowListEl: HTMLElement;
 	checkedList: string[] = [];
 
-	insert(container: HTMLElement): void 
+	async generate(container?: HTMLElement): Promise<HTMLElement>
 	{
-		this.containerEl = container;
+		this.containerEl = container ?? document.body;
 		this.flowListEl = this.containerEl.createDiv({ cls: 'flow-list' });
+		return this.flowListEl;
 	}
 
 	addItem(name: string, key: string, value: boolean, onChange: (value: boolean) => void): HTMLElement {

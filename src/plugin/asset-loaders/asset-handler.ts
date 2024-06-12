@@ -28,6 +28,7 @@ import { SupportedPluginStyles } from "./supported-plugin-styles.js";
 import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options.js";
 import { ExportLog } from "plugin/render-api/render-api.js";
 import { fileTypeFromBuffer } from "file-type";
+import { Settings } from "plugin/settings/settings.js";
 const mime = require('mime');
 
 
@@ -87,34 +88,33 @@ export class AssetHandler
 	}
 
 	// styles
-	public static obsidianStyles: ObsidianStyles = new ObsidianStyles();
-	public static otherPluginStyles: OtherPluginStyles = new OtherPluginStyles();
-	public static themeStyles: ThemeStyles = new ThemeStyles();
-	public static snippetStyles: SnippetStyles = new SnippetStyles();
-	public static mathjaxStyles: MathjaxStyles = new MathjaxStyles();
-	public static globalDataStyles: GlobalVariableStyles = new GlobalVariableStyles();
-	public static supportedPluginStyles: SupportedPluginStyles = new SupportedPluginStyles();
-	public static websiteStyles: AssetLoader = new AssetLoader("main-styles.css", webpageStyles, null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 4);
-	public static deferredCSS: AssetLoader = new AssetLoader("deferred.css", deferredCSS, null, AssetType.Style, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer, -1000);
+	public static obsidianStyles: ObsidianStyles;
+	public static otherPluginStyles: OtherPluginStyles;
+	public static themeStyles: ThemeStyles;
+	public static snippetStyles: SnippetStyles;
+	public static mathjaxStyles: MathjaxStyles;
+	public static globalDataStyles: GlobalVariableStyles;
+	public static supportedPluginStyles: SupportedPluginStyles;
+	public static websiteStyles: AssetLoader;
+	public static deferredCSS: AssetLoader;
 
 	// scripts
-	public static websiteJS: AssetLoader = new AssetLoader("webpage.js", websiteJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async);
-	// public static graphViewJS: AssetLoader = new AssetLoader("graph-view.js", graphViewJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
-	public static graphWASMJS: AssetLoader = new AssetLoader("graph-wasm.js", graphWASMJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
-	public static graphWASM: AssetLoader = new AssetLoader("graph-wasm.wasm", Buffer.from(graphWASM), null, AssetType.Script, InlinePolicy.Download, false, Mutability.Static);
-	public static renderWorkerJS: AssetLoader = new AssetLoader("graph-render-worker.js", renderWorkerJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
-	public static deferredJS: AssetLoader = new AssetLoader("deferred.js", deferredJS, null, AssetType.Script, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer, -1000);
-	public static themeLoadJS: AssetLoader = new AssetLoader("theme-load.js", themeLoadJS, null, AssetType.Script, InlinePolicy.Inline, true, Mutability.Static, LoadMethod.Defer);
+	public static websiteJS: AssetLoader;
+	public static graphWASMJS: AssetLoader;
+	public static graphWASM: AssetLoader;
+	public static renderWorkerJS: AssetLoader;
+	public static deferredJS: AssetLoader;
+	public static themeLoadJS: AssetLoader;
 
-	public static tinyColorJS: AssetLoader = new AssetLoader("tinycolor.js", tinyColorJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
-	public static pixiJS: AssetLoader = new AssetLoader("pixi.js", pixiJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js");
-	public static minisearchJS: AssetLoader = new AssetLoader("minisearch.js", minisearchJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js");
+	public static tinyColorJS: AssetLoader;
+	public static pixiJS: AssetLoader;
+	public static minisearchJS: AssetLoader;
 	 
 	// other
-	public static favicon: Favicon = new Favicon();
-	public static externalLinkIcon: AssetLoader;
-	public static customHeadContent: CustomHeadContent = new CustomHeadContent();
+	public static favicon: Favicon;
+	public static customHeadContent: CustomHeadContent;
 	public static mainJsModTime: number = 0;
+	public static mainJsPath: Path;
 
 	private static initPaths()
 	{
@@ -129,9 +129,32 @@ export class AssetHandler
 
 	public static async initialize()
 	{
+		this.obsidianStyles = new ObsidianStyles();
+		this.otherPluginStyles = new OtherPluginStyles();
+		this.themeStyles = new ThemeStyles();
+		this.snippetStyles = new SnippetStyles();
+		this.mathjaxStyles = new MathjaxStyles();
+		this.globalDataStyles = new GlobalVariableStyles();
+		this.supportedPluginStyles = new SupportedPluginStyles();
+		this.websiteStyles = new AssetLoader("main-styles.css", webpageStyles, null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 4);
+		this.deferredCSS = new AssetLoader("deferred.css", deferredCSS, null, AssetType.Style, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer, -1000);
+		this.websiteJS = new AssetLoader("webpage.js", websiteJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async);
+		this.graphWASMJS = new AssetLoader("graph-wasm.js", graphWASMJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+		this.graphWASM = new AssetLoader("graph-wasm.wasm", Buffer.from(graphWASM), null, AssetType.Script, InlinePolicy.Download, false, Mutability.Static);
+		this.renderWorkerJS = new AssetLoader("graph-render-worker.js", renderWorkerJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+		this.deferredJS = new AssetLoader("deferred.js", deferredJS, null, AssetType.Script, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer, -1000);
+		this.themeLoadJS = new AssetLoader("theme-load.js", themeLoadJS, null, AssetType.Script, InlinePolicy.Inline, true, Mutability.Static, LoadMethod.Defer);
+		this.tinyColorJS = new AssetLoader("tinycolor.js", tinyColorJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
+		this.pixiJS = new AssetLoader("pixi.js", pixiJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js");
+		this.minisearchJS = new AssetLoader("minisearch.js", minisearchJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js");
+		this.favicon = new Favicon();
+		this.customHeadContent = new CustomHeadContent();
+
+
 		this.initPaths();
 		// by default all static assets have a modified time the same as main.js
-		this.mainJsModTime = this.vaultPluginsPath.joinString("webpage-html-export/main.js").stat?.mtimeMs ?? 0;
+		this.mainJsPath = this.vaultPluginsPath.joinString("webpage-html-export/main.js");
+		this.mainJsModTime = this.mainJsPath.stat?.mtimeMs ?? 0;
 		this.staticAssets.forEach(asset => asset.sourceStat.mtime = this.mainJsModTime);
 
 		this.allAssets.sort((a, b) => a.loadPriority - b.loadPriority);
@@ -142,9 +165,6 @@ export class AssetHandler
 			loadPromises.push(asset.load());
 		}
 		await Promise.all(loadPromises);
-
-		// let graphViewJSPath = this.graphViewJS.getAssetPath();
-		// this.graphViewJS.getHTML = () => `<script type="module" async id="graph-view-script" src="${graphViewJSPath}"></script>`;
 	}
 
 	public static async reloadAssets(options: MarkdownWebpageRendererAPIOptions)
@@ -187,13 +207,13 @@ export class AssetHandler
 
 	private static filterDownloads(downloads: AssetLoader[], options: MarkdownWebpageRendererAPIOptions): AssetLoader[]
 	{
-		if (!options.addGraphView || !options.addSidebars)
+		if (!options.graphViewOptions.enabled || !options.sidebarOptions.enabled)
 		{
 			// downloads = downloads.filter(asset => ![this.graphViewJS, this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS, this.pixiJS].includes(asset));
 			downloads = downloads.filter(asset => ![this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS, this.pixiJS].includes(asset));
 		}
 
-		if (!options.addSearch || !options.addSidebars)
+		if (!options.searchOptions.enabled || !options.sidebarOptions.enabled)
 		{
 			downloads = downloads.filter(asset => ![this.minisearchJS].includes(asset));
 		}

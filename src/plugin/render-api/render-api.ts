@@ -402,7 +402,7 @@ export namespace _MarkdownRendererInternal
 				const dataviewContainer = document.createElement("div");
 				dataviewContainer.classList.add(`block-language-${dataviewInfo.keyword}`);
 				dataviewInfo.preEl.replaceWith(dataviewContainer);
-				await new DataviewGenerator(preview, preview.file, dataviewInfo?.query, dataviewInfo.keyword).insert(dataviewContainer);
+				await new DataviewGenerator(preview, preview.file, dataviewInfo?.query, dataviewInfo.keyword).generate(dataviewContainer);
 			}
 
 			// @ts-ignore
@@ -1066,7 +1066,7 @@ export namespace _MarkdownRendererInternal
 		if (!contaienr) return;
 		
 		const fileList = new SimpleFileListGenerator(items, options);
-		const fileListEl = fileList.insert(contaienr);
+		const fileListEl = await fileList.generate(contaienr);
 		contaienr.prepend(fileListEl);
 		if (fileListContainer) fileListContainer.remove();
 		fileListContainer = fileListEl;

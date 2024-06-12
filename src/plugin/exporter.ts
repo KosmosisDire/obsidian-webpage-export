@@ -17,8 +17,8 @@ export class HTMLExporter
 			return await modal.open();
 		}
 		
-		const files = Settings.filesToExport[0];
-		const path = new Path(Settings.exportPath);
+		const files = Settings.exportOptions.filesToExport[0];
+		const path = new Path(Settings.exportOptions.exportPath);
 
 		if ((files.length == 0 && overrideFiles == undefined) || !path.exists || !path.isAbsolute || !path.isDirectory)
 		{
@@ -37,7 +37,7 @@ export class HTMLExporter
 		if ((!info && !usePreviousSettings) || (info && info.canceled)) return;
 
 		const files = info?.pickedFiles ?? overrideFiles ?? SettingsPage.getFilesToExport();
-		const exportPath = info?.exportPath ?? new Path(Settings.exportPath);
+		const exportPath = info?.exportPath ?? new Path(Settings.exportOptions.exportPath);
 
 		const website = await HTMLExporter.exportFiles(files, exportPath, true, Settings.deleteOldFiles);
 
@@ -76,7 +76,7 @@ export class HTMLExporter
 			
 			if (saveFiles) 
 			{
-				if (Settings.combineAsSingleFile)
+				if (Settings.exportOptions.combineAsSingleFile)
 				{
 					await website.saveAsCombinedHTML();
 				}

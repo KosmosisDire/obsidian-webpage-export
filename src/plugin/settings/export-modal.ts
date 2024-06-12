@@ -73,7 +73,7 @@ export class ExportModal extends Modal
 			const paths = app.vault.getFiles().map(file => new Path(file.path));
 			this.filePicker = new FilePickerTree(paths, true, true);
 			this.filePicker.regexBlacklist.push(...Settings.filePickerBlacklist);
-			this.filePicker.regexBlacklist.push(...[Settings.customHeadContentPath, Settings.faviconPath]);
+			this.filePicker.regexBlacklist.push(...[Settings.exportOptions.customHeadPath, Settings.exportOptions.faviconPath]);
 			this.filePicker.regexWhitelist.push(...Settings.filePickerWhitelist);
 			
 			this.filePicker.generateWithItemsClosed = true;
@@ -81,11 +81,11 @@ export class ExportModal extends Modal
 			this.filePicker.hideFileExtentionTags = ["md"];
 			this.filePicker.title = "Select Files to Export";
 			this.filePicker.class = "file-picker";
-			await this.filePicker.insert(scrollArea);
+			await this.filePicker.generate(scrollArea);
 			
-			if((this.pickedFiles?.length ?? 0 > 0) || Settings.filesToExport[0].length > 0) 
+			if((this.pickedFiles?.length ?? 0 > 0) || Settings.exportOptions.filesToExport.length > 0) 
 			{
-				const filesToPick = this.pickedFiles?.map(file => file.path) ?? Settings.filesToExport[0];
+				const filesToPick = this.pickedFiles?.map(file => file.path) ?? Settings.exportOptions.filesToExport;
 				this.filePicker.setSelectedFiles(filesToPick);
 			}
 
@@ -93,7 +93,7 @@ export class ExportModal extends Modal
 			{
 				button.setButtonText("Save").onClick(async () =>
 				{
-					Settings.filesToExport[0] = this.filePicker.getSelectedFilesSavePaths();
+					Settings.exportOptions.filesToExport = this.filePicker.getSelectedFilesSavePaths();
 					await SettingsPage.saveSettings();
 				});
 			});
@@ -178,8 +178,71 @@ export class ExportModal extends Modal
 				));
 		exportModeSetting.descEl.style.whiteSpace = "pre-wrap";
 
-		createToggle(contentEl, "Open after export", () => Settings.openAfterExport, (value) => Settings.openAfterExport = value);
 		
+
+		// add purge export button
+		new Setting(contentEl)
+			
+			.addButton((button) => button
+			.setButtonText('Clear Cache')
+			.onClick(async () =>
+			{
+				// create a modal to confirm the deletion
+				const confirmModal = new Modal(app);
+				confirmModal.titleEl.setText("Are you sure?");
+				confirmModal.contentEl.createEl('p', { text: "This will delete the site metadata (but not all the exported html)." });
+				confirmModal.contentEl.createEl('p', { text: "This will force the site to re-export all files." });
+				confirmModal.contentEl.createEl('p', { text: "Also if you change which files are selected for export before exporting again some files may be left on your file system unused." });
+				confirmModal.contentEl.createEl('p', { text: "This action cannot be undone." });
+				confirmModal.open();
+
+				new Setting(confirmModal.contentEl)
+				.addButton((button) => button
+				.setButtonText('Cancel')
+				.onClick(() => confirmModal.close()))
+				.addButton((button) => button
+				.setButtonText('Clear Cache')
+				.onClick(async () =>
+				{
+					const path = new Path(exportPathInput.textInput.getValue());
+					const website = await new Website(path).load();
+					await website.index.clearCache();
+					onChanged(path);
+					confirmModal.close();
+				}));
+			}))
+
+			.addButton((button) => button
+			.setButtonText('Purge & Delete')
+			.onClick(async () =>
+			{
+				// create a modal to confirm the deletion
+				const confirmModal = new Modal(app);
+				confirmModal.titleEl.setText("Are you sure?");
+				confirmModal.contentEl.createEl('p', { text: "This will delete the entire site and all it's files." });
+				confirmModal.contentEl.createEl('p', { text: "This action cannot be undone." });
+				confirmModal.open();
+
+				new Setting(confirmModal.contentEl)
+				.addButton((button) => button
+				.setButtonText('Cancel')
+				.onClick(() => confirmModal.close()))
+				.addButton((button) => button
+				.setButtonText('Purge & Delete')
+				.onClick(async () =>
+				{
+					const path = new Path(exportPathInput.textInput.getValue());
+					const website = await new Website(path).load();
+					await website.index.purge();
+					onChanged(path);
+					confirmModal.close();
+				}));
+			})).setDesc('Clear the site cache to re-export all files, or purge / delete the site with all it\'s files.');
+
+		
+
+		createToggle(contentEl, "Open after export", () => Settings.openAfterExport, (value) => Settings.openAfterExport = value);
+
 		let exportButton : ButtonComponent | undefined = undefined;
 
 		function setExportDisabled(disabled: boolean)
@@ -204,7 +267,7 @@ export class ExportModal extends Modal
 
 		const onChangedValidate = (path: Path) => (!validatePath(path).valid) ? setExportDisabled(true) : setExportDisabled(false);
 
-		const exportPathInput = createFileInput(contentEl, () => Settings.exportPath, (value) => Settings.exportPath = value,
+		const exportPathInput = createFileInput(contentEl, () => Settings.exportOptions.exportPath, (value) => Settings.exportOptions.exportPath = value,
 		{
 			name: '',
 			description: '',
@@ -228,7 +291,7 @@ export class ExportModal extends Modal
 		});
 
 		// add description of export at this path
-		const exportDescription = contentEl.createEl('div', { text: '', cls: 'setting-item-description'});
+		const exportDescription = contentEl.createEl('div', { text: 'Loading site at path...', cls: 'setting-item-description'});
 		exportDescription.style.marginBottom = "1em";
 		const onChanged = async (path: Path) =>
 		{
@@ -257,31 +320,27 @@ export class ExportModal extends Modal
 
 			exportDescription.setText(`Path contains site: "${lastExportName}" with ${lastExportFiles} files last exported on ${lastExportDate}.`);
 		}
+
 		exportPathInput.textInput.onChange(() => onChanged(new Path(exportPathInput.textInput.getValue())));
 
 		onChanged(new Path(exportPathInput.textInput.getValue()));
 
-		// add purge export button
-
-
-		
+		this.filePickerModalEl.style.height = this.modalEl.clientHeight * 2 + "px";
 
 		new Setting(contentEl)
-			.setDesc("More options located on the plugin settings page.")
-			.addExtraButton((button) => button.setTooltip('Open plugin settings').onClick(() => {
-				//@ts-ignore
-				app.setting.open();
-				//@ts-ignore
-				app.setting.openTabById('webpage-html-export');
+		.setDesc("More options located on the plugin settings page.")
+		.addExtraButton((button) => button.setTooltip('Open plugin settings').onClick(() => {
+			//@ts-ignore
+			app.setting.open();
+			//@ts-ignore
+			app.setting.openTabById('webpage-html-export');
 		}));
-
-		this.filePickerModalEl.style.height = this.modalEl.clientHeight * 2 + "px";
 
 		await Utils.waitUntil(() => this.isClosed, 60 * 60 * 1000, 10);
 		
 		this.pickedFiles = this.filePicker.getSelectedFiles();
 		this.filePickerModalEl.remove();
-		this.exportInfo = { canceled: this.canceled, pickedFiles: this.pickedFiles, exportPath: new Path(Settings.exportPath), validPath: this.validPath};
+		this.exportInfo = { canceled: this.canceled, pickedFiles: this.pickedFiles, exportPath: new Path(Settings.exportOptions.exportPath), validPath: this.validPath};
 
 		return this.exportInfo;
 	}

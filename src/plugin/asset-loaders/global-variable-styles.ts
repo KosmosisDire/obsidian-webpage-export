@@ -12,8 +12,8 @@ export class GlobalVariableStyles extends AssetLoader
     override async load()
     {
         const bodyStyle = (document.body.getAttribute("style") ?? "").replaceAll("\"", "'").replaceAll("; ", " !important;\n\t");
-		let lineWidth = Settings.documentWidth || "40em";
-		let sidebarWidth = Settings.sidebarWidth || "20em";
+		let lineWidth = this.exportOptions.fileOptions.documentWidth || "40em";
+		let sidebarWidth = this.exportOptions.sidebarOptions.rightDefaultWidth;
 		if (!isNaN(Number(lineWidth))) lineWidth += "px";
 		if (!isNaN(Number(sidebarWidth))) sidebarWidth += "px";
 

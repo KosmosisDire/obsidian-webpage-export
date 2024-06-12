@@ -13,8 +13,9 @@ export class SimpleFileListGenerator implements ComponentGenerator
 		this.options = options;
 	}
 
-	insert(container: HTMLElement): HTMLElement 
+	async generate(container?: HTMLElement): Promise<HTMLElement> 
 	{
+		container = container ?? document.body;
 		const listWrapperEl = container.createDiv("file-list-wrapper");
 		const titleEl = listWrapperEl.createDiv("file-list-title");
 		if (this.options.title) titleEl.setText(this.options.title);

@@ -1,108 +1,12 @@
-import { TFile } from "obsidian";
-import { Path } from "plugin/utils/path";
-import { Website } from "plugin/website/website";
-import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
 import { ComponentGenerator } from "./component-generator";
-import { DEFAULT_GRAPH_VIEW_OPTIONS, GraphViewOptions } from "shared/website-data";
+
+
 
 export class GraphView implements ComponentGenerator
 {
-	public nodeCount: number;
-	public linkCount: number;
-	public radii: number[];
-	public labels: string[];
-	public paths: string[];
-	public linkSources: number[];
-	public linkTargets: number[];
-
-	public graphOptions: GraphViewOptions = DEFAULT_GRAPH_VIEW_OPTIONS;
-	private isInitialized: boolean = false;
-
-
-	static InOutQuadBlend(start: number, end: number, t: number): number
+	public async generate(container?: HTMLElement): Promise<HTMLElement>
 	{
-		t /= 2;
-		let t2 = 2.0 * t * (1.0 - t) + 0.5;
-		t2 -= 0.5;
-		t2 *= 2.0;
-		return start + (end - start) * t2;
-	}
-
-	public async init(files: TFile[], options: MarkdownWebpageRendererAPIOptions)
-	{
-		if (this.isInitialized) return;
-
-		Object.assign(this.graphOptions, options.graphViewOptions);
-
-		this.paths = files.map(f => f.path);
-		this.nodeCount = this.paths.length;
-		this.linkSources = [];
-		this.linkTargets = [];
-		this.labels = [];
-		this.radii = [];
-
-		const linkCounts: number[] = [];
-
-		for (let i = 0; i < this.nodeCount; i++)
-		{
-			linkCounts.push(0);
-		}
-
-		const resolvedLinks = Object.entries(app.metadataCache.resolvedLinks);
-		const values = Array.from(resolvedLinks.values());
-		const sources = values.map(v => v[0]);
-		const targets = values.map(v => v[1]);
-
-		for (const source of this.paths)
-		{
-			const sourceIndex = sources.indexOf(source);
-			const file = files.find(f => f.path == source);
-			
-			if (file)
-			{
-				const titleInfo = await Website.getTitleAndIcon(file, true);
-				this.labels.push(titleInfo.title);
-			}
-
-			if (sourceIndex != -1)
-			{
-				const target = targets[sourceIndex];
-
-				for (const link of Object.entries(target))
-				{
-					if (link[0] == source) continue;
-					if (this.paths.includes(link[0]))
-					{
-						const path1 = source;
-						const path2 = link[0];
-
-						const index1 = this.paths.indexOf(path1);
-						const index2 = this.paths.indexOf(path2);
-
-						if (index1 == -1 || index2 == -1) continue;
-
-						this.linkSources.push(index1);
-						this.linkTargets.push(index2);
-
-						linkCounts[index1] = (linkCounts[index1] ?? 0) + 1;
-						linkCounts[index2] = (linkCounts[index2] ?? 0) + 1;
-					}
-				}
-			}
-		}
-
-		const maxLinks = Math.max(...linkCounts);
-
-		this.radii = linkCounts.map(l => GraphView.InOutQuadBlend(this.graphOptions.minNodeRadius, this.graphOptions.maxNodeRadius, Math.min(l / (maxLinks * 0.8), 1.0)));
-		this.paths = this.paths.map(p => new Path(p).setExtension(".html").slugify(options.slugifyPaths).path);
-
-		this.linkCount = this.linkSources.length;
-
-		this.isInitialized = true;
-	}
-
-	public insert(container: HTMLElement): HTMLElement
-	{
+		container = container ?? document.body;
 		const graphWrapper = container.createDiv();
 		graphWrapper.classList.add("graph-view-wrapper");
 
@@ -121,11 +25,5 @@ export class GraphView implements ComponentGenerator
 		</div>
 		`
 		return graphWrapper;
-	}
-
-	public getExportData(): string
-	{
-		if (!this.isInitialized) throw new Error("Graph not initialized");
-		return `let graphData=\n${JSON.stringify(this)};`;
 	}
 }
