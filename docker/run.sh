@@ -5,6 +5,9 @@ if [ -f /config.json ]; then cp /config.json /vault/.obsidian/plugins/webpage-ht
 
 if [ ! -f /vault/.obsidian/plugins/webpage-html-export/main.js ]; then
   cp /plugin/* /vault/.obsidian/plugins/webpage-html-export/
+else
+  sed -i 's|callback: () => {|callback: async () => {|1' /vault/.obsidian/plugins/webpage-html-export/main.js
+  sed -i 's|HTMLExporter.export(true)|await HTMLExporter.export(true)|1' /vault/.obsidian/plugins/webpage-html-export/main.js
 fi
 
 python3 -m electron_inject -r /inject-enable.js - obsidian --remote-allow-origins=* --no-sandbox --no-xshm --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --remote-debugging-port=37941

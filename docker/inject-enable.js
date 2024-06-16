@@ -3,14 +3,15 @@ setTimeout(async () => {
 
 	await this.app.plugins.enablePlugin('webpage-html-export');
 
-	try {
-		await this.app.plugins.getPlugin("webpage-html-export").exportDocker();
-	} catch(_) {
-		const plugin = (await this.app.plugins.getPlugin('webpage-html-export'));
+	const plugin = await this.app.plugins.getPlugin('webpage-html-export');
 
+	try {
+		await plugin.exportDocker();
+	} catch(_) {
 		const temp = plugin.settings.exportPath;
 		plugin.settings.exportPath = '/output';
-		await this.app.commands.executeCommandById('webpage-html-export:export-html-vault')
+
+		await this.app.commands.commands['webpage-html-export:export-html-vault'].callback()
 
 		plugin.settings.exportPath = temp;
 	}
