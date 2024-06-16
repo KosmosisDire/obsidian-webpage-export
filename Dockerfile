@@ -20,7 +20,7 @@ ENV TZ=Etc/UTC
 
 # Install dependencies
 RUN apt update
-RUN apt install -y python3 python3-pip curl x11vnc xvfb tzdata
+RUN apt install -y python3 python3-pip curl x11vnc xvfb tzdata jq
 
 # Download the Obsidian package
 RUN curl -L "https://github.com/obsidianmd/obsidian-releases/releases/download/v${OBSIDIAN_VERSION}/obsidian_${OBSIDIAN_VERSION}_amd64.deb" -o obsidian.deb
