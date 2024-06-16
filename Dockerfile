@@ -13,7 +13,7 @@ RUN npm run build
 FROM ubuntu:20.04 AS Run
 
 # Set image parameters
-ARG OBSIDIAN_VERSION=1.5.12
+ARG OBSIDIAN_VERSION=1.6.3
 ARG DEBIAN_FRONTEND=noninteractive
 VOLUME [ "/vault", "/output", "/config.json" ]
 ENV TZ=Etc/UTC
@@ -39,19 +39,13 @@ COPY --from=Build /app/manifest.json /plugin/manifest.json
 # Copy the inject scripts
 COPY docker/inject-enable.js /inject-enable.js
 
-# Copy the plugin and config to the vault, inject script and start Obsidian on startup
-RUN echo "mkdir -p /vault/.obsidian/plugins/webpage-html-export" >> ~/.xinitrc
-RUN echo "if [ -f /config.json ]; then cp /config.json /vault/.obsidian/plugins/webpage-html-export/data.json; fi" >> ~/.xinitrc
-RUN echo "cp /plugin/main.js /vault/.obsidian/plugins/webpage-html-export/main.js" >> ~/.xinitrc
-RUN echo "cp /plugin/styles.css /vault/.obsidian/plugins/webpage-html-export/styles.css" >> ~/.xinitrc
-RUN echo "cp /plugin/manifest.json /vault/.obsidian/plugins/webpage-html-export/manifest.json" >> ~/.xinitrc
-RUN echo "python3 -m electron_inject -r ./inject-enable.js - obsidian --remote-allow-origins=* --no-sandbox --no-xshm --disable-dev-shm-usage --disable-gpu --disable-software-rasterizer --remote-debugging-port=37941" >> ~/.xinitrc
-RUN echo "x11vnc -forever -nopw -create" >> ~/.xinitrc
-RUN chmod +x ~/.xinitrc
+# Copy the run script
+COPY docker/run.sh /run.sh
+RUN chmod +x /run.sh
 
 # Set up the vault
 RUN mkdir -p /root/.config/obsidian
 RUN mkdir /output
 RUN echo '{"vaults":{"94349b4f2b2e057a":{"path":"/vault","ts":1715257568671,"open":true}}}' > /root/.config/obsidian/obsidian.json
 
-CMD xvfb-run ~/.xinitrc
+CMD xvfb-run /run.sh
