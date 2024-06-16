@@ -6,7 +6,13 @@ setTimeout(async () => {
 	try {
 		await this.app.plugins.getPlugin("webpage-html-export").exportDocker();
 	} catch(_) {
-		await this.app.commands.executeCommand('webpage-html-export:export-html-vault')
+		const plugin = (await this.app.plugins.getPlugin('webpage-html-export'));
+
+		const temp = plugin.settings.exportPath;
+		plugin.settings.exportPath = '/output';
+		await this.app.commands.executeCommandById('webpage-html-export:export-html-vault')
+
+		plugin.settings.exportPath = temp;
 	}
 
 	const process = require('child_process');
