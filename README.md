@@ -8,7 +8,7 @@ Demo / docs: [docs.obsidianweb.net](https://docs.obsidianweb.net/)
 ![image](https://github.com/KosmosisDire/obsidian-webpage-export/assets/39423700/06f29e1a-c067-45e7-9882-f9d6aa83776f)
 
 > [!NOTE]  
-> Although the plugin is fully functional it is still under development, so there may be frequent large changes between updates that could effect your workflow!
+> Although the plugin is fully functional it is still under development, so there may be frequent large changes between updates that could effect your workflow! Bugs are also not uncommon, please report anything you find, I am working to make the plugin more stable.
 
 ## Features:
 - Full text search
