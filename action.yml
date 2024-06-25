@@ -1,0 +1,46 @@
+name: "Export Obsidian vault to HTML"
+description: "Exports the Obsidian vault to HTML"
+
+inputs:
+  vault:
+    description: "Path to the Obsidian vault"
+    required: true
+    default: "."
+  config:
+    description: "Path to the configuration file"
+    required: false
+  version:
+    description: "Version of the plugin"
+    required: false
+    default: "latest"
+    
+outputs:
+  output:
+    description: "Path to the output folder"
+    value: ${{ steps.run-docker.outputs.output }}
+    
+runs:
+  using: "composite"
+  
+  steps:
+    - name: Run docker container
+      id: run-docker
+      shell: bash
+    
+      run: |
+        set +e
+
+        mkdir -p ./.output
+
+        if [ -z "${{ inputs.config }}" ]; then
+          docker run --rm -v ${{ inputs.vault }}:/vault -v ./.output:/output KosmosisDire/obsidian-webpage-export:${{ inputs.version }} >> ./.log.txt
+        else
+          docker run --rm -v ${{ inputs.vault }}:/vault -v ${{ inputs.config }}:/config.json -v ./.output:/output KosmosisDire/obsidian-webpage-export:${{ inputs.version }} >> ./.log.txt
+        fi
+
+        cat ./.log.txt
+
+        if [ $? -eq 137 ]; then
+          exit 0
+          echo "output=./.output" >> $GITHUB_OUTPUT
+        fi
