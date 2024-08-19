@@ -136,12 +136,13 @@ export class TreeItem
 	{
 		this.root = (this instanceof Tree ? this : (parent?.root ?? (parent instanceof Tree ? parent : undefined))) as Tree;
 		this.parent = parent;
-
+		
+		let isRoot = this instanceof Tree;
 		this.itemEl = itemEl;
-		this.selfEl = itemEl.querySelector(".tree-item-self") as HTMLElement;
-		this.collapseIconEl = this.selfEl.querySelector(".collapse-icon") as HTMLElement | undefined;
-		this.innerEl = this.selfEl.querySelector(".tree-item-inner") as HTMLElement;
-		this.childrenEl = itemEl.querySelector(".tree-item-children") as HTMLElement;
+		this.selfEl = isRoot ? itemEl : itemEl.querySelector(".tree-item-self") as HTMLElement;
+		this.collapseIconEl = isRoot? itemEl : this.selfEl.querySelector(".collapse-icon") as HTMLElement | undefined;
+		this.innerEl = isRoot ? itemEl : this.selfEl.querySelector(".tree-item-inner") as HTMLElement;
+		this.childrenEl = isRoot ? itemEl : itemEl.querySelector(".tree-item-children") as HTMLElement;
 
 		const hrefAttr = this.selfEl.getAttribute("href");
 		if (hrefAttr) this.path = hrefAttr;
@@ -160,9 +161,11 @@ export class TreeItem
 		if (this._isCollapsible)
 		{
 			const clickItem = this.isLink ? this.collapseIconEl ?? this.selfEl : this.selfEl;
-			clickItem.addEventListener("click", () =>
+			clickItem.addEventListener("click", (e) =>
 			{
 				this.collapsed = !this.collapsed;
+				e.preventDefault();
+				e.stopPropagation();
 			});
 		}
 
@@ -275,16 +278,14 @@ export class TreeItem
 export class Tree extends TreeItem
 {
 	public activeItem: TreeItem | undefined;
-	public wrapperEl: HTMLElement;
 	public rootEl: HTMLElement;
-	public titleEl: HTMLElement;
+	// public titleEl: HTMLElement;
 	public collapseAllEl: HTMLElement;
 
 	private collapsePath1: SVGPathElement;
 	private collapsePath2: SVGPathElement;
-
-	static readonly collapsePaths = ["m7 15 5 5 5-5", "m7 9 5-5 5 5"]; // path 1, path 2 - svg paths
-	static readonly uncollapsePaths = ["m7 20 5-5 5 5", "m7 4 5 5 5-5"]; // path 1, path 2 - svg paths
+	private static readonly collapsePaths = ["m7 15 5 5 5-5", "m7 9 5-5 5 5"]; // path 1, path 2 - svg paths
+	private static readonly uncollapsePaths = ["m7 20 5-5 5 5", "m7 4 5 5 5-5"]; // path 1, path 2 - svg paths
 
 	public pathToItem: Map<string, TreeItem> = new Map();
 
@@ -301,22 +302,21 @@ export class Tree extends TreeItem
 		const wrapperEl = container.classList.contains("tree-container") ? container : container.querySelector(".tree-container") as HTMLElement;
 		if (wrapperEl == null) throw new Error("Invalid tree container");
 		super(wrapperEl, undefined);
-		this.wrapperEl = wrapperEl;
 
-		this.rootEl = this.wrapperEl.querySelector(".mod-root") as HTMLElement;
-		this.itemEl = this.rootEl;
-		this.selfEl = this.wrapperEl.querySelector(".mod-root > .tree-item-self") as HTMLElement;
-		this.titleEl = this.wrapperEl.querySelector(".mod-root > .nav-folder-title > .nav-folder-title-content") as HTMLElement;
-		this.innerEl = this.titleEl;
-		this.childrenEl = this.wrapperEl.querySelector(".mod-root > .nav-folder-children") as HTMLElement;
-		this.collapseAllEl = this.wrapperEl.querySelector(".tree-collapse-all") as HTMLElement;
-		const collapseSvg = this.collapseAllEl.querySelector("svg");
+		this.rootEl = wrapperEl;
+		this.childrenEl = this.rootEl;
+		this.selfEl = this.rootEl;
+		this.innerEl = this.rootEl;
+
+		this.collapseAllEl = this.rootEl.querySelector(".tree-collapse-all") as HTMLElement;
+		const collapseSvg = this.collapseAllEl?.querySelector("svg");
 		if (collapseSvg) 
 		{
 			collapseSvg.innerHTML = "<path d></path><path d></path>";
 			this.collapsePath1 = collapseSvg.querySelector("path") as SVGPathElement;
 			this.collapsePath2 = collapseSvg.querySelector("path:last-child") as SVGPathElement;
 		}
+		
 
 		this.forAllChildren((child) =>
 		{
@@ -324,13 +324,13 @@ export class Tree extends TreeItem
 				this.pathToItem.set(child.path, child);
 		});
 
-		this.collapseAllEl.addEventListener("click", () =>
+		this.collapseAllEl?.addEventListener("click", () =>
 		{
 			this.setCollapseIcon(!this.collapsedRecursive);
 			this.collapsedRecursive = !this.collapsedRecursive;
 		});
 
-		LinkHandler.initializeLinks(this.wrapperEl);
+		LinkHandler.initializeLinks(this.rootEl);
 	}
 
 	private setCollapseIcon(collapsed: boolean)

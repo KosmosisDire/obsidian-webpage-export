@@ -1,5 +1,5 @@
 import { TFile } from "obsidian";
-import { FileTree, FileTreeItem } from "plugin/component-generators/file-tree";
+import { FileTree, FileTreeItem } from "plugin/features/file-tree";
 import { Path } from "plugin/utils/path";
 import { Website } from "plugin/website/website";
 import { MarkdownRendererAPI } from "plugin/render-api/render-api";
@@ -108,13 +108,11 @@ export class FilePickerTree extends FileTree
 		selectAllButton.checkbox = selectAllEl.querySelector("input") as HTMLInputElement;
 		selectAllButton.itemEl = selectAllEl;
 		selectAllButton.childContainer = selectAllEl.querySelector(".tree-item-children") as HTMLDivElement;
-
-		container.prepend(selectAllEl);
+		selectAllEl.classList.add("select-all");
+		
+		const treeHeader = container.querySelector(".feature-header");
+		treeHeader?.append(selectAllEl);
 		oldItemEl.remove();
-
-		const root = this.container?.querySelector(".mod-root");
-		if (root) root.classList.remove("tree-item");
-
 
 		const localThis = this;
 		function selectAll()

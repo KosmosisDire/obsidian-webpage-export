@@ -58,6 +58,8 @@ export class Sidebar
 			this.containerEl.style.setProperty('--sidebar-width', newWidth);
 			if (width > this.minResizeWidth) this.containerEl.style.transitionDuration = "0s";
 		}
+
+		if(ObsidianSite.graphView) ObsidianSite.graphView.graphRenderer.autoResizeCanvas();
 	}
 
 	constructor(container: HTMLElement)
@@ -129,6 +131,16 @@ export class Sidebar
 		this.containerEl.style.removeProperty('transition-duration');
 		this.containerEl.style.removeProperty('--sidebar-width');
 		localStorage.removeItem(`${this.sidebarID}-width`);
+
+		setTimeout(() =>
+		{
+			console.log("Resizing canvas");
+			if(ObsidianSite.graphView) 
+			{
+				ObsidianSite.graphView.graphRenderer.autoResizeCanvas();
+				ObsidianSite.graphView.graphRenderer.centerCamera();
+			}
+		}, 500);
 	}
 
 	private clickOutsideCollapse(event: MouseEvent)

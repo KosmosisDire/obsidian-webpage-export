@@ -1,7 +1,7 @@
-import { ComponentGenerator } from "./component-generator";
+import { FeatureGenerator } from "./feature-generator";
 
 
-export class FlowList implements ComponentGenerator
+export class FlowList implements FeatureGenerator
 {
 	containerEl: HTMLElement;
 	flowListEl: HTMLElement;

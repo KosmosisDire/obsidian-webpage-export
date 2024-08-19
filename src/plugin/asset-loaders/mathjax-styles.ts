@@ -1,5 +1,5 @@
 import { AssetLoader } from "./base-asset.js";
-import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
+import { AssetType, InlinePolicy, Mutability } from "./asset-types.js";
 
 export class MathjaxStyles extends AssetLoader
 {

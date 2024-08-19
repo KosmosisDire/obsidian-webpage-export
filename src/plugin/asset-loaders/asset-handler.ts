@@ -1,4 +1,3 @@
-// import graphViewJS from "frontend/dist/graph-view/index.txt.js";
 import graphWASMJS from "frontend/graph-view/graph-wasm.txt.js";
 import renderWorkerJS from "frontend/graph-view/graph-render-worker.txt.js";
 import graphWASM from "frontend/graph-view/graph-wasm.wasm";
@@ -25,10 +24,10 @@ import { GlobalVariableStyles } from "./global-variable-styles.js";
 import { Favicon } from "./favicon.js";
 import { FetchBuffer } from "./local-fetch-buffer.js";
 import { SupportedPluginStyles } from "./supported-plugin-styles.js";
-import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options.js";
 import { ExportLog } from "plugin/render-api/render-api.js";
 import { fileTypeFromBuffer } from "file-type";
-import { Settings } from "plugin/settings/settings.js";
+import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
+import { Shared } from "shared/shared.js";
 const mime = require('mime');
 
 
@@ -49,7 +48,7 @@ export class AssetHandler
 	private static fontFolder: Path;
 	private static htmlFolder: Path;
 
-	public static exportOptions: MarkdownWebpageRendererAPIOptions = new MarkdownWebpageRendererAPIOptions();
+	public static exportOptions: ExportPipelineOptions = new ExportPipelineOptions();
 
     public static get libraryPath(): Path
     {
@@ -118,12 +117,12 @@ export class AssetHandler
 
 	private static initPaths()
 	{
-		this.libraryFolder = new Path("lib");
-		this.mediaFolder = this.libraryFolder.joinString("media");
-		this.jsFolder = this.libraryFolder.joinString("scripts"); 
-		this.cssFolder = this.libraryFolder.joinString("styles");
-		this.fontFolder = this.libraryFolder.joinString("fonts");
-		this.htmlFolder = this.libraryFolder.joinString("html");
+		this.libraryFolder = new Path(Shared.libFolderName);
+		this.mediaFolder = this.libraryFolder.joinString(Shared.mediaFolderName);
+		this.jsFolder = this.libraryFolder.joinString(Shared.scriptsFolderName); 
+		this.cssFolder = this.libraryFolder.joinString(Shared.cssFolderName);
+		this.fontFolder = this.libraryFolder.joinString(Shared.fontFolderName);
+		this.htmlFolder = this.libraryFolder.joinString(Shared.htmlFolderName);
 		this.vaultPluginsPath = Path.vaultPath.joinString(app.vault.configDir, "plugins/").absolute();
 	}
 
@@ -167,7 +166,7 @@ export class AssetHandler
 		await Promise.all(loadPromises);
 	}
 
-	public static async reloadAssets(options: MarkdownWebpageRendererAPIOptions)
+	public static async reloadAssets(options: ExportPipelineOptions)
 	{
 		this.exportOptions = options;
 
@@ -205,7 +204,7 @@ export class AssetHandler
 		return assets;
 	}
 
-	private static filterDownloads(downloads: AssetLoader[], options: MarkdownWebpageRendererAPIOptions): AssetLoader[]
+	private static filterDownloads(downloads: AssetLoader[], options: ExportPipelineOptions): AssetLoader[]
 	{
 		if (!options.graphViewOptions.enabled || !options.sidebarOptions.enabled)
 		{
@@ -237,15 +236,16 @@ export class AssetHandler
 		return downloads;
 	}
 
-	public static getDownloads(destination: Path, options: MarkdownWebpageRendererAPIOptions): AssetLoader[]
+	public static getDownloads(destination: Path, options: ExportPipelineOptions): AssetLoader[]
 	{
 		let downloads = this.getAssetsOfInlinePolicy(InlinePolicy.Download)
-						    .concat(this.getAssetsOfInlinePolicy(InlinePolicy.DownloadHead));
+						    .concat(this.getAssetsOfInlinePolicy(InlinePolicy.DownloadHead))
+							.concat(this.getAssetsOfInlinePolicy(InlinePolicy.Auto))
+							.concat(this.getAssetsOfInlinePolicy(InlinePolicy.AutoHead));
 
-		downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.Auto));
-		downloads = downloads.concat(this.getAssetsOfInlinePolicy(InlinePolicy.AutoHead));
-
+		console.log(downloads);
 		downloads = this.filterDownloads(downloads, options);
+		console.log(downloads);
 		downloads.sort((a, b) => b.loadPriority - a.loadPriority);
 		downloads.forEach(asset => asset.targetPath.setWorkingDirectory(destination.path));
 
@@ -260,10 +260,11 @@ export class AssetHandler
 		if (options.inlineHTML)
 			downloads = downloads.filter(asset => asset.type != AssetType.HTML);
 
+
 		return downloads;
 	}
 
-	public static getHeadReferences(options: MarkdownWebpageRendererAPIOptions): string
+	public static getHeadReferences(options: ExportPipelineOptions): string
 	{
 		let head = "";
 

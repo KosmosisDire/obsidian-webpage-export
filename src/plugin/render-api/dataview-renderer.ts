@@ -1,11 +1,10 @@
 import { MarkdownPreviewView, TFile } from "obsidian";
 import { DataviewApi, getAPI } from "obsidian-dataview";
-import { ComponentGenerator } from "plugin/component-generators/component-generator";
 
-export class DataviewGenerator implements ComponentGenerator
+export class DataviewRenderer
 {
 	public static readonly api: DataviewApi = getAPI();
-	public static readonly jsKeyword = DataviewGenerator.api?.settings?.dataviewJsKeyword ?? "dataviewjs";
+	public static readonly jsKeyword = DataviewRenderer.api?.settings?.dataviewJsKeyword ?? "dataviewjs";
 
 	public view: MarkdownPreviewView;
 	public file: TFile;
@@ -22,15 +21,13 @@ export class DataviewGenerator implements ComponentGenerator
 		this.keyword = keyword;
 	}
 
-	
-
 	public async generate(container?: HTMLElement): Promise<HTMLElement>
 	{
 		this.container = container ?? document.body;
 		if (this.keyword == "dataview") 
-			await DataviewGenerator.api.execute(this.query, container, this.view, this.file.path);
+			await DataviewRenderer.api.execute(this.query, container, this.view, this.file.path);
 		else
-			await DataviewGenerator.api.executeJs(this.query, container, this.view, this.file.path);
+			await DataviewRenderer.api.executeJs(this.query, container, this.view, this.file.path);
 
 		function delay(ms: number) {
 			return new Promise( resolve => setTimeout(resolve, ms) );
@@ -44,12 +41,12 @@ export class DataviewGenerator implements ComponentGenerator
 
 	public static getDataviewFromHTML(sectionContainer: HTMLElement): { query: string, preEl: HTMLElement, keyword: string } | undefined
 	{
-		const dataviewEl = sectionContainer.querySelector(`pre:has(:is(.language-dataview, .block-language-dataview, .language-${DataviewGenerator.jsKeyword}, .block-language-${DataviewGenerator.jsKeyword}))`) as HTMLElement;
+		const dataviewEl = sectionContainer.querySelector(`pre:has(:is(.language-dataview, .block-language-dataview, .language-${DataviewRenderer.jsKeyword}, .block-language-${DataviewRenderer.jsKeyword}))`) as HTMLElement;
 		if (!dataviewEl) return;
 
 		const code = dataviewEl.querySelector("code") ?? dataviewEl;
 		const query = code.innerText;
-		const keyword = code.className.contains(DataviewGenerator.jsKeyword) ? DataviewGenerator.jsKeyword : "dataview";
+		const keyword = code.className.contains(DataviewRenderer.jsKeyword) ? DataviewRenderer.jsKeyword : "dataview";
 		return { query, preEl: dataviewEl, keyword: keyword};
 	}
 }

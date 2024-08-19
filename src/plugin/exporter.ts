@@ -36,7 +36,7 @@ export class HTMLExporter
 		const info = await this.updateSettings(usePreviousSettings, overrideFiles);
 		if ((!info && !usePreviousSettings) || (info && info.canceled)) return;
 
-		const files = info?.pickedFiles ?? overrideFiles ?? SettingsPage.getFilesToExport();
+		const files = info?.pickedFiles ?? overrideFiles ?? Settings.getFilesToExport();
 		const exportPath = info?.exportPath ?? new Path(Settings.exportOptions.exportPath);
 
 		const website = await HTMLExporter.exportFiles(files, exportPath, true, Settings.deleteOldFiles);

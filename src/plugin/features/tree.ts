@@ -1,8 +1,8 @@
 import { MarkdownRendererAPI } from "plugin/render-api/render-api";
 import { Path } from "plugin/utils/path";
-import { ComponentGenerator } from "plugin/component-generators/component-generator";
+import { FeatureGenerator } from "plugin/features/feature-generator";
 
-export class Tree implements ComponentGenerator
+export class Tree implements FeatureGenerator
 {
 	public children: TreeItem[] = [];
 	public minCollapsableDepth: number = 1;
@@ -49,46 +49,26 @@ export class Tree implements ComponentGenerator
 	public async generate(container?: HTMLElement): Promise<HTMLElement>
 	{
 		container = container ?? document.body;
-		/*
-		- div.tree-header
-				- span.sidebar-section-header
-				- button.tree-collapse-all
-					- svg
-		- div.tree-container.mod-root.nav-folder
-			- div.tree-scroll-area.tree-item-children
-				- div.tree-item // invisible first item
-				- div.tree-item
-					- div.tree-item-contents
-						- div.tree-item-icon
-							- svg
-						- a.internal-link
-							- span.tree-item-title
-					- div.tree-item-children
-		*/
-
 		this.container = container;
 		const wrapper = container.createDiv({ attr: {id: this.id, class: this.class + " tree-container"} });
-			const root = wrapper.createDiv("tree-item nav-folder mod-root");
-				root.setAttribute("data-depth", "0");
-				if (this.title || this.addCollapseAllButton){
-					const title = root.createDiv("tree-item-self nav-folder-title");
-					if (this.title){
-						const titleInner = title.createDiv("tree-item-inner nav-folder-title-content");
-							titleInner.textContent = this.title;
-					}
-					if (this.addCollapseAllButton){
-						const collapseAllEl = title.createEl('button', { cls: "clickable-icon nav-action-button tree-collapse-all" });
-							collapseAllEl.setAttribute("aria-label", "Collapse All");
-							collapseAllEl.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'></svg>";
-							if (this.generateWithItemsClosed) collapseAllEl.classList.add("is-collapsed");
-					}
-				}
-				const children = root.createDiv("tree-item-children nav-folder-children");
-					children.createDiv("nav-folder-spacer");
+		const header = wrapper.createDiv("feature-header");
+		if (this.title || this.addCollapseAllButton)
+		{
+			if (this.title)
+			{
+				const title = header.createDiv("feature-title");
+				title.textContent = this.title;
+			}
+			if (this.addCollapseAllButton)
+			{
+				const collapseAllEl = header.createEl('button', { cls: "clickable-icon nav-action-button tree-collapse-all" });
+					collapseAllEl.setAttribute("aria-label", "Collapse All");
+					collapseAllEl.innerHTML = "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'></svg>";
+					if (this.generateWithItemsClosed) collapseAllEl.classList.add("is-collapsed");
+			}
+		}
 
-		if (this.showNestingIndicator) root.classList.add("mod-nav-indicator");
-
-		await this.generateTree(children);
+		await this.generateTree(wrapper);
 
 		return wrapper;
 	}

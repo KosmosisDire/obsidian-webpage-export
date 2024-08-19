@@ -22,7 +22,6 @@ export class FetchBuffer extends AssetLoader
     
     override async load()
     {
-
 		if (this.url instanceof Path) 
 		{
 			if (this.url.isRelative)

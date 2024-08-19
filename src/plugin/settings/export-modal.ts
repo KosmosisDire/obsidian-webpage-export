@@ -2,7 +2,7 @@ import { ButtonComponent, Modal, Setting, TFile } from 'obsidian';
 import { Utils } from 'plugin/utils/utils';
 import HTMLExportPlugin from 'plugin/main';
 import { ExportPreset, Settings, SettingsPage } from './settings';
-import { FilePickerTree } from 'plugin/component-generators/file-picker';
+import { FilePickerTree } from 'plugin/features/file-picker';
 import { Path } from 'plugin/utils/path';
 import { FileDialogs } from 'plugin/utils/file-dialogs';
 import { createFileInput, createToggle } from './settings-components';
@@ -79,7 +79,7 @@ export class ExportModal extends Modal
 			this.filePicker.generateWithItemsClosed = true;
 			this.filePicker.showFileExtentionTags = true;
 			this.filePicker.hideFileExtentionTags = ["md"];
-			this.filePicker.title = "Select Files to Export";
+			this.filePicker.title = "Select all files in exported vault";
 			this.filePicker.class = "file-picker";
 			await this.filePicker.generate(scrollArea);
 			
@@ -314,8 +314,14 @@ export class ExportModal extends Modal
 				return;
 			}
 
+			if (index.oldWebsiteData.pluginVersion != HTMLExportPlugin.pluginVersion)
+			{
+				exportDescription.setText("This path contains an export created with a different version of the plugin.");
+				return;
+			}
+
 			const lastExportDate = new Date(index.oldWebsiteData.modifiedTime).toLocaleString();
-			const lastExportFiles = index.oldWebsiteData.allFiles.length;
+			const lastExportFiles = index.oldWebsiteData.allFiles?.length;
 			const lastExportName = index.oldWebsiteData.siteName;
 
 			exportDescription.setText(`Path contains site: "${lastExportName}" with ${lastExportFiles} files last exported on ${lastExportDate}.`);

@@ -1,25 +1,92 @@
-import { Bounds, InOutQuadBlend, Ticker, Vector2, getPointerPosition, getTouchPositionVector } from "frontend/main/utils";
-import { Application } from "pixi.js";
-import { GraphViewOptions } from "shared/website-data";
+import { inOutQuadBlend, Ticker, Vector2, getPointerPosition, getTouchPositionVector } from "frontend/main/utils";
 import { GraphWASMHelper } from "frontend/graph-view/graph-wasm-helper";
 import { GraphRenderWorker } from "../graph-view/graph-worker-helper";
 import { LinkHandler } from "./links";
+import { GraphViewOptions } from "shared/features/graph-view";
+import { InsertedFeature } from "shared/feature";
 
-export class GraphView
+export class GraphView extends InsertedFeature
 {
-	private _options: GraphViewOptions;
-	public get options(): GraphViewOptions
-	{
-		return this._options;
-	}
 	public set options(value: GraphViewOptions)
 	{
 		this._options = value;
+		if (!this.graphSim) return;
 		this.graphSim.attractionForce = value.attractionForce;
 		this.graphSim.centralForce = value.centralForce;
 		this.graphSim.linkLength = value.linkLength;
 		this.graphSim.repulsionForce = value.repulsionForce / this.batchFraction;
 	}
+
+	public get options(): GraphViewOptions
+	{
+		return this._options as GraphViewOptions;
+	}
+
+	public set attractionForce(value: number)
+	{
+		if (value == this.options.attractionForce) return;
+		this.options.attractionForce = value;
+		if (this.graphSim) 
+		{
+			this.graphSim.attractionForce = value;
+			this.graphSim.settleness = 1;
+		}
+	}
+
+	public get attractionForce(): number
+	{
+		return this.options.attractionForce;
+	}
+
+	public set centralForce(value: number)
+	{
+		if (value == this.options.centralForce) return;
+		this.options.centralForce = value;
+		if (this.graphSim) 
+			{
+			this.graphSim.centralForce = value;
+			this.graphSim.settleness = 1;
+		}
+	}
+
+	public get centralForce(): number
+	{
+		return this.options.centralForce;
+	}
+
+	public set linkLength(value: number)
+	{
+		if (value == this.options.linkLength) return;
+		this.options.linkLength = value;
+		if (this.graphSim)
+		{
+			this.graphSim.linkLength = value;
+			this.graphSim.settleness = 1;
+		}
+	}
+
+	public get linkLength(): number
+	{
+		return this.options.linkLength;
+	}
+
+	public set repulsionForce(value: number)
+	{
+		if (value == this.options.repulsionForce) return;
+		this.options.repulsionForce = value;
+		if (this.graphSim)
+		{
+			this.graphSim.repulsionForce = value / this.batchFraction;
+			this.graphSim.settleness = 1;
+		}
+	}
+
+	public get repulsionForce(): number
+	{
+		return this.options.repulsionForce;
+	}
+
+
 
 	// node data
 	public nodeCount: number;
@@ -69,10 +136,10 @@ export class GraphView
 	private mouseWorldPos = new Vector2(0, 0);
 	private scrollVelocity = 0;
 
-	constructor()
+	constructor(featureEl: HTMLElement)
 	{
+		super(ObsidianSite.metadata.featureOptions.graphView, featureEl);
 		this.graphSim = new GraphWASMHelper();
-		this.options = ObsidianSite.metadata.featureOptions.graphView;
 		this.graphContainer = document.querySelector(".graph-view-container") as HTMLElement;
 		this.globalGraphButton = document.querySelector(".graph-global.graph-icon") as HTMLElement;
 		this.expandGraphButton = document.querySelector(".graph-expand.graph-icon") as HTMLElement;
@@ -80,6 +147,8 @@ export class GraphView
 		this.ticker = new Ticker(60);
 		this.ticker.add(this.update.bind(this));
 		this.ticker.start();
+
+		requestAnimationFrame(this.draw.bind(this));
 	}
 
 	private initEvents()
@@ -289,7 +358,7 @@ export class GraphView
 	
 		graphContainer.addEventListener("wheel", function(e) 
 		{
-			const startingScrollVelocity = 0.02;
+			const startingScrollVelocity = 0.065;
 			const delta = e.deltaY;
 			if (delta > 0)
 			{
@@ -297,7 +366,7 @@ export class GraphView
 				{
 					localThis.scrollVelocity = -startingScrollVelocity;
 				}
-				localThis.scrollVelocity *= 1.1;
+				localThis.scrollVelocity *= 1.16;
 			}
 			else
 			{
@@ -305,7 +374,7 @@ export class GraphView
 				{
 					localThis.scrollVelocity = startingScrollVelocity;
 				}
-				localThis.scrollVelocity *= 1.1;
+				localThis.scrollVelocity *= 1.16;
 			}
 		});
 	
@@ -329,6 +398,7 @@ export class GraphView
 		this.linkTargets = [];
 		this.labels = [];
 		this.radii = [];
+		this.colors = [];
 
 		const linkCounts: number[] = [];
 
@@ -364,7 +434,7 @@ export class GraphView
 		}
 
 		const maxLinks = Math.max(...linkCounts);
-		this.radii = linkCounts.map(l => InOutQuadBlend(this.options.minNodeRadius, this.options.maxNodeRadius, Math.min(l / (maxLinks * 0.8), 1.0)));
+		this.radii = linkCounts.map(l => inOutQuadBlend(this.options.minNodeRadius, this.options.maxNodeRadius, Math.min(l / (maxLinks * 0.8), 1.0)));
 		this.linkCount = this.linkSources.length;
 	}
 
@@ -398,7 +468,30 @@ export class GraphView
 		else
 			this.isGlobalGraph = false;
 
-		linked = linked.filter((l) => ObsidianSite.getWebpageData(l));
+		linked = linked.filter((l) => 
+		{
+			let data = ObsidianSite.getWebpageData(l);
+			if (!data) return false;
+			
+			if (data.backlinks.length == 0)
+				{
+					console.log("No backlinks for", l);
+				}
+				
+			if (!this.options.showOrphanNodes && data.backlinks.length == 0 && data.links.length == 0)
+				return false;
+
+			if (!this.options.showAttachments && (data.type == "attachment" || data.type == "media" || data.type == "other"))
+				return false;
+
+			return true;
+		});
+
+		if (linked.length == 0)
+		{
+			console.log("No nodes to display.");
+			return;
+		}
 
 		// remove duplicates
 		const uniquePaths = [...new Set(linked)];
@@ -464,7 +557,6 @@ export class GraphView
 		}
 
 		this.graphSim.dt = dt;
-		this.graphRenderer.autoResizeCanvas();
 		this.graphSim.update(this.mouseWorldPos, this.graphRenderer.grabbedNode, this.graphRenderer.cameraScale);
 
 		if (this.graphSim.hoveredNode != this.graphRenderer.hoveredNode)
@@ -472,6 +564,16 @@ export class GraphView
 			this.graphRenderer.hoveredNode = this.graphSim.hoveredNode;
 			this.graphRenderer.canvas.style.cursor = this.graphSim.hoveredNode == -1 ? "default" : "pointer";
 		}
+	}
+
+	private drawLastTime = 0;
+	private async draw(time: number)
+	{
+		if (!this.graphRenderer || !this.graphSim || this.paths.length == 0) return;
+
+		const dt = (time - this.drawLastTime) / 1000;
+		this.drawLastTime = time;
+
 
 		this.graphRenderer.draw(this.graphSim.positions);
 
@@ -484,8 +586,10 @@ export class GraphView
 
 			this.zoomAround(this.mouseWorldPos, this.scrollVelocity);
 
-			this.scrollVelocity *= (1 - dt * 10);
+			this.scrollVelocity *= (1 - dt * 15);
 		}
+
+		requestAnimationFrame(this.draw.bind(this));
 	}
 
 	private zoomAround(point: Vector2, zoom: number, minScale: number = 0.15, maxScale: number = 15.0)
@@ -579,6 +683,8 @@ export class GraphView
 
 			localThis.toggleExpandedGraph();
 		}
+
+		this.graphRenderer.autoResizeCanvas();
     }
 
 	public getNodeByPath(path: string)

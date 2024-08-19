@@ -2,13 +2,14 @@
 import { Search } from "./search";
 import { Sidebar } from "./sidebars";
 import { Tree } from "./trees";
-import { Bounds, delay, waitUntil } from "./utils";
+import { Bounds, delay, getLengthInPixels, waitUntil } from "./utils";
 import { WebpageDocument } from "./document";
 import { WebpageData, WebsiteData } from "shared/website-data";
 import { GraphView } from "./graph-view";
 import { Notice } from "./notifications";
 import { Theme } from "./theme";
 import { LinkHandler } from "./links";
+import { Shared } from "shared/shared";
 
 export class ObsidianWebsite
 {
@@ -66,7 +67,7 @@ export class ObsidianWebsite
 		this.centerContentEl = document.querySelector("#center-content") as HTMLElement;
 
 		const fileTreeEl = document.querySelector("#file-explorer") as HTMLElement;
-		const outlineTreeEl = document.querySelector("#outline-tree") as HTMLElement;
+		const outlineTreeEl = document.querySelector("#outline") as HTMLElement;
 		const leftSidebarEl = document.querySelector(".sidebar#left-sidebar") as HTMLElement;
 		const rightSidebarEl = document.querySelector(".sidebar#right-sidebar") as HTMLElement;
 		
@@ -81,7 +82,9 @@ export class ObsidianWebsite
 		const pathname = document.querySelector("meta[name='pathname']")?.getAttribute("content") ?? "unknown";
 		this.entryPage = pathname;
 
-		this.document = await (await new WebpageDocument(pathname).init()).postLoadInit();
+		this.document = await new WebpageDocument(pathname).init();
+		await this.document.loadChildDocuments();
+		await this.document.postLoadInit();
 		
 		if (ObsidianSite.metadata.featureOptions.graphView.enabled)
 		{
@@ -99,14 +102,32 @@ export class ObsidianWebsite
 		window.addEventListener("popstate", async (e) =>
 		{
 			console.log("popstate", e);
+			if (!e.state) return;
 			const pathname = e.state.pathname;
 			ObsidianSite.loadURL(pathname);
 		});
+		
+		let localThis = this;
+		window.addEventListener("resize", (e) => 
+			{
+				localThis.onResize()
+			});
+		this.onResize(true);
 	}
 
 	public async loadURL(url: string): Promise<WebpageDocument | undefined>
 	{
+		const header = LinkHandler.getHashFromURL(url);
 		url = LinkHandler.getPathnameFromURL(url);
+		console.log("Loading URL", url);
+
+		if (this.document.pathname == url)
+		{
+			if (header) this.document.scrollToHeader(header);
+			console.log("loading header", header);
+			return this.document;
+		}
+
 		let data = ObsidianSite.getWebpageData(url) as WebpageData;
 		if (!data)
 		{
@@ -139,7 +160,7 @@ export class ObsidianWebsite
 		}
 		else
 		{
-			var file = this.metadata.fileInfo[url];
+			let file = this.metadata.fileInfo[url];
 			if (!file?.data)
 			{
 				console.error("Failed to fetch", url);
@@ -157,7 +178,7 @@ export class ObsidianWebsite
 		{
 			try
 			{
-				const dataReq = await fetch("lib/metadata.json");
+				const dataReq = await fetch(Shared.libFolderName + "/metadata.json");
 				if (dataReq.ok)
 				{
 					return await dataReq.json();
@@ -185,6 +206,9 @@ export class ObsidianWebsite
 
 	private async loadGraphView()
 	{
+		const graphViewFeature = document.querySelector(".graph-view-wrapper") as HTMLElement;
+		if (!graphViewFeature) return;
+
 		const localThis = this;
 		//@ts-ignore
 		waitLoadScripts(["pixi", "graph-render-worker", "graph-wasm"],  () =>
@@ -193,22 +217,30 @@ export class ObsidianWebsite
 			async function initGraphView()
 			{
 				console.log("Initializing graph view"); 
-				const graphView = new GraphView();
+				const graphView = new GraphView(graphViewFeature);
 				localThis.graphView = graphView;
 				console.log("Graph view initialized");
 			}
 
+			
 			//@ts-ignore
-			Module['onRuntimeInitialized'] = initGraphView;
-
-			setTimeout(() =>
-			{
-				console.log(localThis.graphView);
-				if (localThis.graphView == undefined)
+			Module['onRuntimeInitialized'] = () => 
 				{
+					console.log("Wasm loaded");
 					initGraphView();
-				}
-			}, 300);
+				};
+
+			//@ts-ignore
+			run();
+
+			// setTimeout(() =>
+			// {
+			// 	console.log(localThis.graphView);
+			// 	if (localThis.graphView == undefined)
+			// 	{
+			// 		initGraphView();
+			// 	}
+			// }, 100);
 		});
 
 		await waitUntil(() => this.graphView != undefined);
@@ -238,7 +270,7 @@ export class ObsidianWebsite
 		inside.style.transitionDuration = "";
 		inside.classList.toggle("hide", loading);
 		this.loadingEl.classList.toggle("show", loading);
-		this.graphView?.graphRenderer?.canvas.classList.toggle("hide", loading);
+		// this.graphView?.graphRenderer?.canvas.classList.toggle("hide", loading);
 		
 		if(loading)
 		{
@@ -262,5 +294,128 @@ export class ObsidianWebsite
 	public get documentBounds(): Bounds 
 	{
 		return Bounds.fromElement(this.centerContentEl);
+	}
+
+	private onEndResize()
+	{
+		this.graphView?.graphRenderer?.autoResizeCanvas();
+		document.body.classList.toggle("resizing", false);
+	}
+
+	private onStartResize()
+	{
+		document.body.classList.toggle("resizing", true);
+	}
+
+
+	private lastScreenWidth: number | undefined = undefined;
+	private isResizing = false;
+	private checkStillResizingTimeout: NodeJS.Timeout | undefined = undefined;
+	private deviceSize: string = "large-screen";
+	private onResize(isInitial = false)
+	{
+		if (!this.isResizing)
+		{
+			this.onStartResize();
+			this.isResizing = true;
+		}
+
+		let localThis = this;
+	
+		function widthNowInRange(low: number, high: number)
+		{
+			let w = window.innerWidth;
+			return (w > low && w < high && localThis.lastScreenWidth == undefined) || ((w > low && w < high) && ((localThis.lastScreenWidth ?? 0) <= low || (localThis.lastScreenWidth ?? 0) >= high));
+		}
+	
+		function widthNowGreaterThan(value: number)
+		{
+			let w = window.innerWidth;
+			return (w > value && localThis.lastScreenWidth == undefined) || (w > value && (localThis.lastScreenWidth ?? 0) < value);
+		}
+	
+		function widthNowLessThan(value: number)
+		{
+			let w = window.innerWidth;
+			return (w < value && localThis.lastScreenWidth == undefined) || (w < value && (localThis.lastScreenWidth ?? 0) > value);
+		}
+
+		let docWidthCSS = this.metadata.featureOptions.document.documentWidth;
+		let leftWdithCSS = this.metadata.featureOptions.sidebar.leftDefaultWidth;
+		let rightWidthCSS = this.metadata.featureOptions.sidebar.rightDefaultWidth;
+
+		// calculate the css widths
+		let docWidth = getLengthInPixels(docWidthCSS, this.centerContentEl);
+		let leftWidth = this.leftSidebar ? getLengthInPixels(leftWdithCSS, this.leftSidebar?.containerEl) : 0;
+		let rightWidth = this.rightSidebar ? getLengthInPixels(rightWidthCSS, this.rightSidebar?.containerEl) : 0;
+	
+		if (widthNowGreaterThan(docWidth + leftWidth + rightWidth) || widthNowGreaterThan(1025))
+		{
+			this.deviceSize = "large-screen";
+			document.body.classList.toggle("floating-sidebars", false);
+			document.body.classList.toggle("is-large-screen", true);
+			document.body.classList.toggle("is-small-screen", false);
+			document.body.classList.toggle("is-tablet", false);
+			document.body.classList.toggle("is-phone", false);
+
+			if (this.leftSidebar) this.leftSidebar.collapsed = false;
+			if (this.rightSidebar) this.rightSidebar.collapsed = false;
+		}
+		else if (widthNowInRange(docWidth + leftWidth, docWidth + leftWidth + rightWidth) || widthNowInRange(769, 1024))
+		{
+			this.deviceSize = "small screen";
+			document.body.classList.toggle("floating-sidebars", false);
+			document.body.classList.toggle("is-large-screen", false);
+			document.body.classList.toggle("is-small-screen", true);
+			document.body.classList.toggle("is-tablet", false);
+			document.body.classList.toggle("is-phone", false);
+	
+			if (this.leftSidebar && this.rightSidebar && !this.leftSidebar.collapsed) 
+			{
+				this.rightSidebar.collapsed = true;
+			}
+		}
+		else if (widthNowInRange(leftWidth + rightWidth, docWidth + leftWidth) || widthNowInRange(481, 768))
+		{
+			this.deviceSize = "tablet";
+			document.body.classList.toggle("floating-sidebars", true);
+			document.body.classList.toggle("is-large-screen", false);
+			document.body.classList.toggle("is-small-screen", false);
+			document.body.classList.toggle("is-tablet", true);
+			document.body.classList.toggle("is-phone", false);
+			
+			if (this.leftSidebar && this.rightSidebar && !this.leftSidebar.collapsed) 
+			{
+				this.rightSidebar.collapsed = true;
+			}
+		}
+		else if (widthNowLessThan(leftWidth + rightWidth) || widthNowLessThan(480))
+		{
+			this.deviceSize = "phone";
+			document.body.classList.toggle("floating-sidebars", true);
+			document.body.classList.toggle("is-large-screen", false);
+			document.body.classList.toggle("is-small-screen", false);
+			document.body.classList.toggle("is-tablet", false);
+			document.body.classList.toggle("is-phone", true);
+			if (this.leftSidebar) this.leftSidebar.collapsed = true;
+			if (this.rightSidebar) this.rightSidebar.collapsed = true;
+		}
+	
+		this.lastScreenWidth = window.innerWidth;
+	
+		if (this.checkStillResizingTimeout != undefined) clearTimeout(this.checkStillResizingTimeout);
+	
+		// wait a little bit of time and if the width is still the same then we are done resizing
+		let screenWidthSnapshot = window.innerWidth;
+		this.checkStillResizingTimeout = setTimeout(function ()
+		{
+			if (window.innerWidth == screenWidthSnapshot)
+			{
+				localThis.checkStillResizingTimeout = undefined;
+				localThis.isResizing = false;
+				localThis.onEndResize();
+			}
+		}, 200);
+	
 	}
 }

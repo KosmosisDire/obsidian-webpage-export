@@ -1,4 +1,4 @@
-import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
+import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
 import { Path } from "./path";
 import { FileStats, TFile } from "obsidian";
 
@@ -13,7 +13,7 @@ export class Attachment
 	private _sourcePathRootRelative: string | undefined;
 	private _targetPath: Path;
 	public sourceStat: FileStats;
-	public exportOptions: MarkdownWebpageRendererAPIOptions;
+	public exportOptions: ExportPipelineOptions;
 	public showInTree: boolean = false;
 	public treeOrder: number = 0;
 
@@ -51,8 +51,10 @@ export class Attachment
 	}
 
 
-	constructor(data: string | Buffer, target: Path, source: TFile | undefined | null, options: MarkdownWebpageRendererAPIOptions)
+	constructor(data: string | Buffer, target: Path, source: TFile | undefined | null, options: ExportPipelineOptions)
 	{
+		// @ts-ignore
+		if (target.extensionName == "html" && !Object.getPrototypeOf(this).constructor.name.contains("Webpage"))	target.setFileName(target.basename + "-content");
 		if (target.isDirectory) throw new Error("target must be a file: " + target.path);
 		if (target.isAbsolute) throw new Error("(absolute) Target must be a relative path with the working directory set to the root: " + target.path);
 		this.exportOptions = options;

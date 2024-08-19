@@ -1,3 +1,16 @@
+import { AliasesOptions } from "./features/aliases";
+import { BacklinksOptions } from "./features/backlinks";
+import { CustomHeadOptions } from "./features/custom-head";
+import { DocumentOptions } from "./features/document";
+import { FileNavigationOptions } from "./features/file-navigation";
+import { GraphViewOptions } from "./features/graph-view";
+import { OutlineOptions } from "./features/outline";
+import { PropertiesOptions } from "./features/properties";
+import { SearchOptions } from "./features/search";
+import { SidebarOptions } from "./features/sidebar";
+import { TagsOptions } from "./features/tags";
+import { ThemeToggleOptions } from "./features/theme-toggle";
+
 export enum EmojiStyle
 {
 	Native = "Native",
@@ -13,6 +26,7 @@ export enum DocumentType
 	Canvas = "canvas",
 	Excalidraw = "excalidraw",
 	Kanban = "kanban",
+	Attachment = "attachment",
 	Other = "other"
 }
 
@@ -48,103 +62,12 @@ export interface WebpageData extends FileData
 	fullURL: string;
 }
 
-export interface FeatureOptions
-{
-	enabled: boolean;
-}
-
-export enum RelationType
-{
-	Before = "before",
-	After = "after",
-	Child = "child",
-}
-
-export interface InsertedFeatureOptions extends FeatureOptions
-{
-	displayTitle: string;
-	relationSelector: string;
-	relationType: RelationType;
-	insertOrder?: number;
-}
-
-export interface FetchedFeatureOptions extends InsertedFeatureOptions
-{
-	includePath: string;
-}
-
-export interface GraphViewOptions extends InsertedFeatureOptions
-{
-	attractionForce: number;
-	linkLength: number;
-	repulsionForce: number;
-	centralForce: number;
-	edgePruning: number;
-	minNodeRadius: number;
-	maxNodeRadius: number;
-}
-
-export interface OutlineOptions extends InsertedFeatureOptions
-{
-	startCollapsed: boolean;
-	minCollapseDepth: number;
-}
-
-export interface FileNavigationOptions extends FetchedFeatureOptions
-{
-	showDefaultFolderIcons: boolean;
-	showDefaultFileIcons: boolean;
-	defaultFolderIcon: string;
-	defaultFileIcon: string;
-	defaultMediaIcon: string;
-	exposeStartingPath: boolean;
-}
-
-export interface SidebarOptions extends FeatureOptions
-{
-	allowResizing: boolean;
-	allowCollapsing: boolean;
-	rightDefaultWidth: string;
-	leftDefaultWidth: string;
-}
-
-export interface PropertiesOptions extends InsertedFeatureOptions
-{
-	hideProperties: string[];
-}
-
-export interface TagsOptions extends InsertedFeatureOptions
-{
-	showInlineTags: boolean;
-	showFrontmatterTags: boolean;
-}
-
-export interface FileOptions 
-{
-	/**
-	 * Allows lists with sub-items to be folded / collpased.
-	 */
-	allowFoldingLists: boolean;
-
-	/**
-	 * Allows headings to be folded / collapsed.
-	 */
-	allowFoldingHeadings: boolean;
-
-	/**
-	 * The width of the document
-	 */
-	documentWidth: string;
-}
-
-
-
-export interface WebsiteOptions
+export class WebsiteOptions
 {
 	/**
 	 * The options for the backlinks feature.
 	 */
-	backlinks: InsertedFeatureOptions;
+	backlinks: BacklinksOptions;
 
 	/**
 	 * The options for the tags feature.
@@ -154,7 +77,7 @@ export interface WebsiteOptions
 	/**
 	 * The options for the aliases feature.
 	 */
-	alias: InsertedFeatureOptions;
+	alias: AliasesOptions;
 
 	/**
 	 * The options for the properties feature.
@@ -169,7 +92,7 @@ export interface WebsiteOptions
 	/**
 	 * The options for the search feature.
 	 */
-	search: InsertedFeatureOptions;
+	search: SearchOptions;
 
 	/**
 	 * The options for the outline feature.
@@ -179,7 +102,7 @@ export interface WebsiteOptions
 	/**
 	 * The options for the theme toggle feature.
 	 */
-	themeToggle: InsertedFeatureOptions;
+	themeToggle: ThemeToggleOptions;
 
 	/**
 	 * The options for the graph view feature.
@@ -194,28 +117,33 @@ export interface WebsiteOptions
 	/**
 	 * Custom head content options
 	 */
-	customHead: FetchedFeatureOptions;
+	customHead: CustomHeadOptions;
+
+	/**
+	 * Document section options
+	 */
+	document: DocumentOptions;
 }
 
-export interface WebsiteData
+export class WebsiteData
 {
-	webpages: {[targetPath: string]: WebpageData},
-	fileInfo: {[targetPath: string]: FileData},
-	sourceToTarget: {[sourcePath: string]: string},
+	webpages: {[targetPath: string]: WebpageData};
+	fileInfo: {[targetPath: string]: FileData};
+	sourceToTarget: {[sourcePath: string]: string};
 	attachments: string[];
 	shownInTree: string[];
 	allFiles: string[];
 
-	siteName: string,
-	vaultName: string,
+	siteName: string;
+	vaultName: string;
 	createdTime: number;
 	modifiedTime: number;
-	pluginVersion: string,
-	exportRoot: string,
-	baseURL: string,
+	pluginVersion: string;
+	exportRoot: string;
+	baseURL: string;
 
-	themeName: string,
-	bodyClasses: string,
-	hasFavicon: boolean,
-	featureOptions: WebsiteOptions,
+	themeName: string;
+	bodyClasses: string;
+	hasFavicon: boolean;
+	featureOptions: WebsiteOptions;
 }

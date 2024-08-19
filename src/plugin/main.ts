@@ -8,7 +8,7 @@ import { HTMLExporter } from 'plugin/exporter';
 import { Path } from 'plugin/utils/path';
 import { ExportModal } from 'plugin/settings/export-modal';
 import { ExportLog, MarkdownRendererAPI } from 'plugin/render-api/render-api';
-import { DataviewGenerator } from './component-generators/dataview-generator';
+import { DataviewRenderer } from './render-api/dataview-renderer';
 import { Website } from './website/website';
 
 export default class HTMLExportPlugin extends Plugin
@@ -19,7 +19,7 @@ export default class HTMLExportPlugin extends Plugin
 	public settings = Settings;
 	public assetHandler = AssetHandler;
 	public Path = Path;
-	public dv = DataviewGenerator;
+	public dv = DataviewRenderer;
 	public Website = Website;
 
 	async onload()

@@ -81,6 +81,12 @@ body
 	border-bottom-left-radius: var(--radius-l);
 }
 
+.sidebar #right-sidebar-content, .sidebar #left-sidebar-content
+{
+	contain: none !important;
+	container-type: normal !important;
+}
+
 /* Hide empty sidebars */
 .sidebar:has(.leaf-content:empty):has(.topbar-content:empty)
 {
@@ -113,15 +119,27 @@ body
 
 #left-sidebar .sidebar-topbar {
 	left: 0;
+	flex-direction: row;
 }
 
 #right-sidebar .sidebar-topbar {
 	right: 0;
+	flex-direction: row-reverse;
+}
+
+#left-sidebar .topbar-content {
+	margin-right: calc(2.3em + var(--sidebar-margin));
+	flex-direction: row;
+}
+
+#right-sidebar .topbar-content {
+	margin-left: calc(2.3em + var(--sidebar-margin));
+	flex-direction: row-reverse;
 }
 
 .topbar-content {
-    overflow: hidden;
-    overflow: clip;
+    overflow: hidden visible;
+    overflow: clip visible;
     width: 100%;
     height: 100%;
     display: flex;
@@ -160,11 +178,25 @@ body
 	height: 100%;
 }
 
-.sidebar-section-header
+.feature-title
 {
-  margin: 0 0 1em 0;
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+
+.feature-header
+{
+    display: flex;
+    align-items: center;
+	min-height: 2.5em;
+	padding-top: 0;
+    font-size: 1em;
+    padding-left: 0;
+}
+
+body.floating-sidebars .sidebar
+{
+	position: absolute;
 }
 
 /*#endregion */
@@ -204,7 +236,7 @@ body
 	transition: opacity 0.2s ease-in-out;
 }
 
-#center-content>.document 
+#center-content>.obsidian-document 
 {
 	padding-left: 1em;
 	padding-right: 1em;
@@ -224,7 +256,7 @@ body
 	contain: inline-size;
 }
 
-#center-content>.document>.sizer 
+#center-content>.obsidian-document>.markdown-sizer 
 {
     padding-bottom: 80vh !important;
     width: 100% !important;
@@ -234,14 +266,15 @@ body
 	contain: inline-size;
 }
 
-.document:not([data-type='markdown']) img:not([width]), .markdown-rendered img:not([width]) 
+#center-content>.obsidian-document>div
 {
-    max-width: 100%;
-    outline: none;
+    width: 100% !important;
+    transition: background-color var(--color-fade-speed) ease-in-out;
+	contain: inline-size;
 }
 
 /* If the markdown view is displaying a raw file or embed then increase it's size to make everything as large as possible */
-#center-content > .document:not([data-type='markdown']).embed {
+#center-content > .obsidian-document:not([data-type='markdown']).embed {
     display: flex;
     padding: 1em;
     height: 100%;
@@ -250,7 +283,7 @@ body
     justify-content: center;
 }
 
-#center-content > .document:not([data-type='markdown']).embed > *
+#center-content > .obsidian-document:not([data-type='markdown']).embed > *
 {
 	max-width: 100%;
 	max-height: 100%;
@@ -263,13 +296,65 @@ body
 }
 
 /* For custom view exports */
-#center-content > .document:not([data-type='markdown'])
+#center-content > .obsidian-document:not([data-type='markdown'])
 {
 	overflow-x: auto;
 	contain: content;
 	padding: 0;
 	margin: 0;
 	height: 100%;
+}
+
+.obsidian-document[data-type="attachment"]
+{
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	height: 100%;
+	width: 100%;
+}
+
+.obsidian-document[data-type="attachment"] > *
+{
+    outline: none;
+	border: none;
+	box-shadow: none;
+}
+
+.obsidian-document[data-type="attachment"] :is(img)
+{
+	width: 100%;
+	height: 100%;
+	max-width: 90%;
+	max-height: 90%;
+	object-fit: contain;
+}
+
+.obsidian-document[data-type="attachment"] :is(audio)
+{
+	width: 100%;
+	max-width: 90%;
+}
+
+.obsidian-document[data-type="attachment"] :is(embed, iframe, video)
+{
+	width: 100%;
+	height: 100%;
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+}
+
+.canvas-wrapper > :is(.header, .footer)
+{
+	z-index: 100;
+    position: absolute;
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    width: 100%;
+    align-items: center;
 }
 
 /*#endregion */

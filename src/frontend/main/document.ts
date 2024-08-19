@@ -8,6 +8,7 @@ import { List } from "./lists";
 import { Bounds } from "./utils";
 import { Notice } from "./notifications";
 import { Tags } from "./tags";
+import { Tree } from "./trees";
 
 export class WebpageDocument
 {
@@ -38,7 +39,7 @@ export class WebpageDocument
 	public initialized: boolean = false;
 	public get isRootDocument(): boolean
 	{
-		return !this.parent;
+		return this.parent == null;
 	}
 
 	public get bounds(): Bounds
@@ -54,6 +55,8 @@ export class WebpageDocument
 
 	public constructor(url: string)
 	{
+		if (!window?.location) return;
+		
 		url = url.trim();
 
 		if (url.startsWith("http") || url.startsWith("www") || url.startsWith("/") || url.startsWith("\\"))
@@ -66,7 +69,7 @@ export class WebpageDocument
 		if (url.startsWith("#") || url.startsWith("?")) url = ObsidianSite.document.pathname + url;
 
 		this.pathname = LinkHandler.getPathnameFromURL(url);
-		const parsedURL = new URL(window.location.origin + "/" + url);
+		const parsedURL = new URL(window?.location?.origin + "/" + url);
 		this.hash = parsedURL.hash;
 		this.query = parsedURL.search;
 		this.queryParameters = parsedURL.searchParams;
@@ -90,12 +93,28 @@ export class WebpageDocument
 		this.title = this.info.title;
 	}
 
+	public findHeader(predicate: (header: Header) => boolean): Header | null
+	{
+		for (const header of this.headers)
+		{
+			let result = header.find(predicate);
+			if (result) return result;
+		}
+		return null;
+	}
+
+	public scrollToHeader(headerId: string)
+	{
+		const header = this.findHeader(h => h.id == headerId);
+		if (header) header.scrollTo();
+	}
+
 	private findElements()
 	{
-		this.sizerEl = this.containerEl.closest(".sizer") as HTMLElement ?? this.containerEl.querySelector(".sizer") as HTMLElement;
-		this.documentEl = this.containerEl.closest(".document") as HTMLElement ?? this.containerEl.querySelector(".document") as HTMLElement;
-		this.headerEl = this.containerEl.closest(".header") as HTMLElement ?? this.containerEl.querySelector(".header") as HTMLElement;
-		this.footerEl = this.containerEl.closest(".footer") as HTMLElement ?? this.containerEl.querySelector(".footer") as HTMLElement;
+		this.sizerEl = this.containerEl.querySelector(".markdown-sizer") as HTMLElement;
+		this.documentEl = this.containerEl.querySelector(".obsidian-document") as HTMLElement;
+		this.headerEl = this.containerEl.querySelector(".header") as HTMLElement;
+		this.footerEl = this.containerEl.querySelector(".footer") as HTMLElement;
 	}
  
 	public async init(): Promise<WebpageDocument>
@@ -110,13 +129,9 @@ export class WebpageDocument
 		if (this.isRootDocument)
 		{
 			LinkHandler.initializeLinks(this.sizerEl ?? this.documentEl ?? this.containerEl);
+			this.createHeaders();
 			this.createCallouts();
 			this.createLists();
-		}
-
-		if (this.documentType == DocumentType.Canvas)
-		{
-			this.canvas = new Canvas(this);
 		}
 
 		return this;
@@ -127,7 +142,7 @@ export class WebpageDocument
 		if (ObsidianSite.document) // only push to history if we are not the first loaded page
 		{
 			let pathname: string | null = this.pathname;
-			if (pathname == "index.html") pathname = "/";
+			if (pathname == "index.html") pathname = "";
 			if (!ObsidianSite.isHttp) pathname = null;
 			history.pushState({pathname: pathname}, this.title, pathname);
 		}
@@ -153,13 +168,13 @@ export class WebpageDocument
 
 		await ObsidianSite.showLoading(true, containerEl);
 
+		this.parent = parent;
+		this.containerEl = containerEl;
+		
 		if (this.isRootDocument)
 		{
 			await this.setAsActive();
 		}
-
-		this.parent = parent;
-		this.containerEl = containerEl;
 
 		const documentReq = await ObsidianSite.fetch(this.pathname);
 		if (documentReq?.ok)
@@ -167,13 +182,13 @@ export class WebpageDocument
 			const documentText = await documentReq.text();
 			const html = new DOMParser().parseFromString(documentText, "text/html");
 
-			let newDocumentEl = html.querySelector(".document");
-			let newOutlineEl = html.querySelector("#outline");
+			let newDocumentEl = html.querySelector(".obsidian-document");
+			let newOutlineEl = html.querySelector("#outline") as HTMLElement;
 
 			if (newDocumentEl)
 			{
 				newDocumentEl = document.adoptNode(newDocumentEl);
-				const docEl = containerEl.querySelector(".document");
+				const docEl = containerEl.querySelector(".obsidian-document");
 				if (docEl) docEl.replaceWith(newDocumentEl);
 				else containerEl.appendChild(newDocumentEl);
 			}
@@ -182,6 +197,7 @@ export class WebpageDocument
 			{
 				newOutlineEl = document.adoptNode(newOutlineEl);
 				document.querySelector("#outline")?.replaceWith(newOutlineEl);
+				ObsidianSite.outlineTree = new Tree(newOutlineEl);
 			}
 
 			await this.postLoadInit()
@@ -204,13 +220,34 @@ export class WebpageDocument
 	{
 		this.findElements();
 
-		if (ObsidianSite.metadata.featureOptions.backlinks.enabled) 
+		if (this.isRootDocument && ObsidianSite.metadata.featureOptions.backlinks.enabled) 
 			this.createBacklinks();
 
-		if (ObsidianSite.metadata.featureOptions.tags.enabled) 
+		if (this.isRootDocument && ObsidianSite.metadata.featureOptions.tags.enabled) 
 			this.createTags();
 
+		if (this.documentType == DocumentType.Canvas)
+		{
+			this.canvas = new Canvas(this);
+		}
+
 		return this;
+	}
+
+	public createHeaders()
+	{
+		// get all headers that are not nested in another header
+		const pageHeader = this.documentEl.querySelector(".header .heading") as HTMLElement;
+		let headerEls: HTMLElement[] = [];
+
+		if (pageHeader) headerEls = [pageHeader];
+		else headerEls = Array.from(this.documentEl.querySelectorAll(":is(h1, h2, h3, h4, h5, h6):not(:is(.heading-wrapper . heading-wrapper :is(h1, h2, h3, h4, h5, h6)))"));
+		
+		this.headers = [];
+		for (const headerEl of headerEls)
+		{
+			this.headers.push(new Header(headerEl as HTMLElement));
+		}
 	}
 
 	public createCallouts()
@@ -275,6 +312,8 @@ export class WebpageDocument
 			if (!url) continue;
 			const childPromise = new WebpageDocument(url).load(this, ref.parentElement as HTMLElement);
 			promises.push(childPromise);
+			console.log("Loading child", url);
+			ref.remove();
 		}
 
 		const initPromises = (await Promise.all(promises)).map(c => c.init());

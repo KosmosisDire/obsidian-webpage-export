@@ -81,22 +81,18 @@ export namespace Utils
 	export async function  downloadAttachments(files: Attachment[])
 	{
 		ExportLog.progress(0, "Saving HTML files to disk", "...", "var(--color-green)");
-		
-		for (let i = 0; i < files.length; i++)
-		{
-			const file = files[i];
 
-			try
-			{
+		let complete = 0;
+		
+		await Promise.all(files.map(async (file, i) => {
+			try {
+				complete++;
+				ExportLog.progress((complete+1) / files.length, "Saving HTML files to disk", "Saved: " + file.filename, "var(--color-green)");
 				await file.download();
-				ExportLog.progress((i+1) / files.length, "Saving HTML files to disk", "Saving: " + file.filename, "var(--color-green)");
-			}
-			catch (e)
-			{
+			} catch (e) {
 				ExportLog.error(e, "Could not save file: " + file.filename);
-				continue;
 			}
-		}
+		}));
 	}
 
 	//export async function  that awaits until a condition is met

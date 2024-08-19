@@ -97,7 +97,7 @@ async function initializePage(pageChanged = true)
 
 	canvasBackground = document.querySelector(".canvas-background") ?? canvasBackground;
 	canvasBackgroundPattern = document.querySelector(".canvas-background pattern") ?? canvasBackgroundPattern;
-	viewContent = document.querySelector("#center-content > .document:not([data-type='markdown'])") ?? document.querySelector("#center-content > .document") ?? viewContent ?? documentContainer;
+	viewContent = document.querySelector("#center-content > .obsidian-document:not([data-type='markdown'])") ?? document.querySelector("#center-content > .obsidian-document") ?? viewContent ?? documentContainer;
 	outlineTreeItems = Array.from(document.querySelectorAll(".tree-container.outline-tree .tree-item"));
 
 	if(!fullyInitialized)
@@ -184,7 +184,7 @@ function initializePageEvents(setupOnNode)
 
 function initializeDocumentTypes(fromDocument)
 {
-	if (fromDocument.querySelector("#center-content > .document")) documentType = "markdown";
+	if (fromDocument.querySelector("#center-content > .obsidian-document")) documentType = "markdown";
 	else if (fromDocument.querySelector(".canvas-wrapper")) documentType = "canvas";
 	else 
 	{
@@ -1654,7 +1654,7 @@ function setupCanvas(setupOnNode)
 					let mouseVert = Math.abs(deltaY) > Math.abs(deltaX * 1.5);
 
 					// only skip if the focused node can be scrolled in the direction of mouse movement
-					let sizer = focusedCanvasNode.querySelector(".sizer");
+					let sizer = focusedCanvasNode.querySelector(".markdown-sizer");
 					if(sizer)
 					{
 						let scrollableVert = sizer.scrollHeight > sizer.parentElement.clientHeight + 1;
@@ -1754,7 +1754,7 @@ function setupCanvas(setupOnNode)
 		if (focusedCanvasNode)
 		{
 			// only skip if the focused node can be scrolled
-			let sizer = focusedCanvasNode.querySelector(".sizer");
+			let sizer = focusedCanvasNode.querySelector(".markdown-sizer");
 			if(sizer && sizer.scrollHeight > sizer.parentElement.clientHeight) return;
 		}
 
@@ -2459,7 +2459,7 @@ function setupScroll(setupOnNode)
 	// hide elements clipped by scrollable areas in markdown-preview-view elements
 	if(documentType != "canvas") return;
 
-	let markdownViews = Array.from(setupOnNode.querySelectorAll(".document"));
+	let markdownViews = Array.from(setupOnNode.querySelectorAll(".obsidian-document"));
 	let nextMarkdownViewId = 0;
 
 	let marginMultiplier = 0.1;
@@ -2741,7 +2741,7 @@ function startsWithAny(string, prefixes)
 async function searchCurrentDocument(query)
 {
 	clearCurrentDocumentSearch();
-	const textNodes = getTextNodes(document.querySelector(".sizer") ?? documentContainer);
+	const textNodes = getTextNodes(document.querySelector(".markdown-sizer") ?? documentContainer);
 
 	textNodes.forEach(async node =>
 	{

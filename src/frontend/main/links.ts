@@ -3,6 +3,7 @@ export class LinkHandler
 {
 	public static initializeLinks(onElement: HTMLElement)
 	{
+		console.log("Initializing links on element", onElement);
 		onElement?.querySelectorAll(".internal-link, a.tag, a.tree-item-self, a.footnote-link").forEach(function(link)
 		{
 			link.addEventListener("click", function(event)
@@ -31,5 +32,15 @@ export class LinkHandler
 		if(url == "" || url == "/" || url == "\\") return "/index.html";
 		if(url.startsWith("#") || url.startsWith("?")) return ObsidianSite.document.pathname + url;
 		return url.split("?")[0].split("#")[0];
+	}
+
+	public static getHashFromURL(url: string): string
+	{
+		return (url.split("#")[1] ?? "").split("?")[0] ?? "";
+	}
+
+	public static getQueryFromURL(url: string): string
+	{
+		return url.split("?")[1] ?? "";
 	}
 }

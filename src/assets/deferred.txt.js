@@ -23,12 +23,12 @@ async function loadIncludes()
 				let includeChildren = Array.from(docFrag.children);
 				for (let child of includeChildren)
 				{
-					child.classList.add("hide");
+					child?.classList?.add("hide");
 					child.style.transition = "opacity 0.5s ease-in-out";
 
 					setTimeout(() => 
 					{
-						child.classList.remove("hide");
+						child?.classList?.remove("hide");
 					}, 10);
 				};
 
@@ -61,7 +61,7 @@ async function loadIncludes()
 			error.style.fontWeight = "bold";
 			error.style.textAlign = "center";
 			document.body.appendChild(error);
-			document.querySelector("#center-content")?.classList.remove("hide");
+			document.querySelector("#center-content")?.classList?.remove("hide");
 		}
 	}
 }

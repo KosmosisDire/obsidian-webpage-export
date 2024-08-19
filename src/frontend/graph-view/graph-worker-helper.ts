@@ -1,5 +1,6 @@
 import { Vector2 } from "frontend/main/utils";
 import { GraphView } from "../main/graph-view";
+import { Shared } from "shared/shared";
 
 // colors in hex
 export interface GraphViewColors
@@ -71,6 +72,7 @@ export class GraphRenderWorker
 
 	public canvas: HTMLCanvasElement;
 	public canvasSidebar: HTMLElement | null;
+	// @ts-ignore
 	public view: OffscreenCanvas;
 	public worker: Worker;
 	public graph: GraphView;
@@ -102,7 +104,7 @@ export class GraphRenderWorker
 			console.log("Failed to transfer control to offscreen canvas");
 		}
 		
-        this.worker = new Worker(new URL(ObsidianSite.document.info.pathToRoot + "/lib/scripts/graph-render-worker.js", window.location.href).pathname);
+        this.worker = new Worker(new URL(`${ObsidianSite.document.info.pathToRoot}/${Shared.libFolderName}/${Shared.scriptsFolderName}/graph-render-worker.js`, window.location.href).pathname);
 
         this._cameraOffset = new Vector2(0, 0);
         this._cameraScale = 1;
@@ -243,10 +245,12 @@ export class GraphRenderWorker
 
     autoResizeCanvas()
     {
-		if (this.width != this.canvas.offsetWidth || this.height != this.canvas.offsetHeight)
+		let canvasWidth = this.canvas.offsetWidth;
+		let canvasHeight = this.canvas.offsetHeight;
+		if (this.width != canvasWidth || this.height != canvasHeight)
 		{
 			this.centerCamera();
-        	this.resizeCanvas(this.canvas.offsetWidth, this.canvas.offsetHeight);
+        	this.resizeCanvas(canvasWidth, canvasHeight);
 		}
     }
 

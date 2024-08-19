@@ -1,24 +1,24 @@
-import { PageFeature } from "./page-feature";
+import { InsertedFeature } from "shared/feature";
 
-export class Tags extends PageFeature
+
+export class Aliases extends InsertedFeature
 {
-	public tagNames: string[];
-	public tagElements: HTMLSpanElement[];
+	public aliasNames: string[];
+	public aliasElements: HTMLSpanElement[];
 
-	constructor(tags: string[])
+	constructor(aliases: string[])
 	{
-		super(ObsidianSite.metadata.featureOptions.alias, "aliases");
+		super(ObsidianSite.metadata.featureOptions.alias);
 
-		this.tagNames = tags;
-		this.tagElements = [];
-		for (let tagName of tags)
+		this.aliasNames = aliases;
+		this.aliasElements = [];
+		for (let tagName of aliases)
 		{
-			const tagEl = document.createElement("span");
-			tagEl.classList.add("tag");
-			tagEl.setAttribute("href", `?query=tag:${tagName.replace("#", "")}`);
-			tagEl.innerText = tagName;
-			this.contentEl.appendChild(tagEl);
-			this.tagElements.push(tagEl);
+			const aliasEl = document.createElement("span");
+			aliasEl.classList.add("alias");
+			aliasEl.innerText = tagName;
+			this.contentEl.appendChild(aliasEl);
+			this.aliasElements.push(aliasEl);
 		}
 	}
 }

@@ -1,8 +1,8 @@
 import { Attachment } from "plugin/utils/downloadable";
 import { Website } from "./website";
 import { Webpage } from "./webpage";
-import { TFile } from "obsidian";
-import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
+import { Notice, TFile } from "obsidian";
+import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
 import { AssetHandler } from "plugin/asset-loaders/asset-handler";
 import { ExportLog } from "plugin/render-api/render-api";
 import Minisearch from 'minisearch';
@@ -20,7 +20,7 @@ export class Index
 	private website: Website;
 	private sourceToWebpage: Map<string, Webpage> = new Map();
 	private sourceToAttachment: Map<string, Attachment> = new Map();
-	private exportOptions: MarkdownWebpageRendererAPIOptions;
+	private exportOptions: ExportPipelineOptions;
 
 	private stopWords = ["a", "about", "actually", "almost", "also", "although", "always", "am", "an", "and", "any", "are", "as", "at", "be", "became", "become", "but", "by", "can", "could", "did", "do", "does", "each", "either", "else", "for", "from", "had", "has", "have", "hence", "how", "i", "if", "in", "is", "it", "its", "just", "may", "maybe", "me", "might", "mine", "must", "my", "mine", "must", "my", "neither", "nor", "not", "of", "oh", "ok", "when", "where", "whereas", "wherever", "whenever", "whether", "which", "while", "who", "whom", "whoever", "whose", "why", "will", "with", "within", "without", "would", "yes", "yet", "you", "your"];
 	private minisearchOptions = 
@@ -49,7 +49,7 @@ export class Index
 	public updatedFiles: Attachment[] = [];
 	public allFiles: Attachment[] = [];
 
-	public async load(website: Website, options: MarkdownWebpageRendererAPIOptions)
+	public async load(website: Website, options: ExportPipelineOptions)
 	{
 		this.website = website;
 		this.exportOptions = options;
@@ -93,7 +93,8 @@ export class Index
 				themeToggle: options.themeToggleOptions,
 				graphView: options.graphViewOptions,
 				sidebar: options.sidebarOptions,
-				customHead: options.customHead,
+				customHead: options.customHeadOptions,
+				document: options.fileOptions
 			};
 			
 			// set global values
@@ -187,27 +188,27 @@ export class Index
 			return Promise.all(promises);
 		}
 
-		//@ts-ignore
-		app.loadProgress.setMessage("Deleting website data. This may take a minute.");
-		//@ts-ignore
-		app.loadProgress.show();
+
+		new Notice("Deleting website data. This may take a minute...", 10);
 
 		await Utils.delay(500);
 
-		const files = this.oldWebsiteData.allFiles.map((file) => new Path(file).setWorkingDirectory(this.website.destination.path));
+		const files = this.oldWebsiteData?.allFiles?.map((file) => new Path(file).setWorkingDirectory(this.website.destination.path));
 
-		const promises = files.map((file) => file.delete());
+		const promises = files?.map((file) => file.delete());
 		await allPromisesProgress(promises, async (progress) => 
 		{
 			// @ts-ignore
-			app.loadProgress.setProgress(progress, 1);
+			if (progress % 10 == 0)
+			{
+				new Notice(`Deleting website data. ${progress.toFixed(0)}%`);
+			}
 			await Utils.delay(0);
 		});
 
 		Path.removeEmptyDirectories(this.website.destination.path);
 		
-		//@ts-ignore
-		app.loadProgress.hide();
+		new Notice("Website data deletion finished.");
 	}
 
 	/**
@@ -367,6 +368,16 @@ export class Index
 		if (file.showInTree && !this.attachmentsShownInTree.includes(file))
 			this.attachmentsShownInTree.push(file);
 
+		if (file instanceof Webpage && file.sourcePath && !this.sourceToWebpage.has(file.sourcePath))
+		{
+			this.sourceToWebpage.set(file.sourcePath, file);
+		}
+
+		if (file instanceof Attachment && file.sourcePath && !this.sourceToAttachment.has(file.sourcePath))
+		{
+			this.sourceToAttachment.set(file.sourcePath, file);
+		}
+
 		// only update the index if the file is new or updated
 		if (newFile || updatedFile)
 		{
@@ -425,8 +436,13 @@ export class Index
 		return this.sourceToWebpage.get(sourcePath);
 	}
 
-	public getFile(sourcePath: string): Attachment | Webpage | undefined
+	public getFile(sourcePath: string, preferAttachment: boolean = false): Attachment | Webpage | undefined
 	{
+		if (preferAttachment)
+		{
+			return this.sourceToAttachment.get(sourcePath) ?? this.sourceToWebpage.get(sourcePath);
+		}
+		
 		return this.sourceToWebpage.get(sourcePath) ?? this.sourceToAttachment.get(sourcePath);
 	}
 
@@ -475,7 +491,7 @@ export class Index
 
 	private getSearchContent(webpage: Webpage): string 
 	{
-		const contentElement = webpage.sizerElement ?? webpage.viewElement ?? webpage.document?.body;
+		const contentElement = webpage.sizerElement ?? webpage.viewElement ?? webpage.pageDocument?.body;
 		if (!contentElement)
 		{
 			return "";
@@ -596,11 +612,6 @@ export class Index
 
 	private async updateWebpage(webpage: Webpage)
 	{
-		if (webpage.sourcePath && !this.sourceToWebpage.has(webpage.sourcePath))
-		{
-			this.sourceToWebpage.set(webpage.sourcePath, webpage);
-		}
-
 		if (!this.webpages.includes(webpage))
 		{
 			this.webpages.push(webpage);
@@ -645,12 +656,6 @@ export class Index
 	private updateAttachment(attachment: Attachment)
 	{
 		this.addAttachmentToWebsiteData(attachment);
-
-		const key = attachment.sourcePath ?? attachment.targetPath.path;
-		if (!this.sourceToAttachment.has(key))
-		{
-			this.sourceToAttachment.set(key, attachment);
-		}
 
 		if (!this.attachments.includes(attachment))
 		{

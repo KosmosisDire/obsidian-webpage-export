@@ -1,7 +1,7 @@
-import { ComponentGenerator } from "./component-generator";
+import { FeatureGenerator } from "./feature-generator";
 
 
-export class SearchInput implements ComponentGenerator
+export class SearchInput implements FeatureGenerator
 {
 	public inputContainerEl: HTMLElement;
 	public inputWrapperEl: HTMLElement;

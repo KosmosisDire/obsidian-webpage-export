@@ -1,3 +1,4 @@
+import { Shared } from "shared/shared";
 import { LinkHandler } from "./links";
 import { getTextNodes } from "./utils";
 import { ObsidianWebsite } from "./website";
@@ -148,7 +149,7 @@ export class Search
 		this.container = this.input?.closest("#search-container") as HTMLElement;
 		if (!this.input || !this.container) return;
 
-		const indexResp = await ObsidianSite.fetch('lib/search-index.json');
+		const indexResp = await ObsidianSite.fetch(Shared.libFolderName + '/search-index.json');
 		if (!indexResp?.ok)
 		{
 			console.error("Failed to fetch search index");

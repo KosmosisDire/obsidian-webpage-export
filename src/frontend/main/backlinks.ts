@@ -1,5 +1,5 @@
 import { WebpageData } from "shared/website-data";
-import { PageFeature } from "./page-feature";
+import { InsertedFeature } from "shared/feature";
 
 // this is for backlinks but it can actually be used to display any link technically
 
@@ -49,13 +49,13 @@ export class Backlink
 	}
 }
 
-export class BacklinkList extends PageFeature
+export class BacklinkList extends InsertedFeature
 {
 	public backlinks: Backlink[];
 
 	constructor(backlinkPaths: string[])
 	{
-		super(ObsidianSite.metadata.featureOptions.backlinks, "backlinks");
+		super(ObsidianSite.metadata.featureOptions.backlinks);
 
 		this.backlinks = backlinkPaths.map(url => new Backlink(this.contentEl, url));
 	}

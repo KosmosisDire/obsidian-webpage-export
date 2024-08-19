@@ -2,6 +2,7 @@ import { Settings } from "plugin/settings/settings";
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { ExportLog } from "plugin/render-api/render-api";
+import { OtherPluginStyles } from "./other-plugin-styles.js";
 
 export class SupportedPluginStyles extends AssetLoader
 {
@@ -44,6 +45,9 @@ export class SupportedPluginStyles extends AssetLoader
 
 			this.data += "\n\n /* ---- */\n\n";
         }
+
+		// iconize
+		this.data += await OtherPluginStyles.getStyleForPlugin("obsidian-icon-folder");
 
         await super.load();
     }

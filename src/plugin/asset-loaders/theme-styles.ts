@@ -34,17 +34,28 @@ export class ThemeStyles extends AssetLoader
     
     override async load()
     {
-        const themeName = this.exportOptions.themeName ?? "Default";
+        let themeName = this.exportOptions.themeName;
+		if (!themeName || themeName == "")
+			// @ts-ignore
+			themeName = app?.vault?.config?.cssTheme;
+
+		if (!themeName || themeName == "")
+			themeName = "Default";
+		
         if (themeName == this.lastThemeName && this.data != "") 
 		{
+			console.log("Theme styles already loaded.");
 			return;
 		}
+
         const themeCSS = await ThemeStyles.getThemeContent(themeName);
 		const themeStylesheet = new CSSStyleSheet();
 		// @ts-ignore
 		await themeStylesheet.replace(themeCSS);
 		this.data = AssetHandler.filterStyleRules(themeStylesheet, ThemeStyles.obsidianStylesFilter, ThemeStyles.stylesKeep);
         this.lastThemeName = themeName;
+
+		console.log("Theme styles loaded " + themeName);
         await super.load();
     }
 }

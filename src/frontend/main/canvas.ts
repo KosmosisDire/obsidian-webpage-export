@@ -1,5 +1,5 @@
 import { WebpageDocument } from "./document"
-import { Bounds, Vector2, getPointerPosition } from "./utils";
+import { Bounds, inOutQuadBlend, Vector2, getPointerPosition, lerp, lerpv, inOutQuadBlendv, lerpc, clamp, mapRange, mapRangeClamped } from "./utils";
 
 export enum NodeType
 {
@@ -25,9 +25,60 @@ export class CanvasNode
 	public document: WebpageDocument;
 	public isFocused: boolean = false;
 
+	public get size(): Vector2
+	{
+		return new Vector2(parseFloat(this.nodeEl.style.width.replace("px", "")), parseFloat(this.nodeEl.style.height.replace("px", "")));
+	}
+
+	public set size(newSize: Vector2)
+	{
+		this.nodeEl.style.width = newSize.x + "px";
+		this.nodeEl.style.height = newSize.y + "px";
+		this.nodeEl.style.setProperty("--canvas-node-width", newSize.x + "px");
+		this.nodeEl.style.setProperty("--canvas-node-height", newSize.y + "px");
+	}
+
+	public get position(): Vector2
+	{
+		// ex. transform: translate(1600px, 10550px);
+		const transform = this.nodeEl.style.transform;
+		const match = transform.match(/translate\(([^,]+)px, ([^,]+)px\)/);
+
+		const translate = this.nodeEl.style.translate;
+		const match2 = translate.match(/([^,]+)px ([^,]+)px/);
+
+		// add together the two translations
+		let x = 0;
+		let y = 0;
+		if (match)
+		{
+			x += parseFloat(match[1]);
+			y += parseFloat(match[2]);
+		}
+
+		if (match2)
+		{
+			x += parseFloat(match2[1]);
+			y += parseFloat(match2[2]);
+		}
+
+		return new Vector2(x, y);
+	}
+
+	public set position(newPos: Vector2)
+	{
+		this.nodeEl.style.transform = `translate(${newPos.x}px, ${newPos.y}px)`;
+	}
+
 	public get bounds(): Bounds
 	{
-		return Bounds.fromElement(this.nodeEl);
+		let bounds = new Bounds(0, 0, 0, 0);
+		let size = this.size.scale(this.canvas.scale);
+		let position = this.position.scale(this.canvas.scale).add(this.canvas.position);
+
+		bounds.position = position;
+		bounds.size = size;
+		return bounds;
 	}
 
 	public get label(): string
@@ -55,6 +106,8 @@ export class CanvasNode
 	{
 		this.canvas = canvas;
 		this.nodeEl = nodeEl;
+		//@ts-ignore
+		this.nodeEl.nodeObj = this;
 		this.labelEl = nodeEl.querySelector(".canvas-node-label") as HTMLElement;
 		this.containerEl = nodeEl.querySelector(".canvas-node-container") as HTMLElement;
 		this.contentEl = nodeEl.querySelector(".canvas-node-content") as HTMLElement;
@@ -63,7 +116,7 @@ export class CanvasNode
 		if (contentClasses.contains("image-embed")) this.type = NodeType.Image;
 		else if (contentClasses.contains("video-embed")) this.type = NodeType.Video;
 		else if (contentClasses.contains("audio-embed")) this.type = NodeType.Audio;
-		else if (contentClasses.contains("markdown-embed") && contentClasses.contains("is-loaded")) this.type = NodeType.ExternalMarkdown;
+		else if (contentClasses.contains("markdown-embed") && contentClasses.contains("external-markdown-embed")) this.type = NodeType.ExternalMarkdown;
 		else if (contentClasses.contains("markdown-embed")) this.type = NodeType.Markdown;
 		else if (contentClasses.contains("canvas-embed")) this.type = NodeType.Canvas;
 		else if (this.contentEl.firstElementChild?.tagName === "IFRAME") this.type = NodeType.Website;
@@ -72,8 +125,9 @@ export class CanvasNode
 
 		if (this.type == NodeType.ExternalMarkdown)
 		{
-			const markdownEmbedContent = this.contentEl.querySelector(".markdown-embed-content");
-			const documentObj = canvas.document.children.find((doc) => doc.containerEl == markdownEmbedContent);
+			const documentEl = this.contentEl.querySelector(".obsidian-document");
+			console.log(documentEl);
+			const documentObj = canvas.document.children.find((doc) => doc.documentEl == documentEl);
 			if (documentObj) this.document = documentObj;
 			else console.error("Failed to find document object for external markdown node", this);
 		}
@@ -101,7 +155,7 @@ export class CanvasNode
 
 		this.nodeEl.addEventListener("dblclick", (e) => 
 		{
-			node.fitToView(0.3);
+			node.fitToView(false);
 		});
 
 		function onEnter(event: PointerEvent)
@@ -123,9 +177,9 @@ export class CanvasNode
 		this.nodeEl.addEventListener("pointerenter", onEnter);
 	}
 
-	public fitToView(transitionTime: number = 0)
+	public fitToView(instant: boolean = false)
 	{
-		this.canvas.fitToBounds(this.bounds, 0.9, transitionTime);
+		this.canvas.fitToBounds(this.bounds, 0.9, instant);
 	}
 }
 
@@ -133,10 +187,23 @@ export class Canvas
 {
 	public document: WebpageDocument;
 	public nodes: CanvasNode[];
+	public hiddenNodes: CanvasNode[] = [];
 	public canvasEl: HTMLElement;
 	public wrapperEl: HTMLElement;
 	public backgroundEl: HTMLElement;
+	public backgroundDotEl: SVGCircleElement;
 	public focusedNode: CanvasNode | null = null;
+
+	private _renderScale = 1;
+	public get renderScale(): number { return this._renderScale; }
+	public set renderScale(scale: number)
+	{
+		this._renderScale = scale;
+		//@ts-ignore
+		this.canvasEl.style.zoom = (scale * 100) + "%";
+		this.scale = this._scale;
+		this.position = this._position;
+	}
 
 
 	public get nodeBounds(): Bounds
@@ -157,45 +224,99 @@ export class Canvas
 		return Bounds.fromElement(this.wrapperEl);
 	}
 
-	private readonly minScale: number = 0.1;
-	private readonly maxScale: number = 1.5;
-	private _scale: number = 1;
-	public get scale(): number { return this._scale; }
-	private set scale(newScale: number) 
+	private readonly _minScale: number = 0.1;
+	private readonly _maxScale: number = 5;
+	public get minScale(): number { return this._minScale; }
+	public get maxScale(): number { return this._maxScale; }
+
+	private _targetScale: number = 1;
+	public get targetScale(): number { return this._targetScale}
+	private set targetScale(newScale: number) 
 	{
 		newScale = Math.min(Math.max(newScale, this.minScale), this.maxScale);
-		const scaleStr = newScale.toString() ?? "1";
+		this._targetScale = newScale;
+	}
+	
+	private _scale: number = 1;
+	public get scale(): number { return this._scale; }
+	private set scale(newScale: number)
+	{
+		let ratio = newScale / this._scale;
+		this._scale = newScale;
+		let scaled = newScale / this.renderScale;
+		const scaleStr = scaled.toString() ?? "1";
 		this.canvasEl.style.scale = scaleStr;
 		const zoomStr = (1/(Math.sqrt(newScale))).toString() ?? "1";
 		this.wrapperEl.style.setProperty("--zoom-multiplier",  zoomStr);
-		this._scale = newScale;
+
+		this.canvasEl.classList.toggle("small-scale", this.scale < 0.15);
+
+		this.backgroundScale = this.backgroundScale * ratio;
 	}
 
 	// private nodespaceOffset: Vector2;
-	private _position: Vector2;
+	private _targetPosition: Vector2 = new Vector2(0, 0);
+	public get targetPosition(): Vector2 { return this._targetPosition; }
+	public set targetPosition(screenPos: Vector2)
+	{
+		this._targetPosition = screenPos;
+	}
+
+	private _position: Vector2 = new Vector2(0, 0);
 	public get position(): Vector2 { return this._position; }
 	public set position(screenPos: Vector2)
 	{
 		this._position = screenPos;
-		this.canvasEl.style.translate = `${screenPos.x}px ${screenPos.y}px`;
+		let scaled = screenPos.divide(this.renderScale);
+		this.canvasEl.style.translate = `${scaled.x}px ${scaled.y}px`;
+		this.backgroundPosition = this.position;
 	}
 
-	private _backgroundScale: number = 20;
+	public set forcePosition(screenPos: Vector2)
+	{
+		this.targetPosition = screenPos;
+		this.position = screenPos;
+	}
+
+	public get forcePosition(): Vector2
+	{
+		return this.position;
+	}
+
+	private _backgroundBaseScale: number = 20;
+	private _invisibleBackgroundScale: number = 2;
+	private _backgroundScale: number = this._backgroundBaseScale;
 	public get backgroundScale(): number { return this._backgroundScale; }
 	public set backgroundScale(newScale: number)
 	{
-		const scaleStr = newScale.toString() ?? "20";
-		this.backgroundEl.setAttribute("width", scaleStr);
-		this.backgroundEl.setAttribute("height", scaleStr);
+		const scaleStr = (newScale).toString()  ?? "20";
+		this.backgroundEl?.setAttribute("width", scaleStr);
+		this.backgroundEl?.setAttribute("height", scaleStr);
 		this._backgroundScale = newScale;
+
+		// lerp opacity based on scale
+		if (this.backgroundEl?.parentElement)
+			this.backgroundEl.parentElement.style.opacity = (1 - mapRangeClamped(this._backgroundScale, this._backgroundBaseScale / 2, this._invisibleBackgroundScale, 0, 1)).toString();
+	}
+
+	private _backgroundDotSize: number = 1;
+	public get backgroundDotSize(): number { return this._backgroundDotSize; }
+	public set backgroundDotSize(newSize: number)
+	{
+		const sizeStr = newSize.toString() ?? "0.7";
+		this.backgroundDotEl?.setAttribute("r", sizeStr);
+		this.backgroundDotEl?.setAttribute("cx", sizeStr);
+		this.backgroundDotEl?.setAttribute("cy", sizeStr);
+		this._backgroundDotSize = newSize;
 	}
 
 	private _backgroundPosition: Vector2 = new Vector2(0, 0);
 	public get backgroundPosition(): Vector2 { return this._backgroundPosition; }
 	public set backgroundPosition(newPosition: Vector2)
 	{
-		this.backgroundEl.setAttribute("x", newPosition.x.toString());
-		this.backgroundEl.setAttribute("y", newPosition.y.toString());
+		if (!this.backgroundEl) return;
+		this.backgroundEl?.setAttribute("x", newPosition.x.toString());
+		this.backgroundEl?.setAttribute("y", newPosition.y.toString());
 		this._backgroundPosition = newPosition;
 	}
 
@@ -205,6 +326,10 @@ export class Canvas
 		this.document = document;
 		this.nodes = Array.from(document.documentEl.querySelectorAll(".canvas-node"))
 					.map((nodeEl) => new CanvasNode(this, nodeEl as HTMLElement));
+
+		// canvas nodes sometimes (not always) have both a translate and a transform: translate in their style
+		// this snippets combines them into one just one translation
+		
 
 		// make local space equal to screen space
 		this.document.documentEl.style.position = "absolute";
@@ -217,8 +342,11 @@ export class Canvas
 		this.canvasEl = document.documentEl.querySelector(".canvas") as HTMLElement;
 		this.wrapperEl = document.documentEl.querySelector(".canvas-wrapper") as HTMLElement;
 		this.backgroundEl = document.documentEl.querySelector(".canvas-background pattern") as HTMLElement;
+		this.backgroundDotEl = this.backgroundEl?.querySelector("circle") as SVGCircleElement;
 		this.canvasEl.setAttribute("style", `translate: 0px 1px; scale: 1;`);
-		this.backgroundScale = 20;
+		this.backgroundScale = this._backgroundScale;
+		this.backgroundDotSize = this._backgroundDotSize;
+		this.renderScale = this._renderScale;
 
 		const nodespaceOffset = Bounds.fromElement(this.canvasEl).min.sub(this.nodeBounds.min);
 		Array.from(this.canvasEl.children).forEach((el) => 
@@ -227,33 +355,102 @@ export class Canvas
 			el.style.translate = `${nodespaceOffset.x}px ${nodespaceOffset.y}px`;
 		});
 
-		this.position = this.nodeBounds.min.sub(this.wrapperBounds.min);
+		this.forcePosition = this.nodeBounds.min.sub(this.wrapperBounds.min);
 
+		requestAnimationFrame(this.updateScale.bind(this));
+		
 		this.initEvents();
 
-		// zoom in animation
-		this.fitToBounds(this.nodeBounds, 3);
-		this.fitToBounds(this.nodeBounds, 0.9, 0.3);
+		this.wrapperEl.style.transition = "opacity 0.0s";
+		this.wrapperEl.classList.add("hide");
+		this.wrapperEl.style.transition = "opacity 3s";
+		this.wrapperEl.classList.remove("hide");
+
+		this.fitToBounds(this.nodeBounds, 3, true);
+
+		setTimeout(() =>
+		{
+			// zoom in animation
+			this.fitToBounds(this.nodeBounds, 0.9, false);
+		}, 100);
+
+
+	}
+
+	private lastTime: number = 0;
+	private updateScale(time: number)
+	{
+		if (this.lastTime == 0) this.lastTime = time;
+		const deltaTime = (time - this.lastTime) / 1000;
+		this.lastTime = time;
+
+		if (Math.abs(this.targetScale - this.scale) > 0.0001) 
+			this.scale = inOutQuadBlend(this.scale, this.targetScale, 6 * deltaTime);
+
+		if (this.targetPosition.sub(this.position).magnitude > 0.001)
+			this.position = inOutQuadBlendv(this.position, this.targetPosition, 6 * deltaTime);
+		
+		let screenBounds = Bounds.screenBounds;
+
+		// sort the hidden nodes by their distance from the center of the screen
+		this.hiddenNodes.sort((a, b) => 
+		{
+			const aCenter = a.bounds.center;
+			const bCenter = b.bounds.center;
+			const aDist = aCenter.sub(screenBounds.center).magnitude;
+			const bDist = bCenter.sub(screenBounds.center).magnitude;
+			return aDist - bDist;
+		});
+
+		// loop through the first 50 hidden nodes and check if they are visible, if they are unset the display
+		for (let i = 0; i < 50; i++)
+		{
+			if (i >= this.hiddenNodes.length) break;
+			const node = this.hiddenNodes[i];
+			if (!node)
+			{
+				this.hiddenNodes.splice(i, 1);
+				continue;
+			}
+			const bounds = node.bounds.expand(100);
+			const isVisible = bounds.overlaps(screenBounds);
+			node.nodeEl.style.display = isVisible ? "" : "none";
+			if (isVisible) this.hiddenNodes.splice(i, 1);
+		}
+
+		requestAnimationFrame(this.updateScale.bind(this));
 	}
 
 	private initEvents()
 	{
+		// hide nodes that are not in view
+		const observer = new IntersectionObserver((entries) => 
+		{
+			entries.forEach(entry => 
+			{
+				(entry.target as HTMLElement).style.display = entry.isIntersecting ? '' : 'none';
+				//@ts-ignore
+				if (!entry.isIntersecting) this.hiddenNodes.push((entry.target as HTMLElement).nodeObj);
+			});
+		}, { root: null, rootMargin: '0px', threshold: 0 });
+		this.nodes.forEach((node) => observer.observe(node.nodeEl));
+
 		// make canvas draggable / panable with mouse
-		const canvas = this;
+		const localThis = this;
 		const isWindows = navigator.userAgent.includes("Windows"); // used for smart scrolling
  
 		this.backgroundEl.parentElement?.addEventListener("dblclick", () => 
 		{
 			console.log("fitting to bounds");
-			canvas.fitToBounds(this.nodeBounds, 0.9, 0.3);
+			localThis.fitToBounds(this.nodeBounds, 0.9, false);
 		});
 
 		function dragStart(event: PointerEvent)
 		{
 			if (event.pointerType != "mouse" && event.pointerType != "pen") return;
 			const startPointerPos = getPointerPosition(event);
-			const startCanvasPos = canvas.position;
-			const startingNode = canvas.focusedNode;
+			const startCanvasPos = localThis.position;
+			const startingNode = localThis.focusedNode;
 			//@ts-ignore
 			// canvas.wrapperEl.setPointerCapture(event.pointerId);
 
@@ -267,7 +464,7 @@ export class Canvas
 				dragEvent.preventDefault();
 				const pointer = getPointerPosition(dragEvent);
 				const delta = pointer.sub(startPointerPos);
-				canvas.position = startCanvasPos.add(delta);
+				localThis.forcePosition = startCanvasPos.add(delta);
 			}
 
 			function dragEnd(e: MouseEvent)
@@ -313,10 +510,10 @@ export class Canvas
 		// make canvas mouse zoomable
 		this.wrapperEl.addEventListener("wheel", function (event)
 		{
-			if (!shouldOverrideScroll(event.deltaY, event.deltaX, canvas.focusedNode)) return;
+			if (!shouldOverrideScroll(event.deltaY, event.deltaX, localThis.focusedNode)) return;
 			let scale = 1;
 			scale -= event.deltaY / 700 * scale;
-			canvas.scaleAround(scale, getPointerPosition(event));
+			localThis.scaleAround(scale, getPointerPosition(event));
 		}, { passive: true });
 
 		// make canvas pinch to zoom and drag to pan on touch devices
@@ -339,7 +536,7 @@ export class Canvas
 
 			let lastTouchData = getTouchData(touches);
 			let isTwoFingerDrag = touches.length == 2;
-			const startingNode = canvas.focusedNode;
+			const startingNode = localThis.focusedNode;
 		
 			function touchMove(event: TouchEvent)
 			{
@@ -355,7 +552,7 @@ export class Canvas
 					}
 
 					const scaleDelta = (touchData.distance - lastTouchData.distance) / lastTouchData.distance;
-					canvas.scaleAround(1 + scaleDelta, touchData.center);
+					localThis.scaleAround(1 + scaleDelta, touchData.center);
 				}
 
 				const delta = touchData.center.sub(lastTouchData.center);
@@ -366,7 +563,7 @@ export class Canvas
 				}
 
 				event.preventDefault();
-				canvas.position = canvas.position.add(delta);
+				localThis.targetPosition = localThis.targetPosition.add(delta);
 				lastTouchData = getTouchData(touches);
 			}
 
@@ -383,56 +580,68 @@ export class Canvas
 	}
 
 	/**Sets the relative scale of the canvas around a point*/
-	public scaleAround(scaleBy: number, point: Vector2)
+	public scaleAround(scaleBy: number, point: Vector2, instantScale: boolean = false): Vector2
 	{
 		// clamp scale by the min and max scale when applied to the current scale
-		const currentScale = this.scale;
+		const currentScale = this.targetScale;
 		let newScale = currentScale * scaleBy;
 		newScale = Math.min(Math.max(newScale, this.minScale), this.maxScale);
 		scaleBy = newScale / currentScale;
 		
 		// calculate offset after scaling
-		const centerToPoint = point.sub(this.position);
-		const centerPin = centerToPoint.scale(scaleBy).add(this.position);
+		const centerToPoint = point.sub(this.targetPosition);
+		const centerPin = centerToPoint.scale(scaleBy).add(this.targetPosition);
 		const offset = point.sub(centerPin);
 
-		this.scale *= scaleBy;
-		this.position = this.position.add(offset);
+		if (instantScale)
+		{
+			this.scale *= scaleBy;
+			this.targetScale =  this.scale;
+			this.forcePosition = this.forcePosition.add(offset);
+		}
+		else
+		{
+			this.targetScale *= scaleBy;
+			this.targetPosition = this.targetPosition.add(offset);
+		}
 
 		return offset;
 	}
 
-	public setScaleAround(scale: number, point: Vector2)
+	public setScaleAround(scale: number, point: Vector2, instant: boolean = false)
 	{
-		this.scaleAround(scale / this.scale, point);
+		this.scaleAround(scale / this.targetScale, point, instant);
 	}
 
-	public fitToBounds(bounds: Bounds = this.nodeBounds, scaleMultiplier: number = 0.9, transitionTime: number = 0)
+	public fitToBounds(bounds: Bounds = this.nodeBounds, scaleMultiplier: number = 0.9, instant: boolean = false)
 	{
-		if (transitionTime > 0)
-		{
-			const canvasEl = this.canvasEl;
-			canvasEl.style.transition = `scale ${transitionTime}s cubic-bezier(0.5, -0.1, 0.5, 1.1), translate ${transitionTime}s cubic-bezier(0.5, -0.1, 0.5, 1.1)`;
-			
-			setTimeout(function()
-			{
-				canvasEl.style.transition = "";
-			}, transitionTime * 1000 + 50);
-		}
-
+		this.hideNodesOutsideBounds(bounds.scale(2));
 		const documentWidth = this.document.containerEl.clientWidth;
 		const documentHeight = this.document.containerEl.clientHeight;
 		const xRatio = documentWidth/bounds.width;
 		const yRatio = documentHeight/bounds.height;
 		const scale = scaleMultiplier * Math.min(xRatio, yRatio);
-		this.scaleAround(scale, bounds.center);
-		this.centerView(bounds.center);
+		this.scaleAround(scale, bounds.center, instant);
+		this.centerView(bounds.center, instant);
+	}
+
+	private hideNodesOutsideBounds(bounds: Bounds)
+	{
+		for (const node of this.nodes)
+		{
+			if (!bounds.overlaps(node.bounds))
+			{
+				node.nodeEl.style.display = "none";
+				this.hiddenNodes.push(node);
+			}
+		}
 	}
 
 	/**Sets the absolute center of the view*/
-	private centerView(center: Vector2)
+	private centerView(center: Vector2, instant: boolean = false)
 	{
 		const offset = this.wrapperBounds.center.sub(center);
-		this.position = this.position.add(offset);
+		if (instant) this.forcePosition = this.forcePosition.add(offset);
+		else this.targetPosition = this.targetPosition.add(offset);
 	}
 }

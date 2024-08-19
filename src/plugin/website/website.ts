@@ -1,19 +1,23 @@
 import { Attachment } from "plugin/utils/downloadable";
-import { Webpage } from "./webpage";
-import { FileTree } from "plugin/component-generators/file-tree";
-import { AssetHandler } from "plugin/asset-loaders/asset-handler";
+import { FileTree } from "plugin/features/file-tree";
 import {  TAbstractFile, TFile, TFolder } from "obsidian";
 import {  Settings } from "plugin/settings/settings";
-import { GraphView } from "plugin/component-generators/graph-view";
 import { Path } from "plugin/utils/path";
 import { ExportLog, MarkdownRendererAPI } from "plugin/render-api/render-api";
 import { AssetLoader } from "plugin/asset-loaders/base-asset";
 import { AssetType, InlinePolicy, Mutability } from "plugin/asset-loaders/asset-types.js";
 import { HTMLGeneration } from "plugin/render-api/html-generation-helpers";
-import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
+import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
 import { Index as WebsiteIndex } from "plugin/website/index";
 import { WebpageData } from "plugin/../shared/website-data";
 import { WebpageTemplate } from "./webpage-template";
+import { AssetHandler } from "plugin/asset-loaders/asset-handler";
+import { Webpage } from "./webpage";
+import { GraphView } from "plugin/features/graph-view";
+import { ThemeToggle } from "plugin/features/theme-toggle";
+import { SearchInput } from "plugin/features/search-input";
+import { Utils } from "plugin/utils/utils";
+import { IconHandler } from "plugin/utils/icon-handler";
 
 export class Website
 {
@@ -24,18 +28,51 @@ export class Website
 
 	public fileTree: FileTree;
 	public fileTreeAsset: AssetLoader;
-	private _webpageTemplate: HTMLElement;
-	public get webpageTemplate(): HTMLElement { return this._webpageTemplate.cloneNode(true) as HTMLElement; }
+	public webpageTemplate: WebpageTemplate;
 	
 	public bodyClasses: string;
-	public exportOptions: MarkdownWebpageRendererAPIOptions;
+	public exportOptions: ExportPipelineOptions;
 
-	constructor(destination: Path | string, options?: MarkdownWebpageRendererAPIOptions)
+	constructor(destination: Path | string, options?: ExportPipelineOptions)
 	{
 		if (typeof destination == "string") destination = new Path(destination);
 		this.exportOptions = Object.assign(Settings.exportOptions, options);
 		if (destination.isFile) throw new Error("Website destination must be a folder: " + destination.path);
 		this.destination = destination;
+	}
+
+	private async buildTemplate(): Promise<void>
+	{
+		const template = this.webpageTemplate;
+			
+		// inject graph view
+		if (this.exportOptions.graphViewOptions.enabled)
+		{
+			template.insertFeature(await new GraphView().generate(), this.exportOptions.graphViewOptions);
+		}
+
+		// inject darkmode toggle
+		if (this.exportOptions.themeToggleOptions.enabled)
+		{
+			template.insertFeature(await new ThemeToggle().generate(), this.exportOptions.themeToggleOptions);
+		}
+
+		// inject search bar
+		if (this.exportOptions.searchOptions.enabled)
+		{
+			template.insertFeature(await new SearchInput().generate(), this.exportOptions.searchOptions);
+		}
+
+		// inject file tree
+		if (this.exportOptions.fileNavigationOptions.enabled)
+		{
+			const fileTreeElContainer = document.body.createDiv();
+			fileTreeElContainer.innerHTML = this.fileTreeAsset.getHTML(this.exportOptions);
+			const fileTreeEl = fileTreeElContainer.firstElementChild as HTMLElement;
+
+			template.insertFeature(fileTreeEl, this.exportOptions.fileNavigationOptions);
+			fileTreeElContainer.remove();
+		}
 	}
 
 	public async load(files?: TFile[]): Promise<this>
@@ -84,7 +121,7 @@ export class Website
 
 		try
 		{
-			this._webpageTemplate = WebpageTemplate.createWebpageTemplate(this.exportOptions);
+			this.webpageTemplate = new WebpageTemplate(this.exportOptions);
 		}
 		catch (error)
 		{
@@ -96,21 +133,23 @@ export class Website
 		{
 			try
 			{
-				let attachment: Webpage | Attachment | undefined = undefined;
+				const isConvertable = MarkdownRendererAPI.isConvertable(file.extension);
 
-				if (MarkdownRendererAPI.isConvertable(file.extension))
-				{
-					attachment = new Webpage(file, file.name, this, this.exportOptions);
-				}
-				else
+				if (!isConvertable || (MarkdownRendererAPI.viewableMediaExtensions.contains(file.extension)))
 				{
 					const data = Buffer.from(await app.vault.readBinary(file));
 					const path = this.getTargetPathForFile(file);
-					attachment = new Attachment(data, path, file, this.exportOptions);
+					let attachment = new Attachment(data, path, file, this.exportOptions);
+					attachment.showInTree = true;
+					await this.index.addFile(attachment);
 				}
 
-				attachment.showInTree = true;
-				await this.index.addFile(attachment);
+				if (isConvertable)
+				{
+					let webpage = new Webpage(file, file.name, this, this.exportOptions);
+					webpage.showInTree = true;
+					await this.index.addFile(webpage);
+				}
 			}
 			catch (error)
 			{
@@ -161,9 +200,10 @@ export class Website
 
 		console.log("Creating website with files: ", this.sourceFiles);
 
+		this.buildTemplate();
+
 		this.refreshUpdatedFilesList();
 		
-
 		// if body classes have changed write new body classes to existing files
 		if (this.bodyClasses != (this.index.oldWebsiteData?.bodyClasses ?? this.bodyClasses))
 		{
@@ -239,7 +279,7 @@ export class Website
 				}
 				else
 				{
-					this.index.removeFile(webpage);
+					await this.index.removeFile(webpage);
 				}
 			}
 			catch (error)
@@ -275,6 +315,7 @@ export class Website
 
 		this.refreshUpdatedFilesList();
 
+		this.validateSite();
 		return this;
 	}
 
@@ -350,6 +391,49 @@ export class Website
 
 	}
 
+	/**
+	 * Run some checks to make sure certain formatting and element rules are followed everywhere.
+	 */
+	private validateSite()
+	{
+		// check for duplicate ids
+		this.index.webpages.forEach(async (webpage: Webpage) => 
+		{
+			const ids = new Set<string>();
+			const elements = webpage.pageDocument?.querySelectorAll("[id]");
+			if (!elements) return;
+			elements.forEach(async (element: HTMLElement) => 
+			{
+				const id = element.id;
+				if (ids.has(id))
+				{
+					ExportLog.warning("Duplicate id found: " + id, webpage.source.path);
+				}
+				else
+				{
+					ids.add(id);
+				}
+			});
+			await Utils.delay(0);
+		});
+
+		// check for .feature-title elements not inside a .feature-header
+		this.index.webpages.forEach(async (webpage: Webpage) => 
+		{
+			const titles = webpage.pageDocument?.querySelectorAll(".feature-title");
+			if (!titles) return;
+			titles.forEach(async (title: HTMLElement) => 
+			{
+				if (!title.closest(".feature-header"))
+				{
+					ExportLog.warning(title, `Feature title not inside a feature header in ${webpage.source.path}`);
+				}
+			});
+			await Utils.delay(0);
+		});
+
+	}
+
 	public getTargetPathForFile(file: TFile, filename?: string): Path
 	{
 		const targetPath = new Path(file.path);
@@ -387,7 +471,7 @@ export class Website
 			useDefaultIcon = true;
 		}
 
-		iconOutput = await HTMLGeneration.getIcon(iconProperty ?? "");
+		iconOutput = await IconHandler.getIcon(iconProperty ?? "");
 
 		// add iconize icon as frontmatter if iconize exists
 		const isUnchangedNotEmojiNotHTML = (iconProperty == iconOutput && iconOutput.length < 40) && !/\p{Emoji}/u.test(iconOutput) && !iconOutput.includes("<") && !iconOutput.includes(">");
@@ -401,7 +485,7 @@ export class Website
 			const noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;
 			
 			// only add icon if rendering note icons is enabled
-			// because that is what we rely on to get the icon
+			// bectheause that is what we rely on to get  icon
 			if (noteIconsEnabled)
 			{
 				const iconIdentifier = fileToIconName.settings.iconIdentifier ?? ":";
@@ -529,8 +613,18 @@ export class Website
 	public async getCombinedHTML(): Promise<string>
 	{
 		// get index.html
-		var index = this.index.webpages.find((file) => file.filename == "index.html");
-		if (!index?.html) throw new Error("Index file not found");
+		let index = this.index.webpages.find((file) => file.filename == "index.html");
+		if (!index?.html && this.index.webpages.length > 0)
+		{
+			ExportLog.warning("No index.html found, using the first webpage");
+			index = this.index.webpages[0];
+		}
+
+		if (!index?.html)
+		{
+			ExportLog.error("No index.html found, website creation failed");
+			return "";
+		}
 
 		let html = new DOMParser().parseFromString(index.html, "text/html");
 

@@ -1,13 +1,13 @@
-import { PageFeature } from "./page-feature";
+import { InsertedFeature } from "shared/feature";
 
-export class Tags extends PageFeature
+export class Tags extends InsertedFeature
 {
 	public tagNames: string[];
 	public tagElements: HTMLSpanElement[];
 
 	constructor(tags: string[])
 	{
-		super(ObsidianSite.metadata.featureOptions.tags, "tags");
+		super(ObsidianSite.metadata.featureOptions.tags);
 
 		this.tagNames = tags;
 		this.tagElements = [];

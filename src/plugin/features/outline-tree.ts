@@ -25,6 +25,8 @@ export class OutlineTree extends Tree
 		this.file = webpage.source;
 		this.minDepth = minDepth;
 
+		if (webpage.type != "markdown") return;
+
 		const headings = webpage.headings;
 		this.depth = Math.min(...headings.map(h => h.level)) - 1;
 

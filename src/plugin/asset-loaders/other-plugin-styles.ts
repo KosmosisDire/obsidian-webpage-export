@@ -11,6 +11,15 @@ export class OtherPluginStyles extends AssetLoader
     {
         super("other-plugins.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 9);
     }
+
+	public static async getStyleForPlugin(pluginName: string): Promise<string>
+	{
+		const path = AssetHandler.vaultPluginsPath.joinString(pluginName.replace("\n", ""), "styles.css");
+		if (!path.exists) return "";
+		
+		return await path.readAsString() ?? "";
+	}
+
     
     override async load()
     {
@@ -20,11 +29,9 @@ export class OtherPluginStyles extends AssetLoader
         for (let i = 0; i < Settings.exportOptions.includePluginCSS.length; i++)
         {
             if (!Settings.exportOptions.includePluginCSS[i] || (Settings.exportOptions.includePluginCSS[i] && !(/\S/.test(Settings.exportOptions.includePluginCSS[i])))) continue;
-            
-            const path = AssetHandler.vaultPluginsPath.joinString(Settings.exportOptions.includePluginCSS[i].replace("\n", ""), "styles.css");
-            if (!path.exists) continue;
-            
-            const style = await path.readAsString();
+			let pluginName = Settings.exportOptions.includePluginCSS[i];
+			const style = await OtherPluginStyles.getStyleForPlugin(pluginName);
+           
             if (style)
             {
                 this.data += style;

@@ -1,13 +1,10 @@
 import { Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder, getIcon } from 'obsidian';
 import { Path } from 'plugin/utils/path';
 import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
-import { migrateSettings } from './settings-migration';
 import { ExportLog } from 'plugin/render-api/render-api';
-import { createDivider, createFeatureSetting, createSection, createText, createToggle }  from './settings-components';
-import { MarkdownWebpageRendererAPIOptions } from 'plugin/render-api/api-options';
-import { AssetHandler } from 'plugin/asset-loaders/asset-handler';
-import { SidebarOptions } from 'shared/website-data';
-import { FlowList } from 'plugin/component-generators/flow-list';
+import { createDivider, createFeatureSetting, createSection, createToggle }  from './settings-components';
+import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
+import { FlowList } from 'plugin/features/flow-list';
 
 // #region Settings Definition
 
@@ -29,20 +26,20 @@ export enum LogLevel
 
 export class Settings
 {
-	public static settingsVersion: string;
+	public static settingsVersion: string = "0.0.0";
 
-	public static exportOptions: MarkdownWebpageRendererAPIOptions;
+	public static exportOptions: ExportPipelineOptions = new ExportPipelineOptions();
 
-	public static logLevel: LogLevel;
-	public static titleProperty: string;
-	public static onlyExportModified: boolean;
-	public static deleteOldFiles: boolean;
-	public static exportPreset: ExportPreset;
-	public static openAfterExport: boolean;
+	public static logLevel: LogLevel = LogLevel.Warning;
+	public static titleProperty: string = "title";
+	public static onlyExportModified: boolean = true;
+	public static deleteOldFiles: boolean = true;
+	public static exportPreset: ExportPreset = ExportPreset.Online;
+	public static openAfterExport: boolean = true;
 
 	// Graph View Settings
-	public static filePickerBlacklist: string[];
-	public static filePickerWhitelist: string[];
+	public static filePickerBlacklist: string[] = ["(^|\\/)node_modules\\/","(^|\\/)dist\\/","(^|\\/)dist-ssr\\/","(^|\\/)\\.vscode\\/"]; // ignore node_modules, dist, and .vscode
+	public static filePickerWhitelist: string[] = ["\\.\\w+$"]; // only include files with extensions
 
 	public static async onlinePreset()
 	{
@@ -98,23 +95,34 @@ export class Settings
 
 		await SettingsPage.saveSettings();
 	}
-}
 
-export const DEFAULT_SETTINGS: Settings =
-{
-	settingsVersion: "0.0.0",
+	static getAllFilesFromPaths(paths: string[]): string[]
+	{
+		const files: string[] = [];
 
-	// Asset Options
-	exportOptions: new MarkdownWebpageRendererAPIOptions(),
+		const allFilePaths = app.vault.getFiles().map(f => f.path);
+		if (!paths || paths.length == 0) return allFilePaths;
 
-	logLevel: "warning",
-	titleProperty: "title",
-	onlyExportModified: false,
-	deleteOldFiles: true,
-	exportPreset: ExportPreset.Online,
-	openAfterExport: true,
-	filePickerBlacklist: ["(^|\\/)node_modules\\/","(^|\\/)dist\\/","(^|\\/)dist-ssr\\/","(^|\\/)\\.vscode\\/"], // ignore node_modules, dist, and .vscode
-	filePickerWhitelist: ["\\.\\w+$"], // only include files with extensions
+		for (const path of paths)
+		{
+			const file = app.vault.getAbstractFileByPath(path);
+			if (file instanceof TFile) files.push(file.path);
+			else if (file instanceof TFolder)
+			{
+				const newFiles = allFilePaths.filter((f) => f.startsWith(file?.path ?? "*"));
+				files.push(...newFiles);
+			}
+		};
+
+		return files;
+	}
+
+	static getFilesToExport(): TFile[]
+	{
+		return this.getAllFilesFromPaths(Settings.exportOptions.filesToExport).map(p => app.vault.getFileByPath(p)).filter(f => f) as TFile[];
+	}
+
+	
 }
 
 // #endregion
@@ -149,7 +157,7 @@ export class SettingsPage extends PluginSettingTab
 		supportContainer.style.display = 'grid';
 		supportContainer.style.gridTemplateColumns = "0.5fr 0.5fr";
 		supportContainer.style.gridTemplateRows = "40px 20px";
-		supportContainer.appendChild(supportLink);
+		supportContainer.appendChild(supportLink); 
 
 		// debug info button
 		const debugInfoButton = container.createEl('button');
@@ -195,7 +203,7 @@ export class SettingsPage extends PluginSettingTab
 		createFeatureSetting(section, "Theme Toggle", Settings.exportOptions.themeToggleOptions, 
 		"Allows you to switch between dark and light theme dynamically.");
 
-		createFeatureSetting(section, "Custom Head Content", Settings.exportOptions.customHead,
+		createFeatureSetting(section, "Custom Head Content", Settings.exportOptions.customHeadOptions,
 		"Insert a given .html file onto the page which can include custom JS or CSS");
 
 		createFeatureSetting(section, "Backlinks", Settings.exportOptions.backlinkOptions,
@@ -488,15 +496,15 @@ export class SettingsPage extends PluginSettingTab
 // 			.setName('Document Width')
 // 			.setDesc('Sets the line width of the exported document in css units. (ex. 600px, 50em)')
 // 			.addText((text) => text
-// 				.setValue(Settings.exportOptions.documentWidth)
+// 				.setValue(Settings.exportOptions.obsidian-documentWidth)
 // 				.setPlaceholder('40em')
 // 				.onChange(async (value) => {
-// 					Settings.exportOptions.documentWidth = value;
+// 					Settings.exportOptions.obsidian-documentWidth = value;
 // 					await SettingsPage.saveSettings();
 // 				}
 // 				))
 // 			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
-// 				Settings.exportOptions.documentWidth = "";
+// 				Settings.exportOptions.obsidian-documentWidth = "";
 // 				SettingsPage.saveSettings();
 // 				this.display();
 // 			}));
@@ -587,8 +595,6 @@ export class SettingsPage extends PluginSettingTab
 	}
 
 	// #region Class Functions and Variables
-
-	static settings: Settings = DEFAULT_SETTINGS;
 	static plugin: Plugin;
 	static loaded = false;
 
@@ -624,16 +630,74 @@ export class SettingsPage extends PluginSettingTab
 		return pluginsArray;
 	}
 
+	static deepAssign(truth: any, source: any)
+	{
+		if (!source) return;
+		let objects = Object.values(truth);
+		let keys = Object.keys(truth);
+		for (let i = 0; i < objects.length; i++)
+		{
+			let key = keys[i];
+			let type = typeof objects[i];
+			if (type == "object" && source[key] != undefined)
+			{
+				if (Array.isArray(objects[i]))
+				{
+					truth[key] = source[key];
+				}
+				else
+				{
+					SettingsPage.deepAssign(objects[i], source[key]);
+				}
+			}
+			else if (source[key] != undefined)
+			{
+				truth[key] = source[key];
+			}
+		}
+
+		return truth;
+	}
+
+	static deepCopy(truth: any): any
+	{
+		return JSON.parse(JSON.stringify(truth));
+	}
+
+	static deepRemoveStartingWith(truth: any, prefix: string): any
+	{
+		const keys = Object.keys(truth);
+		for (let i = 0; i < keys.length; i++)
+		{
+			if (keys[i].startsWith(prefix))
+			{
+				delete truth[keys[i]];
+			}
+
+			let type = typeof truth[keys[i]];
+			if (type == "object")
+			{
+				SettingsPage.deepRemoveStartingWith(truth[keys[i]], prefix);
+			}
+		}
+		return truth;
+	}
+
 	static async loadSettings() 
 	{
 		const loadedSettings = await SettingsPage.plugin.loadData();
-		Object.assign(Settings, DEFAULT_SETTINGS, loadedSettings);
-		await migrateSettings();
+		console.log(loadedSettings);
+		// do a deep object assign so any non exisant values anywhere in the default settings are preserved
+		SettingsPage.deepAssign(Settings, loadedSettings);
+		SettingsPage.saveSettings();
 		SettingsPage.loaded = true;
 	}
 
-	static async saveSettings() {
-		await SettingsPage.plugin.saveData(Object.assign({}, Settings));
+	static async saveSettings() 
+	{
+		let copy = SettingsPage.deepCopy({...Settings});
+		copy = SettingsPage.deepRemoveStartingWith(copy, "info_");
+		await SettingsPage.plugin.saveData(copy);
 	}
 
 	static renameFile(file: TFile, oldPath: string)
@@ -647,28 +711,6 @@ export class SettingsPage extends PluginSettingTab
 		}
 
 		SettingsPage.saveSettings();
-	}
-
-	static getFilesToExport(): TFile[]
-	{
-		const files: TFile[] = [];
-
-		const allFiles = app.vault.getFiles();
-		const exportPaths = Settings.exportOptions.filesToExport[0];
-		if (!exportPaths) return [];
-
-		for (const path of exportPaths)
-		{
-			const file = app.vault.getAbstractFileByPath(path);
-			if (file instanceof TFile) files.push(file);
-			else if (file instanceof TFolder)
-			{
-				const newFiles = allFiles.filter((f) => f.path.startsWith(file?.path ?? "*"));
-				files.push(...newFiles);
-			}
-		};
-
-		return files;
 	}
 
 	// #endregion

@@ -5,6 +5,8 @@ import { Search } from "./search";
 import { Bounds, Vector2 } from "./utils";
 import { ObsidianWebsite } from "./website";
 
+
+
 declare global 
 {
     interface Window 
@@ -21,20 +23,17 @@ declare global
 	let ObsidianSite: ObsidianWebsite;
 }
 
-window.ObsidianSite = new ObsidianWebsite();
-ObsidianSite = window.ObsidianSite;
-window.WebpageDocument = WebpageDocument;
-window.Canvas = Canvas;
-window.Bounds = Bounds;
-window.Vector2 = Vector2;
-window.LinkHandler = LinkHandler;
-window.Search = Search;
+if (window && window.location)
+{
+	window.ObsidianSite = new ObsidianWebsite();
+	ObsidianSite = window.ObsidianSite;
+	window.WebpageDocument = WebpageDocument;
+	window.Canvas = Canvas;
+	window.Bounds = Bounds;
+	window.Vector2 = Vector2;
+	window.LinkHandler = LinkHandler;
+	window.Search = Search;
 
-ObsidianSite.init();
+	ObsidianSite.init();
+}
 
-// temporary function definition during rewrite
-//@ts-ignore
-// window.getTouchPosition = (touch: Touch) =>
-// {
-// 	return {x: touch.clientX, y: touch.clientY};
-// }

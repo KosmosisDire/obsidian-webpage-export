@@ -255,6 +255,16 @@ export class Path
 		return this;
 	}
 
+	setFileName(name: string): Path
+	{
+		this._name = name;
+		this._base = this._name + this._ext;
+		this._fullPath = Path.joinStringPaths(this._dir, this._base);
+
+		this.reparse(this._fullPath);
+		return this;
+	}
+
 	/**
 	 * Replaces the extension with a new one if it matches the search extension. (in-place).
 	 */

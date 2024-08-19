@@ -1,12 +1,12 @@
 import { Path } from "plugin/utils/path";
 import { Attachment } from "plugin/utils/downloadable";
-import { AssetHandler } from "./asset-handler";
-import { MarkdownWebpageRendererAPIOptions } from "plugin/render-api/api-options";
+import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { TFile } from "obsidian";
 import  mime from "mime";
-import { IncludeGenerator } from "plugin/component-generators/include";
+import { IncludeGenerator } from "plugin/features/include.js";
 import { Settings } from "plugin/settings/settings";
+import { AssetHandler } from "./asset-handler";
 const { minify: runMinify } = require('html-minifier-terser');
 
 export class AssetLoader extends Attachment 
@@ -20,7 +20,7 @@ export class AssetLoader extends Attachment
 	public onlineURL: string | undefined = undefined; // the link to the asset online
 	public childAssets: AssetLoader[] = []; // assets that depend on this asset
 
-	constructor(filename: string, data: string | Buffer, source: TFile | undefined | null, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async, loadPriority: number = 100, cdnPath: string | undefined = undefined, options: MarkdownWebpageRendererAPIOptions | undefined = undefined)
+	constructor(filename: string, data: string | Buffer, source: TFile | undefined | null, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadMethod: LoadMethod = LoadMethod.Async, loadPriority: number = 100, cdnPath: string | undefined = undefined, options: ExportPipelineOptions | undefined = undefined)
     {
 		if (source && options == undefined) throw new Error("WebAsset options cannot be empty if source is not empty");
 		options = Object.assign(Settings.exportOptions, options ?? {});
@@ -60,22 +60,23 @@ export class AssetLoader extends Attachment
 		"\\.workspace-leaf-content": ".leaf-content",
 		"\\.leaf>.leaf-content": ".leaf .leaf-content",
 		"\\.markdown-reading-view": "#center-content",
-		"\\.markdown-preview-view|\\.markdown-rendered|\\.view-content": ".document",
-		"\\.markdown-preview-sizer": ".sizer",
-		"\\.horizontal-main-container|\\.workspace": "#layout",
+		"\\.markdown-preview-sizer|\\.markdown-preview-section": ".markdown-sizer",
+		"\\.markdown-preview-pusher": ".markdown-pusher",
+		"\\.horizontal-main-container|\\.workspace": "#layout", 
 	}
 
     public async load(): Promise<void>
     {
-        if (this.type == AssetType.Style && typeof this.data == "string")
-        {
+		if (this.type == AssetType.Style && typeof this.data == "string")
+		{
 			this.childAssets = [];
-            this.data = await AssetHandler.getStyleChildAssets(this, false);
-
+			this.data = await AssetHandler.getStyleChildAssets(this, false);
+			
 			// replacements
 			for (const key in AssetLoader.replacements)
 			{
-				this.data = this.data.replace(new RegExp(key, "g"), AssetLoader.replacements[key]);
+				const reg = new RegExp(key, "g");
+				this.data = this.data.replace(reg, AssetLoader.replacements[key]);
 			}
 		}
 
@@ -170,7 +171,7 @@ export class AssetLoader extends Attachment
 		return newPath;
 	}
 
-	protected isInlineFormat(options: MarkdownWebpageRendererAPIOptions): boolean
+	protected isInlineFormat(options: ExportPipelineOptions): boolean
 	{
 		const isInlineFormat = this.inlinePolicy == InlinePolicy.Inline || 
 							 this.inlinePolicy == InlinePolicy.InlineHead || 
@@ -186,7 +187,7 @@ export class AssetLoader extends Attachment
         return isInlineFormat;
 	}
 
-	protected isRefFormat(options: MarkdownWebpageRendererAPIOptions): boolean
+	protected isRefFormat(options: ExportPipelineOptions): boolean
 	{
 		const isRefFormat = this.inlinePolicy == InlinePolicy.Download || 
 						  this.inlinePolicy == InlinePolicy.DownloadHead ||
@@ -201,7 +202,7 @@ export class AssetLoader extends Attachment
 		return isRefFormat;
 	}
 
-    public getHTML(options: MarkdownWebpageRendererAPIOptions): string
+    public getHTML(options: ExportPipelineOptions): string
     {
         if(this.isInlineFormat(options))
         {

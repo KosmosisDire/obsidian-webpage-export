@@ -1,4 +1,4 @@
-.document .heading-collapse-indicator 
+.obsidian-document .heading-collapse-indicator 
 {
     margin-left: calc( 0px - var(--collapse-arrow-size) - 10px) !important;
     padding: 0px 0px !important;
@@ -53,6 +53,11 @@ h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-i
 	display: none !important;
 }
 
+.canvas-empty-embed-action-list
+{
+	display: none !important;
+}
+
 /*#endregion */
 
 /*#region Transclusions */
@@ -62,7 +67,7 @@ h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-i
 }
 
 .markdown-embed.internal-embed.inline-embed .markdown-embed-content,
-.markdown-embed.internal-embed.inline-embed .markdown-embed-content .document
+.markdown-embed.internal-embed.inline-embed .markdown-embed-content .obsidian-document
 {
 	overflow: visible !important;
 }
@@ -76,7 +81,7 @@ h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-i
 
 /*#region Canvas */
 
-.canvas-wrapper:not(.mod-readonly) .canvas-node-content.markdown-embed>.markdown-embed-content>.document
+.canvas-wrapper:not(.mod-readonly) .canvas-node-content.markdown-embed>.markdown-embed-content>.obsidian-document
 {
 	user-select: text !important;
 }
@@ -139,6 +144,12 @@ h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-i
 .canvas-node-container
 {
 	cursor: default !important;
+}
+
+.canvas-node .obsidian-document.is-readable-line-width .markdown-sizer {
+    max-width: 100%;
+    margin-left: unset;
+    margin-right: unset;
 }
 
 /*#endregion */

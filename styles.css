@@ -181,21 +181,19 @@
 	display: contents !important;
 }
 
-.file-picker .nav-folder.mod-root>.nav-folder-title 
+.feature-title
 {
-    display: flex!important;
-    align-items: center!important;
-    font-size: 1em;
-    padding-left: 0;
-    text-transform: uppercase;
-    letter-spacing: .06em;
+  margin: 0 0 1em 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
-.file-picker .nav-folder.mod-root > .nav-folder-title > .tree-item-inner
+.select-all
 {
-	flex-grow: 0 !important;
-	margin-right: 0.5em;
+	border-bottom: 1px solid var(--divider-color);
+	margin-bottom: 0.5em;
 }
+
 
 .file-picker *:before
 {
@@ -240,7 +238,31 @@
 	display: block !important;
 }
 
-.file-picker > .mod-root > .nav-folder-title > .tree-item-inner
+
+/* Settings sections */
+details.settings-section
 {
-	font-size: 16px !important;
+	padding-left: 2em;
+	border-left: 1px solid var(--interactive-accent);
+}
+
+details.settings-section > summary
+{
+	display: flex;
+	align-items: center;
+	gap: 1em;
+	margin-left: -1em;
+}
+
+details.settings-section > summary > svg
+{
+	min-width: 18px;
+	min-height: 18px;
+	rotate: 0deg;
+	transition: rotate 0.2s;
+}
+
+details.settings-section[open] > summary > svg
+{
+	rotate: 90deg;
 }

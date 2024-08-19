@@ -28,6 +28,17 @@ export function getTextNodes(element: Element)
 	return textNodes;
 }
 
+export function getLengthInPixels(cssString: string, contextElement: Element): number {
+	const tempElement = document.createElement('div');
+	tempElement.style.position = 'absolute';
+	tempElement.style.visibility = 'hidden';
+	tempElement.style.width = cssString;
+	contextElement.appendChild(tempElement);
+	const lengthInPixels = tempElement.offsetWidth;
+	contextElement.removeChild(tempElement);
+	return lengthInPixels;
+}
+
 //#endregion
 
 //#region Bounds
@@ -39,10 +50,17 @@ export class Bounds
 	public bottom: number;
 
 	public get width(): number { return this.right - this.left; }
+	public set width(value: number) { this.right = this.left + value; }
 	public get height(): number { return this.bottom - this.top; }
+	public set height(value: number) { this.bottom = this.top + value; }
 	public get center(): Vector2 { return new Vector2(this.left + this.width / 2, this.top + this.height / 2); }
 	public get min(): Vector2 { return new Vector2(this.left, this.top); }
+	public set min(value: Vector2) { this.left = value.x; this.top = value.y; }
+	public set position(value: Vector2) { this.min = value; }
 	public get max(): Vector2 { return new Vector2(this.right, this.bottom); }
+	public set max(value: Vector2) { this.right = value.x; this.bottom = value.y; }
+	public get size(): Vector2 { return new Vector2(this.width, this.height); }
+	public set size(value: Vector2) { this.width = value.x; this.height = value.y; }
 
 	constructor(left: number, top: number, width: number, height: number)
 	{
@@ -52,9 +70,14 @@ export class Bounds
 		this.bottom = top + height;
 	}
 
-	public contains(point: Vector2)
+	public containsPoint(point: Vector2)
 	{
 		return point.x >= this.left && point.x <= this.right && point.y >= this.top && point.y <= this.bottom;
+	}
+
+	public containsBounds(bounds: Bounds)
+	{
+		return bounds.left >= this.left && bounds.right <= this.right && bounds.top >= this.top && bounds.bottom <= this.bottom;
 	}
 
 	public encapsulate(bounds: Bounds)
@@ -96,17 +119,30 @@ export class Bounds
 
 	public scale(by: number)
 	{
-		this.left *= by/2;
-		this.right *= by/2;
-		this.top *= by/2;
-		this.bottom *= by/2;
+		let width = this.width;
+		let height = this.height;
+
+		this.left += width * (1 - by) / 2;
+		this.right -= width * (1 - by) / 2;
+		this.top += height * (1 - by) / 2;
+		this.bottom -= height * (1 - by) / 2;
 		return this;
+	}
+
+	public overlaps(bounds: Bounds)
+	{
+		return this.left < bounds.right && this.right > bounds.left && this.top < bounds.bottom && this.bottom > bounds.top;
 	}
 
 	public static fromElement(el: HTMLElement)
 	{
 		const rect = el.getBoundingClientRect();
 		return new Bounds(rect.x, rect.y, rect.width, rect.height);
+	}
+
+	public static get screenBounds()
+	{
+		return new Bounds(0, 0, window.innerWidth, window.innerHeight);
 	}
 }
 //#endregion
@@ -150,7 +186,12 @@ export class Vector2
 
 	public get magnitude()
 	{
-		return Math.sqrt(this.x * this.x + this.y * this.y);
+		return Math.sqrt(this.sqrMagnitude);
+	}
+
+	public get sqrMagnitude()
+	{
+		return this.x * this.x + this.y * this.y;
 	}
 
 	public get normalized()
@@ -404,12 +445,45 @@ export function getTouchPositionVector(touch: Touch)
 //#endregion
 
 //#region Math
-export function InOutQuadBlend(start: number, end: number, t: number): number
+export function inOutQuadBlend(start: number, end: number, t: number): number
 {
 	t /= 2;
 	let t2 = 2.0 * t * (1.0 - t) + 0.5;
 	t2 -= 0.5;
 	t2 *= 2.0;
 	return start + (end - start) * t2;
+}
+
+export function inOutQuadBlendv(start: Vector2, end: Vector2, t: number): Vector2
+{
+	return new Vector2(inOutQuadBlend(start.x, end.x, t), inOutQuadBlend(start.y, end.y, t));
+}
+
+export function clamp(value: number, min: number, max: number): number
+{
+	return Math.max(min, Math.min(value, max));
+}
+
+export function lerp(start: number, end: number, t: number): number
+{
+	return start + (end - start) * t;
+}
+
+export function lerpc(start: number, end: number, t: number): number
+{
+	return lerp(start, end, clamp(t, 0, 1));
+}
+
+export function lerpv(start: Vector2, end: Vector2, t: number): Vector2
+{
+	return new Vector2(lerp(start.x, end.x, t), lerp(start.y, end.y, t));
+}
+
+export function mapRange(value: number, low1: number, high1: number, low2: number, high2: number) {
+    return low2 + (high2 - low2) * (value - low1) / (high1 - low1);
+}
+
+export function mapRangeClamped(value: number, low1: number, high1: number, low2: number, high2: number) {
+	return clamp(mapRange(value, low1, high1, low2, high2), low2, high2);
 }
 //#endregion

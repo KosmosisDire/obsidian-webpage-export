@@ -1,8 +1,8 @@
 import { getIcon } from "obsidian";
-import { ComponentGenerator } from "./component-generator";
+import { FeatureGenerator } from "./feature-generator";
 import { MarkdownRendererAPI } from "plugin/render-api/render-api";
 
-export class SimpleFileListGenerator implements ComponentGenerator
+export class SimpleFileListGenerator implements FeatureGenerator
 {
 	public items: string[];
 	public options: {icons?: string[] | string, renderAsMarkdown?: boolean, title?: string};

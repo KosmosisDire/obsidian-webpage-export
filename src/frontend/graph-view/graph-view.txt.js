@@ -381,10 +381,11 @@ class GraphRenderWorker
 
     autoResizeCanvas()
     {
-		if (this.width != this.canvas.offsetWidth || this.height != this.canvas.offsetHeight)
+		let canvasWidth = this.canvas.offsetWidth;
+		if (this.width != canvasWidth || this.height != canvasWidth)
 		{
 			this.centerCamera();
-        	this.resizeCanvas(this.canvas.offsetWidth, this.canvas.offsetHeight);
+        	this.resizeCanvas(canvasWidth, canvasWidth);
 		}
     }
 
@@ -653,7 +654,7 @@ function updateGraph()
         graphRenderer.canvas.style.cursor = GraphAssembly.hoveredNode == -1 ? "default" : "pointer";
     }
 
-	graphRenderer.autoResizeCanvas();
+	// graphRenderer.autoResizeCanvas();
     graphRenderer.draw(GraphAssembly.positions);
 
     averageFPS = averageFPS * 0.95 + pixiApp.ticker.FPS * 0.05;

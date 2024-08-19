@@ -17,8 +17,8 @@ body
 
 .tree-icon :is(svg, img)
 {
-	width: 16px !important;
-	height: 16px !important;
+	width: 1em !important;
+	height: 1em !important;
 }
 
 .tree-icon *:has(svg, img) {
@@ -36,37 +36,16 @@ a.tree-item-self.is-clickable
 	display: contents !important;
 }
 
-.nav-folder.mod-root>.nav-folder-title 
-{
-    display: flex!important;
-    align-items: center!important;
-	border: none!important;
-	margin-top: 1em !important;
-	padding-top: 0 !important;
-    font-size: 1em;
-    padding-left: 0;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-}
 
-.nav-folder.mod-root>.nav-folder-title>.tree-item-inner 
+.tree-container .feature-title
 {
+	margin-left: 4px;
     flex-grow: 0 !important;
     margin-right: .5em !important;
     font-size: inherit !important;
     color: var(--text-normal) !important;
 }
 
-.outline-tree .nav-folder.mod-root>.nav-folder-title>.nav-folder-title-content::before,
-.outline-tree .nav-folder.mod-root>.nav-folder-title::before
-{
-	content: none;
-}
-
-.outline-tree .nav-folder.mod-root>.nav-folder-title>.nav-folder-title-content
-{
-	margin-left: 0;
-}
 
 .tree-item.filtered-out {
     display: none;
@@ -90,6 +69,10 @@ a.tree-item-self.is-clickable
 	height: 100% !important;
 }
 
+#file-explorer
+{
+	padding: 0 !important;
+}
 
 /*#region Headers */
 
@@ -169,7 +152,7 @@ h1 li {
 }
 
 /* high specificity in order to override other style */
-html > body > #layout > #center-content > .document >  .sizer > div:not(.footer)
+html > body > #layout > #center-content > .obsidian-document >  .markdown-sizer > div:not(.footer)
 {
 	margin-inline: 0 !important;
     margin: 0 !important;
@@ -233,8 +216,10 @@ html > body > #layout > #center-content > .document >  .sizer > div:not(.footer)
     height: var(--collapse-arrow-size);
     transition: transform 100ms ease-in-out 0s;
     stroke-width: 4px;
-    min-width: 10px;
-    min-height: 10px;
+	min-width: 10px;
+	min-height: 10px;
+    max-width: 24px;
+    max-height: 24px;
 }
 
 div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
@@ -271,24 +256,16 @@ div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
 	z-index: -1;
 }
 
-.markdown-embed .markdown-embed-content .document .heading-wrapper-span 
+.markdown-embed .markdown-embed-content .obsidian-document .heading-wrapper-span 
 {
     width: 100%;
 }
 
-.tree-container,
-.tree-container > .tree-item.mod-root
+.tree-container
 {
-	overflow: hidden hidden !important;
-	overflow: clip clip !important;
-	height: 100% !important;
-}
-
-.tree-container > .tree-item.mod-root > .tree-item-children
-{
-	overflow: hidden auto !important;
-	overflow: clip auto !important;
-	height: 100% !important;
+	--nav-item-size: 1em;
+	overflow: hidden auto;
+	height: 100%;
 }
 
 .nav-file-title, .nav-folder-title
@@ -310,11 +287,14 @@ div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
     --handle-margin: calc((var(--toggle-height) / 2.0) - var(--handle-radius));
     --handle-translation: calc(var(--toggle-width) - var(--handle-width) - (var(--handle-margin) * 2));
 
-    display: inline-block;
     cursor: pointer;
+	display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1em;
 }
 
-.sidebar-section-header, .clickable-icon
+.feature-title, .clickable-icon
 {
 	transition: color var(--color-fade-speed) ease-in-out;
 }
@@ -600,6 +580,11 @@ body :is(.canvas-node-container, .canvas-wrapper)
 	cursor: unset !important;
 }
 
+body .canvas-wrapper
+{
+	max-width: 100% !important;
+}
+
 .canvas
 {
 	translate: 0 0;
@@ -624,6 +609,16 @@ body :is(.canvas-node-container, .canvas-wrapper)
 	pointer-events: none;
 }
 
+.canvas.small-scale :is(.canvas-node-label, .canvas-path-label, .obsidian-document)
+{
+	display: none;
+}
+
+.canvas-node:not([data-shape="parallelogram"])
+{
+	contain: strict;
+}
+
 /*#endregion */
 
 /*#region Phone */
@@ -637,7 +632,7 @@ body.is-phone .sidebar
 
 body.is-phone
 {
-	--collapse-arrow-size: 13px;
+	--collapse-arrow-size: 14px;
 	--tree-vertical-spacing: 0.8em;
 }
 
@@ -755,12 +750,12 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 		display: none !important;
 	}
 
-	:root, html body.publish > :is(#layout, #center-content, .document):not(script, style, include)
+	:root, html body.publish > :is(#layout, #center-content, .obsidian-document):not(script, style, include)
 	{
 		display: contents !important;
 	}
 
-	:root, html body.publish #center-content > .document
+	:root, html body.publish #center-content > .obsidian-document
 	{
 		background-color: transparent !important;
 	}
@@ -771,7 +766,7 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 		background: var(--background-primary);
 	}
 
-	#center-content > .document > .sizer
+	#center-content > .obsidian-document > .markdown-sizer
 	{
 		padding: 0 !important;
 		margin: 0 !important;
@@ -779,7 +774,7 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 		padding-bottom: 0 !important;
 	}
 
-	html body.publish :is(#center-content, .document)
+	html body.publish :is(#center-content, .obsidian-document)
 	{
 		margin: 0 !important;
 		padding: 0 !important;
@@ -880,9 +875,14 @@ a.tree-hint-label:hover
   border-bottom-right-radius: 0;
 }
 
+#search-container
+{
+	--input-height: 2.6em;
+}
+
 input[type=search] {
     box-shadow: none!important;
-    height: 2.5em;
+    height: var(--input-height);
     font-size: 1em;
     transition: background, background-color, border;
     transition-duration: var(--color-fade-speed);
@@ -1021,7 +1021,6 @@ a.backlink:hover {
 
 
 
-
 .footer:not(:empty)
 {
     border-top: 1px solid var(--background-modifier-border);
@@ -1135,7 +1134,7 @@ body.theme-light .excalidraw-svg svg.light, body.theme-light .excalidraw-plugin 
 	display: none;
 }
 
-.document:has(.obsidian-banner-wrapper)
+.obsidian-document:has(.obsidian-banner-wrapper)
 {
 	padding-top: 0 !important;
 }
@@ -1144,12 +1143,12 @@ body.theme-light .excalidraw-svg svg.light, body.theme-light .excalidraw-plugin 
 
 /*#region Mind Map  */
 
-.document:not([data-type='markdown']):has(.mm-mindmap)
+.obsidian-document:not([data-type='markdown']):has(.mm-mindmap)
 {
 	overflow-y: none;
 }
 
-.document:not([data-type='markdown'])  .mm-mindmap
+.obsidian-document:not([data-type='markdown'])  .mm-mindmap
 {
 	transform: scale(1);
 	translate: -4000px -4000px;
