@@ -78,7 +78,6 @@ export class Attachment
 	{
 		if (this.targetPath.workingDirectory == Path.vaultPath.path)
 		{ 
-			console.log(this.targetPath.workingDirectory, Path.vaultPath.path, this.targetPath.path);
 			throw new Error("(working dir) Target should be a relative path with the working directory set to the root: " + this.targetPath.absoluted().path);
 		}
 

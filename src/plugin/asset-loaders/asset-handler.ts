@@ -243,9 +243,7 @@ export class AssetHandler
 							.concat(this.getAssetsOfInlinePolicy(InlinePolicy.Auto))
 							.concat(this.getAssetsOfInlinePolicy(InlinePolicy.AutoHead));
 
-		console.log(downloads);
 		downloads = this.filterDownloads(downloads, options);
-		console.log(downloads);
 		downloads.sort((a, b) => b.loadPriority - a.loadPriority);
 		downloads.forEach(asset => asset.targetPath.setWorkingDirectory(destination.path));
 
@@ -254,7 +252,7 @@ export class AssetHandler
 		if (options.inlineFonts)
 			downloads = downloads.filter(asset => asset.type != AssetType.Font);
 		if (options.inlineJS)
-			downloads = downloads.filter(asset => asset.type != AssetType.Script);
+			downloads = downloads.filter(asset => asset.type != AssetType.Script && asset.extensionName != "wasm");
 		if (options.inlineCSS)
 			downloads = downloads.filter(asset => asset.type != AssetType.Style);
 		if (options.inlineHTML)

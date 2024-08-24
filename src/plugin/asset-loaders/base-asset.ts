@@ -192,12 +192,11 @@ export class AssetLoader extends Attachment
 		const isRefFormat = this.inlinePolicy == InlinePolicy.Download || 
 						  this.inlinePolicy == InlinePolicy.DownloadHead ||
 						  ((this.inlinePolicy == InlinePolicy.Auto || this.inlinePolicy == InlinePolicy.AutoHead) && 
-						  !(
-						  (options.inlineCSS! && this.type == AssetType.Style) ||
-						  (options.inlineJS! && this.type == AssetType.Script) ||
-						  (options.inlineMedia! && this.type == AssetType.Media) ||
-						  (options.inlineHTML! && this.type == AssetType.HTML) ||
-						  (options.inlineFonts! && this.type == AssetType.Font)
+						  !((options.inlineCSS! && this.type == AssetType.Style) ||
+						  	(options.inlineJS! && this.type == AssetType.Script) ||
+						  	(options.inlineMedia! && this.type == AssetType.Media) ||
+						  	(options.inlineHTML! && this.type == AssetType.HTML) ||
+						  	(options.inlineFonts! && this.type == AssetType.Font)
 						  ));
 		return isRefFormat;
 	}
@@ -206,6 +205,7 @@ export class AssetLoader extends Attachment
     {
         if(this.isInlineFormat(options))
         {
+			console.log("Inlining " + this.filename);
             switch(this.type)
             {
                 case AssetType.Style:
@@ -225,6 +225,7 @@ export class AssetLoader extends Attachment
         
         if (this.isRefFormat(options))
         {
+			console.log("Generating ref for " + this.filename);
             let path = this.getAssetPath(undefined).path;
 			if (options.offlineResources === false && this.onlineURL) path = this.onlineURL;
 
@@ -257,7 +258,7 @@ export class AssetLoader extends Attachment
             }
         }
 
-
+		console.log("Unable to inline or reference " + this.filename);
         return "";
     }
 

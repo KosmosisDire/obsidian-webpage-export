@@ -5,6 +5,7 @@ import { Utils } from "plugin/utils/utils";
 import { Website } from "plugin/website/website";
 import { ExportLog, MarkdownRendererAPI } from "plugin/render-api/render-api";
 import { ExportInfo, ExportModal } from "plugin/settings/export-modal";
+import { Webpage } from "./website/webpage";
 
 export class HTMLExporter
 {
@@ -82,8 +83,8 @@ export class HTMLExporter
 				}
 				else
 				{
-					await Utils.downloadAttachments(website.index.newFiles);
-					await Utils.downloadAttachments(website.index.updatedFiles);
+					await Utils.downloadAttachments(website.index.newFiles.filter((f) => !(f instanceof Webpage)));
+					await Utils.downloadAttachments(website.index.updatedFiles.filter((f) => !(f instanceof Webpage)));
 				}
 			}
 		}

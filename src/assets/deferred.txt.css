@@ -178,17 +178,18 @@ body
 	height: 100%;
 }
 
-.feature-title
-{
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+.feature-title {
+    margin-left: 4px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+    margin-top: 0.75em;
+    margin-bottom: 0.75em;
 }
 
 .feature-header
 {
     display: flex;
     align-items: center;
-	min-height: 2.5em;
 	padding-top: 0;
     font-size: 1em;
     padding-left: 0;
@@ -238,7 +239,7 @@ body
 
 #center-content>.obsidian-document 
 {
-	padding-left: 1em;
+	padding-left: 2em;
 	padding-right: 1em;
 	margin-bottom: 0;
 	width: 100%;

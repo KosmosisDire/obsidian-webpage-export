@@ -196,18 +196,18 @@ export class Website
 	 */
 	public async build(files?: TFile[]): Promise<Website | undefined>
 	{ 
-		if (files) this.load(files);
+		if (files) await this.load(files);
 
 		console.log("Creating website with files: ", this.sourceFiles);
 
-		this.buildTemplate();
+		await this.buildTemplate();
 
 		this.refreshUpdatedFilesList();
 		
 		// if body classes have changed write new body classes to existing files
 		if (this.bodyClasses != (this.index.oldWebsiteData?.bodyClasses ?? this.bodyClasses))
 		{
-			this.index.applyToOldWebpages(async (document: Document, oldData: WebpageData) => 
+			await this.index.applyToOldWebpages(async (document: Document, oldData: WebpageData) => 
 			{
 				document.body.className = this.bodyClasses;
 				ExportLog.progress(0, "Updating Body Classes", oldData.sourcePath);
@@ -217,79 +217,43 @@ export class Website
 		await MarkdownRendererAPI.beginBatch(this.exportOptions);
 		this.validateSettings();
 
-		// render the documents with bare html
-		let webpages = this.index.webpages;
 		// only render the updated and new files
+		let webpages = this.index.webpages;
 		webpages = webpages.filter((webpage) => 
 		{
 			return this.index.updatedFiles.includes(webpage) || this.index.newFiles.includes(webpage)
 		});
 
+		this.index.addFiles(AssetHandler.getDownloads(this.destination, this.exportOptions));
 		let progress = 0;
 		for (const webpage of webpages)
 		{
 			if (ExportLog.isCancelled()) return;
-			try
-			{
-				ExportLog.progress(progress, "Rendering Documents", webpage.source.path);
-				await webpage.populateDocument();
-			}
-			catch (error)
-			{
-				ExportLog.error(error, "Problem rendering document: " + webpage.source.path);
-			}
-			progress += 1 / (webpages.length * 1.5);
+
+			const rendered = await webpage.renderDocument();
+			if (!rendered) continue;
+			await Utils.delay(0);
+			const attachments = await webpage.getAttachments();
+			await Utils.delay(0);
+			this.index.addFiles(attachments);
+			await Utils.delay(0);
+			const built = await webpage.build();
+			await Utils.delay(0);
+			if (built) await this.index.addFile(webpage);
+			else await this.index.removeFile(webpage);
+
+			// save the file and then dispose of the webpage
+			if (!this.exportOptions.combineAsSingleFile)
+				await webpage.download();
+
+			webpage.dispose();
+
+			ExportLog.progress(progress / webpages.length, "Building Website", webpage.source.path);
+			progress += 1;
+
+			await Utils.delay(0);
 		}
-
-		// create attachments from the webpages if we are not inlining media
-		if (!this.exportOptions.inlineMedia)
-		{
-			for (const webpage of webpages)
-			{
-				if (ExportLog.isCancelled()) return;
-				try
-				{
-					ExportLog.progress(progress, "Creating Attachments", webpage.source.path);
-					const attachments = await webpage.getAttachments();
-					this.index.addFiles(attachments);
-				}
-				catch (error)
-				{
-					ExportLog.error(error, "Problem creating attachments: " + webpage.source.path);
-				}
-				progress += 1 / (webpages.length * 6);
-			}
-		}
-
-		this.index.addFiles(AssetHandler.getDownloads(this.destination, this.exportOptions));
-
-		this.refreshUpdatedFilesList();
-
-		for (const webpage of webpages)
-		{
-			if (ExportLog.isCancelled()) return;
-			try
-			{
-				ExportLog.progress(progress, "Building Website", webpage.source.path);
-				const page = await webpage.build();
-				
-				if (page)
-				{
-					await this.index.addFile(webpage);
-				}
-				else
-				{
-					await this.index.removeFile(webpage);
-				}
-			}
-			catch (error)
-			{
-				ExportLog.error(error, "Problem building webpage: " + webpage.source.path);
-			}
-
-			progress += 1 / (webpages.length * 6);
-		}
-
+	
 		if (this.exportOptions.addRSS)
 		{
 			try
@@ -396,27 +360,6 @@ export class Website
 	 */
 	private validateSite()
 	{
-		// check for duplicate ids
-		this.index.webpages.forEach(async (webpage: Webpage) => 
-		{
-			const ids = new Set<string>();
-			const elements = webpage.pageDocument?.querySelectorAll("[id]");
-			if (!elements) return;
-			elements.forEach(async (element: HTMLElement) => 
-			{
-				const id = element.id;
-				if (ids.has(id))
-				{
-					ExportLog.warning("Duplicate id found: " + id, webpage.source.path);
-				}
-				else
-				{
-					ids.add(id);
-				}
-			});
-			await Utils.delay(0);
-		});
-
 		// check for .feature-title elements not inside a .feature-header
 		this.index.webpages.forEach(async (webpage: Webpage) => 
 		{
@@ -431,7 +374,6 @@ export class Website
 			});
 			await Utils.delay(0);
 		});
-
 	}
 
 	public getTargetPathForFile(file: TFile, filename?: string): Path
@@ -614,24 +556,51 @@ export class Website
 	{
 		// get index.html
 		let index = this.index.webpages.find((file) => file.filename == "index.html");
-		if (!index?.html && this.index.webpages.length > 0)
+		if (!index?.data && this.index.webpages.length > 0)
 		{
 			ExportLog.warning("No index.html found, using the first webpage");
 			index = this.index.webpages[0];
 		}
 
-		if (!index?.html)
+		if (!index?.data)
 		{
 			ExportLog.error("No index.html found, website creation failed");
 			return "";
 		}
 
-		let html = new DOMParser().parseFromString(index.html, "text/html");
+		let html = new DOMParser().parseFromString(index.data as string, "text/html");
 
-		// define metadata 
+		// define metadata
 		let metadataScript = html.head.createEl("data");
 		metadataScript.id = "website-metadata";
+
+		const fileInfo = this.index.websiteData.fileInfo;
+		const webpages = this.index.websiteData.webpages;
+		// @ts-ignore
+		delete this.index.websiteData.fileInfo;
+		// @ts-ignore
+		delete this.index.websiteData.webpages;
 		metadataScript.setAttribute("value", encodeURI(JSON.stringify(this.index.websiteData)));
+
+		// create a data element with the id being the file path for each file
+		for (const [path, data] of Object.entries(webpages))
+		{
+			const dataElement = html.head.createEl("data");
+			dataElement.id = encodeURI(path);
+			dataElement.setAttribute("value", encodeURI(JSON.stringify(data)));
+		}
+
+		// do the same for file info skipping already existing elements
+		for (const [path, data] of Object.entries(fileInfo))
+		{
+			if (html.getElementById(encodeURI(path))) continue;
+			const dataElement = html.head.createEl("data");
+			dataElement.id = encodeURI(path);
+			dataElement.setAttribute("value", encodeURI(JSON.stringify(data)));
+		}
+
+		
+
 
 		return `<!DOCTYPE html>\n${html.documentElement.outerHTML}`;
 	}
@@ -639,9 +608,7 @@ export class Website
 	public async saveAsCombinedHTML(): Promise<void>
 	{
 		const html = await this.getCombinedHTML();
-		const path = this.destination.joinString("index.html");
+		const path = this.destination.joinString(this.exportOptions.siteName + ".html");
 		await path.write(html);
 	}
-
-
 }

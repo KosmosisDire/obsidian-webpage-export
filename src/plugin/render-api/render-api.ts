@@ -669,7 +669,6 @@ export namespace _MarkdownRendererInternal
 
 			if (nodeFile && embedEl)
 			{
-				console.log(allExportedPaths, nodeFile.path);
 				if ((options.inlineHTML || !allExportedPaths.contains(nodeFile.path)) && childPreview)
 				{
 					node.render();

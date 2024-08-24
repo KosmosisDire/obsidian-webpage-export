@@ -1,3 +1,4 @@
+import { slideDown, slideUp } from "./utils";
 
 export class Header
 {
@@ -33,6 +34,12 @@ export class Header
 	public get wrapperElement(): HTMLElement
 	{
 		return this._wrapperElement;
+	}
+
+	private _collapseIndicatorElement: HTMLElement;
+	public get collapseIndicatorElement(): HTMLElement
+	{
+		return this._collapseIndicatorElement;
 	}
 
 	private _children: Header[] = [];
@@ -71,6 +78,16 @@ export class Header
 		{
 			console.error("Header element not found in wrapper element", element);
 			return;
+		}
+
+		this._collapseIndicatorElement = this._headerElement.querySelector(".heading-collapse-indicator") as HTMLElement;
+		if (this.collapseIndicatorElement)
+		{
+			this.collapseIndicatorElement.addEventListener("click", () =>
+			{
+				this.collapseIndicatorElement.classList.toggle("is-collapsed");
+				this.wrapperElement?.classList.toggle("is-collapsed");
+			});
 		}
 
 		this._id = this.headerElement.id;

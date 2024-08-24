@@ -280,10 +280,11 @@ export function slideUp(target: HTMLElement, duration: number = 500)
 {
 	if (target.style.display === 'none') return;
 	target.style.transitionProperty = 'height, margin, padding';
+	target.style.transitionTimingFunction = "ease-in-out";
 	target.style.transitionDuration = duration + 'ms';
 	target.style.boxSizing = 'border-box';
 	target.style.height = target.offsetHeight + 'px';
-	target.offsetHeight;
+	target.offsetHeight; // force reflow
 	target.style.overflow = 'hidden';
 	target.style.height = "0";
 	target.style.paddingTop = "0";
@@ -308,10 +309,11 @@ export function slideUpAll(targets: HTMLElement[], duration: number = 500)
 	targets.forEach(async target => {
 		if (!target) return;
 		target.style.transitionProperty = 'height, margin, padding';
+		target.style.transitionTimingFunction = "ease-in-out";
 		target.style.transitionDuration = duration + 'ms';
 		target.style.boxSizing = 'border-box';
 		target.style.height = target.offsetHeight + 'px';
-		target.offsetHeight;
+		target.offsetHeight; // force reflow
 		target.style.overflow = 'hidden';
 		target.style.height = "0;"
 		target.style.paddingTop = "0";
@@ -353,6 +355,7 @@ export function slideDown(target: HTMLElement, duration: number = 500)
 	target.offsetHeight;
 	target.style.boxSizing = 'border-box';
 	target.style.transitionProperty = "height, margin, padding";
+	target.style.transitionTimingFunction = "ease-in-out";
 	target.style.transitionDuration = duration + 'ms';
 	target.style.height = height + 'px';
 	target.style.removeProperty('padding-top');
@@ -385,6 +388,7 @@ export function slideDownAll(targets: HTMLElement[], duration: number = 500)
 		target.offsetHeight;
 		target.style.boxSizing = 'border-box';
 		target.style.transitionProperty = "height, margin, padding";
+		target.style.transitionTimingFunction = "ease-in-out";
 		target.style.transitionDuration = duration + 'ms';
 		target.style.height = height + 'px';
 		target.style.removeProperty('padding-top');

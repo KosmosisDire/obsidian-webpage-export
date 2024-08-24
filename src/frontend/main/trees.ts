@@ -331,6 +331,9 @@ export class Tree extends TreeItem
 		});
 
 		LinkHandler.initializeLinks(this.rootEl);
+
+		// if there are any non-collapsed items, set the collapse icon to uncollapsed, otherwise to collapsed
+		this.setCollapseIcon(!this.anyChildrenOpen);
 	}
 
 	private setCollapseIcon(collapsed: boolean)

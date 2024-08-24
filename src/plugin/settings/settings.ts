@@ -64,14 +64,14 @@ export class Settings
 	{
 		Settings.exportOptions.inlineCSS = true;
 		Settings.exportOptions.inlineFonts = true;
-		Settings.exportOptions.inlineHTML = true;
+		Settings.exportOptions.inlineHTML = false;
 		Settings.exportOptions.inlineJS = true;
 		Settings.exportOptions.inlineMedia = true;
 		Settings.exportOptions.inlineOther = true;
-		Settings.exportOptions.slugifyPaths = false;
-		Settings.exportOptions.graphViewOptions.enabled = false;
-		Settings.exportOptions.fileNavigationOptions.enabled = false;
-		Settings.exportOptions.searchOptions.enabled = false;
+		Settings.exportOptions.slugifyPaths = true;
+		Settings.exportOptions.graphViewOptions.enabled = true;
+		Settings.exportOptions.fileNavigationOptions.enabled = true;
+		Settings.exportOptions.searchOptions.enabled = true;
 		Settings.exportOptions.addRSS = false;
 		Settings.exportOptions.combineAsSingleFile = true;
 

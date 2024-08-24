@@ -39,7 +39,6 @@ a.tree-item-self.is-clickable
 
 .tree-container .feature-title
 {
-	margin-left: 4px;
     flex-grow: 0 !important;
     margin-right: .5em !important;
     font-size: inherit !important;
@@ -152,11 +151,15 @@ h1 li {
 }
 
 /* high specificity in order to override other style */
-html > body > #layout > #center-content > .obsidian-document >  .markdown-sizer > div:not(.footer)
+html > body > #layout > #center-content > .obsidian-document > .markdown-sizer > div:not(:is(.footer, .header))
 {
 	margin-inline: 0 !important;
     margin: 0 !important;
 	padding: 0 !important;
+}
+
+html > body > #layout > #center-content > .obsidian-document > .markdown-sizer > div
+{
 	width: 100%;
 	max-width: 100%;
 }
@@ -175,10 +178,11 @@ html > body > #layout > #center-content > .obsidian-document >  .markdown-sizer 
 	contain: inline-size;
 }
 
-.heading-children.is-collapsed
+.heading-wrapper.is-collapsed > .heading-children
 {
-	padding-top: 0em;
+	display: none;
 }
+
 
 .heading-wrapper.is-collapsed > .heading-children, .heading-wrapper.is-animating > .heading-children
 {
@@ -222,7 +226,7 @@ html > body > #layout > #center-content > .obsidian-document >  .markdown-sizer 
     max-height: 24px;
 }
 
-div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
+.heading-collapse-indicator.collapse-icon.is-collapsed > svg
 {
     transition: transform 0.1s ease-in-out;
     transform: rotate(-90deg);
@@ -244,16 +248,6 @@ div.is-collapsed > * > .heading-collapse-indicator.collapse-icon > svg
 .heading-wrapper .heading-collapse-indicator:hover
 {
 	opacity: 1;
-}
-
-.heading-wrapper-span 
-{
-    position: absolute;
-    width: 200vw;
-    height: calc(100% + var(--p-spacing) * 2);
-    top: calc(0px - var(--p-spacing));
-    left: -100vw;
-	z-index: -1;
 }
 
 .markdown-embed .markdown-embed-content .obsidian-document .heading-wrapper-span 
@@ -1019,14 +1013,21 @@ a.backlink:hover {
 
 /*#endregion */
 
+/*#region Header & Footer */
 
-
-.footer:not(:empty)
+.footer:not(:has(div:first-child:last-child)):not(:empty), .footer .data-bar:not(:empty)
 {
     border-top: 1px solid var(--background-modifier-border);
     padding-top: var(--size-4-6);
     margin-top: var(--size-4-6);
 }
+
+.header:last-child
+{
+	margin-bottom: var(--p-spacing);
+}
+
+/*#endregion */
 
 /* Plugins: */
 

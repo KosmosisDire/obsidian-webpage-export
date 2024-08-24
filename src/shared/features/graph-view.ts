@@ -8,9 +8,9 @@ export class GraphViewOptions extends InsertedFeatureOptions
 	allowExpand: boolean = true;
 
 	attractionForce: number = 1;
-	linkLength: number = 10;
-	repulsionForce: number = 150;
-	centralForce: number = 3;
+	linkLength: number = 15;
+	repulsionForce: number = 80;
+	centralForce: number = 2;
 	edgePruning: number = 100;
 	minNodeRadius: number = 3;
 	maxNodeRadius: number = 7;

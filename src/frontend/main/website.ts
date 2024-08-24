@@ -4,7 +4,7 @@ import { Sidebar } from "./sidebars";
 import { Tree } from "./trees";
 import { Bounds, delay, getLengthInPixels, waitUntil } from "./utils";
 import { WebpageDocument } from "./document";
-import { WebpageData, WebsiteData } from "shared/website-data";
+import { FileData, WebpageData, WebsiteData } from "shared/website-data";
 import { GraphView } from "./graph-view";
 import { Notice } from "./notifications";
 import { Theme } from "./theme";
@@ -42,16 +42,29 @@ export class ObsidianWebsite
 	{
 		window.addEventListener("load", () => ObsidianSite.onInit());
 
-		this.metadata = await this.loadWebsiteData() as WebsiteData;
-		if (!this.metadata)
+		if (this.isHttp)
 		{
-			console.error("Failed to load website data.");
-			return;
+			this.metadata = await this.loadWebsiteData() as WebsiteData;
+			if (!this.metadata)
+			{
+				console.error("Failed to load website data.");
+				return;
+			}
 		}
 	}
 
 	private async onInit()
 	{
+		if (!this.isHttp)
+		{
+			this.metadata = await this.loadWebsiteData() as WebsiteData;
+			if (!this.metadata)
+			{
+				console.error("Failed to load website data.");
+				return;
+			}
+		}
+
 		await waitUntil(() => this.metadata != undefined);
 		console.log("Website init");
 		if(window.location.protocol != "file:") 
@@ -160,7 +173,7 @@ export class ObsidianWebsite
 		}
 		else
 		{
-			let file = this.metadata.fileInfo[url];
+			let file = this.getFileData(url);
 			if (!file?.data)
 			{
 				console.error("Failed to fetch", url);
@@ -246,8 +259,25 @@ export class ObsidianWebsite
 		await waitUntil(() => this.graphView != undefined);
 	}
 
-	public getWebpageData(url: string)
+	private cachedWebpageDataMap: Map<string, WebpageData> = new Map();
+	public getWebpageData(url: string): WebpageData
 	{
+		if (!this.isHttp)
+		{
+			if (this.cachedWebpageDataMap.has(url))
+			{
+				return this.cachedWebpageDataMap.get(url) as WebpageData;
+			}
+			else
+			{
+				const dataEl = document.querySelector(`data[id='${encodeURI(url)}']`);
+				if (!dataEl) return {} as WebpageData;
+				const data = JSON.parse(decodeURI(dataEl.getAttribute("value") ?? ""));
+				this.cachedWebpageDataMap.set(url, data);
+				return data;
+			}
+		}
+		
 		if (this.metadata)
 		{
 			const data = this.metadata.webpages[url];
@@ -257,8 +287,40 @@ export class ObsidianWebsite
 			}
 		}
 
-		return undefined;
+		return {} as WebpageData;
 	}
+
+	private cachedFileDataMap: Map<string, FileData> = new Map();
+	public getFileData(url: string): FileData
+	{
+		if (!this.isHttp)
+		{
+			if (this.cachedFileDataMap.has(url))
+			{
+				return this.cachedFileDataMap.get(url) as FileData;
+			}
+			else
+			{
+				const dataEl = document.querySelector(`data[id='${encodeURI(url)}']`);
+				if (!dataEl) return {} as FileData;
+				const data = JSON.parse(decodeURI(dataEl.getAttribute("value") ?? ""));
+				this.cachedFileDataMap.set(url, data);
+				return data;
+			}
+		}
+		
+		if (this.metadata)
+		{
+			const data = this.metadata.fileInfo[url];
+			if (data)
+			{
+				return data;
+			}
+		}
+
+		return {} as FileData;
+	}
+
 
 	public scrollTo(element: Element)
 	{

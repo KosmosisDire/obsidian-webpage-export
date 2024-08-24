@@ -30,8 +30,9 @@ export class Webpage extends Attachment
 	public attachments: Attachment[] = [];
 	public type: DocumentType = DocumentType.Markdown;
 	public title: string = "";
+	public isDefaultTitle: boolean = true;
 	public icon: string = "";
-	public titleInfo: {title: string, icon: string, isDefaultTitle: boolean, isDefaultIcon: boolean} = {title: "", icon: "", isDefaultTitle: true, isDefaultIcon: true};
+	public isDefaultIcon: boolean = true;
 
 	/**
 	 * @param file The original markdown file to export
@@ -203,7 +204,7 @@ export class Webpage extends Attachment
 			// update image links
 			content.querySelectorAll("[src]").forEach((el: HTMLImageElement) => 
 			{
-				let src = el.src;
+				let src = el.getAttribute("src");
 				if (!src) return;
 				if (src.startsWith("http") || src.startsWith("data:")) return;
 				if (src.startsWith("data:")) 
@@ -214,19 +215,19 @@ export class Webpage extends Attachment
 				src = src.replace("app://obsidian", "");
 				src = src.replace(".md", "");
 				const path = Path.joinStrings(this.exportOptions.siteURL ?? "", src);
-				el.src = path.path;
+				el.setAttribute("src", path.path);
 			});
 
 			// update normal links
 			content.querySelectorAll("[href]").forEach((el: HTMLAnchorElement) => 
 			{
-				let href = el.href;
+				let href = el.getAttribute("href");
 				if (!href) return; 
 				if (href.startsWith("http") || href.startsWith("data:")) return;
 				href = href.replace("app://obsidian", "");
 				href = href.replace(".md", "");
 				const path = Path.joinStrings(this.exportOptions.siteURL ?? "", href);
-				el.href = path.path;
+				el.setAttribute("href", path.path);
 			});
 
 			function keepTextLinksImages(element: HTMLElement) 
@@ -408,16 +409,22 @@ export class Webpage extends Attachment
 		}
 
 		// get title and icon
-		this.title = (await Website.getTitle(this.source)).title;
-		this.icon = (await Website.getIcon(this.source)).icon;
+		const titleInfo = await Website.getTitle(this.source);
+		const iconInfo = await Website.getIcon(this.source);
+		this.title = titleInfo.title;
+		this.isDefaultTitle = titleInfo.isDefault;
+		this.icon = iconInfo.icon;
+		this.isDefaultIcon = iconInfo.isDefault;
 		const iconRenderContainer = document.body.createDiv();
 		await MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, iconRenderContainer);
 		this.icon = iconRenderContainer.innerHTML;
 		iconRenderContainer.remove();
 
 		// create header and footer
-		this.sizerElement?.createDiv({cls: "header"});
-		this.sizerElement?.createDiv({cls: "footer"});
+		const header = this.sizerElement?.createDiv({cls: "header"});
+		header?.createDiv({cls: "data-bar"});
+		const footer = this.sizerElement?.createDiv({cls: "footer"});
+		footer?.createDiv({cls: "data-bar"});
 		this.sizerElement?.prepend(this.headerElement!);
 
 		if (this.exportOptions.inlineMedia) 
@@ -489,7 +496,7 @@ export class Webpage extends Attachment
 		return this;
 	}
 
-	public async populateDocument(): Promise<Webpage | undefined>
+	public async renderDocument(): Promise<Webpage | undefined>
 	{
 		const body = this.pageDocument.body;
 		if (this.exportOptions.addBodyClasses)
@@ -538,7 +545,7 @@ export class Webpage extends Attachment
 			
 			if (!sourcePath || !attachment)
 			{
-				ExportLog.warning("Attachment source not found: " + src);
+				ExportLog.log("Attachment source not found: " + src);
 				continue;
 			}
 
@@ -576,7 +583,6 @@ export class Webpage extends Attachment
 		const linkSplit = link.split("#")[0].split("?")[0];
 		const attachmentPath = this.website.getFilePathFromSrc(linkSplit, this.source.path).pathname;
 		const attachment = this.website.index.getFile(attachmentPath, preferAttachment);
-		console.log(linkSplit, attachmentPath, attachment);
 		if (!attachment)
 		{
 			return;
@@ -648,7 +654,7 @@ export class Webpage extends Attachment
 
 			if ((firstHeader.tagName == "H1" && difference < 0.2) || (firstHeader.tagName == "H2" && difference < 0.1))
 			{
-				if(this.titleInfo.isDefaultTitle) 
+				if(this.isDefaultTitle) 
 				{
 					firstHeader.querySelector(".heading-collapse-indicator")?.remove();
 					this.title = firstHeader.innerHTML;
@@ -670,7 +676,7 @@ export class Webpage extends Attachment
 					const childPosition = Array.from(headerParent.children).indexOf(headerEl);
 					if (childPosition <= 2)
 					{
-						if(this.titleInfo.isDefaultTitle) 
+						if(this.isDefaultTitle) 
 						{
 							firstHeader.querySelector(".heading-collapse-indicator")?.remove();
 							this.title = firstHeader.innerHTML;
@@ -698,7 +704,7 @@ export class Webpage extends Attachment
 
 		let pageIcon = undefined;
 		// Create a div with icon
-		if ((this.icon != "" && !this.titleInfo.isDefaultIcon))
+		if ((this.icon != "" && !this.isDefaultIcon))
 		{
 			pageIcon = this.pageDocument.createElement("div");
 			pageIcon.id = "webpage-icon";
@@ -720,16 +726,16 @@ export class Webpage extends Attachment
 	{
 		let rootPath = this.pathToRoot.slugified(this.exportOptions.slugifyPaths).path;
 		if (rootPath == "") rootPath = ".";
-		const description = this.description || (this.exportOptions.siteName + " - " + this.titleInfo.title);
+		const description = this.description || (this.exportOptions.siteName + " - " + this.title);
 		let head =
 `
-<title>${this.titleInfo.title}</title>
+<title>${this.title}</title>
 <base href="${rootPath}">
 <meta name="pathname" content="${this.targetPath}">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
 <meta charset="UTF-8">
 <meta name="description" content="${description}">
-<meta property="og:title" content="${this.titleInfo.title}">
+<meta property="og:title" content="${this.title}">
 <meta property="og:description" content="${description}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="${this.fullURL}">
@@ -776,4 +782,10 @@ export class Webpage extends Attachment
 		};
 	}
 
+	public dispose()
+	{
+		this.viewElement?.remove();
+		// @ts-ignore
+		this.pageDocument = undefined;
+	}
 }

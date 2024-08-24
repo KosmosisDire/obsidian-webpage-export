@@ -471,12 +471,12 @@ export class GraphView extends InsertedFeature
 		linked = linked.filter((l) => 
 		{
 			let data = ObsidianSite.getWebpageData(l);
-			if (!data) return false;
+			if (!data?.backlinks || !data?.links || !data?.type) return false;
 			
 			if (data.backlinks.length == 0)
-				{
-					console.log("No backlinks for", l);
-				}
+			{
+				console.log("No backlinks for", l);
+			}
 				
 			if (!this.options.showOrphanNodes && data.backlinks.length == 0 && data.links.length == 0)
 				return false;

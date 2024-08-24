@@ -242,7 +242,20 @@ function getBinaryPromise(binaryFile) {
     return Promise.resolve().then(() => getBinarySync(binaryFile))
 }
 
-function instantiateArrayBuffer(binaryFile, imports, receiver) {
+function instantiateArrayBuffer(binaryFile, imports, receiver) 
+{
+	if (window.location.protocol == "file:")
+	{
+		const dataEl = document.querySelector(`data[id='site-lib/scripts/${encodeURI(binaryFile)}']`);
+		if (dataEl)
+		{
+			const data = JSON.parse(decodeURI(dataEl.getAttribute("value") ?? ""));
+			WebAssembly.instantiate(data?.data ?? new Uint8Array(), imports).then(receiver, reason => {
+				err(`failed to prepare locally loaded wasm: ${reason}`);
+				abort(reason)
+			});
+		}
+	}
     return getBinaryPromise(binaryFile).then(binary => WebAssembly.instantiate(binary, imports)).then(receiver, reason => {
         err(`failed to asynchronously prepare wasm: ${reason}`);
         abort(reason)

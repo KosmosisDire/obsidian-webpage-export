@@ -8,12 +8,12 @@ import { ExportLog } from "plugin/render-api/render-api";
 import Minisearch from 'minisearch';
 import { Path } from "plugin/utils/path";
 import HTMLExportPlugin from "plugin/main";
-import { Settings } from "plugin/settings/settings";
 import { AssetType } from "plugin/asset-loaders/asset-types";
 import RSS from 'rss';
 import { AssetLoader } from "plugin/asset-loaders/base-asset";
 import { FileData, WebpageData, WebsiteData } from "shared/website-data";
 import { Utils } from "plugin/utils/utils";
+import { Shared } from "shared/shared";
 
 export class Index
 {
@@ -57,7 +57,7 @@ export class Index
 		try
 		{
 			// try to load website data
-			const metadataPath = this.website.destination.join(AssetHandler.libraryPath).joinString("metadata.json");
+			const metadataPath = this.website.destination.join(AssetHandler.libraryPath).joinString(Shared.metadataFileName);
 	
 			const metadata = await metadataPath.readAsString();
 			if (metadata) 
@@ -116,7 +116,7 @@ export class Index
 		// load current index or create a new one if it doesn't exist
 		try
 		{			
-			const indexPath = this.website.destination.join(AssetHandler.libraryPath).joinString("search-index.json");
+			const indexPath = this.website.destination.join(AssetHandler.libraryPath).joinString(Shared.searchIndexFileName);
 			const indexJson = await indexPath.readAsString();
 			if (indexJson)
 			{
@@ -216,8 +216,8 @@ export class Index
 	 */
 	public async clearCache()
 	{
-		const metadataPath = this.website.destination.join(AssetHandler.libraryPath).joinString("metadata.json");
-		const indexPath = this.website.destination.join(AssetHandler.libraryPath).joinString("search-index.json");
+		const metadataPath = this.website.destination.join(AssetHandler.libraryPath).joinString(Shared.metadataFileName);
+		const indexPath = this.website.destination.join(AssetHandler.libraryPath).joinString(Shared.searchIndexFileName);
 
 		await metadataPath.delete();
 		await indexPath.delete();
@@ -561,7 +561,11 @@ export class Index
 			webpageInfo.treeOrder = webpage.treeOrder;
 			webpageInfo.backlinks = webpage.backlinks.map((backlink) => backlink.targetPath.path);
 			webpageInfo.type = webpage.type;
-
+			if (this.exportOptions.combineAsSingleFile)
+			{
+				webpageInfo.data = webpage.data.toString();
+			}
+			
 			// get file info version of the webpage
 			const fileInfo: FileData = {} as FileData;
 			fileInfo.createdTime = webpageInfo.createdTime;
@@ -574,10 +578,7 @@ export class Index
 			fileInfo.backlinks = webpageInfo.backlinks;
 			fileInfo.type = webpageInfo.type;
 			fileInfo.data = null;
-			if (this.exportOptions.combineAsSingleFile)
-			{
-				fileInfo.data = webpage.data.toString();
-			}
+			
 
 			this.websiteData.webpages[webpageInfo.exportPath] = webpageInfo;
 			this.websiteData.fileInfo[webpageInfo.exportPath] = fileInfo;
@@ -695,16 +696,24 @@ export class Index
 		delete this.websiteData.fileInfo[key];
 	}
 
-	private async indexSelf()
+	public websiteDataAttachment(): Attachment
 	{
 		const websiteDataString = JSON.stringify(this.websiteData);
-		const indexDataString = JSON.stringify(this.minisearch);
-
 		const websiteDataPath = AssetHandler.generateSavePath("metadata.json", AssetType.Other, this.website.destination);
-		const indexDataPath = AssetHandler.generateSavePath("search-index.json", AssetType.Other, this.website.destination);
+		return new Attachment(websiteDataString, websiteDataPath, null, this.exportOptions);
+	}
 
-		const websiteDataAttachment = new Attachment(websiteDataString, websiteDataPath, null, this.exportOptions);
-		const indexDataAttachment = new Attachment(indexDataString, indexDataPath, null, this.exportOptions);
+	public indexDataAttachment(): Attachment
+	{
+		const indexDataString = JSON.stringify(this.minisearch);
+		const indexDataPath = AssetHandler.generateSavePath("search-index.json", AssetType.Other, this.website.destination);
+		return new Attachment(indexDataString, indexDataPath, null, this.exportOptions);
+	}
+
+	private async indexSelf()
+	{
+		const websiteDataAttachment = this.websiteDataAttachment();
+		const indexDataAttachment = this.indexDataAttachment();
 		
 		await this.addFiles([websiteDataAttachment, indexDataAttachment]);
 
