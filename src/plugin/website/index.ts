@@ -548,7 +548,7 @@ export class Index
 			webpageInfo.author = webpage.author;
 			webpageInfo.coverImageURL = "";
 			webpageInfo.fullURL = webpage.fullURL;
-			webpageInfo.pathToRoot = webpage.pathToRoot.path;
+			webpageInfo.pathToRoot = webpage.pathToRoot.path == "" ? "." : webpage.pathToRoot.path;
 			webpageInfo.attachments = webpage.attachments.map((download) => download.targetPath.path);
 			
 			webpageInfo.createdTime = webpage.source.stat.ctime;
