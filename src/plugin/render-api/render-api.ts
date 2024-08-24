@@ -1,11 +1,11 @@
 import { MarkdownRendererOptions } from "./api-options";
 import { Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, MarkdownPreviewView, loadMermaid, TFile, MarkdownView, View } from "obsidian";
-import { TabManager } from "plugin/utils/tab-manager";
+import { TabManager } from "src/plugin/utils/tab-manager";
 import * as electron from 'electron';
-import { Settings, SettingsPage } from "plugin/settings/settings";
-import { Path } from "plugin/utils/path";
-import { SimpleFileListGenerator } from "plugin/features/simple-list-generator";
-import { IncludeGenerator } from "plugin/features/include";
+import { Settings, SettingsPage } from "src/plugin/settings/settings";
+import { Path } from "src/plugin/utils/path";
+import { SimpleFileListGenerator } from "src/plugin/features/simple-list-generator";
+import { IncludeGenerator } from "src/plugin/features/include";
 import { DataviewRenderer } from "./dataview-renderer";
 import { debug } from "console";
 

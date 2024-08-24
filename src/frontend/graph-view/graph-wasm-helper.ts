@@ -1,4 +1,4 @@
-import { Bounds, Vector2 } from "frontend/main/utils";
+import { Bounds, Vector2 } from "src/frontend/main/utils";
 import { GraphView } from "../main/graph-view";
 
 declare let Module: any;

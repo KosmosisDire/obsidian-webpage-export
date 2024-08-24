@@ -1,7 +1,7 @@
-import { AssetHandler } from "plugin/asset-loaders/asset-handler";
-import { ExportLog } from "plugin/render-api/render-api";
-import { Utils } from "plugin/utils/utils";
-import { AssetType } from "plugin/asset-loaders/asset-types";
+import { AssetHandler } from "src/plugin/asset-loaders/asset-handler";
+import { ExportLog } from "src/plugin/render-api/render-api";
+import { Utils } from "src/plugin/utils/utils";
+import { AssetType } from "src/plugin/asset-loaders/asset-types";
 
 export namespace HTMLGeneration
 {

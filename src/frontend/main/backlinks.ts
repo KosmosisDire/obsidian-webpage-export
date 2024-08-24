@@ -1,5 +1,5 @@
-import { WebpageData } from "shared/website-data";
-import { InsertedFeature } from "shared/feature";
+import { WebpageData } from "src/shared/website-data";
+import { InsertedFeature } from "src/shared/feature";
 
 // this is for backlinks but it can actually be used to display any link technically
 

@@ -1,4 +1,4 @@
-import { ThemeToggleOptions } from "shared/features/theme-toggle";
+import { ThemeToggleOptions } from "src/shared/features/theme-toggle";
 import { FeatureGenerator } from "./feature-generator";
 
 

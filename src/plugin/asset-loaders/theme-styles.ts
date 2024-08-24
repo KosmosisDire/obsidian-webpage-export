@@ -1,6 +1,6 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { ExportLog } from "plugin/render-api/render-api";
+import { ExportLog } from "src/plugin/render-api/render-api";
 import { AssetHandler } from "./asset-handler.js";
 
 export class ThemeStyles extends AssetLoader

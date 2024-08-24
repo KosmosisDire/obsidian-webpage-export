@@ -1,4 +1,4 @@
-import { Settings } from "plugin/settings/settings";
+import { Settings } from "src/plugin/settings/settings";
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { AssetHandler } from "./asset-handler.js";

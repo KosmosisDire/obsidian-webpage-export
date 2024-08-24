@@ -1,17 +1,17 @@
 import { FrontMatterCache, TFile } from "obsidian";
-import { Path } from "plugin/utils/path";
-import { Attachment } from "plugin/utils/downloadable";
-import { OutlineTree } from "plugin/features/outline-tree";
+import { Path } from "src/plugin/utils/path";
+import { Attachment } from "src/plugin/utils/downloadable";
+import { OutlineTree } from "src/plugin/features/outline-tree";
 import { Website } from "./website";
-import { HTMLGeneration } from "plugin/render-api/html-generation-helpers";
-import { Utils } from "plugin/utils/utils";
-import { ExportLog } from "plugin/render-api/render-api";
-import { MarkdownRendererAPI } from "plugin/render-api/render-api";
-import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
-import { DocumentType } from "shared/website-data";
-import { Settings } from "plugin/settings/settings";
-import { AssetHandler } from "plugin/asset-loaders/asset-handler";
-import { Shared } from "shared/shared";
+import { HTMLGeneration } from "src/plugin/render-api/html-generation-helpers";
+import { Utils } from "src/plugin/utils/utils";
+import { ExportLog } from "src/plugin/render-api/render-api";
+import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
+import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
+import { DocumentType } from "src/shared/website-data";
+import { Settings } from "src/plugin/settings/settings";
+import { AssetHandler } from "src/plugin/asset-loaders/asset-handler";
+import { Shared } from "src/shared/shared";
 
 export class Webpage extends Attachment
 {

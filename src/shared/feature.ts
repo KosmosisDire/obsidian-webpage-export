@@ -1,4 +1,4 @@
-import { InsertedFeatureOptions } from "shared/features/feature-options-base";
+import { InsertedFeatureOptions } from "src/shared/features/feature-options-base";
 
 export class InsertedFeature
 {

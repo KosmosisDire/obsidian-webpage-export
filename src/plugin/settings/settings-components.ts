@@ -1,9 +1,9 @@
 import { getIcon, Modal, Setting, TextComponent } from "obsidian";
 import { SettingsPage } from "./settings";
-import { Path } from "plugin/utils/path";
-import { FileDialogs } from "plugin/utils/file-dialogs";
-import { FeatureOptions, FeatureRelation, FeatureSettingInfo } from "shared/features/feature-options-base";
-import { ExportPipelineOptions } from "plugin/website/pipeline-options";
+import { Path } from "src/plugin/utils/path";
+import { FileDialogs } from "src/plugin/utils/file-dialogs";
+import { FeatureOptions, FeatureRelation, FeatureSettingInfo } from "src/shared/features/feature-options-base";
+import { ExportPipelineOptions } from "src/plugin/website/pipeline-options";
 
 export function createDivider(container: HTMLElement)
 {

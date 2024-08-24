@@ -1,5 +1,5 @@
 import {  PaneType, SplitDirection, TFile, WorkspaceLeaf } from "obsidian";
-import { ExportLog } from "plugin/render-api/render-api";
+import { ExportLog } from "src/plugin/render-api/render-api";
 
 
 export namespace TabManager

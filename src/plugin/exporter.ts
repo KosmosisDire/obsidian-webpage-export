@@ -1,10 +1,10 @@
 import { Notice, TFile, TFolder } from "obsidian";
-import { Path } from "plugin/utils/path";
-import { Settings, SettingsPage } from "plugin/settings/settings";
-import { Utils } from "plugin/utils/utils";
-import { Website } from "plugin/website/website";
-import { ExportLog, MarkdownRendererAPI } from "plugin/render-api/render-api";
-import { ExportInfo, ExportModal } from "plugin/settings/export-modal";
+import { Path } from "src/plugin/utils/path";
+import { Settings, SettingsPage } from "src/plugin/settings/settings";
+import { Utils } from "src/plugin/utils/utils";
+import { Website } from "src/plugin/website/website";
+import { ExportLog, MarkdownRendererAPI } from "src/plugin/render-api/render-api";
+import { ExportInfo, ExportModal } from "src/plugin/settings/export-modal";
 import { Webpage } from "./website/webpage";
 
 export class HTMLExporter

@@ -1,6 +1,6 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { Path } from "plugin/utils/path";
+import { Path } from "src/plugin/utils/path";
 
 export class SnippetStyles extends AssetLoader
 {

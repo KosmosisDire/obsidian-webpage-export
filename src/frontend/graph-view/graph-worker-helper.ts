@@ -1,6 +1,6 @@
-import { Vector2 } from "frontend/main/utils";
+import { Vector2 } from "src/frontend/main/utils";
 import { GraphView } from "../main/graph-view";
-import { Shared } from "shared/shared";
+import { Shared } from "src/shared/shared";
 
 // colors in hex
 export interface GraphViewColors

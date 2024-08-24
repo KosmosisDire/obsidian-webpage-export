@@ -1,4 +1,4 @@
-import { WebpageData, DocumentType } from "shared/website-data";
+import { WebpageData, DocumentType } from "src/shared/website-data";
 import { BacklinkList } from "./backlinks";
 import { Callout } from "./callouts";
 import { Canvas } from "./canvas";

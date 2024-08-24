@@ -1,9 +1,9 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { Path } from "plugin/utils/path";
-import { ExportLog } from "plugin/render-api/render-api";
+import { Path } from "src/plugin/utils/path";
+import { ExportLog } from "src/plugin/render-api/render-api";
 import { RequestUrlResponse, requestUrl } from "obsidian";
-import { Utils } from "plugin/utils/utils";
+import { Utils } from "src/plugin/utils/utils";
 import { fileTypeFromBuffer } from "file-type";
 
 export class FetchBuffer extends AssetLoader

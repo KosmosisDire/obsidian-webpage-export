@@ -1,8 +1,8 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { Path } from "plugin/utils/path";
-import { Settings, SettingsPage } from "plugin/settings/settings";
-import { ExportLog } from "plugin/render-api/render-api";
+import { Path } from "src/plugin/utils/path";
+import { Settings, SettingsPage } from "src/plugin/settings/settings";
+import { ExportLog } from "src/plugin/render-api/render-api";
 
 export class CustomHeadContent extends AssetLoader
 {

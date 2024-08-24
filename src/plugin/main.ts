@@ -2,12 +2,12 @@
 import { Notice, Plugin, TFile, TFolder, requestUrl} from 'obsidian';
 
 // modules that are part of the plugin
-import { AssetHandler } from 'plugin/asset-loaders/asset-handler';
-import { Settings, SettingsPage } from 'plugin/settings/settings';
-import { HTMLExporter } from 'plugin/exporter';
-import { Path } from 'plugin/utils/path';
-import { ExportModal } from 'plugin/settings/export-modal';
-import { ExportLog, MarkdownRendererAPI } from 'plugin/render-api/render-api';
+import { AssetHandler } from 'src/plugin/asset-loaders/asset-handler';
+import { Settings, SettingsPage } from 'src/plugin/settings/settings';
+import { HTMLExporter } from 'src/plugin/exporter';
+import { Path } from 'src/plugin/utils/path';
+import { ExportModal } from 'src/plugin/settings/export-modal';
+import { ExportLog, MarkdownRendererAPI } from 'src/plugin/render-api/render-api';
 import { DataviewRenderer } from './render-api/dataview-renderer';
 import { Website } from './website/website';
 class SvgPathManager {

@@ -1,4 +1,4 @@
-import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
+import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
 import { Path } from "./path";
 import { FileStats, TFile } from "obsidian";
 

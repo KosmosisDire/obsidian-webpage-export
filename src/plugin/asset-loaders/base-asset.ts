@@ -1,11 +1,11 @@
-import { Path } from "plugin/utils/path";
-import { Attachment } from "plugin/utils/downloadable";
-import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
+import { Path } from "src/plugin/utils/path";
+import { Attachment } from "src/plugin/utils/downloadable";
+import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { TFile } from "obsidian";
 import  mime from "mime";
-import { IncludeGenerator } from "plugin/features/include.js";
-import { Settings } from "plugin/settings/settings";
+import { IncludeGenerator } from "src/plugin/features/include.js";
+import { Settings } from "src/plugin/settings/settings";
 import { AssetHandler } from "./asset-handler";
 const { minify: runMinify } = require('html-minifier-terser');
 

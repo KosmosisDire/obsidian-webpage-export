@@ -1,8 +1,8 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { Settings } from "plugin/settings/settings";
-import { Path } from "plugin/utils/path";
-import defaultIcon from "assets/icon.png";
+import { Settings } from "src/plugin/settings/settings";
+import { Path } from "src/plugin/utils/path";
+import defaultIcon from "src/assets/icon.png";
 
 export class Favicon extends AssetLoader
 {

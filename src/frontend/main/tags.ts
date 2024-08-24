@@ -1,4 +1,4 @@
-import { InsertedFeature } from "shared/feature";
+import { InsertedFeature } from "src/shared/feature";
 
 export class Tags extends InsertedFeature
 {

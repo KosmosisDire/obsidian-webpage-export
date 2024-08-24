@@ -1,7 +1,7 @@
 import {  MarkdownView, TextFileView } from 'obsidian';
 import { Path } from './path';
 import { Attachment } from './downloadable';
-import { ExportLog } from 'plugin/render-api/render-api';
+import { ExportLog } from 'src/plugin/render-api/render-api';
 
 export namespace Utils
 {

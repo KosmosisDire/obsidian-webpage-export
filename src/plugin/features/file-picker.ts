@@ -1,8 +1,8 @@
 import { TFile } from "obsidian";
-import { FileTree, FileTreeItem } from "plugin/features/file-tree";
-import { Path } from "plugin/utils/path";
-import { Website } from "plugin/website/website";
-import { MarkdownRendererAPI } from "plugin/render-api/render-api";
+import { FileTree, FileTreeItem } from "src/plugin/features/file-tree";
+import { Path } from "src/plugin/utils/path";
+import { Website } from "src/plugin/website/website";
+import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
 
 export class FilePickerTree extends FileTree
 {

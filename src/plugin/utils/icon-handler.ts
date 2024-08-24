@@ -1,6 +1,6 @@
 import { getIcon as getObsidianIcon, requestUrl } from "obsidian";
-import { EmojiStyle } from "shared/website-data";
-import { Settings } from "plugin/settings/settings";
+import { EmojiStyle } from "src/shared/website-data";
+import { Settings } from "src/plugin/settings/settings";
 
 
 export namespace IconHandler

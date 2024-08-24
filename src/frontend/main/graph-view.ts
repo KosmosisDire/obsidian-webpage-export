@@ -1,9 +1,9 @@
-import { inOutQuadBlend, Ticker, Vector2, getPointerPosition, getTouchPositionVector } from "frontend/main/utils";
-import { GraphWASMHelper } from "frontend/graph-view/graph-wasm-helper";
+import { inOutQuadBlend, Ticker, Vector2, getPointerPosition, getTouchPositionVector } from "src/frontend/main/utils";
+import { GraphWASMHelper } from "src/frontend/graph-view/graph-wasm-helper";
 import { GraphRenderWorker } from "../graph-view/graph-worker-helper";
 import { LinkHandler } from "./links";
-import { GraphViewOptions } from "shared/features/graph-view";
-import { InsertedFeature } from "shared/feature";
+import { GraphViewOptions } from "src/shared/features/graph-view";
+import { InsertedFeature } from "src/shared/feature";
 
 export class GraphView extends InsertedFeature
 {

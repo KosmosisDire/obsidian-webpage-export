@@ -1,13 +1,13 @@
 import { ButtonComponent, Modal, Setting, TFile } from 'obsidian';
-import { Utils } from 'plugin/utils/utils';
-import HTMLExportPlugin from 'plugin/main';
+import { Utils } from 'src/plugin/utils/utils';
+import HTMLExportPlugin from 'src/plugin/main';
 import { ExportPreset, Settings, SettingsPage } from './settings';
-import { FilePickerTree } from 'plugin/features/file-picker';
-import { Path } from 'plugin/utils/path';
-import { FileDialogs } from 'plugin/utils/file-dialogs';
+import { FilePickerTree } from 'src/plugin/features/file-picker';
+import { Path } from 'src/plugin/utils/path';
+import { FileDialogs } from 'src/plugin/utils/file-dialogs';
 import { createFileInput, createToggle } from './settings-components';
-import { Website } from 'plugin/website/website';
-import { Index } from 'plugin/website';
+import { Website } from 'src/plugin/website/website';
+import { Index } from 'src/plugin/website';
 
 export interface ExportInfo
 {

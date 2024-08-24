@@ -1,10 +1,10 @@
 import { Notice, Plugin, PluginSettingTab, Setting, TFile, TFolder, getIcon } from 'obsidian';
-import { Path } from 'plugin/utils/path';
-import pluginStylesBlacklist from 'assets/third-party-styles-blacklist.txt';
-import { ExportLog } from 'plugin/render-api/render-api';
+import { Path } from 'src/plugin/utils/path';
+import pluginStylesBlacklist from 'src/assets/third-party-styles-blacklist.txt';
+import { ExportLog } from 'src/plugin/render-api/render-api';
 import { createDivider, createFeatureSetting, createSection, createToggle }  from './settings-components';
-import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
-import { FlowList } from 'plugin/features/flow-list';
+import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
+import { FlowList } from 'src/plugin/features/flow-list';
 
 // #region Settings Definition
 

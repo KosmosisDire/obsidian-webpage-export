@@ -1,23 +1,23 @@
-import { Attachment } from "plugin/utils/downloadable";
-import { FileTree } from "plugin/features/file-tree";
+import { Attachment } from "src/plugin/utils/downloadable";
+import { FileTree } from "src/plugin/features/file-tree";
 import {  TAbstractFile, TFile, TFolder } from "obsidian";
-import {  Settings } from "plugin/settings/settings";
-import { Path } from "plugin/utils/path";
-import { ExportLog, MarkdownRendererAPI } from "plugin/render-api/render-api";
-import { AssetLoader } from "plugin/asset-loaders/base-asset";
-import { AssetType, InlinePolicy, Mutability } from "plugin/asset-loaders/asset-types.js";
-import { HTMLGeneration } from "plugin/render-api/html-generation-helpers";
-import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
-import { Index as WebsiteIndex } from "plugin/website/index";
-import { WebpageData } from "plugin/../shared/website-data";
+import {  Settings } from "src/plugin/settings/settings";
+import { Path } from "src/plugin/utils/path";
+import { ExportLog, MarkdownRendererAPI } from "src/plugin/render-api/render-api";
+import { AssetLoader } from "src/plugin/asset-loaders/base-asset";
+import { AssetType, InlinePolicy, Mutability } from "src/plugin/asset-loaders/asset-types.js";
+import { HTMLGeneration } from "src/plugin/render-api/html-generation-helpers";
+import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
+import { Index as WebsiteIndex } from "src/plugin/website/index";
+import { WebpageData } from "src/plugin/../shared/website-data";
 import { WebpageTemplate } from "./webpage-template";
-import { AssetHandler } from "plugin/asset-loaders/asset-handler";
+import { AssetHandler } from "src/plugin/asset-loaders/asset-handler";
 import { Webpage } from "./webpage";
-import { GraphView } from "plugin/features/graph-view";
-import { ThemeToggle } from "plugin/features/theme-toggle";
-import { SearchInput } from "plugin/features/search-input";
-import { Utils } from "plugin/utils/utils";
-import { IconHandler } from "plugin/utils/icon-handler";
+import { GraphView } from "src/plugin/features/graph-view";
+import { ThemeToggle } from "src/plugin/features/theme-toggle";
+import { SearchInput } from "src/plugin/features/search-input";
+import { Utils } from "src/plugin/utils/utils";
+import { IconHandler } from "src/plugin/utils/icon-handler";
 
 export class Website
 {

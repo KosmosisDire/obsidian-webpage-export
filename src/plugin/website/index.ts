@@ -1,19 +1,19 @@
-import { Attachment } from "plugin/utils/downloadable";
+import { Attachment } from "src/plugin/utils/downloadable";
 import { Website } from "./website";
 import { Webpage } from "./webpage";
 import { Notice, TFile } from "obsidian";
-import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
-import { AssetHandler } from "plugin/asset-loaders/asset-handler";
-import { ExportLog } from "plugin/render-api/render-api";
+import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
+import { AssetHandler } from "src/plugin/asset-loaders/asset-handler";
+import { ExportLog } from "src/plugin/render-api/render-api";
 import Minisearch from 'minisearch';
-import { Path } from "plugin/utils/path";
-import HTMLExportPlugin from "plugin/main";
-import { AssetType } from "plugin/asset-loaders/asset-types";
+import { Path } from "src/plugin/utils/path";
+import HTMLExportPlugin from "src/plugin/main";
+import { AssetType } from "src/plugin/asset-loaders/asset-types";
 import RSS from 'rss';
-import { AssetLoader } from "plugin/asset-loaders/base-asset";
-import { FileData, WebpageData, WebsiteData } from "shared/website-data";
-import { Utils } from "plugin/utils/utils";
-import { Shared } from "shared/shared";
+import { AssetLoader } from "src/plugin/asset-loaders/base-asset";
+import { FileData, WebpageData, WebsiteData } from "src/shared/website-data";
+import { Utils } from "src/plugin/utils/utils";
+import { Shared } from "src/shared/shared";
 
 export class Index
 {
@@ -565,7 +565,7 @@ export class Index
 			{
 				webpageInfo.data = webpage.data.toString();
 			}
-			
+
 			// get file info version of the webpage
 			const fileInfo: FileData = {} as FileData;
 			fileInfo.createdTime = webpageInfo.createdTime;

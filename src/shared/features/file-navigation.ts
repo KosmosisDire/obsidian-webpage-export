@@ -1,4 +1,4 @@
-import { Shared } from "shared/shared";
+import { Shared } from "src/shared/shared";
 import { FeatureRelation, FeatureSettingInfo, FetchedFeatureOptions, RelationType } from "./feature-options-base";
 
 export class FileNavigationOptions extends FetchedFeatureOptions

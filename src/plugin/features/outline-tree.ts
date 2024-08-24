@@ -1,6 +1,6 @@
 import {  TFile } from "obsidian";
 import { Tree, TreeItem } from "./tree";
-import { Webpage } from "plugin/website/webpage";
+import { Webpage } from "src/plugin/website/webpage";
 
 export class OutlineTree extends Tree
 {

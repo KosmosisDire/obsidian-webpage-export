@@ -1,4 +1,4 @@
-import { FeatureOptions } from "shared/features/feature-options-base";
+import { FeatureOptions } from "src/shared/features/feature-options-base";
 
 export interface FeatureGenerator
 {

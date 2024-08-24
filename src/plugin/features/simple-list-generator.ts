@@ -1,6 +1,6 @@
 import { getIcon } from "obsidian";
 import { FeatureGenerator } from "./feature-generator";
-import { MarkdownRendererAPI } from "plugin/render-api/render-api";
+import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
 
 export class SimpleFileListGenerator implements FeatureGenerator
 {

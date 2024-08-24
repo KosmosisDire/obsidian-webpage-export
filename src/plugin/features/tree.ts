@@ -1,6 +1,6 @@
-import { MarkdownRendererAPI } from "plugin/render-api/render-api";
-import { Path } from "plugin/utils/path";
-import { FeatureGenerator } from "plugin/features/feature-generator";
+import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
+import { Path } from "src/plugin/utils/path";
+import { FeatureGenerator } from "src/plugin/features/feature-generator";
 
 export class Tree implements FeatureGenerator
 {

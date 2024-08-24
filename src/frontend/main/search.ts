@@ -1,4 +1,4 @@
-import { Shared } from "shared/shared";
+import { Shared } from "src/shared/shared";
 import { LinkHandler } from "./links";
 import { getTextNodes } from "./utils";
 import { ObsidianWebsite } from "./website";

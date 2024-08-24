@@ -1,17 +1,17 @@
-import graphWASMJS from "frontend/graph-view/graph-wasm.txt.js";
-import renderWorkerJS from "frontend/graph-view/graph-render-worker.txt.js";
-import graphWASM from "frontend/graph-view/graph-wasm.wasm";
-import websiteJS from "frontend/dist/index.txt.js";
-import webpageStyles from "assets/plugin-styles.txt.css";
-import deferredJS from "assets/deferred.txt.js";
-import deferredCSS from "assets/deferred.txt.css";
-import themeLoadJS from "assets/theme-load.txt.js";
+import graphWASMJS from "src/frontend/graph-view/graph-wasm.txt.js";
+import renderWorkerJS from "src/frontend/graph-view/graph-render-worker.txt.js";
+import graphWASM from "src/frontend/graph-view/graph-wasm.wasm";
+import websiteJS from "src/frontend/dist/index.txt.js";
+import webpageStyles from "src/assets/plugin-styles.txt.css";
+import deferredJS from "src/assets/deferred.txt.js";
+import deferredCSS from "src/assets/deferred.txt.css";
+import themeLoadJS from "src/assets/theme-load.txt.js";
 
-import tinyColorJS from "frontend/graph-view/tinycolor.txt.js";
-import pixiJS from "frontend/graph-view/pixi.txt.js";
-import minisearchJS from "assets/minisearch.txt.js";
+import tinyColorJS from "src/frontend/graph-view/tinycolor.txt.js";
+import pixiJS from "src/frontend/graph-view/pixi.txt.js";
+import minisearchJS from "src/assets/minisearch.txt.js";
 
-import { Path } from "plugin/utils/path.js";
+import { Path } from "src/plugin/utils/path.js";
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { ObsidianStyles } from "./obsidian-styles.js";
@@ -24,10 +24,10 @@ import { GlobalVariableStyles } from "./global-variable-styles.js";
 import { Favicon } from "./favicon.js";
 import { FetchBuffer } from "./local-fetch-buffer.js";
 import { SupportedPluginStyles } from "./supported-plugin-styles.js";
-import { ExportLog } from "plugin/render-api/render-api.js";
+import { ExportLog } from "src/plugin/render-api/render-api.js";
 import { fileTypeFromBuffer } from "file-type";
-import { ExportPipelineOptions } from "plugin/website/pipeline-options.js";
-import { Shared } from "shared/shared.js";
+import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
+import { Shared } from "src/shared/shared.js";
 const mime = require('mime');
 
 

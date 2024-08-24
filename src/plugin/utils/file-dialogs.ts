@@ -1,4 +1,4 @@
-import { Settings, SettingsPage } from "plugin/settings/settings";
+import { Settings, SettingsPage } from "src/plugin/settings/settings";
 import { Path } from "./path";
 /* @ts-ignore */
 const dialog: Electron.Dialog = require('electron').remote.dialog;

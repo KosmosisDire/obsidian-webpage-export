@@ -1,7 +1,7 @@
-import { Settings } from "plugin/settings/settings";
+import { Settings } from "src/plugin/settings/settings";
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { ExportLog } from "plugin/render-api/render-api";
+import { ExportLog } from "src/plugin/render-api/render-api";
 import { OtherPluginStyles } from "./other-plugin-styles.js";
 
 export class SupportedPluginStyles extends AssetLoader

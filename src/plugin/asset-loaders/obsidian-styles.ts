@@ -1,4 +1,4 @@
-import obsidianStyleOverrides from "assets/obsidian-styles.txt.css";
+import obsidianStyleOverrides from "src/assets/obsidian-styles.txt.css";
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { AssetHandler } from "./asset-handler.js";

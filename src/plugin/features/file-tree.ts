@@ -1,7 +1,7 @@
 import { Tree, TreeItem } from "./tree";
-import { Path } from "plugin/utils/path";
-import { Website } from "plugin/website/website";
-import { MarkdownRendererAPI } from "plugin/render-api/render-api";
+import { Path } from "src/plugin/utils/path";
+import { Website } from "src/plugin/website/website";
+import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
 
 export class FileTree extends Tree
 {

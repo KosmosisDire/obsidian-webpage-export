@@ -13,12 +13,12 @@ const prod = (process.argv[2] === 'production');
 
 esbuild.build
 ({
-	entryPoints: ["frontend/main/index.txt.ts"],
+	entryPoints: ["src/frontend/main/index.txt.ts"],
 	bundle: true,
 	minify: false,
 	treeShaking: true,
 	platform: 'browser',
-	outdir: "frontend/dist",
+	outdir: "src/frontend/dist",
 	tsconfig: "tsconfig.frontend.json",
 	watch: !prod,
 });
@@ -33,7 +33,7 @@ esbuild.build({
 	banner: {
 		js: banner,
 	},
-	entryPoints: ['plugin/main.ts'],
+	entryPoints: ['src/plugin/main.ts'],
 	bundle: true,
 	tsconfig: 'tsconfig.json',
 	external: [
@@ -59,7 +59,7 @@ esbuild.build({
 	logLevel: "info",
 	sourcemap: prod ? false : 'inline',
 	treeShaking: true,
-	outfile: '../main.js'
+	outfile: 'main.js'
 }).catch(() => process.exit(1));
 
 

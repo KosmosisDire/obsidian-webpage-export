@@ -1,17 +1,17 @@
-import { BacklinksOptions } from "shared/features/backlinks";
-import { TagsOptions } from "shared/features/tags";
-import { AliasesOptions } from "shared/features/aliases";
-import { PropertiesOptions } from "shared/features/properties";
-import { FileNavigationOptions } from "shared/features/file-navigation";
-import { OutlineOptions } from "shared/features/outline";
-import { ThemeToggleOptions } from "shared/features/theme-toggle";
-import { GraphViewOptions } from "shared/features/graph-view";
-import { SidebarOptions } from "shared/features/sidebar";
-import { DocumentOptions } from "shared/features/document";
-import { EmojiStyle } from "shared/website-data";
-import { SearchOptions } from "shared/features/search";
-import { CustomHeadOptions } from "shared/features/custom-head";
-import { MarkdownRendererOptions } from "plugin/render-api/api-options";
+import { BacklinksOptions } from "src/shared/features/backlinks";
+import { TagsOptions } from "src/shared/features/tags";
+import { AliasesOptions } from "src/shared/features/aliases";
+import { PropertiesOptions } from "src/shared/features/properties";
+import { FileNavigationOptions } from "src/shared/features/file-navigation";
+import { OutlineOptions } from "src/shared/features/outline";
+import { ThemeToggleOptions } from "src/shared/features/theme-toggle";
+import { GraphViewOptions } from "src/shared/features/graph-view";
+import { SidebarOptions } from "src/shared/features/sidebar";
+import { DocumentOptions } from "src/shared/features/document";
+import { EmojiStyle } from "src/shared/website-data";
+import { SearchOptions } from "src/shared/features/search";
+import { CustomHeadOptions } from "src/shared/features/custom-head";
+import { MarkdownRendererOptions } from "src/plugin/render-api/api-options";
 
 export class ExportPipelineOptions extends MarkdownRendererOptions
 {

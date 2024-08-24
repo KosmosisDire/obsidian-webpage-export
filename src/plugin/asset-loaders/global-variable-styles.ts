@@ -1,6 +1,6 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { Settings } from "plugin/settings/settings";
+import { Settings } from "src/plugin/settings/settings";
 
 export class GlobalVariableStyles extends AssetLoader
 {

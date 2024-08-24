@@ -1,5 +1,5 @@
-import { InsertedFeatureOptions } from "shared/features/feature-options-base";
-import { ExportLog } from "plugin/render-api/render-api";
+import { InsertedFeatureOptions } from "src/shared/features/feature-options-base";
+import { ExportLog } from "src/plugin/render-api/render-api";
 import { ExportPipelineOptions } from "./pipeline-options";
 
 

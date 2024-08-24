@@ -1,8 +1,8 @@
-import { InsertedFeatureOptions } from "shared/features/feature-options-base";
+import { InsertedFeatureOptions } from "src/shared/features/feature-options-base";
 import { TFile } from "obsidian";
-import { Attachment } from "plugin/utils/downloadable";
-import { AssetLoader } from "plugin/asset-loaders/base-asset";
-import { Aliases } from "frontend/main/aliases";
+import { Attachment } from "src/plugin/utils/downloadable";
+import { AssetLoader } from "src/plugin/asset-loaders/base-asset";
+import { Aliases } from "src/frontend/main/aliases";
 import { ExportPipelineOptions } from "./pipeline-options";
 
 

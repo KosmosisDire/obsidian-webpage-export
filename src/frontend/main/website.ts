@@ -4,12 +4,12 @@ import { Sidebar } from "./sidebars";
 import { Tree } from "./trees";
 import { Bounds, delay, getLengthInPixels, waitUntil } from "./utils";
 import { WebpageDocument } from "./document";
-import { FileData, WebpageData, WebsiteData } from "shared/website-data";
+import { FileData, WebpageData, WebsiteData } from "src/shared/website-data";
 import { GraphView } from "./graph-view";
 import { Notice } from "./notifications";
 import { Theme } from "./theme";
 import { LinkHandler } from "./links";
-import { Shared } from "shared/shared";
+import { Shared } from "src/shared/shared";
 
 export class ObsidianWebsite
 {
