@@ -13,7 +13,7 @@ RUN npm run build
 FROM ubuntu:20.04 AS Run
 
 # Set image parameters
-ARG OBSIDIAN_VERSION=1.6.3
+ARG OBSIDIAN_VERSION=1.6.7
 ARG DEBIAN_FRONTEND=noninteractive
 VOLUME [ "/vault", "/output", "/config.json" ]
 ENV TZ=Etc/UTC
