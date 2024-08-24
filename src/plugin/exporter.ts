@@ -85,6 +85,9 @@ export class HTMLExporter
 				{
 					await Utils.downloadAttachments(website.index.newFiles.filter((f) => !(f instanceof Webpage)));
 					await Utils.downloadAttachments(website.index.updatedFiles.filter((f) => !(f instanceof Webpage)));
+					await Utils.downloadAttachments([website.index.websiteDataAttachment()]);
+					await Utils.downloadAttachments([website.index.indexDataAttachment()]);
+
 				}
 			}
 		}

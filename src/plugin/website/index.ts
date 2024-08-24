@@ -136,8 +136,6 @@ export class Index
 
 	public async finalize()
 	{
-		if (!this.exportOptions.inlineOther)
-			await this.indexSelf();
 
 		this.websiteData.shownInTree = this.attachmentsShownInTree.map((attachment) => attachment.targetPath.path);
 		this.websiteData.allFiles = this.allFiles.map((file) => file.targetPath.path);
@@ -160,8 +158,6 @@ export class Index
 			}
 		}
 
-		if (!this.exportOptions.inlineOther)
-			await this.indexSelf();
 
 		console.log("Deleted: ", this.deletedFiles);
 		console.log("New: ", this.newFiles);
@@ -475,6 +471,9 @@ export class Index
 			const webpages = Object.entries(this.oldWebsiteData.webpages);
 			for (const [path, data] of webpages)
 			{
+				// skip files that were deleted
+				if (this.deletedFiles.includes(path)) continue;
+
 				const filePath = new Path(path, this.website.destination.path);
 				const fileData = await filePath.readAsBuffer();
 				if (fileData)
@@ -708,16 +707,6 @@ export class Index
 		const indexDataString = JSON.stringify(this.minisearch);
 		const indexDataPath = AssetHandler.generateSavePath("search-index.json", AssetType.Other, this.website.destination);
 		return new Attachment(indexDataString, indexDataPath, null, this.exportOptions);
-	}
-
-	private async indexSelf()
-	{
-		const websiteDataAttachment = this.websiteDataAttachment();
-		const indexDataAttachment = this.indexDataAttachment();
-		
-		await this.addFiles([websiteDataAttachment, indexDataAttachment]);
-
-		websiteDataAttachment.data = JSON.stringify(this.websiteData);
 	}
 
 }
