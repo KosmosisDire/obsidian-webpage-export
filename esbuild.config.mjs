@@ -11,7 +11,7 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === 'production');
 
-esbuild.build
+await esbuild.build
 ({
 	entryPoints: ["src/frontend/main/index.txt.ts"],
 	bundle: true,
@@ -23,7 +23,7 @@ esbuild.build
 	watch: !prod,
 });
 
-esbuild.build({
+await esbuild.build({
 	loader: {
 		'.txt.js': 'text',
 		'.txt.css': 'text',
