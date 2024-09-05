@@ -19,7 +19,7 @@
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",
-		"electron": "^26.1.0",
+		"electron": "^26.6.10",
 		"esbuild": "0.14.47",
 		"eslint": "^8.57.0",
 		"globals": "^15.0.0",
