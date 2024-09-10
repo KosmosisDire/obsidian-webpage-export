@@ -1,0 +1,81 @@
+{
+	"filePicker_title": {
+		"title": "选择导出库中的所有文件"
+	},
+	"Export_as_HTML": {
+		"title": "导出HTML文档"
+	},
+
+	"Export_Mode": {
+		"title": "导出模式",
+		"description": "\n\n某些选项仅在特定模式下可用。",
+		"online": "如果您的文件将被在线访问（通过http服务器），请使用此选项。",
+		"local": "这将导出一个包含整个导出的单个（大）html文件。仅用于离线共享。",
+		"rawDocuments": "用简单的样式和脚本导出普通的html文档，但没有额外的功能。",
+		"cleardescription": "Clear the site cache to re-export all files, or purge / delete the site with all it's files."
+	},
+	"Page_Features": {
+		"title": "页面功能",
+		"description": "控制导出页面的各种功能"
+	},
+	"Sidebars": {
+		"title": "侧边栏",
+		"description": "拥有所有其他功能，如文件导航，大纲，主题切换，图形视图等…"
+	},
+	"File_Navigation": {
+		"title": "文件导航",
+		"description": "显示用于浏览导出的保管库的文件树"
+	},
+	"Outline": {
+		"title": "大纲",
+		"description": "显示打开文档的标题列表。"
+	},
+	"Graph_View": {
+		"title": "图形视图",
+		"description": "显示您的保险库的可视化交互式表示。(注意:这只适用于托管在web服务器上的导出)"
+	},
+	"Search_Bar": {
+		"title": "搜索栏",
+		"description": "允许您搜索保险库，列出匹配的文件和头。(注意:这只适用于托管在web服务器上的导出)"
+	},
+	"Theme_Toggle": {
+		"title": "主题切换",
+		"description": "允许黑暗和光明主题之间动态切换。"
+	},
+	"Custom_Head_Content": {
+		"title": "自定义头部内容",
+		"description": "插入一个给定的html文件到页面上，其中可以包含自定义JS或CSS"
+	},
+	"Backlinks": {
+		"title": "反向链接",
+		"description": "显示链接到当前打开的文档的所有文档。"
+	},
+	"Tags": {
+		"title": "标签",
+		"description": "显示当前打开的文档的标记。"
+	},
+	"Aliases": {
+		"title": "别名",
+		"description": "显示当前打开的文档的别名。"
+	},
+	"Properties": {
+		"title": "属性",
+		"description": "将当前打开的文档的所有属性显示为表。"
+	},
+	"Asset_Options": {
+		"title": "资源选择",
+		"description": "添加插件的样式，使页面可以离线正常使用。"
+	},
+	"Make_Offline_Compatible": {
+		"title": "离线资源",
+		"description": "导出所有在线资源、图像、脚本，以便于离线查看页面。"
+	},
+	"Include_Svelte_CSS": {
+		"title": "包含 Svelte 中的css",
+		"description": "包括任何使用svelte框架的插件的CSS。这些不能单独选择，因为它们的样式与各自的插件无关。"
+	},
+	"Include_CSS_from_Plugins": {
+		"title": "包含插件中的css",
+		"description": "在导出的HTML中包含来自以下插件的CSS。如果插件功能在页面中无法正确呈现，请尝试将插件添加到此列表中。不过应当避免添加插件，除非你特别关注到一个问题，因为更多的CSS会增加页面的加载时间。"
+	}
+}
