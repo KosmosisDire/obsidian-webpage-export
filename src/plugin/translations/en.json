@@ -1,0 +1,80 @@
+{
+	"filePicker_title": {
+		"title": "Select all files in exported vault"
+	},
+	"Export_as_HTML": {
+		"title": "Export as HTML"
+	},
+	"Export_Mode": {
+		"title": "Export Mode",
+		"description": "\n\nSome options are only available in certain modes.",
+		"onlineDescription": "Use this if your files will be accessed online (via an http server).",
+		"localDescription": "This will export a single (large) html file containing the whole export. Only use this for offline sharing.",
+		"rawDocuments": "Export plain html documents with simple style and scripts but no additional features.",
+		"ClearDocuments": "Clear the site cache to re-export all files, or purge / delete the site with all it's files."
+	},
+	"Page_Features": {
+		"title": "Page Features",
+		"description": "Control various features of the exported page."
+	},
+	"Sidebars": {
+		"title": "Sidebars",
+		"description": "Holds all the other features like the file nav, outline, theme toggle, graph view, etc..."
+	},
+	"File_Navigation": {
+		"title": "File Navigation",
+		"description": "Shows a file tree used to explore the exported vault."
+	},
+	"Outline": {
+		"title": "Outline",
+		"description": "Shows a list of the open document's headers."
+	},
+	"Graph_View": {
+		"title": "Graph View",
+		"description": "Shows a visual, interactive representation of your vault. (NOTE: this is only available for exports hosted on a web server)"
+	},
+	"Search_Bar": {
+		"title": "Search Bar",
+		"description": "Allows you search the vault, listing matching files and headers. (NOTE: this is only available for exports hosted on a web server)"
+	},
+	"Theme_Toggle": {
+		"title": "Theme Toggle",
+		"description": "Allows you to switch between dark and light theme dynamically."
+	},
+	"Custom_Head_Content": {
+		"title": "Custom Head Content",
+		"description": "Insert a given .html file onto the page which can include custom JS or CSS"
+	},
+	"Backlinks": {
+		"title": "Backlinks",
+		"description": "Displays all the documents which link to the currently opened document."
+	},
+	"Tags": {
+		"title": "Tags",
+		"description": "Displays the tags for the currently opened document."
+	},
+	"Aliases": {
+		"title": "Aliases",
+		"description": "Displays the aliases for the currently opened document."
+	},
+	"Properties": {
+		"title": "Properties",
+		"description": "Displays all the properties of the currently opened document as a table."
+	},
+	"Asset_Options": {
+		"title": "Asset Options",
+		"description": "Add plugin styles, or make the page offline compatible."
+	},
+	"Make_Offline_Compatible": {
+		"title": "Make Offline Compatible",
+		"description": "Download any online assets / images / scripts so the page can be viewed offline. Or so the website does not depend on a CDN."
+	},
+	"Include_Svelte_CSS": {
+		"title": "Include Svelte CSS",
+		"description": "Include the CSS from any plugins that use the svelte framework. These can not be chosen individually because their styles are not associated with their respective plugins."
+	},
+	"Include_CSS_from_Plugins": {
+		"title": "Include CSS from Plugins",
+		"description": "Include the CSS from the following plugins in the exported HTML. If plugin features aren't rendering correctly, try adding the plugin to this list. Avoid adding plugins unless you specifically notice a problem, because more CSS will increase the loading time of your page."
+	}
+}

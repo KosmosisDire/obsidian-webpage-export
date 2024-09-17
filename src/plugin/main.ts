@@ -1,5 +1,5 @@
 // imports from obsidian API
-import { Notice, Plugin, TFile, TFolder, requestUrl} from 'obsidian';
+import { Notice, Plugin, TFile, TFolder, requestUrl,moment} from 'obsidian';
 
 // modules that are part of the plugin
 import { AssetHandler } from 'src/plugin/asset-loaders/asset-handler';
@@ -10,7 +10,8 @@ import { ExportModal } from 'src/plugin/settings/export-modal';
 import { ExportLog, MarkdownRendererAPI } from 'src/plugin/render-api/render-api';
 import { DataviewRenderer } from './render-api/dataview-renderer';
 import { Website } from './website/website';
-
+import * as en from "./translations/en.json";
+import * as cn from "./translations/zh-cn.json";
 export default class HTMLExportPlugin extends Plugin
 {
 	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string} = {updateAvailable: false, latestVersion: "0", currentVersion: "0", updateNote: ""};
@@ -22,6 +23,8 @@ export default class HTMLExportPlugin extends Plugin
 	public dv = DataviewRenderer;
 	public Website = Website;
 
+	private i18n: { [key: string]: any } = {};
+
 	public async exportDocker() {
 		await HTMLExporter.export(true, undefined, new Path("/output"));
 	}
@@ -30,12 +33,13 @@ export default class HTMLExportPlugin extends Plugin
 	{
 		console.log("Loading webpage-html-export plugin");
 		this.checkForUpdates();
+		await this.loadTranslations();
 		HTMLExportPlugin.pluginVersion = this.manifest.version;
 
 		// @ts-ignore
 		window.WebpageHTMLExport = this;
 
-		this.addSettingTab(new SettingsPage(this));
+		this.addSettingTab(new SettingsPage(this,this.getLanguage()));
 		await SettingsPage.loadSettings();
 		await AssetHandler.initialize();
 
@@ -88,7 +92,7 @@ export default class HTMLExportPlugin extends Plugin
 				menu.addItem((item) =>
 				{
 					item
-					.setTitle("Export as HTML")
+					.setTitle(this.getLanguage().Export_as_HTML.title)
 					.setIcon("download")
 					.setSection("export")
 					.onClick(() =>
@@ -147,4 +151,34 @@ export default class HTMLExportPlugin extends Plugin
 	{
 		ExportLog.log('unloading webpage-html-export plugin');
 	}
+		/**
+		 * init json
+		 */
+		private async loadTranslations() {
+			this.i18n["zh-cn"] = cn;
+			this.i18n["en"] = en;
+		}
+	
+		/**
+		 * getUserLanguage
+		 * Example default en
+		 * @returns
+		 */
+		private getUserLanguage(): string {
+			const locale = moment.locale();
+			const language = locale ? moment.locale() : "en";
+			return language;
+		}
+		/**
+		 * 
+		 * @returns 
+		 */
+		public getLanguage() {
+			const settingLanguages = this.getUserLanguage();
+			const language = this.i18n[settingLanguages];
+			if (!language) {
+				return this.i18n["en"];
+			}
+			return language;
+		}
 }

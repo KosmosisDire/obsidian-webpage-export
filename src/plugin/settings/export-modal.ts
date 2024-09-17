@@ -79,7 +79,7 @@ export class ExportModal extends Modal
 			this.filePicker.generateWithItemsClosed = true;
 			this.filePicker.showFileExtentionTags = true;
 			this.filePicker.hideFileExtentionTags = ["md"];
-			this.filePicker.title = "Select all files in exported vault";
+			this.filePicker.title = SettingsPage.i18n.filePicker_title.title;
 			this.filePicker.class = "file-picker";
 			await this.filePicker.generate(scrollArea);
 			
@@ -142,15 +142,15 @@ export class ExportModal extends Modal
 
 		const modeDescriptions = 
 		{
-			"online": "Use this if your files will be accessed online (via an http server).",
-			"local": "This will export a single (large) html file containing the whole export. Only use this for offline sharing.",
-			"raw-documents": "Export plain html documents with simple style and scripts but no additional features."
+			"online": SettingsPage.i18n.Export_Mode.online,
+			"local": SettingsPage.i18n.Export_Mode.local,
+			"raw-documents":  SettingsPage.i18n.Export_Mode.rawDocuments
 		}
 
 		const exportModeSetting = new Setting(contentEl)
-			.setName('Export Mode')
+			.setName(SettingsPage.i18n.Export_Mode.title)
 			// @ts-ignore
-			.setDesc(modeDescriptions[Settings.exportPreset] + "\n\nSome options are only available in certain modes.")
+			.setDesc(modeDescriptions[Settings.exportPreset] + SettingsPage.i18n.Export_Mode.description)
 			.setHeading()
 			.addDropdown((dropdown) => dropdown
 				.addOption('online', 'Online Website')
@@ -237,7 +237,7 @@ export class ExportModal extends Modal
 					onChanged(path);
 					confirmModal.close();
 				}));
-			})).setDesc('Clear the site cache to re-export all files, or purge / delete the site with all it\'s files.');
+			})).setDesc(SettingsPage.i18n.Export_Mode.cleardescription);
 
 		
 
