@@ -656,7 +656,7 @@ Use the 'author' property to set the author of a specific page.`);
 		SettingsPage.saveSettings();
 	}
 
-	static async updateSettings(usePreviousSettings: boolean = false, overrideFiles: TFile[] | undefined = undefined): Promise<ExportInfo | undefined>
+	static async updateSettings(usePreviousSettings: boolean = false, overrideFiles: TFile[] | undefined = undefined, overrideExportPath: Path | undefined = undefined): Promise<ExportInfo | undefined>
 	{
 		if (!usePreviousSettings) 
 		{
@@ -666,7 +666,7 @@ Use the 'author' property to set the author of a specific page.`);
 		}
 		
 		let files = Settings.filesToExport[0];
-		let path = new Path(Settings.exportPath);
+		let path = overrideExportPath ?? new Path(Settings.exportPath);
 		if ((files.length == 0 && overrideFiles == undefined) || !path.exists || !path.isAbsolute || !path.isDirectory)
 		{
 			new Notice("Please set the export path and files to export in the settings first.", 5000);

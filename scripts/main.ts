@@ -20,6 +20,10 @@ export default class HTMLExportPlugin extends Plugin
 	public assetHandler = AssetHandler;
 	public Path = Path;
 
+	public async exportDocker() {
+		await HTMLExporter.export(true, undefined, new Path("/output"));
+	}
+
 	async onload()
 	{
 		console.log("Loading webpage-html-export plugin");
