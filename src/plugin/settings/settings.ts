@@ -182,41 +182,53 @@ export class SettingsPage extends PluginSettingTab
 		//#region Page Features
 
 		createDivider(container);
-
-		let section = createSection(container, 'Page Features', 'Control various features of the exported page.');
-
-		createFeatureSetting(section, "Sidebars", Settings.exportOptions.sidebarOptions, 
-		"Holds all the other features like the file nav, outline, theme toggle, graph view, etc...");
 		
-		createFeatureSetting(section, "File Navigation", Settings.exportOptions.fileNavigationOptions, 
-		"Shows a file tree used to explore the exported vault.");
+		let section = createSection(container, SettingsPage.i18n.Page_Features.title,
+			SettingsPage.i18n.Page_Features.description);
 
-		createFeatureSetting(section, "Outline", Settings.exportOptions.outlineOptions, 
-		"Shows a list of the open document's headers.");
+		createFeatureSetting(section, SettingsPage.i18n.Sidebars.title,
+			 Settings.exportOptions.sidebarOptions, 
+			 SettingsPage.i18n.Sidebars.description);
+		
+		createFeatureSetting(section, SettingsPage.i18n.File_Navigation.title,
+			 Settings.exportOptions.fileNavigationOptions, 
+			 SettingsPage.i18n.File_Navigation.description);
 
-		createFeatureSetting(section, "Graph View", Settings.exportOptions.graphViewOptions, 
-		"Shows a visual, interactive representation of your vault. (NOTE: this is only available for exports hosted on a web server)");
+		createFeatureSetting(section, SettingsPage.i18n.Outline.title,
+			 Settings.exportOptions.outlineOptions, 
+			 SettingsPage.i18n.Outline.description);
 
-		createFeatureSetting(section, "Search Bar", Settings.exportOptions.searchOptions, 
-		"Allows you search the vault, listing matching files and headers. (NOTE: this is only available for exports hosted on a web server)");
+		createFeatureSetting(section, SettingsPage.i18n.Graph_View.title,
+			 Settings.exportOptions.graphViewOptions,
+			 SettingsPage.i18n.Graph_View.description);
 
-		createFeatureSetting(section, "Theme Toggle", Settings.exportOptions.themeToggleOptions, 
-		"Allows you to switch between dark and light theme dynamically.");
+		createFeatureSetting(section, SettingsPage.i18n.Search_Bar.title,
+			 Settings.exportOptions.searchOptions, 
+			 SettingsPage.i18n.Search_Bar.description);
 
-		createFeatureSetting(section, "Custom Head Content", Settings.exportOptions.customHeadOptions,
-		"Insert a given .html file onto the page which can include custom JS or CSS");
+		createFeatureSetting(section, SettingsPage.i18n.Theme_Toggle.title,
+			 Settings.exportOptions.themeToggleOptions, 
+			 SettingsPage.i18n.Theme_Toggle.description);
 
-		createFeatureSetting(section, "Backlinks", Settings.exportOptions.backlinkOptions,
-		"Displays all the documents which link to the currently opened document.");
+		createFeatureSetting(section, SettingsPage.i18n.Custom_Head_Content.title,
+			 Settings.exportOptions.customHeadOptions,
+			 SettingsPage.i18n.Custom_Head_Content.description);
 
-		createFeatureSetting(section, "Tags", Settings.exportOptions.tagOptions,
-		"Displays the tags for the currently opened document.");
+		createFeatureSetting(section, SettingsPage.i18n.Backlinks.title,
+			 Settings.exportOptions.backlinkOptions,
+			 SettingsPage.i18n.Backlinks.description);
 
-		createFeatureSetting(section, "Aliases", Settings.exportOptions.aliasOptions,
-		"Displays the aliases for the currently opened document.");
+		createFeatureSetting(section, SettingsPage.i18n.Tags.title,
+			 Settings.exportOptions.tagOptions,
+			 SettingsPage.i18n.Tags.description);
 
-		createFeatureSetting(section, "Properties", Settings.exportOptions.propertiesOptions,
-		"Displays all the properties of the currently opened document as a table.");
+		createFeatureSetting(section, SettingsPage.i18n.Aliases.title,
+			 Settings.exportOptions.aliasOptions,
+			 SettingsPage.i18n.Aliases.description);
+
+		createFeatureSetting(section, SettingsPage.i18n.Properties.title,
+			 Settings.exportOptions.propertiesOptions,
+			 SettingsPage.i18n.Properties.description);
 		
 		// #endregion
 
@@ -225,16 +237,21 @@ export class SettingsPage extends PluginSettingTab
 
 		createDivider(container);
 
-		section = createSection(container, 'Asset Options', 'Add plugin styles, or make the page offline compatible.');
+		section = createSection(container, SettingsPage.i18n.Asset_Options.title,
+			SettingsPage.i18n.Asset_Options.description);
 
-		createToggle(section, 'Make Offline Compatible', () => Settings.exportOptions.offlineResources, (value) => Settings.exportOptions.offlineResources = value,
-						'Download any online assets / images / scripts so the page can be viewed offline. Or so the website does not depend on a CDN.');
-		createToggle(section, 'Include Svelte CSS', () => Settings.exportOptions.includeSvelteCSS, (value) => Settings.exportOptions.includeSvelteCSS = value,
-			'Include the CSS from any plugins that use the svelte framework. These can not be chosen individually because their styles are not associated with their respective plugins.');
+		createToggle(section, SettingsPage.i18n.Make_Offline_Compatible.title,
+			 () => Settings.exportOptions.offlineResources,
+			  (value) => Settings.exportOptions.offlineResources = value,
+						SettingsPage.i18n.Asset_Options.description);
+		createToggle(section, SettingsPage.i18n.Include_Svelte_CSS.title,
+			 () => Settings.exportOptions.includeSvelteCSS,
+			  (value) => Settings.exportOptions.includeSvelteCSS = value,
+			  SettingsPage.i18n.Include_Svelte_CSS.description);
 
 		new Setting(section)
-			.setName('Include CSS from Plugins')
-			.setDesc('Include the CSS from the following plugins in the exported HTML. If plugin features aren\'t rendering correctly, try adding the plugin to this list. Avoid adding plugins unless you specifically notice a problem, because more CSS will increase the loading time of your page.')
+			.setName(SettingsPage.i18n.Include_CSS_from_Plugins.title)
+			.setDesc(SettingsPage.i18n.Include_CSS_from_Plugins.description)
 
 		const pluginsList = new FlowList();
 		pluginsList.generate(section);
@@ -597,6 +614,8 @@ export class SettingsPage extends PluginSettingTab
 	// #region Class Functions and Variables
 	static plugin: Plugin;
 	static loaded = false;
+	// internationalization
+	static i18n: any;
 
 
 	private blacklistedPluginIDs: string[] = [];
@@ -608,9 +627,10 @@ export class SettingsPage extends PluginSettingTab
 		return this.blacklistedPluginIDs;
 	}
 
-	constructor(plugin: Plugin) {
+	constructor(plugin: Plugin,i18n:any) {
 		super(app, plugin);
 		SettingsPage.plugin = plugin;
+		SettingsPage.i18n=i18n; 
 	}
 
 	getPluginIDs(): string[]
