@@ -1,14 +1,17 @@
+import { i18n } from "src/plugin/translations/language";
 import { FeatureRelation, FeatureSettingInfo, InsertedFeatureOptions, RelationType } from "./feature-options-base";
 
 export class TagsOptions extends InsertedFeatureOptions
 {
-	showInlineTags: FeatureSettingInfo = new FeatureSettingInfo({
+	showInlineTags: boolean = true;
+	showFrontmatterTags: boolean = true;
+	info_showInlineTags: FeatureSettingInfo = new FeatureSettingInfo({
 		show: true,
-		description: "Show tags that are inline in the document"
+		description: i18n.settings.tags.info_showInlineTags
 	});
-	showFrontmatterTags: FeatureSettingInfo = new FeatureSettingInfo({
+	info_showFrontmatterTags: FeatureSettingInfo = new FeatureSettingInfo({
 		show: true,
-		description: "Show tags that are in the frontmatter"
+		description: i18n.settings.tags.info_showFrontmatterTags
 	});
 
 	constructor()

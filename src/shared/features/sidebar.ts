@@ -1,3 +1,4 @@
+import { i18n } from "src/plugin/translations/language";
 import { FeatureOptions, FeatureSettingInfo } from "./feature-options-base";
 
 export class SidebarOptions extends FeatureOptions
@@ -9,19 +10,19 @@ export class SidebarOptions extends FeatureOptions
 
 	info_allowResizing = new FeatureSettingInfo({
 		show: true,
-		description: "Whether or not to allow the sidebars to be resized"
+		description: i18n.settings.sidebars.info_allowResizing
 	});
 	info_allowCollapsing = new FeatureSettingInfo({
 		show: true,
-		description: "Whether or not to allow the sidebars to be collapsed"
+		description: i18n.settings.sidebars.info_allowCollapsing
 	});
 	info_rightDefaultWidth = new FeatureSettingInfo({
 		show: true,
-		description: "The default width of the right sidebar"
+		description: i18n.settings.sidebars.info_rightDefaultWidth
 	});
 	info_leftDefaultWidth = new FeatureSettingInfo({
 		show: true,
-		description: "The default width of the left sidebar"
+		description: i18n.settings.sidebars.info_leftDefaultWidth
 	});
 
 	constructor()

@@ -1,3 +1,4 @@
+import { i18n } from "src/plugin/translations/language";
 import { FeatureRelation, FeatureSettingInfo, InsertedFeatureOptions, RelationType } from "./feature-options-base";
 
 export class OutlineOptions extends InsertedFeatureOptions
@@ -8,19 +9,19 @@ export class OutlineOptions extends InsertedFeatureOptions
 	info_startCollapsed = new FeatureSettingInfo(
 	{
 		show: true,
-		description: "Should the outline start collapsed?"
+		description: i18n.settings.outline.info_startCollapsed
 	});
 	info_minCollapseDepth = new FeatureSettingInfo(
 	{
 		show: true,
-		description: "The minimum depth at which headings should be collapsed"
+		description: i18n.settings.outline.info_minCollapseDepth
 	});
 
 	constructor()
 	{
 		super();
 		this.featureId = "outline";
-		this.displayTitle = "Outline";
+		this.displayTitle = i18n.settings.outline.title;
 		this.featurePlacement = new FeatureRelation("#right-sidebar-content", RelationType.End);
 	}
 }

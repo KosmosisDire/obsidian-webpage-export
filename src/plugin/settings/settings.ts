@@ -5,6 +5,7 @@ import { ExportLog } from 'src/plugin/render-api/render-api';
 import { createDivider, createFeatureSetting, createSection, createToggle }  from './settings-components';
 import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
 import { FlowList } from 'src/plugin/features/flow-list';
+import { i18n } from '../translations/language';
 
 // #region Settings Definition
 
@@ -134,11 +135,13 @@ export class SettingsPage extends PluginSettingTab
 	{
 		const { containerEl: container } = this;
 
+		const lang = i18n.settings;
+
 		// #region Settings Header
 
 		container.empty();
 
-		const header = container.createEl('h2', { text: 'HTML Export Settings' });
+		const header = container.createEl('h2', { text: lang.title });
 		header.style.display = 'block';
 		header.style.marginBottom = '15px';
 
@@ -151,7 +154,7 @@ export class SettingsPage extends PluginSettingTab
 		supportLink.href = `href="https://www.buymeacoffee.com/nathangeorge"`;
 		supportLink.style.height = "40px"
 		supportLink.innerHTML = `<img style="height:40px;" src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=${buttonColor}&font_colour=${buttonTextColor}&font_family=Poppins&outline_colour=${buttonTextColor}&coffee_colour=FFDD00">`;
-		const supportHeader = container.createDiv({ text: 'Support the continued development of this plugin.', cls: "setting-item-description" });
+		const supportHeader = container.createDiv({ text: lang.support, cls: "setting-item-description" });
 		supportHeader.style.display = 'block';
 
 		supportContainer.style.display = 'grid';
@@ -166,7 +169,7 @@ export class SettingsPage extends PluginSettingTab
 		debugInfoButton.style.height = '100%';
 		debugInfoButton.style.aspectRatio = '1/1';
 		debugInfoButton.style.justifySelf = 'end';
-		const debugHeader = container.createDiv({ text: 'Copy debug info to clipboard', cls: "setting-item-description" });
+		const debugHeader = container.createDiv({ text: lang.debug, cls: "setting-item-description" });
 		debugHeader.style.display = 'block';
 		debugHeader.style.justifySelf = 'end';
 		debugInfoButton.addEventListener('click', () => {
@@ -183,52 +186,20 @@ export class SettingsPage extends PluginSettingTab
 
 		createDivider(container);
 		
-		let section = createSection(container, SettingsPage.i18n.Page_Features.title,
-			SettingsPage.i18n.Page_Features.description);
-
-		createFeatureSetting(section, SettingsPage.i18n.Sidebars.title,
-			 Settings.exportOptions.sidebarOptions, 
-			 SettingsPage.i18n.Sidebars.description);
+		let section = createSection(container, lang.pageFeatures.title, lang.pageFeatures.description);
 		
-		createFeatureSetting(section, SettingsPage.i18n.File_Navigation.title,
-			 Settings.exportOptions.fileNavigationOptions, 
-			 SettingsPage.i18n.File_Navigation.description);
-
-		createFeatureSetting(section, SettingsPage.i18n.Outline.title,
-			 Settings.exportOptions.outlineOptions, 
-			 SettingsPage.i18n.Outline.description);
-
-		createFeatureSetting(section, SettingsPage.i18n.Graph_View.title,
-			 Settings.exportOptions.graphViewOptions,
-			 SettingsPage.i18n.Graph_View.description);
-
-		createFeatureSetting(section, SettingsPage.i18n.Search_Bar.title,
-			 Settings.exportOptions.searchOptions, 
-			 SettingsPage.i18n.Search_Bar.description);
-
-		createFeatureSetting(section, SettingsPage.i18n.Theme_Toggle.title,
-			 Settings.exportOptions.themeToggleOptions, 
-			 SettingsPage.i18n.Theme_Toggle.description);
-
-		createFeatureSetting(section, SettingsPage.i18n.Custom_Head_Content.title,
-			 Settings.exportOptions.customHeadOptions,
-			 SettingsPage.i18n.Custom_Head_Content.description);
-
-		createFeatureSetting(section, SettingsPage.i18n.Backlinks.title,
-			 Settings.exportOptions.backlinkOptions,
-			 SettingsPage.i18n.Backlinks.description);
-
-		createFeatureSetting(section, SettingsPage.i18n.Tags.title,
-			 Settings.exportOptions.tagOptions,
-			 SettingsPage.i18n.Tags.description);
-
-		createFeatureSetting(section, SettingsPage.i18n.Aliases.title,
-			 Settings.exportOptions.aliasOptions,
-			 SettingsPage.i18n.Aliases.description);
-
-		createFeatureSetting(section, SettingsPage.i18n.Properties.title,
-			 Settings.exportOptions.propertiesOptions,
-			 SettingsPage.i18n.Properties.description);
+		createFeatureSetting(section, lang.document.title, 			Settings.exportOptions.documentOptions,			lang.document.description);
+		createFeatureSetting(section, lang.sidebars.title, 			Settings.exportOptions.sidebarOptions,			lang.sidebars.description);
+		createFeatureSetting(section, lang.fileNavigation.title,	Settings.exportOptions.fileNavigationOptions,	lang.fileNavigation.description);
+		createFeatureSetting(section, lang.outline.title,			Settings.exportOptions.outlineOptions,			lang.outline.description);
+		createFeatureSetting(section, lang.graphView.title, 		Settings.exportOptions.graphViewOptions,		lang.graphView.description);
+		createFeatureSetting(section, lang.search.title,			Settings.exportOptions.searchOptions,			lang.search.description);
+		createFeatureSetting(section, lang.themeToggle.title,		Settings.exportOptions.themeToggleOptions,		lang.themeToggle.description);
+		createFeatureSetting(section, lang.customHead.title,		Settings.exportOptions.customHeadOptions,		lang.customHead.description);
+		createFeatureSetting(section, lang.backlinks.title,			Settings.exportOptions.backlinkOptions,			lang.backlinks.description);
+		createFeatureSetting(section, lang.tags.title,				Settings.exportOptions.tagOptions,				lang.tags.description);
+		createFeatureSetting(section, lang.aliases.title,			Settings.exportOptions.aliasOptions,			lang.aliases.description);
+		createFeatureSetting(section, lang.properties.title,		Settings.exportOptions.propertiesOptions,		lang.properties.description);
 		
 		// #endregion
 
@@ -237,21 +208,21 @@ export class SettingsPage extends PluginSettingTab
 
 		createDivider(container);
 
-		section = createSection(container, SettingsPage.i18n.Asset_Options.title,
-			SettingsPage.i18n.Asset_Options.description);
+		section = createSection(container, lang.assetOptions.title,
+			lang.assetOptions.description);
 
-		createToggle(section, SettingsPage.i18n.Make_Offline_Compatible.title,
+		createToggle(section, lang.makeOfflineCompatible.title,
 			 () => Settings.exportOptions.offlineResources,
 			  (value) => Settings.exportOptions.offlineResources = value,
-						SettingsPage.i18n.Asset_Options.description);
-		createToggle(section, SettingsPage.i18n.Include_Svelte_CSS.title,
+						lang.assetOptions.description);
+		createToggle(section, lang.includeSvelteCSS.title,
 			 () => Settings.exportOptions.includeSvelteCSS,
 			  (value) => Settings.exportOptions.includeSvelteCSS = value,
-			  SettingsPage.i18n.Include_Svelte_CSS.description);
+			  lang.includeSvelteCSS.description);
 
 		new Setting(section)
-			.setName(SettingsPage.i18n.Include_CSS_from_Plugins.title)
-			.setDesc(SettingsPage.i18n.Include_CSS_from_Plugins.description)
+			.setName(lang.includePluginCSS.title)
+			.setDesc(lang.includePluginCSS.description)
 
 		const pluginsList = new FlowList();
 		pluginsList.generate(section);
@@ -281,342 +252,11 @@ export class SettingsPage extends PluginSettingTab
 		});
 
 		//#endregion
-
-
-// 		if (Settings.exportPreset != ExportPreset.RawDocuments)
-// 		{
-// 			createDivider(contentEl);
-// 			const section = createSection(contentEl, 'Page Features', 'Control the visibility of different page features');
-
-// 			createToggle(section, 'Theme toggle', () => Settings.exportOptions.themeToggleOptions.enabled, (value) => Settings.exportOptions.themeToggleOptions.enabled = value);
-// 			createToggle(section, 'Document outline / table of contents', () => Settings.exportOptions.outlineOptions.enabled, (value) => Settings.exportOptions.outlineOptions.enabled = value);
-// 			createToggle(section, 'File navigation tree', () => Settings.exportOptions.fileNavigationOptions.enabled, (value) => Settings.exportOptions.fileNavigationOptions.enabled = value);
-// 			createToggle(section, 'File icons', () => Settings.exportOptions.fileNavigationOptions.showDefaultFileIcons, (value) => Settings.exportOptions.fileNavigationOptions.showDefaultFileIcons = value);
-// 			createToggle(section, 'Folder icons', () => Settings.exportOptions.fileNavigationOptions.showDefaultFolderIcons, (value) => Settings.exportOptions.fileNavigationOptions.showDefaultFolderIcons = value);
-			
-// 			if (Settings.exportPreset == ExportPreset.Online)
-// 			{
-// 				createToggle(section, 'Search bar', () => Settings.exportOptions.addSearch, (value) => Settings.exportOptions.addSearch = value);
-// 				createToggle(section, 'Graph view', () => Settings.exportOptions.addGraphView, (value) => Settings.exportOptions.addGraphView = value);
-// 				const graphViewSection = createSection(section, 'Graph View Settings', 'Control the behavior of the graph view simulation');
-
-// 				new Setting(graphViewSection)
-// 					.setName('Attraction Force')
-// 					.setDesc("How much should linked nodes attract each other? This will make the graph appear more clustered.")
-// 					.addSlider((slider) => slider
-// 						.setLimits(0, 100, 1)
-// 						.setValue(Settings.exportOptions.graphViewOptions.attractionForce / (2 / 100))
-// 						.setDynamicTooltip()
-// 						.onChange(async (value) => {
-// 							// remap to 0 - 2;
-// 							const remapMultiplier = 2 / 100;
-// 							Settings.exportOptions.graphViewOptions.attractionForce = value * remapMultiplier;
-// 							await SettingsPage.saveSettings();
-// 						})
-// 						.showTooltip()
-// 					);
-
-// 				new Setting(graphViewSection)
-// 					.setName('Link Length')
-// 					.setDesc("How long should the links between nodes be? The shorter the links the closer connected nodes will cluster together.")
-// 					.addSlider((slider) => slider
-// 						.setLimits(0, 100, 1)
-// 						.setValue(Settings.exportOptions.graphViewOptions.linkLength)
-// 						.setDynamicTooltip()
-// 						.onChange(async (value) => {
-// 							Settings.exportOptions.graphViewOptions.linkLength = value;
-// 							await SettingsPage.saveSettings();
-// 						})
-// 						.showTooltip()
-// 					);
-
-// 				new Setting(graphViewSection)
-// 					.setName('Repulsion Force')
-// 					.setDesc("How much should nodes repel each other? This will make the graph appear more spread out.")
-// 					.addSlider((slider) => slider
-// 						.setLimits(0, 100, 1)
-// 						.setValue(Settings.exportOptions.graphViewOptions.repulsionForce / 3)
-// 						.setDynamicTooltip()
-// 						.onChange(async (value) => {
-// 							Settings.exportOptions.graphViewOptions.repulsionForce = value * 3;
-// 							await SettingsPage.saveSettings();
-// 						})
-// 						.showTooltip()
-// 					);
-
-// 				new Setting(graphViewSection)
-// 					.setName('Central Force')
-// 					.setDesc("How much should nodes be attracted to the center? This will make the graph appear more dense and circular.")
-// 					.addSlider((slider) => slider
-// 						.setLimits(0, 100, 1)
-// 						.setValue(Settings.exportOptions.graphViewOptions.centralForce / (5 / 100))
-// 						.setDynamicTooltip()
-// 						.onChange(async (value) => {
-// 							// remap to 0 - 5;
-// 							const remapMultiplier = 5 / 100;
-// 							Settings.exportOptions.graphViewOptions.centralForce = value * remapMultiplier;
-// 							await SettingsPage.saveSettings();
-// 						})
-// 						.showTooltip()
-// 					);
-
-// 				new Setting(graphViewSection)
-// 					.setName('Max Node Radius')
-// 					.setDesc("How large should the largest nodes be? Nodes are sized by how many links they have. The larger a node is the more it will attract other nodes. This can be used to create a good grouping around the most important nodes.")
-// 					.addSlider((slider) => slider
-// 						.setLimits(3, 15, 1)
-// 						.setValue(Settings.exportOptions.graphViewOptions.maxNodeRadius)
-// 						.setDynamicTooltip()
-// 						.onChange(async (value) => {
-// 							Settings.exportOptions.graphViewOptions.maxNodeRadius = value;
-// 							await SettingsPage.saveSettings();
-// 						})
-// 						.showTooltip()
-// 					);
-
-// 				new Setting(graphViewSection)
-// 					.setName('Min Node Radius')
-// 					.setDesc("How small should the smallest nodes be? The smaller a node is the less it will attract other nodes.")
-// 					.addSlider((slider) => slider
-// 						.setLimits(3, 15, 1)
-// 						.setValue(Settings.exportOptions.graphViewOptions.minNodeRadius)
-// 						.setDynamicTooltip()
-// 						.onChange(async (value) => {
-// 							Settings.exportOptions.graphViewOptions.minNodeRadius = value;
-// 							await SettingsPage.saveSettings();
-// 						})
-// 						.showTooltip()
-// 					);
-
-// 				new Setting(graphViewSection)
-// 					.setName('Edge Pruning Factor')
-// 					.setDesc("Edges with a length above this threshold will not be rendered, however they will still contribute to the simulation. This can help large tangled graphs look more organised. Hovering over a node will still display these links.")
-// 					.addSlider((slider) => slider
-// 						.setLimits(0, 100, 1)
-// 						.setValue(100 - Settings.exportOptions.graphViewOptions.edgePruning)
-// 						.setDynamicTooltip()
-// 						.onChange(async (value) => {
-// 							Settings.exportOptions.graphViewOptions.edgePruning = 100 - value;
-// 							await SettingsPage.saveSettings();
-// 						})
-// 						.showTooltip()
-// 					);
-			
-// 			}
-
-// 			const iconTutorial = new Setting(section)
-// 			.setName('Custom icons')
-// 			.setDesc(
-// `Use the 'Iconize' plugin to add custom icons to your files and folders.
-// Or set the 'icon' property of your file to an emoji or lucide icon name.
-// This feature does not require "File & folder icons" to be enbaled.`);
-// 			iconTutorial.infoEl.style.whiteSpace = "pre-wrap";
-
-// 			new Setting(section)
-// 				.setName('Icon emoji style')
-// 				.addDropdown((dropdown) =>
-// 				{
-// 					for (const style in EmojiStyle) dropdown.addOption(style, style);
-// 					dropdown.setValue(Settings.exportOptions.emojiStyle);
-// 					dropdown.onChange(async (value) => {
-// 						Settings.exportOptions.emojiStyle = value as EmojiStyle;
-// 						await SettingsPage.saveSettings();
-// 					});
-// 				});
-
-// 			createFileInput(section, () => Settings.exportOptions.customHeadContentPath, (value) => Settings.exportOptions.customHeadContentPath = value,
-// 			{
-// 				name: 'Custom head content',
-// 				description: 'Custom scripts, styles, or anything else (html file).',
-// 				placeholder: 'Relative or absolute path to a file...',
-// 				defaultPath: Path.vaultPath,
-// 				validation: (path) => path.validate(
-// 					{
-// 						allowEmpty: true,
-// 						allowAbsolute: true,
-// 						allowRelative: true,
-// 						allowFiles: true,
-// 						requireExists: true,
-// 						requireExtentions: ["html", "htm", "txt"]
-// 					}),
-// 			});
-
-// 			createFileInput(section, () => Settings.exportOptions.faviconPath, (value) => Settings.exportOptions.faviconPath = value,
-// 			{
-// 				name: 'Favicon path',
-// 				description: 'Add a custom favicon image to the website.',
-// 				placeholder: 'Relative or absolute path to an image...',
-// 				defaultPath: Path.vaultPath,
-// 				validation: (path) => path.validate(
-// 					{
-// 						allowEmpty: true,
-// 						allowAbsolute: true,
-// 						allowRelative: true,
-// 						allowFiles: true,
-// 						requireExists: true,
-// 						requireExtentions: ["png", "ico", "jpg", "jpeg", "svg"]
-// 					}),
-// 			});
-
-			
-// 		}
-
-// 		//#endregion
-
-// 		//#region Page Behaviors
-
-// 		let section;
-
-// 		if (Settings.exportOptions.exportPreset != ExportPreset.RawDocuments)
-// 		{
-			
-// 			createDivider(contentEl);
-
-// 			section = createSection(contentEl, 'Page Behaviors', 'Change the behavior of included page features');
-			
-// 			new Setting(section)
-// 				.setName('Min Outline Collapse Depth')
-// 				.setDesc('Only allow outline items to be collapsed if they are at least this many levels deep in the tree.')
-// 				.addDropdown((dropdown) => dropdown.addOption('1', '1').addOption('2', '2').addOption('100', 'No Collapse')
-// 					.setValue(Settings.exportOptions.minOutlineCollapse.toString())
-// 					.onChange(async (value) => {
-// 						Settings.exportOptions.minOutlineCollapse = parseInt(value);
-// 						await SettingsPage.saveSettings();
-// 			}));
-			
-// 			createToggle(section, 'Start Outline Collapsed', () => Settings.exportOptions.startOutlineCollapsed, (value) => Settings.exportOptions.startOutlineCollapsed = value,
-// 							  'All outline items will be collapsed by default.');
-
-// 			createToggle(section, 'Relative Outline Links', () => Settings.exportOptions.relativeOutlineLinks, (value) => Settings.exportOptions.relativeOutlineLinks = value,
-// 							  '(NOT RECCOMENDED!) Make links in the outline relative to the current page. This will break the ability to copy the header links from the outline, but allows you to move the file and still have the links work.');
-
-// 			createToggle(section, 'Allow folding headings', () => Settings.exportOptions.allowFoldingHeadings, (value) => Settings.exportOptions.allowFoldingHeadings = value,
-// 							  'Fold headings using an arrow icon, like in Obsidian.');
-
-// 			createToggle(section, 'Allow folding lists', () => Settings.exportOptions.allowFoldingLists, (value) => Settings.exportOptions.allowFoldingLists = value,
-// 							  'Fold lists using an arrow icon, like in Obsidian.');
-
-// 			createToggle(section, 'Allow resizing sidebars', () => Settings.exportOptions.allowResizingSidebars, (value) => Settings.exportOptions.allowResizingSidebars = value,
-// 							  'Allow the user to resize the sidebar width.');
-// 		}
-
-// 		//#endregion
-
-// 		//#region Layout Options
-
-// 		createDivider(contentEl);
-		
-
-// 		section = createSection(contentEl, 'Layout Options', 'Set document and sidebar widths');
-
-// 		new Setting(section)
-// 			.setName('Document Width')
-// 			.setDesc('Sets the line width of the exported document in css units. (ex. 600px, 50em)')
-// 			.addText((text) => text
-// 				.setValue(Settings.exportOptions.obsidian-documentWidth)
-// 				.setPlaceholder('40em')
-// 				.onChange(async (value) => {
-// 					Settings.exportOptions.obsidian-documentWidth = value;
-// 					await SettingsPage.saveSettings();
-// 				}
-// 				))
-// 			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
-// 				Settings.exportOptions.obsidian-documentWidth = "";
-// 				SettingsPage.saveSettings();
-// 				this.display();
-// 			}));
-
-// 		new Setting(section)
-// 			.setName('Sidebar Width')
-// 			.setDesc('Sets the width of the sidebar in css units. (ex. 20em, 200px)')
-// 			.addText((text) => text
-// 				.setValue(Settings.exportOptions.sidebarWidth)
-// 				.setPlaceholder('20em')
-// 				.onChange(async (value) => {
-// 					Settings.exportOptions.sidebarWidth = value;
-// 					await SettingsPage.saveSettings();
-// 				}
-// 				))
-// 			.addExtraButton((button) => button.setIcon('reset').setTooltip('Reset to default').onClick(() => {
-// 				Settings.exportOptions.sidebarWidth = "";
-// 				SettingsPage.saveSettings();
-// 				this.display();
-// 			}));
-
-// 		//#endregion
-
-// 		//#region Export Options
-
-// 		createDivider(contentEl);
-
-
-// 		section = createSection(contentEl, 'Export Options', 'Change the behavior of the export process.');
-
-// 		createToggle(section, 'Only export modfied files', () => Settings.exportOptions.onlyExportModified, (value) => Settings.exportOptions.onlyExportModified = value,
-// 						'Only generate new html for files which have been modified since the last export.');
-// 		createToggle(section, 'Delete old files', () => Settings.exportOptions.deleteOldFiles, (value) => Settings.exportOptions.deleteOldFiles = value,
-// 						'Delete files from a previous export that are no longer being exported.');
-// 		createToggle(section, 'Minify HTML', () => Settings.exportOptions.minifyHTML, (value) => Settings.exportOptions.minifyHTML = value,
-// 						'Minify HTML to make it load faster.');
-
-// 		new Setting(section)
-// 			.setName('Log Level')
-// 			.setDesc('Set the level of logging to display in the export log.')
-// 			.addDropdown((dropdown) => dropdown
-// 				.addOption('all', 'All')
-// 				.addOption('warning', 'Warning')
-// 				.addOption('error', 'Error')
-// 				.addOption('fatal', 'Only Fatal Errors')
-// 				.setValue(Settings.exportOptions.logLevel)
-// 				.onChange(async (value: "all" | "warning" | "error" | "fatal" | "none") =>
-// 				{
-// 					Settings.exportOptions.logLevel = value;
-// 					await SettingsPage.saveSettings();
-// 				}));
-
-// 		//#endregion
-
-
-
-// 		//#region Advanced
-
-// 		createDivider(contentEl);
-// 		section = createSection(contentEl, 'Metadata', 'Control general site data and RSS feed creation');
-
-// 		createText(section, 'Public site URL', () => Settings.exportOptions.siteURL, (value) => Settings.exportOptions.siteURL = ((value.endsWith("/") || value == "") ? value : value + "/").trim(),
-// 					'The url that this site will be hosted at. This is needed to reference links and images in metadata and RSS. (Because these links cannot be relative)', 
-// 					(value) => (value.startsWith("http://") || value.startsWith("https://") || value.trim() == "") ? "" : "URL must start with 'http://' or 'https://'");	
-		
-// 		createText(section, 'Author Name', () => Settings.exportOptions.authorName, (value) => Settings.exportOptions.authorName = value,
-// 					'The default name of the author of the site');
-
-// 		createText(section, 'Vault Title', () => Settings.exportOptions.vaultTitle, (value) => Settings.exportOptions.vaultTitle = value,
-// 					'The title of the vault');
-
-// 		createToggle(section, 'Create RSS feed', () => Settings.exportOptions.addRSSFeed, (value) => Settings.exportOptions.addRSSFeed = value,
-// 					`Create an RSS feed for the website located at ${Settings.exportOptions.siteURL}lib/rss.xml`);
-
-// 		const summaryTutorial = new Setting(section)
-// 		.setName('Metadata Properties')
-// 		.setDesc(
-// `Use the 'description' or 'summary' property to set a custom summary of a page.
-// Use the 'author' property to set the author of a specific page.`);
-// 		summaryTutorial.infoEl.style.whiteSpace = "pre-wrap";
-
-// 		createText(section, 'Page title property', () => Settings.exportOptions.titleProperty, (value) => Settings.exportOptions.titleProperty = value,
-// 						"Override a specific file's title / name by defining this property in the frontmatter.");
-
-		
-// 		//#endregion
-
 	}
 
 	// #region Class Functions and Variables
 	static plugin: Plugin;
 	static loaded = false;
-	// internationalization
-	static i18n: any;
-
 
 	private blacklistedPluginIDs: string[] = [];
 	public async getBlacklistedPluginIDs(): Promise<string[]> 
@@ -627,10 +267,9 @@ export class SettingsPage extends PluginSettingTab
 		return this.blacklistedPluginIDs;
 	}
 
-	constructor(plugin: Plugin,i18n:any) {
+	constructor(plugin: Plugin) {
 		super(app, plugin);
 		SettingsPage.plugin = plugin;
-		SettingsPage.i18n=i18n; 
 	}
 
 	getPluginIDs(): string[]

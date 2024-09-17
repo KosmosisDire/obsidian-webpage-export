@@ -10,8 +10,10 @@ import { ExportModal } from 'src/plugin/settings/export-modal';
 import { ExportLog, MarkdownRendererAPI } from 'src/plugin/render-api/render-api';
 import { DataviewRenderer } from './render-api/dataview-renderer';
 import { Website } from './website/website';
-import * as en from "./translations/en.json";
-import * as cn from "./translations/zh-cn.json";
+import { i18n } from './translations/language';
+
+
+
 export default class HTMLExportPlugin extends Plugin
 {
 	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string} = {updateAvailable: false, latestVersion: "0", currentVersion: "0", updateNote: ""};
@@ -23,8 +25,6 @@ export default class HTMLExportPlugin extends Plugin
 	public dv = DataviewRenderer;
 	public Website = Website;
 
-	private i18n: { [key: string]: any } = {};
-
 	public async exportDocker() {
 		await HTMLExporter.export(true, undefined, new Path("/output"));
 	}
@@ -33,20 +33,21 @@ export default class HTMLExportPlugin extends Plugin
 	{
 		console.log("Loading webpage-html-export plugin");
 		this.checkForUpdates();
-		await this.loadTranslations();
 		HTMLExportPlugin.pluginVersion = this.manifest.version;
 
 		// @ts-ignore
 		window.WebpageHTMLExport = this;
 
-		this.addSettingTab(new SettingsPage(this,this.getLanguage()));
+		this.addSettingTab(new SettingsPage(this));
 		await SettingsPage.loadSettings();
 		await AssetHandler.initialize();
 
-		this.addRibbonIcon("folder-up", "Export Vault to HTML", () =>
+		this.addRibbonIcon("folder-up", i18n.exportAsHTML, () =>
 		{
 			HTMLExporter.export(false);
 		});
+
+		
 
 		// register callback for file rename so we can update the saved files to export
 		this.registerEvent(this.app.vault.on("rename", SettingsPage.renameFile));
@@ -92,12 +93,12 @@ export default class HTMLExportPlugin extends Plugin
 				menu.addItem((item) =>
 				{
 					item
-					.setTitle(this.getLanguage().Export_as_HTML.title)
+					.setTitle(i18n.exportAsHTML)
 					.setIcon("download")
 					.setSection("export")
 					.onClick(() =>
 					{
-						ExportModal.title = `Export ${file.name} as HTML`;
+						ExportModal.title = i18n.exportModal.exportAsTitle.format(file.name);
 						if(file instanceof TFile)
 						{
 							HTMLExporter.export(false, [file]);
@@ -135,7 +136,7 @@ export default class HTMLExportPlugin extends Plugin
 			
 			HTMLExportPlugin.updateInfo = {updateAvailable: updateAvailable, latestVersion: latestVersion, currentVersion: currentVersion, updateNote: updateNote};
 			
-			if(updateAvailable) ExportLog.log("Update available: " + latestVersion + " (current: " + currentVersion + ")");
+			if(updateAvailable) ExportLog.log(`${i18n.updateAvailable}: ${currentVersion} ⟶ ${latestVersion}`);
 			
 			return HTMLExportPlugin.updateInfo;
 		}
@@ -151,34 +152,5 @@ export default class HTMLExportPlugin extends Plugin
 	{
 		ExportLog.log('unloading webpage-html-export plugin');
 	}
-		/**
-		 * init json
-		 */
-		private async loadTranslations() {
-			this.i18n["zh-cn"] = cn;
-			this.i18n["en"] = en;
-		}
 	
-		/**
-		 * getUserLanguage
-		 * Example default en
-		 * @returns
-		 */
-		private getUserLanguage(): string {
-			const locale = moment.locale();
-			const language = locale ? moment.locale() : "en";
-			return language;
-		}
-		/**
-		 * 
-		 * @returns 
-		 */
-		public getLanguage() {
-			const settingLanguages = this.getUserLanguage();
-			const language = this.i18n[settingLanguages];
-			if (!language) {
-				return this.i18n["en"];
-			}
-			return language;
-		}
 }

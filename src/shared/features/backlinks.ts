@@ -1,3 +1,4 @@
+import { i18n } from "src/plugin/translations/language";
 import { FeatureRelation, InsertedFeatureOptions, RelationType } from "./feature-options-base";
 
 export class BacklinksOptions extends InsertedFeatureOptions
@@ -6,7 +7,7 @@ export class BacklinksOptions extends InsertedFeatureOptions
 	{
 		super();
 		this.featureId = "backlinks";
-		this.displayTitle = "Backlinks";
+		this.displayTitle = i18n.settings.backlinks.title;
 		this.featurePlacement = new FeatureRelation(".footer", RelationType.Start);
 	}
 }

@@ -94,7 +94,7 @@ export class Index
 				graphView: options.graphViewOptions,
 				sidebar: options.sidebarOptions,
 				customHead: options.customHeadOptions,
-				document: options.fileOptions
+				document: options.documentOptions
 			};
 			
 			// set global values

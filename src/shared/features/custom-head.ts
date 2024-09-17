@@ -1,5 +1,6 @@
 import { Shared } from "src/shared/shared";
 import { FeatureRelation, FeatureSettingInfo, FetchedFeatureOptions, RelationType } from "./feature-options-base";
+import { i18n } from "src/plugin/translations/language";
 
 export class CustomHeadOptions extends FetchedFeatureOptions
 {
@@ -7,12 +8,12 @@ export class CustomHeadOptions extends FetchedFeatureOptions
 	info_sourcePath = new FeatureSettingInfo(
 	{
 		show: true,
-		description: "The local path to the source .html file which will be included.",
+		description: i18n.settings.customHead.info_sourcePath,
 		fileInputOptions: {
 			validation: (path: string) => {
 				let isEmpty = (path || "").length === 0;
 				let valid = path.endsWith(".html") || isEmpty;
-				return {valid: valid, isEmpty: isEmpty, error: !valid ? "Must be a path to a .html file" : ""};
+				return {valid: valid, isEmpty: isEmpty, error: !valid ? i18n.settings.customHead.validationError : ""};
 			},
 			browseButton: true
 		}

@@ -4,6 +4,7 @@ import { FileSystemAdapter } from 'obsidian';
 import internal from 'stream'; 
 import { homedir, platform } from 'os';
 import { readdir, rmdir } from 'fs/promises';
+import { i18n } from '../translations/language';
 
 export class Path
 {
@@ -621,9 +622,11 @@ export class Path
 		options.requireExtentions = options.requireExtentions?.map(e => e.replace(".", "")) ?? [];
 		const dottedExtention = options.requireExtentions.map(e => "." + e);
 
+		const lang = i18n.pathValidations;
+
 		if (!options.allowEmpty && isEmpty)
 		{
-			error += "Path cannot be empty\n";
+			error += lang.noEmpty;
 			valid = false;
 		}
 		else if (options.allowEmpty && isEmpty)
@@ -633,37 +636,37 @@ export class Path
 		
 		if (options.requireExists && !this.exists)
 		{
-			error += "Path does not exist";
+			error += lang.mustExist;
 			valid = false;
 		}
 		else if (!options.allowTildeHomeDirectory && this.path.startsWith("~"))
 		{
-			error += "Home directory with tilde (~) is not allowed";
+			error += lang.noTilde;
 			valid = false;
 		}
 		else if (!options.allowAbsolute && this.isAbsolute)
 		{
-			error += "Path cannot be absolute";
+			error += lang.noAbsolute;
 			valid = false;
 		}
 		else if (!options.allowRelative && this.isRelative)
 		{
-			error += "Path cannot be relative";
+			error += lang.noRelative;
 			valid = false;
 		}
 		else if (!options.allowFiles && this.isFile)
 		{
-			error += "Path cannot be a file";
+			error += lang.noFiles;
 			valid = false;
 		}
 		else if (!options.allowDirectories && this.isDirectory)
 		{
-			error += "Path cannot be a directory";
+			error += lang.noFolders;
 			valid = false;
 		}
 		else if (options.requireExtentions.length > 0 && !options.requireExtentions.includes(this.extensionName) && !isEmpty)
 		{
-			error += "Path must be: " + dottedExtention.join(", ");
+			error += lang.mustHaveExtension.format(dottedExtention.join(", "));
 			valid = false;
 		}
 

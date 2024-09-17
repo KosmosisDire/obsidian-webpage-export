@@ -1,5 +1,6 @@
 import { Shared } from "src/shared/shared";
 import { FeatureRelation, FeatureSettingInfo, FetchedFeatureOptions, RelationType } from "./feature-options-base";
+import { i18n } from "src/plugin/translations/language";
 
 export class FileNavigationOptions extends FetchedFeatureOptions
 {
@@ -13,32 +14,32 @@ export class FileNavigationOptions extends FetchedFeatureOptions
 	info_showDefaultFolderIcons: FeatureSettingInfo = new FeatureSettingInfo(
 	{
 		show: true, 
-		description: "Show a default icon of a folder for every folder in the tree"
+		description: i18n.settings.fileNavigation.info_showDefaultFolderIcons
 	});
 	info_showDefaultFileIcons: FeatureSettingInfo = new FeatureSettingInfo(
 	{
 		show: true, 
-		description: "Show a default icon of a file for every file in the tree"
+		description: i18n.settings.fileNavigation.info_showDefaultFileIcons
 	});
 	info_defaultFolderIcon: FeatureSettingInfo = new FeatureSettingInfo(
 	{
 		show: true, 
-		description: "The icon to use for folders. Prefix with 'lucide//' to use a Lucide icon"
+		description: i18n.settings.fileNavigation.info_defaultFolderIcon
 	});
 	info_defaultFileIcon: FeatureSettingInfo = new FeatureSettingInfo(
 	{
 		show: true, 
-		description: "The icon to use for files. Prefix with 'lucide//' to use a Lucide icon"
+		description: i18n.settings.fileNavigation.info_defaultFileIcon
 	});
 	info_defaultMediaIcon: FeatureSettingInfo = new FeatureSettingInfo(
 	{
 		show: true, 
-		description: "The icon to use for media files. Prefix with 'lucide//' to use a Lucide icon"
+		description: i18n.settings.fileNavigation.info_defaultMediaIcon
 	});
 	info_exposeStartingPath: FeatureSettingInfo = new FeatureSettingInfo(
 	{
 		show: true, 
-		description: "Whether or not to show the current file in the file tree when the page is first loaded"
+		description: i18n.settings.fileNavigation.info_exposeStartingPath
 	});
 
 	constructor()

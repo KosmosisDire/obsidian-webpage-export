@@ -12,7 +12,6 @@
 		"esModuleInterop": true,
 		"strictNullChecks": true,
 		"removeComments": false,
-		"resolveJsonModule":true,
 		"lib": [
 			"DOM",
 			"ES5",
@@ -23,6 +22,5 @@
 	},
 	"include": [
 		"**/*.ts",
-		"**/*.json"
 	],
 }

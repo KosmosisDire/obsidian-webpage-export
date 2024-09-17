@@ -516,8 +516,8 @@ export class Webpage extends Attachment
 
 		if (this.type == "markdown")
 		{
-			contentEl.classList.toggle("allow-fold-headings", this.exportOptions.fileOptions.allowFoldingHeadings);
-			contentEl.classList.toggle("allow-fold-lists", this.exportOptions.fileOptions.allowFoldingLists);
+			contentEl.classList.toggle("allow-fold-headings", this.exportOptions.documentOptions.allowFoldingHeadings);
+			contentEl.classList.toggle("allow-fold-lists", this.exportOptions.documentOptions.allowFoldingLists);
 			contentEl.classList.add("is-readable-line-width");
 
 			const cssclasses = this.frontmatter['cssclasses'];

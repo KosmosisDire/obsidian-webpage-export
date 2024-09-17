@@ -8,6 +8,7 @@ import { FileDialogs } from 'src/plugin/utils/file-dialogs';
 import { createFileInput, createToggle } from './settings-components';
 import { Website } from 'src/plugin/website/website';
 import { Index } from 'src/plugin/website';
+import { i18n } from '../translations/language';
 
 export interface ExportInfo
 {
@@ -25,7 +26,7 @@ export class ExportModal extends Modal
 	private filePicker: FilePickerTree;
 	private pickedFiles: TFile[] | undefined = undefined;
 	private validPath: boolean = true;
-	public static title: string = "Export to HTML";
+	public static title: string = i18n.exportModal.title;
 
 	public exportInfo: ExportInfo;
 
@@ -47,6 +48,7 @@ export class ExportModal extends Modal
 	{
 		this.isClosed = false;
 		this.canceled = true;
+		const lang = i18n.exportModal;
 
 		super.open();
 
@@ -79,7 +81,7 @@ export class ExportModal extends Modal
 			this.filePicker.generateWithItemsClosed = true;
 			this.filePicker.showFileExtentionTags = true;
 			this.filePicker.hideFileExtentionTags = ["md"];
-			this.filePicker.title = SettingsPage.i18n.filePicker_title.title;
+			this.filePicker.title = lang.filePicker.title;
 			this.filePicker.class = "file-picker";
 			await this.filePicker.generate(scrollArea);
 			
@@ -91,7 +93,7 @@ export class ExportModal extends Modal
 
 			const saveFiles = new Setting(this.filePickerModalEl).addButton((button) => 
 			{
-				button.setButtonText("Save").onClick(async () =>
+				button.setButtonText(lang.filePicker.save).onClick(async () =>
 				{
 					Settings.exportOptions.filesToExport = this.filePicker.getSelectedFilesSavePaths();
 					await SettingsPage.saveSettings();
@@ -112,7 +114,7 @@ export class ExportModal extends Modal
 		if (HTMLExportPlugin.updateInfo.updateAvailable) 
 		{
 			// create red notice showing the update is available
-			const updateNotice = contentEl.createEl('strong', { text: `Update Available: ${HTMLExportPlugin.updateInfo.currentVersion} ⟶ ${HTMLExportPlugin.updateInfo.latestVersion}` });
+			const updateNotice = contentEl.createEl('strong', { text: `${i18n.updateAvailable}: ${HTMLExportPlugin.updateInfo.currentVersion} ⟶ ${HTMLExportPlugin.updateInfo.latestVersion}` });
 			updateNotice.setAttribute("style",
 				`margin-block-start: calc(var(--h3-size)/2);
 			background-color: var(--interactive-normal);
@@ -142,15 +144,15 @@ export class ExportModal extends Modal
 
 		const modeDescriptions = 
 		{
-			"online": SettingsPage.i18n.Export_Mode.online,
-			"local": SettingsPage.i18n.Export_Mode.local,
-			"raw-documents":  SettingsPage.i18n.Export_Mode.rawDocuments
+			"online": lang.exportMode.online,
+			"local": lang.exportMode.local,
+			"raw-documents":  lang.exportMode.rawDocuments
 		}
 
 		const exportModeSetting = new Setting(contentEl)
-			.setName(SettingsPage.i18n.Export_Mode.title)
+			.setName(lang.exportMode.title)
 			// @ts-ignore
-			.setDesc(modeDescriptions[Settings.exportPreset] + SettingsPage.i18n.Export_Mode.description)
+			.setDesc(modeDescriptions[Settings.exportPreset])
 			.setHeading()
 			.addDropdown((dropdown) => dropdown
 				.addOption('online', 'Online Website')
@@ -177,6 +179,7 @@ export class ExportModal extends Modal
 				}
 				));
 		exportModeSetting.descEl.style.whiteSpace = "pre-wrap";
+		exportModeSetting.settingEl.style.paddingRight = "1em";
 
 		
 
@@ -184,24 +187,22 @@ export class ExportModal extends Modal
 		new Setting(contentEl)
 			
 			.addButton((button) => button
-			.setButtonText('Clear Cache')
+			.setButtonText(lang.purgeExport.clearCache)
 			.onClick(async () =>
 			{
 				// create a modal to confirm the deletion
 				const confirmModal = new Modal(app);
-				confirmModal.titleEl.setText("Are you sure?");
-				confirmModal.contentEl.createEl('p', { text: "This will delete the site metadata (but not all the exported html)." });
-				confirmModal.contentEl.createEl('p', { text: "This will force the site to re-export all files." });
-				confirmModal.contentEl.createEl('p', { text: "Also if you change which files are selected for export before exporting again some files may be left on your file system unused." });
-				confirmModal.contentEl.createEl('p', { text: "This action cannot be undone." });
+				confirmModal.titleEl.setText(lang.purgeExport.confirmation);
+				let warning = confirmModal.contentEl.createEl('p', { text: lang.purgeExport.clearWarning });
+				warning.style.whiteSpace = "pre-wrap";
 				confirmModal.open();
 
 				new Setting(confirmModal.contentEl)
 				.addButton((button) => button
-				.setButtonText('Cancel')
+				.setButtonText(i18n.cancel)
 				.onClick(() => confirmModal.close()))
 				.addButton((button) => button
-				.setButtonText('Clear Cache')
+				.setButtonText(lang.purgeExport.clearCache)
 				.onClick(async () =>
 				{
 					const path = new Path(exportPathInput.textInput.getValue());
@@ -213,22 +214,22 @@ export class ExportModal extends Modal
 			}))
 
 			.addButton((button) => button
-			.setButtonText('Purge & Delete')
+			.setButtonText(lang.purgeExport.purgeSite)
 			.onClick(async () =>
 			{
 				// create a modal to confirm the deletion
 				const confirmModal = new Modal(app);
-				confirmModal.titleEl.setText("Are you sure?");
-				confirmModal.contentEl.createEl('p', { text: "This will delete the entire site and all it's files." });
-				confirmModal.contentEl.createEl('p', { text: "This action cannot be undone." });
+				confirmModal.titleEl.setText(lang.purgeExport.confirmation);
+				let warning = confirmModal.contentEl.createEl('p', { text: lang.purgeExport.purgeWarning });
+				warning.style.whiteSpace = "pre-wrap";
 				confirmModal.open();
 
 				new Setting(confirmModal.contentEl)
 				.addButton((button) => button
-				.setButtonText('Cancel')
+				.setButtonText(i18n.cancel)
 				.onClick(() => confirmModal.close()))
 				.addButton((button) => button
-				.setButtonText('Purge & Delete')
+				.setButtonText(lang.purgeExport.purgeSite)
 				.onClick(async () =>
 				{
 					const path = new Path(exportPathInput.textInput.getValue());
@@ -237,11 +238,11 @@ export class ExportModal extends Modal
 					onChanged(path);
 					confirmModal.close();
 				}));
-			})).setDesc(SettingsPage.i18n.Export_Mode.cleardescription);
+			})).setDesc(lang.purgeExport.description);
 
 		
 
-		createToggle(contentEl, "Open after export", () => Settings.openAfterExport, (value) => Settings.openAfterExport = value);
+		createToggle(contentEl, lang.openAfterExport, () => Settings.openAfterExport, (value) => Settings.openAfterExport = value);
 
 		let exportButton : ButtonComponent | undefined = undefined;
 
@@ -256,14 +257,14 @@ export class ExportModal extends Modal
 		}
 
 		const validatePath = (path: Path) => path.validate(
-			{
-				allowEmpty: false,
-				allowRelative: false,
-				allowAbsolute: true,
-				allowDirectories: true,
-				allowTildeHomeDirectory: true,
-				requireExists: true
-			});
+		{
+			allowEmpty: false,
+			allowRelative: false,
+			allowAbsolute: true,
+			allowDirectories: true,
+			allowTildeHomeDirectory: true,
+			requireExists: true
+		});
 
 		const onChangedValidate = (path: Path) => (!validatePath(path).valid) ? setExportDisabled(true) : setExportDisabled(false);
 
@@ -271,7 +272,7 @@ export class ExportModal extends Modal
 		{
 			name: '',
 			description: '',
-			placeholder: 'Type or browse an export directory...',
+			placeholder: i18n.pathInputPlaceholder,
 			defaultPath: FileDialogs.idealDefaultPath(),
 			pickFolder: true,
 			validation: validatePath,
@@ -283,7 +284,7 @@ export class ExportModal extends Modal
 		fileInput.addButton((button) => {
 			exportButton = button;
 			setExportDisabled(!this.validPath);
-			button.setButtonText('Export').onClick(async () => 
+			button.setButtonText(lang.exportButton).onClick(async () => 
 			{
 				this.canceled = false;
 				this.close();
@@ -310,13 +311,13 @@ export class ExportModal extends Modal
 
 			if (!index.oldWebsiteData)
 			{
-				exportDescription.setText("This path currently contains no exported website.");
+				exportDescription.setText(lang.currentSite.noSite);
 				return;
 			}
 
 			if (index.oldWebsiteData.pluginVersion != HTMLExportPlugin.pluginVersion)
 			{
-				exportDescription.setText("This path contains an export created with a different version of the plugin.");
+				exportDescription.setText(lang.currentSite.oldSite);
 				return;
 			}
 
@@ -324,7 +325,8 @@ export class ExportModal extends Modal
 			const lastExportFiles = index.oldWebsiteData.allFiles?.length;
 			const lastExportName = index.oldWebsiteData.siteName;
 
-			exportDescription.setText(`Path contains site: "${lastExportName}" with ${lastExportFiles} files last exported on ${lastExportDate}.`);
+			exportDescription.setText(`${lang.currentSite.pathContainsSite}: "${lastExportName}"\n${lang.currentSite.fileCount}: ${lastExportFiles}\n${lang.currentSite.lastExported}: ${lastExportDate}`);
+			exportDescription.style.whiteSpace = "pre-wrap";
 		}
 
 		exportPathInput.textInput.onChange(() => onChanged(new Path(exportPathInput.textInput.getValue())));
@@ -334,7 +336,7 @@ export class ExportModal extends Modal
 		this.filePickerModalEl.style.height = this.modalEl.clientHeight * 2 + "px";
 
 		new Setting(contentEl)
-		.setDesc("More options located on the plugin settings page.")
+		.setDesc(lang.moreOptions)
 		.addExtraButton((button) => button.setTooltip('Open plugin settings').onClick(() => {
 			//@ts-ignore
 			app.setting.open();
@@ -356,6 +358,6 @@ export class ExportModal extends Modal
 		const { contentEl } = this;
 		contentEl.empty();
 		this.isClosed = true;
-		ExportModal.title = "Export to HTML";
+		ExportModal.title = i18n.exportModal.title;
 	}
 }

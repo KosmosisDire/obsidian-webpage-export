@@ -3,6 +3,7 @@ import { FileTree, FileTreeItem } from "src/plugin/features/file-tree";
 import { Path } from "src/plugin/utils/path";
 import { Website } from "src/plugin/website/website";
 import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
+import { i18n } from "../translations/language";
 
 export class FilePickerTree extends FileTree
 {
@@ -99,7 +100,7 @@ export class FilePickerTree extends FileTree
 
 		// add a select all button at the top
 		const selectAllButton = new FilePickerTreeItem(this, this, 0);
-		selectAllButton.title = "Select All";
+		selectAllButton.title = i18n.exportModal.filePicker.selectAll;
 		let selectAllEl = await selectAllButton.insert(container);
 
 		// remove all event listeners from the select all button

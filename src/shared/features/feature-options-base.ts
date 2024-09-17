@@ -1,3 +1,5 @@
+import { i18n } from "src/plugin/translations/language";
+
 export enum RelationType
 {
 	Before = "before",
@@ -14,13 +16,13 @@ export class FeatureRelation
 	info_selector = new FeatureSettingInfo(
 	{
 		show: true, 
-		description: "CSS selector for an element. The feature will be placed relative to this element."
+		description: i18n.settings.baseFeatures.info_selector
 	});
 
 	info_type = new FeatureSettingInfo(
 	{
 		show: true, 
-		description: "Will this feature be placed before, after, or inside (at the beggining or end).",
+		description: i18n.settings.baseFeatures.info_type,
 		dropdownTypes: RelationType
 	});
 
@@ -49,7 +51,6 @@ export class FeatureSettingInfo
 
 	dropdownOptions?: Record<string, string> = undefined;
 
-
 	constructor(options?: 
 		{
 			show?: boolean,
@@ -69,12 +70,12 @@ export class FeatureSettingInfo
 	{
 		if (options)
 		{
-			this.show = options.show;
-			this.name = options.name;
-			this.description = options.description;
-			this.placeholder = options.placeholder;
-			this.fileInputOptions = options.fileInputOptions;
-			this.dropdownOptions = options.dropdownTypes;
+			this.show = options.show ?? this.show;
+			this.name = options.name ?? this.name;
+			this.description = options.description ?? this.description;
+			this.placeholder = options.placeholder ?? this.placeholder;
+			this.fileInputOptions = options.fileInputOptions ?? this.fileInputOptions;
+			this.dropdownOptions = options.dropdownTypes ?? this.dropdownOptions;
 		}
 	}
 }
@@ -83,6 +84,7 @@ export class FeatureOptions
 {
 	featureId: string = "feature";
 	enabled: boolean = true;
+	alwaysEnabled: boolean = false;
 }
 
 export class InsertedFeatureOptions extends FeatureOptions
@@ -93,12 +95,12 @@ export class InsertedFeatureOptions extends FeatureOptions
 	info_displayTitle = new FeatureSettingInfo(
 	{
 		show: true, 
-		description: "Descriptive title to show above the feature"
+		description: i18n.settings.baseFeatures.info_displayTitle
 	});
 	info_featurePlacement = new FeatureSettingInfo(
 	{
 		show: true, 
-		description: "Where to place this feature on the page. Multiple values will be tried in order until one succeeds. Multiple values will not insert this feature multiple times."
+		description: i18n.settings.baseFeatures.info_featurePlacement,
 	});
 
 	constructor(options?: InsertedFeatureOptions)
@@ -141,6 +143,5 @@ export class FetchedFeatureOptions extends InsertedFeatureOptions
 	includePath: string;
 	info_includePath = new FeatureSettingInfo({
 		show: false,
-		description: "The path on the server from which this feature can be loaded"
 	});
 }

@@ -1,3 +1,4 @@
+import { i18n } from "src/plugin/translations/language";
 import { FeatureRelation, FeatureSettingInfo, InsertedFeatureOptions, RelationType } from "./feature-options-base";
 
 export class PropertiesOptions extends InsertedFeatureOptions
@@ -6,14 +7,14 @@ export class PropertiesOptions extends InsertedFeatureOptions
 	info_hideProperties = new FeatureSettingInfo(
 	{
 		show: true,
-		description: "A list of properties to hide from the properties view"
+		description: i18n.settings.properties.info_hideProperties
 	});
 
 	constructor()
 	{
 		super();
 		this.featureId = "properties";
-		this.displayTitle = "Properties";
+		this.displayTitle = i18n.settings.properties.title;
 		this.featurePlacement = new FeatureRelation(".header", RelationType.Start);
 	}
 }

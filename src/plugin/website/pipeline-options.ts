@@ -106,7 +106,7 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	/**
 	 * Document section options
 	 */
-	fileOptions: DocumentOptions = new DocumentOptions();
+	documentOptions: DocumentOptions = new DocumentOptions();
 
 	/**
 	 * Make outline links relative instead of absolute.

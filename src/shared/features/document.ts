@@ -1,3 +1,4 @@
+import { i18n } from "src/plugin/translations/language";
 import { FeatureOptions, FeatureSettingInfo } from "./feature-options-base";
 
 export class DocumentOptions extends FeatureOptions
@@ -8,20 +9,21 @@ export class DocumentOptions extends FeatureOptions
 
 	info_allowFoldingLists = new FeatureSettingInfo({
 		show: true,
-		description: "Whether or not to allow lists to be folded"
+		description: i18n.settings.document.info_allowFoldingLists
 	});
 	info_allowFoldingHeadings = new FeatureSettingInfo({
 		show: true,
-		description: "Whether or not to allow headings to be folded"
+		description: i18n.settings.document.info_allowFoldingHeadings
 	});
 	info_documentWidth = new FeatureSettingInfo({
 		show: true,
-		description: "The width of the document"
+		description: i18n.settings.document.info_documentWidth
 	});
 
 	constructor()
 	{
 		super();
 		this.featureId = "obsidian-document";
+		this.alwaysEnabled = true;
 	}
 }

@@ -4,6 +4,7 @@ import { Path } from "src/plugin/utils/path";
 import { FileDialogs } from "src/plugin/utils/file-dialogs";
 import { FeatureOptions, FeatureRelation, FeatureSettingInfo } from "src/shared/features/feature-options-base";
 import { ExportPipelineOptions } from "src/plugin/website/pipeline-options";
+import { i18n } from "../translations/language";
 
 export function createDivider(container: HTMLElement)
 {
@@ -147,7 +148,7 @@ options?: {name?: string, description?: string, placeholder?: string, defaultPat
 		fileInput.addButton((button) =>
 		{
 			browseButtonEl = button.buttonEl;
-			button.setButtonText('Browse').onClick(async () => 
+			button.setButtonText(i18n.browse).onClick(async () => 
 			{
 				let path = pickFolder ? await FileDialogs.showSelectFolderDialog(defaultPath) : await FileDialogs.showSelectFileDialog(defaultPath);
 				
@@ -337,8 +338,11 @@ export function generateSettingsFromObject(obj: any, container: HTMLElement)
 
 export function createFeatureSetting(container: HTMLElement, name: string, feature: FeatureOptions, desc: string)
 {
-	new Setting(container).setName(name).setDesc(desc)
-		.addToggle(toggle => 
+	let setting = new Setting(container).setName(name).setDesc(desc);
+	
+	if (!feature.alwaysEnabled)
+	{
+		setting.addToggle(toggle => 
 		{
 			toggle.setValue(feature.enabled)
 			toggle.onChange((value) => 
@@ -346,19 +350,20 @@ export function createFeatureSetting(container: HTMLElement, name: string, featu
 				feature.enabled = value;
 				SettingsPage.saveSettings();
 			});
+		});
+	}
+
+	setting.addExtraButton(button => 
+	{
+		button.setIcon("settings")
+		button.onClick(() => 
+		{
+			// create a modal with all the feature's properties as settings
+			let modal = new Modal(app);
+			let contentEl = modal.contentEl;
+			modal.open()
+			modal.setTitle(name);
+			generateSettingsFromObject(feature, contentEl);
 		})
-		.addExtraButton(button => 
-			{
-				button.setIcon("settings")
-				button.onClick(() => 
-				{
-					// create a modal with all the feature's properties as settings
-					let modal = new Modal(app);
-					let contentEl = modal.contentEl;
-					modal.open()
-					modal.setTitle(name);
-					generateSettingsFromObject(feature, contentEl);
-				})
-			}
-		)
+	});
 }
