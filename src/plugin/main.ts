@@ -22,7 +22,13 @@ export default class HTMLExportPlugin extends Plugin
 	public Path = Path;
 	public dv = DataviewRenderer;
 	public Website = Website;
+
 	private i18n: { [key: string]: any } = {};
+
+	public async exportDocker() {
+		await HTMLExporter.export(true, undefined, new Path("/output"));
+	}
+
 	async onload()
 	{
 		console.log("Loading webpage-html-export plugin");

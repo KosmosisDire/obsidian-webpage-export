@@ -596,15 +596,33 @@ export class Webpage extends Attachment
 
 	private remapLinks()
 	{
-		this.pageDocument.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((headerEl) =>
-		{
-			// convert the data-heading to the id
-			headerEl.setAttribute("id", this.headingTextToID(headerEl.getAttribute("data-heading") ?? headerEl.textContent));
-		});
+		// convert the data-heading to the id
+
+		const hMap = new Map();
+
+		this.pageDocument
+			.querySelectorAll("h1, h2, h3, h4, h5, h6")
+			.forEach((headerEl) => {
+				let headerText =
+					headerEl.getAttribute("data-heading") ??
+					headerEl.textContent;
+				let headerId = hMap.get(headerText);
+				if (headerId) {
+					headerId = `${+headerId + 1}`;
+				} else {
+					headerId = "0";
+				}
+
+				hMap.set(headerText, headerId);
+
+				headerEl.setAttribute(
+					"id",
+					`${headerText}_${headerId}`.replaceAll(" ", "_") ?? ""
+				);
+			});
 
 		const links = this.hrefLinkElements;
-		for (const link of links)
-		{
+		for (const link of links) {
 			const href = link.getAttribute("href");
 			const newHref = this.resolveLink(href);
 			link.setAttribute("href", newHref ?? href ?? "");
