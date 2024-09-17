@@ -22,6 +22,10 @@ export default class HTMLExportPlugin extends Plugin
 	public dv = DataviewRenderer;
 	public Website = Website;
 
+	public async exportDocker() {
+		await HTMLExporter.export(true, undefined, new Path("/output"));
+	}
+
 	async onload()
 	{
 		console.log("Loading webpage-html-export plugin");

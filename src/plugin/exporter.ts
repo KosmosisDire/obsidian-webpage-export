@@ -9,7 +9,7 @@ import { Webpage } from "./website/webpage";
 
 export class HTMLExporter
 {
-	static async updateSettings(usePreviousSettings: boolean = false, overrideFiles: TFile[] | undefined = undefined): Promise<ExportInfo | undefined>
+	static async updateSettings(usePreviousSettings: boolean = false, overrideFiles: TFile[] | undefined = undefined, overrideExportPath: Path | undefined = undefined): Promise<ExportInfo | undefined>
 	{
 		if (!usePreviousSettings) 
 		{
@@ -19,7 +19,7 @@ export class HTMLExporter
 		}
 		
 		const files = Settings.exportOptions.filesToExport[0];
-		const path = new Path(Settings.exportOptions.exportPath);
+		const path = overrideExportPath ?? new Path(Settings.exportOptions.exportPath);
 
 		if ((files.length == 0 && overrideFiles == undefined) || !path.exists || !path.isAbsolute || !path.isDirectory)
 		{
@@ -32,13 +32,13 @@ export class HTMLExporter
 		return undefined;
 	}
 
-	public static async export(usePreviousSettings: boolean = true, overrideFiles: TFile[] | undefined = undefined)
+	public static async export(usePreviousSettings: boolean = true, overrideFiles: TFile[] | undefined = undefined, overrideExportPath: Path | undefined = undefined)
 	{
-		const info = await this.updateSettings(usePreviousSettings, overrideFiles);
+		const info = await this.updateSettings(usePreviousSettings, overrideFiles, overrideExportPath);
 		if ((!info && !usePreviousSettings) || (info && info.canceled)) return;
 
 		const files = info?.pickedFiles ?? overrideFiles ?? Settings.getFilesToExport();
-		const exportPath = info?.exportPath ?? new Path(Settings.exportOptions.exportPath);
+		const exportPath = overrideExportPath ?? info?.exportPath ?? new Path(Settings.exportOptions.exportPath);
 
 		const website = await HTMLExporter.exportFiles(files, exportPath, true, Settings.deleteOldFiles);
 
