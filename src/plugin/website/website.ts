@@ -245,8 +245,9 @@ export class Website
 			// save the file and then dispose of the webpage
 			if (!this.exportOptions.combineAsSingleFile)
 				await webpage.download();
-
-			webpage.dispose();
+			
+			if (this.exportOptions.autoDisposeWebpages)
+				webpage.dispose();
 
 			ExportLog.progress(progress / webpages.length, "Building Website", webpage.source.path);
 			progress += 1;

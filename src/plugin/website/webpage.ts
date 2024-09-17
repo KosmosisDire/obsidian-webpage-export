@@ -702,22 +702,24 @@ export class Webpage extends Attachment
 		if (this.pageDocument.body.classList.contains("show-inline-title")) titleEl.classList.add("inline-title");
 		titleEl.id = this.title;
 
-		let pageIcon = undefined;
-		// Create a div with icon
-		if ((this.icon != "" && !this.isDefaultIcon))
+		if (this.exportOptions.addPageIcon)
 		{
-			pageIcon = this.pageDocument.createElement("div");
-			pageIcon.id = "webpage-icon";
-			pageIcon.innerHTML = this.icon;
-		}
+			let pageIcon = undefined;
+			// Create a div with icon
+			if ((this.icon != "" && !this.isDefaultIcon))
+			{
+				pageIcon = this.pageDocument.createElement("div");
+				pageIcon.id = "webpage-icon";
+				pageIcon.innerHTML = this.icon;
+			}
 		
-		// Insert title into the title element
-		MarkdownRendererAPI.renderMarkdownSimpleEl(this.title, titleEl);
-		if (pageIcon) 
-		{
-			titleEl.prepend(pageIcon);
+			// Insert title into the title element
+			MarkdownRendererAPI.renderMarkdownSimpleEl(this.title, titleEl);
+			if (pageIcon) 
+			{
+				titleEl.prepend(pageIcon);
+			}
 		}
-
 		// Insert title into the document
 		(this.headerElement ?? this.sizerElement).prepend(titleEl);
 	}

@@ -14,11 +14,10 @@ body
 
 .sidebar {
     height: 100%;
-    min-width: calc(var(--sidebar-width) + var(--divider-width-hover));
-    max-width: calc(var(--sidebar-width) + var(--divider-width-hover));
     font-size: 14px;
     z-index: 10;
-
+	min-width: calc(var(--sidebar-width) + var(--divider-width-hover));
+    max-width: calc(var(--sidebar-width) + var(--divider-width-hover));
     position: relative;
     overflow: hidden;
     overflow: clip;
@@ -257,12 +256,12 @@ body
 	contain: inline-size;
 }
 
-#center-content>.obsidian-document>.markdown-sizer 
+body #center-content>.obsidian-document>.markdown-sizer 
 {
-    padding-bottom: 80vh !important;
-    width: 100% !important;
-    max-width: var(--line-width) !important;
-    flex-basis: var(--line-width) !important;
+    padding-bottom: 80vh;
+    width: 100%;
+    max-width: var(--line-width);
+    flex-basis: var(--line-width);
     transition: background-color var(--color-fade-speed) ease-in-out;
 	contain: inline-size;
 }

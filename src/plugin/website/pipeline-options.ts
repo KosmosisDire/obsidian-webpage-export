@@ -42,6 +42,11 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	 */
 	addTitle: boolean = true;
 
+	/**
+	 * Add page icon to the top of each page.
+	 */
+	addPageIcon: boolean = true;
+
 	// Options for the features
 	/**
 	 * The options for the backlinks feature.
@@ -221,6 +226,11 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	 * Include CSS from all svelte components in the export.
 	 */
 	includeSvelteCSS: boolean = true;
+
+	/**
+	 * Auto dispose webpage documents and elements after each one is rendered.
+	 */
+	autoDisposeWebpages: boolean = true;
 }
 
 

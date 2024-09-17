@@ -732,13 +732,6 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 
 @media print 
 {
-	body #layout #center-content *
-	{ 
-		overflow: visible !important;
-		overflow-y: visible !important;
-		overflow-x: visible !important;
-	}
-
 	html body.publish :is(.sidebar, script, style, include)
 	{
 		display: none !important;
@@ -760,12 +753,12 @@ body.is-phone .heading-wrapper .heading-collapse-indicator
 		background: var(--background-primary);
 	}
 
-	#center-content > .obsidian-document > .markdown-sizer
+	body #center-content > .obsidian-document > .markdown-sizer
 	{
-		padding: 0 !important;
-		margin: 0 !important;
-		padding: var(--file-margins) !important;
-		padding-bottom: 0 !important;
+		padding: 0;
+		margin: 0;
+		padding: var(--file-margins);
+		padding-bottom: 0;
 	}
 
 	html body.publish :is(#center-content, .obsidian-document)

@@ -89,15 +89,16 @@ export function createError(container: HTMLElement): HTMLElement
 }
 
 export function createFileInput(container: HTMLElement, get: () => string, set: (value: string) => void, 
-options?: {name?: string, description?: string, placeholder?: string, defaultPath?: Path, pickFolder?: boolean, validation?: (path: Path) => {valid: boolean, isEmpty: boolean, error: string}, browseButton?: boolean, onChanged?: (path: Path)=>void}): {fileInput: Setting, textInput: TextComponent, browseButton: HTMLElement | undefined}
+options?: {name?: string, description?: string, placeholder?: string, defaultPath?: Path, makeRelativeToVault?: boolean, pickFolder?: boolean, validation?: (path: Path) => {valid: boolean, isEmpty: boolean, error: string}, browseButton?: boolean, onChanged?: (path: Path)=>void}): {fileInput: Setting, textInput: TextComponent, browseButton: HTMLElement | undefined}
 {
 	const getSafe = () => new Path(get() ?? "").makePlatformSafe();
 	const setSafe = (value: string) => set(new Path(value).makePlatformSafe().path);
 
-	const name = options?.name ?? "";
+	const name = options?.name ?? ""; 
 	const description = options?.description ?? "";
 	const placeholder = options?.placeholder ?? "Path to file...";
 	const defaultPath = options?.defaultPath ?? Path.vaultPath;
+	const makeRelativeToVault = options?.makeRelativeToVault ?? false;
 	const pickFolder = options?.pickFolder ?? false;
 	const validation = options?.validation ?? ((path) => ({valid: true, isEmpty: false, error: ""}));
 	const browseButton = options?.browseButton ?? true;
@@ -148,21 +149,26 @@ options?: {name?: string, description?: string, placeholder?: string, defaultPat
 			browseButtonEl = button.buttonEl;
 			button.setButtonText('Browse').onClick(async () => 
 			{
-				const path = pickFolder ? await FileDialogs.showSelectFolderDialog(defaultPath) : await FileDialogs.showSelectFileDialog(defaultPath);
+				let path = pickFolder ? await FileDialogs.showSelectFolderDialog(defaultPath) : await FileDialogs.showSelectFileDialog(defaultPath);
+				
 				if (!path) return;
 				
-				setSafe(path.path);
+				if (makeRelativeToVault)
+					path = Path.getRelativePathFromVault(path, true);
+
+				path.makePlatformSafe();
+
 				const valid = validation(path);
 				errorMessage.setText(valid.error);
 				if (valid.valid)
 				{
+					setSafe(path.path);
 					await SettingsPage.saveSettings();
+					textInput?.setValue(path.path);
 				}
-
-				textInput?.setValue(getSafe().path);
 				
-				if (onChanged) onChanged(path);
-				textInput?.onChanged();
+				// if (onChanged) onChanged(path);
+				// textInput?.onChanged();
 			});
 		});
 	}

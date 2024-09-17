@@ -7,7 +7,6 @@ import { Path } from "src/plugin/utils/path";
 import { SimpleFileListGenerator } from "src/plugin/features/simple-list-generator";
 import { IncludeGenerator } from "src/plugin/features/include";
 import { DataviewRenderer } from "./dataview-renderer";
-import { debug } from "console";
 
 export namespace MarkdownRendererAPI
 {

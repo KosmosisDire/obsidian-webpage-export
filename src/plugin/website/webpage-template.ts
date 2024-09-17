@@ -39,13 +39,15 @@ export class WebpageTemplate
 					const rightSidebarContentWrapper = rightSidebar.createDiv({attr: {class: "sidebar-content-wrapper"}});
 						const rightSidebarContent = rightSidebarContentWrapper.createDiv({attr: {id: "right-sidebar-content", class: "leaf-content"}});
 
+		leftContent.style.setProperty("--sidebar-width", "var(--sidebar-width-left)");
+		rightContent.style.setProperty("--sidebar-width", "var(--sidebar-width-right)");
 
 		let leftSidebarScript = leftSidebar.createEl("script");
 		let rightSidebarScript = rightSidebar.createEl("script");
 		leftSidebarScript.setAttribute("defer", "");
 		rightSidebarScript.setAttribute("defer", "");
-		leftSidebarScript.innerHTML = `let ls = document.querySelector("#left-sidebar"); ls.classList.add("is-collapsed"); if (window.innerWidth > 768) ls.classList.remove("is-collapsed"); ls.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-left-width"));`;
-		rightSidebarScript.innerHTML = `let rs = document.querySelector("#right-sidebar"); rs.classList.add("is-collapsed"); if (window.innerWidth > 768) rs.classList.remove("is-collapsed"); rs.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-right-width"));`;
+		leftSidebarScript.innerHTML = `let ls = document.querySelector("#left-sidebar"); ls.classList.toggle("is-collapsed", window.innerWidth < 768); ls.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-left-width"));`;
+		rightSidebarScript.innerHTML = `let rs = document.querySelector("#right-sidebar"); rs.classList.toggle("is-collapsed", window.innerWidth < 768); rs.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-right-width"));`;
 
 		this.layout = layout;
 	}

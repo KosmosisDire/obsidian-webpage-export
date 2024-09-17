@@ -11,7 +11,7 @@ export class CustomHeadOptions extends FetchedFeatureOptions
 		fileInputOptions: {
 			validation: (path: string) => {
 				let isEmpty = (path || "").length === 0;
-				let valid = path.endsWith(".html");
+				let valid = path.endsWith(".html") || isEmpty;
 				return {valid: valid, isEmpty: isEmpty, error: !valid ? "Must be a path to a .html file" : ""};
 			},
 			browseButton: true
