@@ -1,6 +1,7 @@
 import { Vector2 } from "src/frontend/main/utils";
 import { GraphView } from "../main/graph-view";
 import { Shared } from "src/shared/shared";
+import { LinkHandler } from "../main/links";
 
 // colors in hex
 export interface GraphViewColors
@@ -104,18 +105,17 @@ export class GraphRenderWorker
 			console.log("Failed to transfer control to offscreen canvas");
 		}
 
+		var workerPath = `${ObsidianSite.document.info.pathToRoot}/${Shared.libFolderName}/${Shared.scriptsFolderName}/graph-render-worker.js`;
+
 		if (window.location.protocol === 'file:')
 		{
-			let id = btoa(encodeURI(`site-lib/scripts/graph-render-worker.js`));
-			let dataEl = document.getElementById(id) as HTMLScriptElement;
-			if (dataEl == null) return;
-
-			const data = Uint8Array.from(Array.from(JSON.parse(decodeURI(atob(dataEl.getAttribute("value") ?? ""))).data).map((s: string) => s.charCodeAt(0)));
+			var fileInfo = ObsidianSite.getLocalDataFromId(LinkHandler.getFileDataIdFromURL(workerPath));
+			const data = Uint8Array.from(Array.from(fileInfo.data).map((s: string) => s.charCodeAt(0)));
 			this.worker = new Worker(URL.createObjectURL(new Blob([data], {type: 'application/javascript'})));
 		}
 		else
 		{
-			this.worker = new Worker(new URL(`${ObsidianSite.document.info.pathToRoot}/${Shared.libFolderName}/${Shared.scriptsFolderName}/graph-render-worker.js`, window.location.href).pathname);
+			this.worker = new Worker(new URL(workerPath, window.location.href).pathname);
 		}
 
 

@@ -6,8 +6,6 @@ import deferredJS from "src/assets/deferred.txt.js";
 import deferredCSS from "src/assets/deferred.txt.css";
 import themeLoadJS from "src/assets/theme-load.txt.js";
 
-import tinyColorJS from "src/frontend/graph-view/tinycolor.txt.js";
-import pixiJS from "src/frontend/graph-view/pixi.txt.js";
 import minisearchJS from "src/assets/minisearch.txt.js";
 
 import { Path } from "src/plugin/utils/path.js";
@@ -105,7 +103,6 @@ export class AssetHandler
 	public static deferredJS: AssetLoader;
 	public static themeLoadJS: AssetLoader;
 
-	public static pixiJS: AssetLoader;
 	public static minisearchJS: AssetLoader;
 	 
 	// other
@@ -142,8 +139,7 @@ export class AssetHandler
 		this.renderWorkerJS = new AssetLoader("graph-render-worker.js", renderWorkerJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
 		this.deferredJS = new AssetLoader("deferred.js", deferredJS, null, AssetType.Script, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer, -1000);
 		this.themeLoadJS = new AssetLoader("theme-load.js", themeLoadJS, null, AssetType.Script, InlinePolicy.Inline, true, Mutability.Static, LoadMethod.Defer);
-		this.pixiJS = new AssetLoader("pixi.js", pixiJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js");
-		this.minisearchJS = new AssetLoader("minisearch.js", minisearchJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js");
+		this.minisearchJS = new AssetLoader("minisearch.js", minisearchJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdn.jsdelivr.net/npm/minisearch@7.1.0/dist/umd/index.min.js");
 		this.favicon = new Favicon();
 		this.customHeadContent = new CustomHeadContent();
 
@@ -209,7 +205,7 @@ export class AssetHandler
 		if (!options.graphViewOptions.enabled)
 		{
 			console.log("Filtering graph view assets");
-			downloads = downloads.filter(asset => ![this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.pixiJS].includes(asset));
+			downloads = downloads.filter(asset => ![this.graphWASMJS, this.graphWASM, this.renderWorkerJS].includes(asset));
 		}
 
 		if (!options.searchOptions.enabled)

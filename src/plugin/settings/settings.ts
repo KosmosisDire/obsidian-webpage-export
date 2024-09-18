@@ -214,7 +214,7 @@ export class SettingsPage extends PluginSettingTab
 		createToggle(section, lang.makeOfflineCompatible.title,
 			 () => Settings.exportOptions.offlineResources,
 			  (value) => Settings.exportOptions.offlineResources = value,
-						lang.assetOptions.description);
+						lang.makeOfflineCompatible.description);
 		createToggle(section, lang.includeSvelteCSS.title,
 			 () => Settings.exportOptions.includeSvelteCSS,
 			  (value) => Settings.exportOptions.includeSvelteCSS = value,

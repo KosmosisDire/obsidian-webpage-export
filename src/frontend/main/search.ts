@@ -155,11 +155,11 @@ export class Search
 			console.error("Failed to fetch search index");
 			return;
 		}
-		const indexJSON = await indexResp.text();
+		const indexJSON = await indexResp.json();
 		try
 		{
 			// @ts-ignore
-			this.index = MiniSearch.loadJSON(indexJSON, { fields: ['title', 'path', 'tags', 'headers'] });
+			this.index = MiniSearch.loadJS(indexJSON, { fields: ['title', 'path', 'tags', 'headers'] });
 		}
 		catch (e)
 		{

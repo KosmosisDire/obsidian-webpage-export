@@ -198,20 +198,20 @@ export class ObsidianWebsite
 				}
 				else
 				{
-					console.log("Failed to load website metadata.");
+					new Notice("Failed to load website metadata.");
+					console.error("Failed to load website metadata.");
 				}
 			}
 			catch (e)
 			{
-				console.log("Failed to load website metadata.", e);
+				new Notice("Failed to load website metadata.");
+				console.error("Failed to load website metadata.", e);
 			}
 		}
 		else
 		{
-			// when local the metadata is embedded
-			const dataEl = document.querySelector("data#website-metadata");
-			if (!dataEl) return undefined;
-			return JSON.parse(decodeURI(atob(dataEl.getAttribute("value") ?? "")))
+			// when in file://
+			return this.getLocalDataFromId("website-metadata") as WebsiteData;
 		}
 
 		return undefined;
@@ -224,7 +224,7 @@ export class ObsidianWebsite
 
 		const localThis = this;
 		//@ts-ignore
-		waitLoadScripts(["pixi", "graph-render-worker", "graph-wasm"],  () =>
+		waitLoadScripts(["graph-render-worker", "graph-wasm"],  () =>
 		{
 			console.log("scripts loaded");
 			async function initGraphView()
@@ -258,6 +258,13 @@ export class ObsidianWebsite
 		await waitUntil(() => this.graphView != undefined);
 	}
 
+	public getLocalDataFromId(id: string): any | undefined
+	{
+		var el = document.getElementById(id);
+		if (!el) return;
+		return JSON.parse(decodeURI(atob(el.getAttribute("value") ?? "")));
+	}
+
 	private cachedWebpageDataMap: Map<string, WebpageData> = new Map();
 	public getWebpageData(url: string): WebpageData
 	{
@@ -269,9 +276,7 @@ export class ObsidianWebsite
 			}
 			else
 			{
-				const dataEl = document.getElementById(btoa(encodeURI(url)));
-				if (!dataEl) return {} as WebpageData;
-				const data = JSON.parse(decodeURI(atob(dataEl.getAttribute("value") ?? "")));
+				const data = this.getLocalDataFromId(LinkHandler.getFileDataIdFromURL(url)) as WebpageData;
 				this.cachedWebpageDataMap.set(url, data);
 				return data;
 			}
@@ -300,9 +305,7 @@ export class ObsidianWebsite
 			}
 			else
 			{
-				const dataEl = document.getElementById(btoa(encodeURI(url)));
-				if (!dataEl) return {} as FileData;
-				const data = JSON.parse(decodeURI(atob(dataEl.getAttribute("value") ?? "")));
+				const data = this.getLocalDataFromId(LinkHandler.getFileDataIdFromURL(url)) as FileData;
 				this.cachedFileDataMap.set(url, data);
 				return data;
 			}

@@ -43,4 +43,9 @@ export class LinkHandler
 	{
 		return url.split("?")[1] ?? "";
 	}
+
+	public static getFileDataIdFromURL(url: string): string
+	{
+		return btoa(encodeURI(url));
+	}
 }
