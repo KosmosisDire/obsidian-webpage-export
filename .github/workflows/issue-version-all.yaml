@@ -1,0 +1,83 @@
+name: Update All Existing Issue Titles
+
+on:
+  workflow_dispatch:
+
+jobs:
+  update-issue-titles:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+    - name: Update All Issue Titles
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const perPage = 100;
+          let page = 1;
+          let allIssues = [];
+
+          // Fetch all issues
+          while (true) {
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'all',
+              per_page: perPage,
+              page: page
+            });
+            
+            allIssues = allIssues.concat(issues.data);
+            
+            if (issues.data.length < perPage) break;
+            page++;
+          }
+
+          console.log(`Total issues found: ${allIssues.length}`);
+
+          for (const issue of allIssues) {
+            const currentTitle = issue.title;
+            
+            // Check if the title starts with [Bug] and doesn't already have a version
+            if (currentTitle.trim().toLowerCase().startsWith('[bug]') && 
+                !currentTitle.match(/^\[Bug\]\s*\[[^\]]+\]/i)) {
+              
+              console.log(`Processing issue #${issue.number}: "${currentTitle}"`);
+              
+              // Extract version from the issue body, handling null case
+              let version = 'unknown';
+              if (issue.body) {
+                const versionMatch = issue.body.match(/### Version\s*([0-9.b-]+)/);
+                if (versionMatch) {
+                  version = versionMatch[1];
+                }
+              } else {
+                console.log(`Issue #${issue.number} has no body`);
+              }
+              
+              // Remove any existing version tag if present and add new tags
+              let newTitle = currentTitle.replace(/^\[Bug\]\s*/i, '').trim();
+              newTitle = `[Bug] [${version}]${newTitle}`;
+              
+              console.log(`New title: "${newTitle}"`);
+              
+              try {
+                await github.rest.issues.update({
+                  issue_number: issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  title: newTitle
+                });
+                console.log(`Successfully updated issue #${issue.number}`);
+              } catch (error) {
+                console.error(`Failed to update issue #${issue.number}`);
+                console.error(error);
+              }
+            } else {
+              console.log(`Skipping issue #${issue.number}: "${currentTitle}" (already formatted or not a bug)`);
+            }
+          }
+
+          console.log('Finished processing all issues');
