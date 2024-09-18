@@ -1,24 +1,18 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { Path } from "src/plugin/utils/path";
-import { Settings, SettingsPage } from "src/plugin/settings/settings";
 import { ExportLog } from "src/plugin/render-api/render-api";
 
 export class CustomHeadContent extends AssetLoader
 {
     constructor()
     {
-        super("custom-head-content.html", "", null, AssetType.HTML, InlinePolicy.AutoHead, false, Mutability.Dynamic, LoadMethod.Default, 100000000000);
+        super("custom-head-content.html", "", null, AssetType.HTML, InlinePolicy.Auto, false, Mutability.Dynamic, LoadMethod.Default, 100000000000);
     }
     
     override async load()
     {
-		if (!SettingsPage.loaded) 
-		{
-			return;
-		}
-
-        const customHeadPath = new Path(this.exportOptions.customHeadPath);
+        const customHeadPath = new Path(this.exportOptions.customHeadOptions.sourcePath);
 		
 		if (customHeadPath.isEmpty)
 		{

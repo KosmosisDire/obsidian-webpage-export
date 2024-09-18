@@ -128,7 +128,7 @@ export const language: i18n =
 			description: "允许动态切换暗色和亮色主题。"
 		},
 		customHead: {
-			title: "自定义头部内容",
+			title: "自定义HTML / JS",
 			description: "插入一个指定的HTML文件到页面上，可包含自定义JS或CSS。",
 			info_sourcePath: "包含的本地HTML文件路径。",
 			validationError: "必须是一个指向HTML文件的路径。"

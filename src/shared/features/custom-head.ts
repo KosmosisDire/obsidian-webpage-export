@@ -10,6 +10,7 @@ export class CustomHeadOptions extends FetchedFeatureOptions
 		show: true,
 		description: i18n.settings.customHead.info_sourcePath,
 		fileInputOptions: {
+			makeRelativeToVault: true,
 			validation: (path: string) => {
 				let isEmpty = (path || "").length === 0;
 				let valid = path.endsWith(".html") || isEmpty;
@@ -24,7 +25,7 @@ export class CustomHeadOptions extends FetchedFeatureOptions
 		super();
 		this.featureId = "custom-head";
 		this.displayTitle = "";
-		this.featurePlacement = new FeatureRelation("head", RelationType.Start);
+		this.featurePlacement = new FeatureRelation("head", RelationType.End);
 		this.includePath = `${Shared.libFolderName}/${Shared.htmlFolderName}/custom-head.html`;
 	}
 }

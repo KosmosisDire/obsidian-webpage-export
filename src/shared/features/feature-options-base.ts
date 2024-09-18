@@ -44,6 +44,7 @@ export class FeatureSettingInfo
 	{
 		defaultPath?: string, 
 		pickFolder?: boolean, 
+		makeRelativeToVault?: boolean,
 		validation?: (path: string) => {valid: boolean, isEmpty: boolean, error: string}, 
 		browseButton?: boolean, 
 		onChanged?: (path: string)=>void
@@ -61,6 +62,7 @@ export class FeatureSettingInfo
 			{
 				defaultPath?: string, 
 				pickFolder?: boolean, 
+				makeRelativeToVault?: boolean,
 				validation?: (path: string) => {valid: boolean, isEmpty: boolean, error: string}, 
 				browseButton?: boolean, 
 				onChanged?: (path: string)=>void
@@ -112,6 +114,7 @@ export class InsertedFeatureOptions extends FeatureOptions
 
 	public insertFeature(container: HTMLElement, feature: HTMLElement): boolean
 	{
+		if (!container) return false;
 		let relation = container.querySelector(this.featurePlacement.selector) as HTMLElement;
 		if (relation)
 		{

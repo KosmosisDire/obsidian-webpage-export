@@ -242,9 +242,6 @@ export class Index
 		
 		for (const page of this.webpages)
 		{
-			// only include pages with content
-			if ((page.sizerElement?.innerText.length ?? 0) < 5) continue;
-
 			const title = page.title;
 			const url = Path.joinStrings(this.exportOptions.siteURL ?? "", page.targetPath.path).path;
 			const guid = page.source.path;

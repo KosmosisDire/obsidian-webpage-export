@@ -198,11 +198,6 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	faviconPath: string = '';
 
 	/**
-	 * The local path to the custom head content to embbed on the site.
-	 */
-	customHeadPath: string = '';
-
-	/**
 	 * The style of emoji to use for custom icons.
 	 */
 	iconEmojiStyle: EmojiStyle = EmojiStyle.Native;

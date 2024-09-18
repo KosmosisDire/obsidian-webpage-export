@@ -84,6 +84,8 @@ export class AssetLoader extends Attachment
         {
             await this.minifyAsset();
         }
+
+		console.log(`Loaded ${this.filename}`);
     }
 
     override async download(): Promise<void> 

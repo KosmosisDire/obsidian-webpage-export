@@ -240,6 +240,7 @@ export function generateSettingsFromObject(obj: any, container: HTMLElement)
 				description: description,
 				placeholder: settinginfo.placeholder,
 				defaultPath: new Path(settinginfo.fileInputOptions.defaultPath ?? Path.vaultPath.path),
+				makeRelativeToVault: settinginfo.fileInputOptions?.makeRelativeToVault,
 				pickFolder: settinginfo.fileInputOptions?.pickFolder,
 				validation: (path: Path) => {return settinginfo.fileInputOptions?.validation ? (settinginfo.fileInputOptions?.validation(path.path) ?? {valid: true, isEmpty: false, error: ""}) : {valid: true, isEmpty: false, error: ""}},
 				browseButton: settinginfo.fileInputOptions?.browseButton,

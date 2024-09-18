@@ -75,7 +75,7 @@ export class ExportModal extends Modal
 			const paths = app.vault.getFiles().map(file => new Path(file.path));
 			this.filePicker = new FilePickerTree(paths, true, true);
 			this.filePicker.regexBlacklist.push(...Settings.filePickerBlacklist);
-			this.filePicker.regexBlacklist.push(...[Settings.exportOptions.customHeadPath, Settings.exportOptions.faviconPath]);
+			this.filePicker.regexBlacklist.push(...[Settings.exportOptions.customHeadOptions.sourcePath, Settings.exportOptions.faviconPath]);
 			this.filePicker.regexWhitelist.push(...Settings.filePickerWhitelist);
 			
 			this.filePicker.generateWithItemsClosed = true;

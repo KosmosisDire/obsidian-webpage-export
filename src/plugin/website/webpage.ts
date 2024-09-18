@@ -12,6 +12,7 @@ import { DocumentType } from "src/shared/website-data";
 import { Settings } from "src/plugin/settings/settings";
 import { AssetHandler } from "src/plugin/asset-loaders/asset-handler";
 import { Shared } from "src/shared/shared";
+import { moment } from "obsidian";
 
 export class Webpage extends Attachment
 {
@@ -446,8 +447,6 @@ export class Webpage extends Attachment
 			this.viewElement?.prepend(mathStyleEl);
 		}
 
-		const template = this.website.webpageTemplate.createCopy();
-
 		// inject outline
 		if (this.exportOptions.outlineOptions.enabled)
 		{
@@ -457,18 +456,11 @@ export class Webpage extends Attachment
 			headerTree.showNestingIndicator = false;
 			headerTree.generateWithItemsClosed = this.exportOptions.outlineOptions.startCollapsed === true;
 			headerTree.minCollapsableDepth = this.exportOptions.outlineOptions.minCollapseDepth ?? 2;
-			template.insertFeature(await headerTree.generate(), this.exportOptions.graphViewOptions);
+			this.exportOptions.outlineOptions.insertFeature(this.pageDocument.documentElement, await headerTree.generate());
 		}
 
-		const layout = template.getFinalLayout();
-		const centerContent = layout.querySelector("#center-content");
-		if (!centerContent) return;
-		centerContent.innerHTML = this.pageDocument.body.innerHTML;
-		this.pageDocument.body.innerHTML = "";
-		this.pageDocument.body.append(layout);
-
 		// if html will be inlined, un-collapse the tree containing this file
-		const fileExplorer = layout.querySelector("#file-explorer");
+		const fileExplorer = this.pageDocument.querySelector("#file-explorer");
 		if (fileExplorer && this.exportOptions.fileNavigationOptions.exposeStartingPath && this.exportOptions.inlineHTML)
 		{
 			const unixPath = this.targetPath.path;
@@ -491,6 +483,8 @@ export class Webpage extends Attachment
 			this.pageDocument.body.prepend(bodyScript);
 		}
 
+		this.pageDocument.documentElement.lang = moment.locale();
+
 		this.data = this.html;
 
 		return this;
@@ -498,18 +492,21 @@ export class Webpage extends Attachment
 
 	public async renderDocument(): Promise<Webpage | undefined>
 	{
+		this.pageDocument.documentElement.innerHTML = this.website.webpageTemplate.getDocElementInner();
+
 		const body = this.pageDocument.body;
 		if (this.exportOptions.addBodyClasses)
 			body.setAttribute("class", this.website.bodyClasses || await HTMLGeneration.getValidBodyClasses(false));
 		
 		// render the file
-		const options = {...this.exportOptions, container: body};
+		const centerContent = this.pageDocument.querySelector("#center-content") as HTMLElement;
+		if (!centerContent) return undefined;
+
+		const options = {...this.exportOptions, container: centerContent};
 		const renderInfo = await MarkdownRendererAPI.renderFile(this.source, options);
 		const contentEl = renderInfo?.contentEl;
 		if (!contentEl) return undefined;
 		if (MarkdownRendererAPI.checkCancelled()) return undefined;
-
-		this.pageDocument.body.innerHTML = contentEl.outerHTML;
 
 		// set the document's type
 		this.type = (renderInfo?.viewType as DocumentType) ?? DocumentType.Markdown;
@@ -752,31 +749,19 @@ export class Webpage extends Attachment
 <title>${this.title}</title>
 <base href="${rootPath}">
 <meta name="pathname" content="${this.targetPath}">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">
-<meta charset="UTF-8">
 <meta name="description" content="${description}">
 <meta property="og:title" content="${this.title}">
 <meta property="og:description" content="${description}">
 <meta property="og:type" content="website">
 <meta property="og:url" content="${this.fullURL}">
 <meta property="og:image" content="${this.coverImageURL}">
-<meta property="og:site_name" content="${this.exportOptions.siteName}">
 `;
-
 		if (this.author && this.author != "")
 		{
 			head += `<meta name="author" content="${this.author}">`;
-		}
+		} 
 
-		if (this.exportOptions.addRSS)
-		{
-			const rssURL = this.website.index.rssURL ?? "";
-			head += `<link rel="alternate" type="application/rss+xml" title="RSS Feed" href="${rssURL}">`;
-		}
-
-		head += AssetHandler.getHeadReferences(this.exportOptions);
-
-		this.pageDocument.head.innerHTML = head;
+		this.pageDocument.head.innerHTML = head + this.pageDocument.head.innerHTML;
 	}
 
 	private async inlineMedia()

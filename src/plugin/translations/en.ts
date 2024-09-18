@@ -127,7 +127,7 @@ export const language: i18n =
 			description: "Allows you to switch between dark and light theme dynamically."
 		},
 		customHead: {
-			title: "Custom Head Content",
+			title: "Custom HTML / JS",
 			description: "Insert a given .html file onto the page which can include custom JS or CSS",
 			info_sourcePath: "The local path to the source .html file which will be included.",
 			validationError: "Must be a path to a .html file"

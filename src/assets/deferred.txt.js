@@ -51,6 +51,8 @@ async function loadIncludes()
 			includeTag.before(docFrag);
 			includeTag.remove();
 
+			console.log("Included text: " + includeText);
+
 			console.log("Included file: " + includePath);
 		}
 		catch (e)

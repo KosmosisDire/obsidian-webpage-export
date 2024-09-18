@@ -1,7 +1,6 @@
 import graphWASMJS from "src/frontend/graph-view/graph-wasm.txt.js";
 import renderWorkerJS from "src/frontend/graph-view/graph-render-worker.txt.js";
 import graphWASM from "src/frontend/graph-view/graph-wasm.wasm";
-import websiteJS from "src/frontend/dist/index.txt.js";
 import webpageStyles from "src/assets/plugin-styles.txt.css";
 import deferredJS from "src/assets/deferred.txt.js";
 import deferredCSS from "src/assets/deferred.txt.css";
@@ -28,6 +27,7 @@ import { ExportLog } from "src/plugin/render-api/render-api.js";
 import { fileTypeFromBuffer } from "file-type";
 import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
 import { Shared } from "src/shared/shared.js";
+import { WebsiteJS } from "./website-js.js";
 const mime = require('mime');
 
 
@@ -98,7 +98,7 @@ export class AssetHandler
 	public static deferredCSS: AssetLoader;
 
 	// scripts
-	public static websiteJS: AssetLoader;
+	public static websiteJS: WebsiteJS;
 	public static graphWASMJS: AssetLoader;
 	public static graphWASM: AssetLoader;
 	public static renderWorkerJS: AssetLoader;
@@ -135,9 +135,9 @@ export class AssetHandler
 		this.mathjaxStyles = new MathjaxStyles();
 		this.globalDataStyles = new GlobalVariableStyles();
 		this.supportedPluginStyles = new SupportedPluginStyles();
+		this.websiteJS = new WebsiteJS();
 		this.websiteStyles = new AssetLoader("main-styles.css", webpageStyles, null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 4);
 		this.deferredCSS = new AssetLoader("deferred.css", deferredCSS, null, AssetType.Style, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer, -1000);
-		this.websiteJS = new AssetLoader("webpage.js", websiteJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async);
 		this.graphWASMJS = new AssetLoader("graph-wasm.js", graphWASMJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
 		this.graphWASM = new AssetLoader("graph-wasm.wasm", Buffer.from(graphWASM), null, AssetType.Script, InlinePolicy.Download, false, Mutability.Static);
 		this.renderWorkerJS = new AssetLoader("graph-render-worker.js", renderWorkerJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
@@ -164,6 +164,8 @@ export class AssetHandler
 			loadPromises.push(asset.load());
 		}
 		await Promise.all(loadPromises);
+
+		console.log(this.allAssets);
 	}
 
 	public static async reloadAssets(options: ExportPipelineOptions)

@@ -120,7 +120,7 @@ export const language: i18n =
 			description: "Permette di passare dinamicamente tra tema scuro e chiaro."
 		},
 		customHead: {
-			title: "Contenuto Head Personalizzato",
+			title: "HTML / JS Personalizzato",
 			description: "Inserisci un file .html nella pagina, che può includere JS o CSS personalizzato",
 			info_sourcePath: "Percorso locale del file .html da includere.",
 			validationError: "Deve essere un percorso a un file .html"

@@ -14,6 +14,7 @@ const prod = (process.argv[2] === 'production');
 await esbuild.build
 ({
 	entryPoints: ["src/frontend/main/index.txt.ts"],
+	external: ['moment', "src/plugin/*"],
 	bundle: true,
 	minify: false,
 	treeShaking: true,

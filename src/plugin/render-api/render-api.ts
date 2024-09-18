@@ -1229,10 +1229,11 @@ export namespace ExportLog
         messageTitle = `[INFO] ${messageTitle}`
         fullLog += logToString(message, messageTitle);
 
+		if (messageTitle != "") console.log(messageTitle + " ", message);
+        else console.log(message);
+
 		if(SettingsPage.loaded && !(Settings.logLevel == "all")) return;
 
-        if (messageTitle != "") console.log(messageTitle + " ", message);
-        else console.log(message);
         _MarkdownRendererInternal._reportInfo(messageTitle, message);
     }
 
@@ -1243,10 +1244,11 @@ export namespace ExportLog
         messageTitle = `[WARNING] ${messageTitle}`
         fullLog += logToString(message, messageTitle);
 
+		if (messageTitle != "") console.warn(messageTitle + " ", message);
+        else console.warn(message);
+
 		if(SettingsPage.loaded && !["warning", "all"].contains(Settings.logLevel)) return;
 
-        if (messageTitle != "") console.warn(messageTitle + " ", message);
-        else console.warn(message);
         _MarkdownRendererInternal._reportWarning(messageTitle, message);
     }
 
@@ -1257,12 +1259,11 @@ export namespace ExportLog
         messageTitle = (fatal ? "[FATAL ERROR] " : "[ERROR] ") + messageTitle;
         fullLog += logToString(message, messageTitle);
 
-        if (SettingsPage.loaded && !fatal && !["error", "warning", "all"].contains(Settings.logLevel)) return;
-		
-        if (fatal && messageTitle == "Error") messageTitle = "Fatal Error";
-
-        if (messageTitle != "") console.error(messageTitle + " ", message);
+		if (fatal && messageTitle == "Error") messageTitle = "Fatal Error";
+		if (messageTitle != "") console.error(messageTitle + " ", message);
         else console.error(message);
+
+        if (SettingsPage.loaded && !fatal && !["error", "warning", "all"].contains(Settings.logLevel)) return;
 
         _MarkdownRendererInternal._reportError(messageTitle, message, fatal);
     }

@@ -44,6 +44,7 @@ export class Website
 	private async buildTemplate(): Promise<void>
 	{
 		const template = this.webpageTemplate;
+		await template.loadLayout();
 			
 		// inject graph view
 		if (this.exportOptions.graphViewOptions.enabled)
@@ -72,6 +73,13 @@ export class Website
 
 			template.insertFeature(fileTreeEl, this.exportOptions.fileNavigationOptions);
 			fileTreeElContainer.remove();
+		}
+
+		// inject custom head content
+		if (this.exportOptions.customHeadOptions.enabled)
+		{
+			let string = AssetHandler.customHeadContent.getHTML(this.exportOptions);
+			template.insertFeatureString(string, this.exportOptions.customHeadOptions);
 		}
 	}
 
@@ -121,7 +129,7 @@ export class Website
 
 		try
 		{
-			this.webpageTemplate = new WebpageTemplate(this.exportOptions);
+			this.webpageTemplate = new WebpageTemplate(this.exportOptions, this.index.rssURL.path);
 		}
 		catch (error)
 		{
@@ -201,7 +209,7 @@ export class Website
 		console.log("Creating website with files: ", this.sourceFiles);
 
 		await this.buildTemplate();
-
+		
 		this.refreshUpdatedFilesList();
 		
 		// if body classes have changed write new body classes to existing files
@@ -225,6 +233,8 @@ export class Website
 		});
 
 		this.index.addFiles(AssetHandler.getDownloads(this.destination, this.exportOptions));
+
+		
 		let progress = 0;
 		for (const webpage of webpages)
 		{
