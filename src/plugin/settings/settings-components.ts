@@ -210,7 +210,6 @@ export function generateSettingsFromObject(obj: any, container: HTMLElement)
 		
 		if (!settinginfo)
 		{
-			console.warn(`No setting info found for setting, ${key}`);
 			continue;
 		}
 

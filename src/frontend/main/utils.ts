@@ -433,12 +433,18 @@ export function slideToggleAll(targets: HTMLElement[], duration: number = 500)
 //#endregion
 
 //#region Events
-export function getPointerPosition(event: MouseEvent | TouchEvent)
+
+export function getTouchPosition(event: TouchEvent)
 {
-	const touches = event instanceof TouchEvent ? Array.from(event.touches) : [];
-	const x = (touches.length > 0 && event instanceof TouchEvent) ? (touches.reduce((acc, cur) => acc + cur.clientX, 0) / touches.length) : (event as MouseEvent).clientX;
-	const y = (touches.length > 0 && event instanceof TouchEvent) ? (touches.reduce((acc, cur) => acc + cur.clientY, 0) / touches.length) : (event as MouseEvent).clientY;
+	const touches = Array.from(event.touches);
+	const x = touches.reduce((acc, cur) => acc + cur.clientX, 0) / touches.length;
+	const y = touches.reduce((acc, cur) => acc + cur.clientY, 0) / touches.length;
 	return new Vector2(x, y);
+}
+
+export function getPointerPosition(event: MouseEvent)
+{
+	return new Vector2(event.clientX, event.clientY);
 }
 
 export function getTouchPositionVector(touch: Touch)

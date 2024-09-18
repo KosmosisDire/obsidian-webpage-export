@@ -1,4 +1,4 @@
-import { inOutQuadBlend, Ticker, Vector2, getPointerPosition, getTouchPositionVector } from "src/frontend/main/utils";
+import { inOutQuadBlend, Ticker, Vector2, getPointerPosition, getTouchPositionVector, getTouchPosition } from "src/frontend/main/utils";
 import { GraphWASMHelper } from "src/frontend/graph-view/graph-wasm-helper";
 import { GraphRenderWorker } from "../graph-view/graph-worker-helper";
 import { LinkHandler } from "./links";
@@ -155,11 +155,17 @@ export class GraphView extends InsertedFeature
 	{
 		const localThis = this;
 
-		function getPointerPosOnCanvas(event: MouseEvent | TouchEvent)
+		function getMousePositionOnCanvas(event: MouseEvent)
 		{
 			const rect = localThis.graphRenderer.canvas.getBoundingClientRect();
 			const pos = getPointerPosition(event);
+			return new Vector2(pos.x - rect.left, pos.y - rect.top);
+		}
 
+		function getTouchPositionOnCanvas(event: TouchEvent)
+		{
+			const rect = localThis.graphRenderer.canvas.getBoundingClientRect();
+			const pos = getTouchPosition(event);
 			return new Vector2(pos.x - rect.left, pos.y - rect.top);
 		}
 
@@ -183,7 +189,7 @@ export class GraphView extends InsertedFeature
 
 			function handleMouseMove(move: MouseEvent)
 			{
-				pointerPos = getPointerPosOnCanvas(move);
+				pointerPos = getMousePositionOnCanvas(move);
 				localThis.mouseWorldPos = graphRenderer.vecToWorldspace(pointerPos);
 				pointerDelta = new Vector2(pointerPos.x - lastPointerPos.x, pointerPos.y - lastPointerPos.y);
 				lastPointerPos = pointerPos;
@@ -212,7 +218,7 @@ export class GraphView extends InsertedFeature
 				{
 					if(startZoom)
 					{
-						lastPointerPos = getPointerPosOnCanvas(move);
+						lastPointerPos = getTouchPositionOnCanvas(move);
 						startZoom = false;
 					}
 
@@ -226,7 +232,7 @@ export class GraphView extends InsertedFeature
 					const touch1 = getTouchPositionVector(move.touches[0]);
 					const touch2 = getTouchPositionVector(move.touches[1]);
 
-					pointerPos = getPointerPosOnCanvas(move);
+					pointerPos = getTouchPositionOnCanvas(move);
 					pointerDelta = new Vector2(pointerPos.x - lastPointerPos.x, pointerPos.y - lastPointerPos.y);
 					lastPointerPos = pointerPos;
 
@@ -323,9 +329,9 @@ export class GraphView extends InsertedFeature
 				}, 1);
 			}
 
-			pointerPos = getPointerPosOnCanvas(enter);
+			pointerPos = getMousePositionOnCanvas(enter);
 			localThis.mouseWorldPos = graphRenderer.vecToWorldspace(pointerPos);
-			lastPointerPos = getPointerPosOnCanvas(enter);
+			lastPointerPos = getMousePositionOnCanvas(enter);
 			pointerInside = true;
 
 			document.addEventListener("mousemove", handleMouseMove);

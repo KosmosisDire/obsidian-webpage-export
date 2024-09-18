@@ -953,17 +953,21 @@ input[type=search] {
 
 /*#region Backlinks */
 
-.backlinks-container {
+#backlinks {
     border: 1px solid var(--background-modifier-border);
     border-radius: var(--radius-m);
 	transition: opacity 0.2s ease-in-out;
 }
 
-.backlinks-container .feature-title {
+#backlinks .feature-header {
     border-bottom: 1px solid;
     border-color: inherit;
     padding: var(--size-4-2);
     padding-left: var(--size-4-3);
+}
+
+#backlinks .feature-header .feature-title {
+	margin: 0.25em;
 }
 
 .backlinks-content {
