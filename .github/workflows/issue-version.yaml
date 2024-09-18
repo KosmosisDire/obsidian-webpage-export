@@ -1,0 +1,57 @@
+name: Update Issue Title with Version
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  update-issue-title:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+    - name: Update Issue Title
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const issueNumber = context.issue.number;
+          const issueBody = context.payload.issue.body;
+          
+          console.log('Extracting version from issue body...');
+          
+          // Extract version from the issue body
+          const versionMatch = issueBody.match(/### Version\s*([0-9.b-]+)/);
+          const version = versionMatch ? versionMatch[1] : 'unknown';
+          
+          console.log(`Extracted version: ${version}`);
+          
+          const currentTitle = context.payload.issue.title;
+          console.log(`Current title: "${currentTitle}"`);
+          
+          // Check if the title starts with [Bug]
+          if (currentTitle.trim().toLowerCase().startsWith('[bug]')) {
+            // Remove any existing version tag if present
+            let newTitle = currentTitle.replace(/^\[Bug\]\s*(\[[^\]]+\]\s*)?/i, '').trim();
+            // Add [Bug] and [version] tags with a colon
+            newTitle = `[Bug] [${version}]${newTitle}`;
+            
+            console.log(`New title: "${newTitle}"`);
+            
+            try {
+              await github.rest.issues.update({
+                issue_number: issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: newTitle
+              });
+              console.log('Successfully updated issue title');
+            } catch (error) {
+              console.error('Failed to update issue title');
+              console.error(error);
+              core.setFailed('Failed to update issue title');
+            }
+          } else {
+            console.log('Title does not start with [Bug]. No changes made.');
+          }
