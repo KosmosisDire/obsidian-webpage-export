@@ -1000,17 +1000,44 @@ a.backlink:hover {
 
 /*#endregion */
 
+/*#region Tags */
+
+#tags {
+    display: flex;
+    align-items: baseline;
+    gap: 1em;
+}
+
+#tags .tags-content {
+    display: flex;
+    gap: 0.5em;
+}
+
+/*#endregion */
+
 /*#region Features */
 
-.feature-title
+.data-bar .feature-title {
+    color: var(--text-muted);
+    font-weight: 400;
+    font-size: 0.9em;
+}
+
+.feature-header:empty, .feature-title:empty
 {
-    text-transform: uppercase;
-    letter-spacing: .06em;
+	display: none;
 }
 
 /*#endregion */
 
 /*#region Header & Footer */
+
+.header .data-bar:not(:empty)
+{
+	padding-bottom: 1em;
+	margin-bottom: 1em;
+	border-bottom: 1px solid var(--background-modifier-border);
+}
 
 .footer:not(:has(div:first-child:last-child)):not(:empty), .footer .data-bar:not(:empty)
 {

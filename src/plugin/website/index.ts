@@ -639,7 +639,8 @@ export class Index
 			fileInfo.data = null;
 			if (this.exportOptions.combineAsSingleFile)
 			{
-				fileInfo.data = attachment.data.toString();
+				if (attachment.data instanceof Buffer) fileInfo.data = attachment.data.toString("base64");
+				else fileInfo.data = attachment.data.toString();
 			}
 
 			this.websiteData.fileInfo[key] = fileInfo;

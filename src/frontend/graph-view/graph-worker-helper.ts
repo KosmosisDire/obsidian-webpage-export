@@ -103,8 +103,21 @@ export class GraphRenderWorker
 		{
 			console.log("Failed to transfer control to offscreen canvas");
 		}
-		
-        this.worker = new Worker(new URL(`${ObsidianSite.document.info.pathToRoot}/${Shared.libFolderName}/${Shared.scriptsFolderName}/graph-render-worker.js`, window.location.href).pathname);
+
+		if (window.location.protocol === 'file:')
+		{
+			let id = btoa(encodeURI(`site-lib/scripts/graph-render-worker.js`));
+			let dataEl = document.getElementById(id) as HTMLScriptElement;
+			if (dataEl == null) return;
+
+			const data = Uint8Array.from(Array.from(JSON.parse(decodeURI(atob(dataEl.getAttribute("value") ?? ""))).data).map((s: string) => s.charCodeAt(0)));
+			this.worker = new Worker(URL.createObjectURL(new Blob([data], {type: 'application/javascript'})));
+		}
+		else
+		{
+			this.worker = new Worker(new URL(`${ObsidianSite.document.info.pathToRoot}/${Shared.libFolderName}/${Shared.scriptsFolderName}/graph-render-worker.js`, window.location.href).pathname);
+		}
+
 
         this._cameraOffset = new Vector2(0, 0);
         this._cameraScale = 1;

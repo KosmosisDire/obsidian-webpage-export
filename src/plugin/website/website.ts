@@ -232,7 +232,8 @@ export class Website
 			return this.index.updatedFiles.includes(webpage) || this.index.newFiles.includes(webpage)
 		});
 
-		this.index.addFiles(AssetHandler.getDownloads(this.destination, this.exportOptions));
+		const downloads = AssetHandler.getDownloads(this.destination, this.exportOptions);
+		this.index.addFiles(downloads);
 
 		
 		let progress = 0;
@@ -581,6 +582,9 @@ export class Website
 
 		let html = new DOMParser().parseFromString(index.data as string, "text/html");
 
+		// insert head references
+		html.head.innerHTML += AssetHandler.getHeadReferences(this.exportOptions);
+
 		// define metadata
 		let metadataScript = html.head.createEl("data");
 		metadataScript.id = "website-metadata";
@@ -591,27 +595,24 @@ export class Website
 		delete this.index.websiteData.fileInfo;
 		// @ts-ignore
 		delete this.index.websiteData.webpages;
-		metadataScript.setAttribute("value", encodeURI(JSON.stringify(this.index.websiteData)));
+		metadataScript.setAttribute("value", btoa(encodeURI(JSON.stringify(this.index.websiteData))));
 
 		// create a data element with the id being the file path for each file
 		for (const [path, data] of Object.entries(webpages))
 		{
 			const dataElement = html.head.createEl("data");
-			dataElement.id = encodeURI(path);
-			dataElement.setAttribute("value", encodeURI(JSON.stringify(data)));
+			dataElement.id = btoa(encodeURI(path));
+			dataElement.setAttribute("value", btoa(encodeURI(JSON.stringify(data))));
 		}
 
 		// do the same for file info skipping already existing elements
 		for (const [path, data] of Object.entries(fileInfo))
 		{
-			if (html.getElementById(encodeURI(path))) continue;
+			if (html.getElementById(btoa(encodeURI(path)))) continue;
 			const dataElement = html.head.createEl("data");
-			dataElement.id = encodeURI(path);
-			dataElement.setAttribute("value", encodeURI(JSON.stringify(data)));
+			dataElement.id = btoa(encodeURI(path));
+			dataElement.setAttribute("value", btoa(encodeURI(JSON.stringify(data))));
 		}
-
-		
-
 
 		return `<!DOCTYPE html>\n${html.documentElement.outerHTML}`;
 	}

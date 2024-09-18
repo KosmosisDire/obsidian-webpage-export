@@ -105,7 +105,6 @@ export class AssetHandler
 	public static deferredJS: AssetLoader;
 	public static themeLoadJS: AssetLoader;
 
-	public static tinyColorJS: AssetLoader;
 	public static pixiJS: AssetLoader;
 	public static minisearchJS: AssetLoader;
 	 
@@ -143,7 +142,6 @@ export class AssetHandler
 		this.renderWorkerJS = new AssetLoader("graph-render-worker.js", renderWorkerJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
 		this.deferredJS = new AssetLoader("deferred.js", deferredJS, null, AssetType.Script, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer, -1000);
 		this.themeLoadJS = new AssetLoader("theme-load.js", themeLoadJS, null, AssetType.Script, InlinePolicy.Inline, true, Mutability.Static, LoadMethod.Defer);
-		this.tinyColorJS = new AssetLoader("tinycolor.js", tinyColorJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
 		this.pixiJS = new AssetLoader("pixi.js", pixiJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdnjs.cloudflare.com/ajax/libs/pixi.js/7.4.0/pixi.min.js");
 		this.minisearchJS = new AssetLoader("minisearch.js", minisearchJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdn.jsdelivr.net/npm/minisearch@6.3.0/dist/umd/index.min.js");
 		this.favicon = new Favicon();
@@ -208,14 +206,15 @@ export class AssetHandler
 
 	private static filterDownloads(downloads: AssetLoader[], options: ExportPipelineOptions): AssetLoader[]
 	{
-		if (!options.graphViewOptions.enabled || !options.sidebarOptions.enabled)
+		if (!options.graphViewOptions.enabled)
 		{
-			// downloads = downloads.filter(asset => ![this.graphViewJS, this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS, this.pixiJS].includes(asset));
-			downloads = downloads.filter(asset => ![this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.tinyColorJS, this.pixiJS].includes(asset));
+			console.log("Filtering graph view assets");
+			downloads = downloads.filter(asset => ![this.graphWASMJS, this.graphWASM, this.renderWorkerJS, this.pixiJS].includes(asset));
 		}
 
-		if (!options.searchOptions.enabled || !options.sidebarOptions.enabled)
+		if (!options.searchOptions.enabled)
 		{
+			console.log("Filtering search assets");
 			downloads = downloads.filter(asset => ![this.minisearchJS].includes(asset));
 		}
 
@@ -250,16 +249,26 @@ export class AssetHandler
 		downloads.forEach(asset => asset.targetPath.setWorkingDirectory(destination.path));
 
 		if (options.inlineMedia)
+		{
 			downloads = downloads.filter(asset => asset.type != AssetType.Media);
+		}
 		if (options.inlineFonts)
+		{
 			downloads = downloads.filter(asset => asset.type != AssetType.Font);
+		}
 		if (options.inlineJS)
-			downloads = downloads.filter(asset => asset.type != AssetType.Script && asset.extensionName != "wasm");
+		{
+			// keep wasm and render worker as downloaded always (they cannot be inlined)
+			downloads = downloads.filter(asset => asset.type != AssetType.Script || (asset.extensionName == "wasm" || asset.filename == this.renderWorkerJS.filename));
+		}
 		if (options.inlineCSS)
+		{
 			downloads = downloads.filter(asset => asset.type != AssetType.Style);
+		}
 		if (options.inlineHTML)
+		{
 			downloads = downloads.filter(asset => asset.type != AssetType.HTML);
-
+		}
 
 		return downloads;
 	}

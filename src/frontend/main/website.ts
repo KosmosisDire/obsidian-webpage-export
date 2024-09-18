@@ -211,7 +211,7 @@ export class ObsidianWebsite
 			// when local the metadata is embedded
 			const dataEl = document.querySelector("data#website-metadata");
 			if (!dataEl) return undefined;
-			return JSON.parse(decodeURI(dataEl.getAttribute("value") ?? ""))
+			return JSON.parse(decodeURI(atob(dataEl.getAttribute("value") ?? "")))
 		}
 
 		return undefined;
@@ -246,14 +246,13 @@ export class ObsidianWebsite
 			//@ts-ignore
 			run();
 
-			// setTimeout(() =>
-			// {
-			// 	console.log(localThis.graphView);
-			// 	if (localThis.graphView == undefined)
-			// 	{
-			// 		initGraphView();
-			// 	}
-			// }, 100);
+			setTimeout(() =>
+			{
+				if (localThis.graphView == undefined)
+				{
+					initGraphView();
+				}
+			}, 100);
 		});
 
 		await waitUntil(() => this.graphView != undefined);
@@ -270,9 +269,9 @@ export class ObsidianWebsite
 			}
 			else
 			{
-				const dataEl = document.querySelector(`data[id='${encodeURI(url)}']`);
+				const dataEl = document.getElementById(btoa(encodeURI(url)));
 				if (!dataEl) return {} as WebpageData;
-				const data = JSON.parse(decodeURI(dataEl.getAttribute("value") ?? ""));
+				const data = JSON.parse(decodeURI(atob(dataEl.getAttribute("value") ?? "")));
 				this.cachedWebpageDataMap.set(url, data);
 				return data;
 			}
@@ -301,9 +300,9 @@ export class ObsidianWebsite
 			}
 			else
 			{
-				const dataEl = document.querySelector(`data[id='${encodeURI(url)}']`);
+				const dataEl = document.getElementById(btoa(encodeURI(url)));
 				if (!dataEl) return {} as FileData;
-				const data = JSON.parse(decodeURI(dataEl.getAttribute("value") ?? ""));
+				const data = JSON.parse(decodeURI(atob(dataEl.getAttribute("value") ?? "")));
 				this.cachedFileDataMap.set(url, data);
 				return data;
 			}

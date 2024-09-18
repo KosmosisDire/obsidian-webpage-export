@@ -154,7 +154,7 @@ body
 .clickable-icon.sidebar-collapse-icon {
     background-color: transparent;
     color: var(--icon-color-focused);
-    padding: 0!important;
+    padding: 2px!important;
     margin: 0!important;
     height: 100%!important;
 	width: 2.3em !important;

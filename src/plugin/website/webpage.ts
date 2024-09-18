@@ -403,12 +403,6 @@ export class Webpage extends Attachment
 		
 		this.viewElement?.setAttribute("data-type", this.type);
 
-		if (this.exportOptions.fixLinks)
-		{
-			this.remapLinks();
-			this.remapEmbedLinks();
-		}
-
 		// get title and icon
 		const titleInfo = await Website.getTitle(this.source);
 		const iconInfo = await Website.getIcon(this.source);
@@ -436,6 +430,12 @@ export class Webpage extends Attachment
 		
 		if (this.exportOptions.addTitle)
 			await this.addTitle();
+
+		if (this.exportOptions.fixLinks)
+		{
+			this.remapLinks();
+			this.remapEmbedLinks();
+		}
 
 		// add math styles to the document. They are here and not in <head> because they are unique to each document
 		if (this.exportOptions.addMathjaxStyles && this.type != DocumentType.Attachment)
@@ -494,10 +494,6 @@ export class Webpage extends Attachment
 	{
 		this.pageDocument.documentElement.innerHTML = this.website.webpageTemplate.getDocElementInner();
 
-		const body = this.pageDocument.body;
-		if (this.exportOptions.addBodyClasses)
-			body.setAttribute("class", this.website.bodyClasses || await HTMLGeneration.getValidBodyClasses(false));
-		
 		// render the file
 		const centerContent = this.pageDocument.querySelector("#center-content") as HTMLElement;
 		if (!centerContent) return undefined;
@@ -766,11 +762,14 @@ export class Webpage extends Attachment
 
 	private async inlineMedia()
 	{
+		console.log("Inlining media for: " + this.source.path);
 		const elements = Array.from(this.pageDocument.querySelectorAll("[src]:not(head [src])"))
+		console.log(elements);
 		for (const mediaEl of elements)
 		{
 			const rawSrc = mediaEl.getAttribute("src") ?? "";
 			const filePath = this.website.getFilePathFromSrc(rawSrc, this.source.path);
+			console.log(rawSrc, filePath);
 			if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
 
 			const base64 = await filePath.readAsString("base64");

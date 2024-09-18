@@ -69,7 +69,9 @@ export class WebpageDocument
 		if (url.startsWith("#") || url.startsWith("?")) url = ObsidianSite.document.pathname + url;
 
 		this.pathname = LinkHandler.getPathnameFromURL(url);
-		const parsedURL = new URL(window?.location?.origin + "/" + url);
+		let origin = window?.location?.origin;
+		if (origin == "null") origin = "file://";
+		const parsedURL = new URL(origin + "/" + url);
 		this.hash = parsedURL.hash;
 		this.query = parsedURL.search;
 		this.queryParameters = parsedURL.searchParams;
@@ -219,6 +221,7 @@ export class WebpageDocument
 	public async postLoadInit(): Promise<WebpageDocument>
 	{
 		this.findElements();
+		this.postProcess();
 
 		if (this.isRootDocument && ObsidianSite.metadata.featureOptions.backlinks.enabled) 
 			this.createBacklinks();
@@ -289,6 +292,16 @@ export class WebpageDocument
 		if (tags.length == 0) return;
 
 		this.tags = new Tags(tags);
+	}
+
+	public postProcess()
+	{
+		// make completed kanban checkboxes checked
+		this.documentEl?.querySelectorAll(".kanban-plugin__item.is-complete input[type='checkbox']").forEach((el: HTMLInputElement) => el.checked = true);
+
+		// toggle list and header collapse CSS
+		this.documentEl?.classList.toggle("allow-fold-headings", ObsidianSite.metadata.featureOptions.document.allowFoldingHeadings);
+		this.documentEl?.classList.toggle("allow-fold-lists", ObsidianSite.metadata.featureOptions.document.allowFoldingLists);
 	}
 
 	public async loadChildDocuments()

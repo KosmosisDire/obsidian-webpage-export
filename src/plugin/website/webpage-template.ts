@@ -2,6 +2,7 @@ import { InsertedFeatureOptions } from "src/shared/features/feature-options-base
 import { ExportLog } from "src/plugin/render-api/render-api";
 import { ExportPipelineOptions } from "./pipeline-options";
 import { AssetHandler } from "../asset-loaders/asset-handler";
+import { HTMLGeneration } from "../render-api/html-generation-helpers";
 
 
 
@@ -32,12 +33,19 @@ export class WebpageTemplate
 		head.innerHTML += `<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">`;
 		head.innerHTML += `<meta charset="UTF-8">`;
 
-		if (this.options.addRSS)
+		if (!this.options.combineAsSingleFile)
 		{
-			head.innerHTML += `<link rel="alternate" type="application/rss+xml" title="RSS Feed" href="${this.rssURL}">`;
+			if (this.options.addRSS)
+			{
+				head.innerHTML += `<link rel="alternate" type="application/rss+xml" title="RSS Feed" href="${this.rssURL}">`;
+			}
+
+			head.innerHTML += AssetHandler.getHeadReferences(this.options);
 		}
 
-		head.innerHTML += AssetHandler.getHeadReferences(this.options);
+		const body = this.doc.body;
+		if (this.options.addBodyClasses)
+			body.setAttribute("class", await HTMLGeneration.getValidBodyClasses(false));
 
 		const layout = this.doc.body.createDiv({attr: {id: "layout"}});
 			const leftContent = layout.createDiv({attr: {id: "left-content", class: "leaf"}});
@@ -69,6 +77,13 @@ export class WebpageTemplate
 		rightSidebarScript.setAttribute("defer", "");
 		leftSidebarScript.innerHTML = `let ls = document.querySelector("#left-sidebar"); ls.classList.toggle("is-collapsed", window.innerWidth < 768); ls.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-left-width"));`;
 		rightSidebarScript.innerHTML = `let rs = document.querySelector("#right-sidebar"); rs.classList.toggle("is-collapsed", window.innerWidth < 768); rs.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-right-width"));`;
+
+		// delete sidebars if they are not needed
+		if (!this.options.sidebarOptions.enabled)
+		{
+			leftSidebar.remove();
+			rightSidebar.remove();
+		}
 	}
 
 	public insertFeature(feature: HTMLElement, featureOptions: InsertedFeatureOptions): void

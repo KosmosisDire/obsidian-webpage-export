@@ -26,10 +26,10 @@ async function loadIncludes()
 			}
 			else
 			{
-				const dataEl = document.querySelector(`data[id='${encodeURI(includePath)}']`);
+				const dataEl = document.getElementById(btoa(encodeURI(includePath)));
 				if (dataEl)
 				{
-					const data = JSON.parse(decodeURI(dataEl.getAttribute("value") ?? ""));
+					const data = JSON.parse(decodeURI(atob(dataEl.getAttribute("value") ?? "")));
 					includeText = data?.data ?? "";
 				}
 			}

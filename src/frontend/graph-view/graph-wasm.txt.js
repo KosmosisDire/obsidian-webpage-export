@@ -222,7 +222,25 @@ function getBinarySync(file) {
     throw "both async and sync fetching of the wasm failed"
 }
 
-function getBinaryPromise(binaryFile) {
+function getBinaryPromise(binaryFile) 
+{
+	if (window.location.protocol === 'file:')
+	{
+		return new Promise((resolve, reject) =>
+		{
+			let id = btoa(encodeURI(`site-lib/scripts/${binaryFile}`));
+			window.addEventListener('DOMContentLoaded', () => 
+			{
+				const dataEl = document.getElementById(id);
+				if (dataEl)
+				{
+					const data = Uint8Array.from(Array.from(atob(JSON.parse(decodeURI(atob(dataEl.value))).data)).map(s => s.charCodeAt(0)));
+					resolve(data);
+				}
+			});
+		});
+	}
+
     if (!wasmBinary && (ENVIRONMENT_IS_WEB || ENVIRONMENT_IS_WORKER)) {
         if (typeof fetch == "function" && !isFileURI(binaryFile)) {
             return fetch(binaryFile, {
@@ -244,22 +262,14 @@ function getBinaryPromise(binaryFile) {
 
 function instantiateArrayBuffer(binaryFile, imports, receiver) 
 {
-	if (window.location.protocol == "file:")
-	{
-		const dataEl = document.querySelector(`data[id='site-lib/scripts/${encodeURI(binaryFile)}']`);
-		if (dataEl)
+	return getBinaryPromise(binaryFile).then(binary => 
 		{
-			const data = JSON.parse(decodeURI(dataEl.getAttribute("value") ?? ""));
-			WebAssembly.instantiate(data?.data ?? new Uint8Array(), imports).then(receiver, reason => {
-				err(`failed to prepare locally loaded wasm: ${reason}`);
-				abort(reason)
-			});
-		}
-	}
-    return getBinaryPromise(binaryFile).then(binary => WebAssembly.instantiate(binary, imports)).then(receiver, reason => {
-        err(`failed to asynchronously prepare wasm: ${reason}`);
-        abort(reason)
-    })
+			console.log("loaded wasm from", binary);
+			return WebAssembly.instantiate(binary, imports)
+		}).then(receiver, reason => {
+		err(`failed to asynchronously prepare wasm: ${reason}`);
+		abort(reason)
+	})
 }
 
 function instantiateAsync(binary, binaryFile, imports, callback) {

@@ -442,10 +442,10 @@ export namespace _MarkdownRendererInternal
 			foldedCallouts.push(...folded);
 
 			// wait for transclusions
-			await waitUntil(() => !section.el.querySelector(".markdown-sizer:empty") || checkCancelled(), 500, 1);
+			await waitUntil(() => !section.el.querySelector(".markdown-preview-pusher") || section.el.querySelector(".markdown-preview-pusher + *") != null || checkCancelled(), 500, 1);
 			if (checkCancelled()) return undefined;
 
-			if (section.el.querySelector(".markdown-sizer:empty"))
+			if ((section.el.querySelector(".markdown-preview-pusher") && !section.el.querySelector(".markdown-preview-pusher + *")))
 			{
 				ExportLog.warning("Transclusions were not rendered correctly in file " + preview.file.name + "!");
 			}
@@ -512,7 +512,7 @@ export namespace _MarkdownRendererInternal
 			newSizerEl.before(banner);
 		}
 
-		// if we aren't kepping the view element then only keep the content of the sizer element
+		// if we aren't keeping the view element then only keep the content of the sizer element
 		if (options.createDocumentContainer === false) 
 		{
 			newMarkdownEl.outerHTML = newSizerEl.innerHTML;
@@ -577,9 +577,8 @@ export namespace _MarkdownRendererInternal
 		if (checkCancelled()) return undefined;
 
 		// @ts-ignore
-		const contentEl = view.containerEl;
+		const contentEl = view.contentEl.cloneNode(true);
 		options.container?.appendChild(contentEl);
-
 
 		return contentEl;
 	}
