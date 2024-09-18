@@ -1,7 +1,7 @@
 import moment from "moment";
 import { language as cn } from './zh-cn';
 import { language as en } from './en';
-import { info } from "console";
+import { language as it } from './it';
 
 export interface i18n
 {
@@ -178,9 +178,8 @@ function getUserLanguage(): string {
 	return language;
 }
 
-function getLanguage() 
+function getLanguage()
 {
-	return translations["zh-cn"];
 	const settingLanguages = getUserLanguage();
 	const language = translations[settingLanguages];
 	if (!language) {
@@ -191,8 +190,9 @@ function getLanguage()
 
 export let translations: { [key: string]: i18n } = 
 {
-	"en": en,
-	"zh-cn": cn
+	"en": en, // English
+	"zh-cn": cn, // Chinese
+	"it": it // Italian
 };
 
 export let i18n: i18n = getLanguage();
