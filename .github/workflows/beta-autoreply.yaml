@@ -1,0 +1,92 @@
+name: Autoreply to Bug Issues
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  autoreply-to-bugs:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+    - name: Check and Respond to Bug Issues
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const issueBody = context.payload.issue.body;
+          const issueTitle = context.payload.issue.title;
+          
+          // Check if it's a bug issue
+          if (!issueTitle.toLowerCase().includes('[bug]')) {
+            console.log('Not a bug issue. Skipping.');
+            return;
+          }
+          
+          console.log('Processing bug issue:', issueTitle);
+          
+          // Extract version from the issue body
+          const versionMatch = issueBody ? issueBody.match(/### Version\s*([0-9.b-]+)/) : null;
+          if (!versionMatch) {
+            console.log('Version not specified in the issue. Skipping response.');
+            return;
+          }
+          
+          const reportedVersion = versionMatch[1];
+          console.log('Reported version:', reportedVersion);
+          
+          // Fetch the latest beta release
+          const releases = await github.rest.repos.listReleases({
+            owner: context.repo.owner,
+            repo: context.repo.repo
+          });
+          
+          const latestBeta = releases.data.find(release => release.prerelease);
+          if (!latestBeta) {
+            console.log('No beta release found. Skipping response.');
+            return;
+          }
+          
+          const latestBetaVersion = latestBeta.tag_name.replace(/^v/, '');
+          console.log('Latest beta version:', latestBetaVersion);
+          
+          // Compare versions
+          if (compareVersions(reportedVersion, latestBetaVersion) >= 0) {
+            console.log('Reported version is latest or newer. No response needed.');
+            return;
+          }
+          
+          // Respond to the issue
+          const response = `Thank you for reporting this issue. It is possible this issue has already been solved in the latest beta version.\nPlease try updating to the latest beta version of the plugin (${latestBetaVersion}) and see if the issue persists.\n\nYou can find the latest beta release here: ${latestBeta.html_url}.\nInstructions for installing are located in the readme.\n\nIf the problem continues after updating, please let us know, and we'll investigate further.`;
+          
+          await github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: response
+          });
+          
+          console.log('Response posted successfully.');
+          
+          // Version comparison function
+          function compareVersions(v1, v2) {
+            const parts1 = v1.split(/[.-]/).map(part => isNaN(part) ? part : parseInt(part));
+            const parts2 = v2.split(/[.-]/).map(part => isNaN(part) ? part : parseInt(part));
+            
+            for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+              const part1 = parts1[i] || 0;
+              const part2 = parts2[i] || 0;
+              
+              if (part1 === part2) continue;
+              
+              if (typeof part1 === 'string' && typeof part2 === 'string') {
+                return part1.localeCompare(part2);
+              } else {
+                return part1 < part2 ? -1 : 1;
+              }
+            }
+            
+            return 0;
+          }
