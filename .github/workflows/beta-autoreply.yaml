@@ -1,15 +1,12 @@
 name: Autoreply to Bug Issues
-
 on:
   issues:
     types: [opened]
-
 jobs:
   autoreply-to-bugs:
     runs-on: ubuntu-latest
     permissions:
       issues: write
-
     steps:
     - name: Check and Respond to Bug Issues
       uses: actions/github-script@v6
@@ -70,10 +67,17 @@ jobs:
           
           console.log('Response posted successfully.');
           
-          // Version comparison function
+          // Updated version comparison function
           function compareVersions(v1, v2) {
             const parts1 = v1.split(/[.-]/).map(part => isNaN(part) ? part : parseInt(part));
             const parts2 = v2.split(/[.-]/).map(part => isNaN(part) ? part : parseInt(part));
+            
+            const isV1Beta = parts1.some(part => typeof part === 'string' && part.toLowerCase().includes('b'));
+            const isV2Beta = parts2.some(part => typeof part === 'string' && part.toLowerCase().includes('b'));
+            
+            // If one is beta and the other is not, the non-beta version is newer
+            if (isV1Beta && !isV2Beta) return -1;
+            if (!isV1Beta && isV2Beta) return 1;
             
             for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
               const part1 = parts1[i] || 0;
@@ -83,6 +87,10 @@ jobs:
               
               if (typeof part1 === 'string' && typeof part2 === 'string') {
                 return part1.localeCompare(part2);
+              } else if (typeof part1 === 'string') {
+                return 1; // Consider string (beta) as newer within same version number
+              } else if (typeof part2 === 'string') {
+                return -1; // Consider string (beta) as newer within same version number
               } else {
                 return part1 < part2 ? -1 : 1;
               }
