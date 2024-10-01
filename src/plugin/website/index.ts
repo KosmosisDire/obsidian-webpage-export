@@ -94,18 +94,19 @@ export class Index
 				graphView: options.graphViewOptions,
 				sidebar: options.sidebarOptions,
 				customHead: options.customHeadOptions,
-				document: options.documentOptions
+				document: options.documentOptions,
+				rss: options.rssOptions,
 			};
 			
 			// set global values
 			this.websiteData.modifiedTime = Date.now();
-			this.websiteData.siteName = this.website.exportOptions.siteName ?? "";
+			this.websiteData.siteName = this.website.exportOptions.rssOptions.siteName ?? "";
 			this.websiteData.vaultName = app.vault.getName();
 			this.websiteData.exportRoot = this.website.exportOptions.exportRoot ?? "";
-			this.websiteData.baseURL = this.website.exportOptions.siteURL ?? "";
+			this.websiteData.baseURL = this.website.exportOptions.rssOptions.siteUrl ?? "";
 			this.websiteData.pluginVersion = HTMLExportPlugin.pluginVersion;
 			this.websiteData.themeName = this.website.exportOptions.themeName ?? "Default";
-			this.websiteData.bodyClasses = this.website.bodyClasses ?? "";
+			this.websiteData.bodyClasses = await this.website.webpageTemplate.getValidBodyClasses(false) ?? "";
 			this.websiteData.hasFavicon = this.exportOptions.faviconPath != "";
 		}
 		catch (e)
@@ -126,12 +127,12 @@ export class Index
 		}
 		catch (e)
 		{
-			ExportLog.warning(e, "Failed to load search-index.json. Creating new index.");
+			ExportLog.log(e, "No search-index.json exists. Creating new index.");
 			this.minisearch = new Minisearch(this.minisearchOptions);
 		}
 
 		this.rssPath = AssetHandler.generateSavePath("rss.xml", AssetType.Other, this.website.destination);
-		this.rssURL = AssetHandler.generateSavePath("rss.xml", AssetType.Other, new Path(this.exportOptions.siteURL ?? "")).absolute();
+		this.rssURL = AssetHandler.generateSavePath("rss.xml", AssetType.Other, new Path(this.exportOptions.rssOptions.siteUrl ?? "")).absolute();
 	}
 
 	public async finalize()
@@ -157,11 +158,6 @@ export class Index
 				webpage.backlinks.remove(file);
 			}
 		}
-
-
-		console.log("Deleted: ", this.deletedFiles);
-		console.log("New: ", this.newFiles);
-		console.log("Updated: ", this.updatedFiles);
 	}
 
 	/**
@@ -221,16 +217,16 @@ export class Index
 
 	public async createRSSFeed()
 	{
-		let author = this.exportOptions.authorName || undefined;
+		let author = this.exportOptions.rssOptions.authorName || undefined;
 
 		this.rssFeed = new RSS(
 		{
-			title: this.exportOptions.siteName ?? app.vault.getName(),
+			title: this.exportOptions.rssOptions.siteName ?? app.vault.getName(),
 			description: "Obsidian digital garden",
 			generator: "Webpage HTML Export plugin for Obsidian",
 			feed_url: this.rssURL.path,
-			site_url: this.exportOptions.siteURL ?? "",
-			image_url: Path.joinStrings(this.exportOptions.siteURL ?? "", AssetHandler.favicon.targetPath.path).path,
+			site_url: this.exportOptions.rssOptions.siteUrl ?? "",
+			image_url: Path.joinStrings(this.exportOptions.rssOptions.siteUrl ?? "", AssetHandler.favicon.targetPath.path).path,
 			pubDate: new Date(this.websiteData.modifiedTime),
 			copyright: author,
 			ttl: 60,
@@ -243,13 +239,13 @@ export class Index
 		for (const page of this.webpages)
 		{
 			const title = page.title;
-			const url = Path.joinStrings(this.exportOptions.siteURL ?? "", page.targetPath.path).path;
+			const url = Path.joinStrings(this.exportOptions.rssOptions.siteUrl ?? "", page.targetPath.path).path;
 			const guid = page.source.path;
-			const date = new Date(page.source.stat.mtime);
-			author = page.author ?? author;
-			const media = page.coverImageURL ?? "";
+			const date = page.outputData.rssDate ?? new Date(page.source.stat.mtime);
+			author = page.outputData.author ?? author;
+			const media = page.outputData.coverImageURL ?? "";
 			const hasMedia = media != "";
-			const description = page.descriptionOrShortenedContent;
+			const description = page.outputData.descriptionOrShortenedContent;
 
 			this.rssFeed.item(
 			{ 
@@ -315,21 +311,10 @@ export class Index
 			const oldData = this.getOldFile(key);
 			if (oldData)
 			{
-				if (oldData.modifiedTime != file.sourceStat.mtime && oldData.sourceSize != file.sourceStat.size)
+				if (oldData.modifiedTime != file.sourceStat.mtime || oldData.sourceSize != file.sourceStat.size)
 				{
 					this.updatedFiles.push(file);
 					updatedFile = true;
-				}
-				else if (oldData.sourceSize != file.sourceStat.size)
-				{
-					// compare data to see if it's actually different
-					const oldData = await file.targetPath.readAsBuffer();
-					const newData = Buffer.from(file.data);
-					if (!oldData?.equals(newData))
-					{
-						this.updatedFiles.push(file);
-						updatedFile = true;
-					}
 				}
 			}
 
@@ -485,50 +470,6 @@ export class Index
 		Promise.all(promises);
 	}
 
-	private getSearchContent(webpage: Webpage): string 
-	{
-		const contentElement = webpage.sizerElement ?? webpage.viewElement ?? webpage.pageDocument?.body;
-		if (!contentElement)
-		{
-			return "";
-		}
-
-		const skipSelector = ".math, svg, img, .frontmatter, .metadata-container, .heading-after, style, script";
-		function getTextNodes(element: HTMLElement): Node[]
-		{
-			const textNodes = [];
-			const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
-	
-			let node;
-			while (node = walker.nextNode()) 
-			{
-				if (node.parentElement?.closest(skipSelector))
-				{
-					continue;
-				}
-
-				textNodes.push(node);
-			}
-	
-			return textNodes;
-		}
-
-		const textNodes = getTextNodes(contentElement);
-
-		let content = '';
-		for (const node of textNodes) 
-		{
-			content += ' ' + node.textContent + ' ';
-		}
-
-		content += webpage.hrefLinks.join(" ");
-		content += webpage.srcLinks.join(" ");
-
-		content = content.trim().replace(/\s+/g, ' ');
-
-		return content;
-	}
-
 	private async addWebpageToWebsiteData(webpage: Webpage)
 	{
 		if (webpage.sourcePath && this.websiteData)
@@ -536,16 +477,16 @@ export class Index
 			const webpageInfo: WebpageData = {} as WebpageData;
 			webpageInfo.title = webpage.title;
 			webpageInfo.icon = webpage.icon;
-			webpageInfo.description = webpage.descriptionOrShortenedContent;
-			webpageInfo.aliases = webpage.aliases;
-			webpageInfo.inlineTags = webpage.inlineTags;
-			webpageInfo.frontmatterTags = webpage.frontmatterTags;
-			webpageInfo.headers = await webpage.getStrippedHeadings();
-			webpageInfo.links = webpage.linksToOtherFiles;
-			webpageInfo.author = webpage.author;
+			webpageInfo.description = webpage.outputData.descriptionOrShortenedContent;
+			webpageInfo.aliases = webpage.outputData.aliases;
+			webpageInfo.inlineTags = webpage.outputData.inlineTags;
+			webpageInfo.frontmatterTags = webpage.outputData.frontmatterTags;
+			webpageInfo.headers = await webpage.outputData.renderedHeadings;
+			webpageInfo.links = webpage.outputData.linksToOtherFiles;
+			webpageInfo.author = webpage.outputData.author;
 			webpageInfo.coverImageURL = "";
-			webpageInfo.fullURL = webpage.fullURL;
-			webpageInfo.pathToRoot = webpage.pathToRoot.path == "" ? "." : webpage.pathToRoot.path;
+			webpageInfo.fullURL = webpage.outputData.fullURL;
+			webpageInfo.pathToRoot = webpage.outputData.pathToRoot == "" ? "." : webpage.outputData.pathToRoot;
 			webpageInfo.attachments = webpage.attachments.map((download) => download.targetPath.path);
 			
 			webpageInfo.createdTime = webpage.source.stat.ctime;
@@ -555,7 +496,7 @@ export class Index
 			webpageInfo.exportPath = webpage.targetPath.path;
 			webpageInfo.showInTree = webpage.showInTree;
 			webpageInfo.treeOrder = webpage.treeOrder;
-			webpageInfo.backlinks = webpage.backlinks.map((backlink) => backlink.targetPath.path);
+			webpageInfo.backlinks = webpage.outputData.backlinks.map((backlink) => backlink.targetPath.path);
 			webpageInfo.type = webpage.type;
 			if (this.exportOptions.combineAsSingleFile)
 			{
@@ -592,17 +533,17 @@ export class Index
 				this.minisearch.discard(webpagePath);
 			}
 
-			const headersInfo = await webpage.getStrippedHeadings();
+			const headersInfo = await webpage.outputData.renderedHeadings;
 			if (headersInfo.length > 0 && headersInfo[0].level == 1 && headersInfo[0].heading == webpage.title) headersInfo.shift();
 			const headers = headersInfo.map((header) => header.heading);
 
 			this.minisearch.add({
 				title: webpage.title,
-				aliases: webpage.aliases,
+				aliases: webpage.outputData.aliases,
 				headers: headers,
-				tags: webpage.allTags,
+				tags: webpage.outputData.allTags,
 				path: webpagePath,
-				content: webpage.description + " " + this.getSearchContent(webpage),
+				content: webpage.outputData.description + " " + webpage.outputData.searchContent,
 			});
 		}
 	}

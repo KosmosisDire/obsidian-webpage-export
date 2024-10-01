@@ -1,5 +1,5 @@
 
-import { Search } from "./search";
+import { Search, SearchType } from "./search";
 import { Sidebar } from "./sidebars";
 import { Tree } from "./trees";
 import { Bounds, delay, getLengthInPixels, waitUntil } from "./utils";
@@ -10,9 +10,13 @@ import { Notice } from "./notifications";
 import { Theme } from "./theme";
 import { LinkHandler } from "./links";
 import { Shared } from "src/shared/shared";
+import { FilePreviewPopover } from "./link-preview";
 
 export class ObsidianWebsite
 {
+	public LinkHandler: LinkHandler = LinkHandler;
+	public LinkPreview: any = FilePreviewPopover;
+
 	public bodyEl: HTMLElement;
 	public websiteEl: HTMLElement;
 	public centerContentEl: HTMLElement;
@@ -61,11 +65,13 @@ export class ObsidianWebsite
 			if (!this.metadata)
 			{
 				console.error("Failed to load website data.");
-				return;
+				this.metadata = new WebsiteData();
+				this.metadata.ignoreMetadata = true;
 			}
 		}
 
-		await waitUntil(() => this.metadata != undefined);
+		await waitUntil(() => this.metadata != undefined, 10);
+
 		console.log("Website init");
 		if(window.location.protocol != "file:") 
 		{
@@ -83,6 +89,8 @@ export class ObsidianWebsite
 		const outlineTreeEl = document.querySelector("#outline") as HTMLElement;
 		const leftSidebarEl = document.querySelector(".sidebar#left-sidebar") as HTMLElement;
 		const rightSidebarEl = document.querySelector(".sidebar#right-sidebar") as HTMLElement;
+
+		this.bodyEl.className += " " + this.metadata.bodyClasses;
 		
 		this.createLoadingEl();
 		
@@ -99,12 +107,14 @@ export class ObsidianWebsite
 		await this.document.loadChildDocuments();
 		await this.document.postLoadInit();
 		
-		if (ObsidianSite.metadata.featureOptions.graphView.enabled)
+		if (!ObsidianSite.metadata.ignoreMetadata && ObsidianSite.metadata.featureOptions.graphView.enabled)
 		{
 			this.loadGraphView().then(() => this.graphView?.showGraph([pathname]));
 		}
 
 		this.initEvents();
+
+		FilePreviewPopover.loadPinnedPreviews();
 		
 		this.isLoaded = true;
 		this.onloadCallbacks.forEach(cb => cb(this.document));
@@ -131,13 +141,19 @@ export class ObsidianWebsite
 	public async loadURL(url: string): Promise<WebpageDocument | undefined>
 	{
 		const header = LinkHandler.getHashFromURL(url);
+		const query = LinkHandler.getQueryFromURL(url);
 		url = LinkHandler.getPathnameFromURL(url);
-		console.log("Loading URL", url);
+		console.log("Loading URL", url, header, query);
 
+		if (query && query.startsWith("query="))
+		{
+			this.search?.searchParseFilters(query.substring(6));
+		}
+
+		// if this document is already loaded
 		if (this.document.pathname == url)
 		{
 			if (header) this.document.scrollToHeader(header);
-			console.log("loading header", header);
 			return this.document;
 		}
 
@@ -150,7 +166,17 @@ export class ObsidianWebsite
 		}
 
 		let page = await (await new WebpageDocument(url).load()).init();
-		this.onloadCallbacks.forEach(cb => cb(this.document));
+		
+		setTimeout(() => 
+		{
+			this.onloadCallbacks.forEach(cb => cb(page));
+
+			if (header)
+			{
+				page.scrollToHeader(header);
+			}
+		}, 100); // Small delay to ensure the DOM is updated
+	
 		return page;
 	}
 
@@ -182,6 +208,19 @@ export class ObsidianWebsite
 
 			let req = new Response(file.data, {status: 200});
 			return req;
+		}
+	}
+
+	public documentExists(url: string): boolean
+	{
+		url = LinkHandler.getPathnameFromURL(url);
+		if (this.isHttp)
+		{
+			return !!this.metadata.webpages[url];
+		}
+		else
+		{
+			return !!this.getFileData(url)?.data;
 		}
 	}
 
@@ -266,7 +305,7 @@ export class ObsidianWebsite
 	}
 
 	private cachedWebpageDataMap: Map<string, WebpageData> = new Map();
-	public getWebpageData(url: string): WebpageData
+	public getWebpageData(url: string): WebpageData | undefined
 	{
 		if (!this.isHttp)
 		{
@@ -291,7 +330,7 @@ export class ObsidianWebsite
 			}
 		}
 
-		return {} as WebpageData;
+		return;
 	}
 
 	private cachedFileDataMap: Map<string, FileData> = new Map();
@@ -371,7 +410,6 @@ export class ObsidianWebsite
 		document.body.classList.toggle("resizing", true);
 	}
 
-
 	private lastScreenWidth: number | undefined = undefined;
 	private isResizing = false;
 	private checkStillResizingTimeout: NodeJS.Timeout | undefined = undefined;
@@ -404,9 +442,9 @@ export class ObsidianWebsite
 			return (w < value && localThis.lastScreenWidth == undefined) || (w < value && (localThis.lastScreenWidth ?? 0) > value);
 		}
 
-		let docWidthCSS = this.metadata.featureOptions.document.documentWidth;
-		let leftWdithCSS = this.metadata.featureOptions.sidebar.leftDefaultWidth;
-		let rightWidthCSS = this.metadata.featureOptions.sidebar.rightDefaultWidth;
+		let docWidthCSS = this.metadata.featureOptions.document?.documentWidth ?? "45em";
+		let leftWdithCSS = this.metadata.featureOptions.sidebar?.leftDefaultWidth ?? "20em";
+		let rightWidthCSS = this.metadata.featureOptions.sidebar?.rightDefaultWidth ?? "20em";
 
 		// calculate the css widths
 		let docWidth = getLengthInPixels(docWidthCSS, this.centerContentEl);

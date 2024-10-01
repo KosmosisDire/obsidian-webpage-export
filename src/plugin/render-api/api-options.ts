@@ -15,6 +15,21 @@ export class MarkdownRendererOptions
 	createDocumentContainer: boolean = true;
 
 	/**
+	 * Keep mod-header and mod-footer elements.
+	 */
+	keepModHeaderFooter: boolean = false;
+
+	/**
+	 * Add the file's icon to the page header
+	 */
+	addPageIcon: boolean = true;
+
+	/**
+	 * Modify the title to a unified format.
+	 */
+	unifyTitleFormat: boolean = true;
+
+	/**
 	 * Create the markdown-preview-pusher element.
 	 */
 	createPusherElement: boolean = true;

@@ -1,5 +1,6 @@
 import { Canvas } from "./canvas";
 import { WebpageDocument } from "./document";
+import { FilePreviewPopover } from "./link-preview";
 import { LinkHandler } from "./links";
 import { Search } from "./search";
 import { Bounds, Vector2 } from "./utils";
@@ -16,7 +17,8 @@ declare global
 		Bounds: typeof Bounds;
 		Vector2: typeof Vector2;
 		LinkHandler: typeof LinkHandler;
-		Search: typeof Search;
+		LinkPreview: typeof FilePreviewPopover;
+
 		ObsidianSite: ObsidianWebsite;
 	}
 
@@ -32,7 +34,7 @@ if (window && window.location)
 	window.Bounds = Bounds;
 	window.Vector2 = Vector2;
 	window.LinkHandler = LinkHandler;
-	window.Search = Search;
+	window.LinkPreview = FilePreviewPopover;
 
 	ObsidianSite.init();
 }

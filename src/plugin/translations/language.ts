@@ -62,6 +62,7 @@ export interface i18n
 		title: string;
 		support: string;
 		debug: string;
+		unavailableSetting: string;
 		pageFeatures: {
 			title: string;
 			description: string;
@@ -91,6 +92,7 @@ export interface i18n
 		fileNavigation: {
 			title: string;
 			description: string;
+			info_showCustomIcons: string;
 			info_showDefaultFolderIcons: string;
 			info_showDefaultFileIcons: string;
 			info_defaultFolderIcon: string;
@@ -153,7 +155,15 @@ export interface i18n
 			description: string;
 			info_hideProperties: string;
 		},
-		assetOptions: {
+		rss: {
+			title: string;
+			description: string;
+			info_siteUrl: string;
+			info_siteUrlPlaceholder: string;
+			info_siteName: string;
+			info_authorName: string;
+		},
+		styleOptionsSection: {
 			title: string;
 			description: string;
 		},
@@ -161,14 +171,59 @@ export interface i18n
 			title: string;
 			description: string;
 		},
-		includeSvelteCSS: {
-			title: string;
-			description: string;
-		},
 		includePluginCSS: {
 			title: string;
 			description: string;
-		}
+		},
+		includeStyleCssIds:{
+			title: string;
+			description: string;
+		},
+		generalSettingsSection: {
+			title: string;
+			description: string;
+		},
+		favicon: {
+			title: string;
+			description: string;
+		},
+		iconEmojiStyle: {
+			title: string;
+			description: string;
+		},
+		themeName: {
+			title: string;
+			description: string;
+		},
+		exportSettingsSection: {
+			title: string;
+			description: string;
+		},
+		relativeHeaderLinks: {
+			title: string;
+			description: string;
+		},
+		slugifyPaths: {
+			title: string;
+			description: string;
+		},
+		addPageIcon: {
+			title: string;
+			description: string;
+		},
+		obsidianSettingsSection: {
+			title: string;
+			description: string;
+		},
+		logLevel: {
+			title: string;
+			description: string;
+		},
+		titleProperty: {
+			title: string;
+			description: string;
+		},
+
 	}
 }
 

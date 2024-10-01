@@ -1,5 +1,5 @@
 import { getIcon, Modal, Setting, TextComponent } from "obsidian";
-import { SettingsPage } from "./settings";
+import { Settings, SettingsPage } from "./settings";
 import { Path } from "src/plugin/utils/path";
 import { FileDialogs } from "src/plugin/utils/file-dialogs";
 import { FeatureOptions, FeatureRelation, FeatureSettingInfo } from "src/shared/features/feature-options-base";
@@ -168,7 +168,7 @@ options?: {name?: string, description?: string, placeholder?: string, defaultPat
 					textInput?.setValue(path.path);
 				}
 				
-				// if (onChanged) onChanged(path);
+				if (onChanged) onChanged(path);
 				// textInput?.onChanged();
 			});
 		});
@@ -336,14 +336,19 @@ export function generateSettingsFromObject(obj: any, container: HTMLElement)
 	}
 }
 
-export function createFeatureSetting(container: HTMLElement, name: string, feature: FeatureOptions, desc: string)
+export function createFeatureSetting(container: HTMLElement, name: string, feature: FeatureOptions, desc: string, addSettings?: (container: HTMLElement) => void)
 {
 	let setting = new Setting(container).setName(name).setDesc(desc);
+
+	setting.setDisabled(feature.unavailable);
+	setting.setTooltip(feature.unavailable ? i18n.settings.unavailableSetting.format(Settings.exportPreset) : "", {delay: 0});
 	
 	if (!feature.alwaysEnabled)
 	{
 		setting.addToggle(toggle => 
 		{
+			toggle.setTooltip(feature.unavailable ? i18n.settings.unavailableSetting.format(Settings.exportPreset) : "", {delay: 0});
+			toggle.setDisabled(feature.unavailable);
 			toggle.setValue(feature.enabled)
 			toggle.onChange((value) => 
 			{
@@ -355,6 +360,8 @@ export function createFeatureSetting(container: HTMLElement, name: string, featu
 
 	setting.addExtraButton(button => 
 	{
+		button.setTooltip(feature.unavailable ? i18n.settings.unavailableSetting.format(Settings.exportPreset) : "", {delay: 0});
+		button.setDisabled(feature.unavailable);
 		button.setIcon("settings")
 		button.onClick(() => 
 		{
@@ -364,6 +371,7 @@ export function createFeatureSetting(container: HTMLElement, name: string, featu
 			modal.open()
 			modal.setTitle(name);
 			generateSettingsFromObject(feature, contentEl);
+			if (addSettings) addSettings(contentEl);
 		})
 	});
 }

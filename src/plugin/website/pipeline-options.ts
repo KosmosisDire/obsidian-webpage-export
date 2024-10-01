@@ -12,6 +12,7 @@ import { EmojiStyle } from "src/shared/website-data";
 import { SearchOptions } from "src/shared/features/search";
 import { CustomHeadOptions } from "src/shared/features/custom-head";
 import { MarkdownRendererOptions } from "src/plugin/render-api/api-options";
+import { RssOptions } from "src/shared/features/rss";
 
 export class ExportPipelineOptions extends MarkdownRendererOptions
 {
@@ -31,21 +32,6 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	 * Add a <head> tag with metadata, scripts, and styles.
 	 */
 	addHeadTag: boolean = true;
-
-	/**
-	 * Create an RSS feed for the site
-	 */
-	addRSS: boolean = true;
-
-	/**
-	 * Add a title to the top of each page. (Makes sure there are no duplicate titles)
-	 */
-	addTitle: boolean = true;
-
-	/**
-	 * Add page icon to the top of each page.
-	 */
-	addPageIcon: boolean = true;
 
 	// Options for the features
 	/**
@@ -107,6 +93,11 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	 * Document section options
 	 */
 	documentOptions: DocumentOptions = new DocumentOptions();
+
+	/**
+	 * Document section options
+	 */
+	rssOptions: RssOptions = new RssOptions();
 
 	/**
 	 * Make outline links relative instead of absolute.
@@ -181,16 +172,6 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	 * Fix all links to be relative and direct to other files or media included in the export.
 	 */
 	fixLinks: boolean = true;
-
-	/**
-	 * The url that this site will be hosted at. This is used for the rss feed data.
-	 */
-	siteURL: string = '';
-
-	/**
-	 * The name of the vault displayed above the file navigation.
-	 */
-	siteName: string = app.vault.getName();
 	
 	/**
 	 * The local path to the favicon for the site.
@@ -203,11 +184,6 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	iconEmojiStyle: EmojiStyle = EmojiStyle.Native;
 
 	/**
-	 * The name of the author of the site.
-	 */
-	authorName: string = '';
-
-	/**
 	 * The relative path in the vault that will be considered the root of the export. Anything outside of this path will either be moved or not included.
 	 */
 	exportRoot: string = '';
@@ -215,12 +191,12 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	/**
 	 * Include CSS from the plugins with these ids.
 	 */
-	includePluginCSS: string[] = [];
+	includePluginCss: string[] = [];
 
 	/**
-	 * Include CSS from all svelte components in the export.
+	 * Include CSS from the style elements with these ids.
 	 */
-	includeSvelteCSS: boolean = true;
+	includeStyleCssIds: string[] = [];
 
 	/**
 	 * Auto dispose webpage documents and elements after each one is rendered.

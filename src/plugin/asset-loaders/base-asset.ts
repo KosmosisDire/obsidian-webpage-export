@@ -84,8 +84,6 @@ export class AssetLoader extends Attachment
         {
             await this.minifyAsset();
         }
-
-		console.log(`Loaded ${this.filename}`);
     }
 
     override async download(): Promise<void> 
@@ -154,7 +152,7 @@ export class AssetLoader extends Attachment
 		}
 		catch (e)
 		{
-			console.log("Unable to minify " + (isJS ? "JS" : "CSS") + " file.");
+			console.error("Unable to minify " + (isJS ? "JS" : "CSS") + " file.");
 
 			// remove whitespace manually
 			this.data = this.data.replace(/[\n\r]+/g, "");
@@ -207,7 +205,6 @@ export class AssetLoader extends Attachment
     {
         if(this.isInlineFormat(options))
         {
-			console.log("Inlining " + this.filename);
             switch(this.type)
             {
                 case AssetType.Style:
@@ -227,7 +224,6 @@ export class AssetLoader extends Attachment
         
         if (this.isRefFormat(options))
         {
-			console.log("Generating ref for " + this.filename);
             let path = this.getAssetPath(undefined).path;
 			if (options.offlineResources === false && this.onlineURL) path = this.onlineURL;
 

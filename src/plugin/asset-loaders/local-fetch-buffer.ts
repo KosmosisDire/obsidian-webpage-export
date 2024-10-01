@@ -12,7 +12,6 @@ export class FetchBuffer extends AssetLoader
 
     constructor(filename: string, url: Path | string, type: AssetType, inlinePolicy: InlinePolicy, minify: boolean, mutability: Mutability, loadPriority?: number)
     {
-		
         super(filename, "", null, type, inlinePolicy, minify, mutability, LoadMethod.Default, loadPriority);
         this.url = url;
 		

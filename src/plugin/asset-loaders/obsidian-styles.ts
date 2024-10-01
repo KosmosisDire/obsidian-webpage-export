@@ -10,20 +10,23 @@ export class ObsidianStyles extends AssetLoader
         super("obsidian.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Default, 10);
     }
 
+	static readonly obsidianStyleAlwaysFilter =
+	[
+		"cm-", "cm6", "workspace-", ":root", "CodeMirror", "xfa", "modal", "@-webkit", "leaf", "plugins", "-split", "empty-state", "search-result-", "mobile", "tablet", "phone", "linux", "macos", "mod-windows", "is-frameless", 
+	]
 	static readonly obsidianStylesFilter =
-	["workspace-", "cm-", "cm6", "ghost", "leaf", "CodeMirror", 
-	"@media", "pdf", "xfa", "annotation",
-	"load", "@-webkit", "setting", "filter", "decorator", 
-	"dictionary", "status", "windows", "titlebar", "source",
-	"menu", "message", "popover", "suggestion", "prompt", 
+	["ghost", "pdf", "annotation", "data-main-rotation", "spread",
+	"load",  "setting", "filter", "decorator", "node-insert", "app-container",
+	"dictionary", "status", "windows", "titlebar", "source", "#layout",
+	"menu", "message", "suggestion", "prompt", 
 	"tab", "HyperMD", "workspace", "publish", 
-	"backlink", "sync", "vault", "mobile", "tablet", "phone", 
-	"textLayer", "header", "linux", "macos", "rename", "edit",
+	"backlink", "sync", "vault",  
+	"textLayer", "header",  "rename", "edit",
 	"progress", "native", "aria", "tooltip", 
-	"drop", "sidebar", "mod-windows", "is-frameless", 
-	"is-hidden-frameless", "obsidian-app", "show-view-header", 
+	"drop", "sidebar", 
+	"is-hidden-frameless", "obsidian-app", "show-view-header",
 	"is-maximized", "is-translucent", "community", "Layer"];
-	static readonly stylesKeep = ["@media", "tree", "scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager", "inline-embed", "background", "token"];
+	static readonly stylesKeep = ["tree", "scrollbar", "input[type", "table", "markdown-rendered", "css-settings-manager", "inline-embed", "background", "token", "-plugin-"];
     
     override async load()
     {
@@ -40,7 +43,7 @@ export class ObsidianStyles extends AssetLoader
             }
         }
 
-		this.data = AssetHandler.filterStyleRules(appSheet, ObsidianStyles.obsidianStylesFilter, ObsidianStyles.stylesKeep);
+		this.data = await AssetHandler.filterStyleRules(appSheet, ObsidianStyles.obsidianStyleAlwaysFilter, ObsidianStyles.obsidianStylesFilter, ObsidianStyles.stylesKeep);
         this.data += obsidianStyleOverrides;
         await super.load();
     }

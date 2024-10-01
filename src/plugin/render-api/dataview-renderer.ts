@@ -39,15 +39,17 @@ export class DataviewRenderer
 		return this.container;
 	}
 
-	public static getDataviewFromHTML(sectionContainer: HTMLElement): { query: string, preEl: HTMLElement, keyword: string } | undefined
+	public static getDataViewsFromHTML(sectionContainer: HTMLElement): { query: string, preEl: HTMLElement, keyword: string }[]
 	{
-		const dataviewEl = sectionContainer.querySelector(`pre:has(:is(.language-dataview, .block-language-dataview, .language-${DataviewRenderer.jsKeyword}, .block-language-${DataviewRenderer.jsKeyword}))`) as HTMLElement;
-		if (!dataviewEl) return;
-
-		const code = dataviewEl.querySelector("code") ?? dataviewEl;
-		const query = code.innerText;
-		const keyword = code.className.contains(DataviewRenderer.jsKeyword) ? DataviewRenderer.jsKeyword : "dataview";
-		return { query, preEl: dataviewEl, keyword: keyword};
+		const dataviewEls = Array.from(sectionContainer.querySelectorAll(`pre:has(:is(.language-dataview, .block-language-dataview, .language-${DataviewRenderer.jsKeyword}, .block-language-${DataviewRenderer.jsKeyword}))`));
+		const results = dataviewEls.map((el) => 
+		{
+			const code = el.querySelector("code") ?? el as HTMLElement;
+			const query = code.innerText;
+			const keyword = code.className.contains(DataviewRenderer.jsKeyword) ? DataviewRenderer.jsKeyword : "dataview";
+			return { query, preEl: el as HTMLElement, keyword: keyword};
+		});
+		return results;
 	}
 }
 

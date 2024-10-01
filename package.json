@@ -15,6 +15,7 @@
 		"@eslint/js": "^9.1.1",
 		"@types/mime": "^3.0.4",
 		"@types/node": "^16.11.6",
+		"@types/postcss-safe-parser": "^5.0.4",
 		"@types/rss": "^0.0.32",
 		"@typescript-eslint/eslint-plugin": "5.29.0",
 		"@typescript-eslint/parser": "5.29.0",
@@ -30,12 +31,12 @@
 		"typescript-eslint": "^7.7.0"
 	},
 	"dependencies": {
-		"@pixi/webworker": "^7.4.2",
 		"file-type": "^19.0.0",
 		"html-minifier-terser": "^7.2.0",
 		"mime": "^3.0.0",
-		"minisearch": "^6.3.0",
-		"pixi.js": "^8.0.4",
+		"minisearch": "^7.1.0",
+		"postcss": "^8.4.47",
+		"postcss-safe-parser": "^7.0.0",
 		"rss": "^1.2.2",
 		"upath": "^2.0.1"
 	}

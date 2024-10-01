@@ -7,7 +7,7 @@ import { Settings, SettingsPage } from 'src/plugin/settings/settings';
 import { HTMLExporter } from 'src/plugin/exporter';
 import { Path } from 'src/plugin/utils/path';
 import { ExportModal } from 'src/plugin/settings/export-modal';
-import { ExportLog, MarkdownRendererAPI } from 'src/plugin/render-api/render-api';
+import { _MarkdownRendererInternal, ExportLog, MarkdownRendererAPI } from 'src/plugin/render-api/render-api';
 import { DataviewRenderer } from './render-api/dataview-renderer';
 import { Website } from './website/website';
 import { i18n } from './translations/language';
@@ -19,6 +19,7 @@ export default class HTMLExportPlugin extends Plugin
 	static updateInfo: {updateAvailable: boolean, latestVersion: string, currentVersion: string, updateNote: string} = {updateAvailable: false, latestVersion: "0", currentVersion: "0", updateNote: ""};
 	static pluginVersion: string = "0.0.0";
 	public api = MarkdownRendererAPI;
+	public internalAPI = _MarkdownRendererInternal;
 	public settings = Settings;
 	public assetHandler = AssetHandler;
 	public Path = Path;

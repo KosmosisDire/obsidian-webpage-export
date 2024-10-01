@@ -2,9 +2,8 @@ import { InsertedFeatureOptions } from "src/shared/features/feature-options-base
 import { ExportLog } from "src/plugin/render-api/render-api";
 import { ExportPipelineOptions } from "./pipeline-options";
 import { AssetHandler } from "../asset-loaders/asset-handler";
-import { HTMLGeneration } from "../render-api/html-generation-helpers";
-
-
+import { AssetType } from "../asset-loaders/asset-types";
+import { Utils } from "../utils/utils";
 
 
 
@@ -29,13 +28,13 @@ export class WebpageTemplate
 		const collapseSidebarIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="svg-icon"><path d="M21 3H3C1.89543 3 1 3.89543 1 5V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19V5C23 3.89543 22.1046 3 21 3Z"></path><path d="M10 4V20"></path><path d="M4 7H7"></path><path d="M4 10H7"></path><path d="M4 13H7"></path></svg>`;
 		
 		const head = this.doc.head;
-		head.innerHTML += `<meta property="og:site_name" content="${this.options.siteName}">`;
+		head.innerHTML += `<meta property="og:site_name" content="${this.options.rssOptions.siteName}">`;
 		head.innerHTML += `<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes, minimum-scale=1.0, maximum-scale=5.0">`;
 		head.innerHTML += `<meta charset="UTF-8">`;
 
 		if (!this.options.combineAsSingleFile)
 		{
-			if (this.options.addRSS)
+			if (this.options.rssOptions.enabled)
 			{
 				head.innerHTML += `<link rel="alternate" type="application/rss+xml" title="RSS Feed" href="${this.rssURL}">`;
 			}
@@ -45,7 +44,7 @@ export class WebpageTemplate
 
 		const body = this.doc.body;
 		if (this.options.addBodyClasses)
-			body.setAttribute("class", await HTMLGeneration.getValidBodyClasses(false));
+			body.setAttribute("class", await this.getValidBodyClasses(false));
 
 		const layout = this.doc.body.createDiv({attr: {id: "layout"}});
 			const leftContent = layout.createDiv({attr: {id: "left-content", class: "leaf"}});
@@ -107,8 +106,6 @@ export class WebpageTemplate
 				if (deferredFeature.feature === feature) continue;
 				this.insertFeature(deferredFeature.feature, deferredFeature.featureOptions);
 			}
-
-			console.log(`Inserted feature ${featureOptions.featureId}`, feature);
 		}
 		else
 		{
@@ -134,5 +131,69 @@ export class WebpageTemplate
 		}
 
 		return this.doc.documentElement.innerHTML;
+	}
+
+	private readonly ignoreClasses = ["publish", "css-settings-manager", "theme-light", "theme-dark"];
+	private _validBodyClasses: string | undefined = undefined;
+	public async getValidBodyClasses(cleanCache: boolean): Promise<string>
+	{
+		if (cleanCache) this._validBodyClasses = undefined;
+		if (this._validBodyClasses) return this._validBodyClasses;
+		
+		const bodyClasses = Array.from(document.body.classList); 
+
+		let validClasses = "";
+		validClasses += " publish ";
+		validClasses += " css-settings-manager ";
+		
+		// keep body classes that are referenced in the styles
+		const styles = AssetHandler.getAssetsOfType(AssetType.Style);
+		let i = 0;
+		let classes: string[] = [];
+
+		for (const style of styles)
+		{
+			ExportLog.progress(0, "Compiling css classes", "Scanning: " + style.filename, "var(--color-yellow)");
+			if (typeof(style.data) != "string") continue;
+			
+			// this matches every class name with the dot
+			const matches = Array.from(style.data.matchAll(/\.([A-Za-z_-]+[\w-]+)/g));
+			let styleClasses = matches.map(match => match[0].substring(1).trim());
+			// remove duplicates
+			styleClasses = styleClasses.filter((value, index, self) => self.indexOf(value) === index);
+			classes = classes.concat(styleClasses);
+			i++;
+			await Utils.delay(0);
+		}
+
+		// remove duplicates
+		ExportLog.progress(0, "Filtering classes", "...", "var(--color-yellow)");
+		classes = classes.filter((value, index, self) => self.indexOf(value) === index);
+		ExportLog.progress(0, "Sorting classes", "...", "var(--color-yellow)");
+		classes = classes.sort();
+
+		i = 0;
+		for (const bodyClass of bodyClasses)
+		{
+			ExportLog.progress(0, "Collecting valid classes", "Scanning: " + bodyClass, "var(--color-yellow)");
+
+			if (classes.includes(bodyClass) && !this.ignoreClasses.includes(bodyClass))
+			{
+				validClasses += bodyClass + " ";
+			}
+
+			i++;
+		}
+
+		ExportLog.progress(0, "Cleanup classes", "...", "var(--color-yellow)");
+		this._validBodyClasses = validClasses.replace(/\s\s+/g, ' ');
+
+		// convert to array and remove duplicates
+		ExportLog.progress(0, "Filter duplicate classes", this._validBodyClasses.length + " classes", "var(--color-yellow)");
+		this._validBodyClasses = this._validBodyClasses.split(" ").filter((value, index, self) => self.indexOf(value) === index).join(" ").trim();
+		
+		ExportLog.progress(0, "Classes done", "...", "var(--color-yellow)");
+
+		return this._validBodyClasses;
 	}
 }

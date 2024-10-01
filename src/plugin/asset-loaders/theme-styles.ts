@@ -2,6 +2,7 @@ import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { ExportLog } from "src/plugin/render-api/render-api";
 import { AssetHandler } from "./asset-handler.js";
+import { Path } from "../utils/path.js";
 
 export class ThemeStyles extends AssetLoader
 {
@@ -21,10 +22,12 @@ export class ThemeStyles extends AssetLoader
     {
         if (themeName == "Default") return "/* Using default theme. */";
 		
-        const themePath = AssetHandler.vaultPluginsPath.joinString(`../themes/${themeName}/theme.css`).absoluted();
+		// @ts-ignore
+        const themePath = new Path(app.customCss.themes[themeName].dir).joinString("theme.css").absolute();
+		console.log("Loading theme from path: " + themePath.path);
         if (!themePath.exists)
         {
-            ExportLog.warning("Cannot find theme at path: \n\n" + themePath);
+            ExportLog.warning("Cannot find theme at path: \n\n" + themePath.path);
             return "";
         }
         const themeContent = await themePath.readAsString() ?? "";
@@ -35,7 +38,7 @@ export class ThemeStyles extends AssetLoader
     override async load()
     {
         let themeName = this.exportOptions.themeName;
-		if (!themeName || themeName == "")
+		if (!themeName || themeName == "" || themeName == "obsidian-current-theme")
 			// @ts-ignore
 			themeName = app?.vault?.config?.cssTheme;
 
@@ -44,15 +47,12 @@ export class ThemeStyles extends AssetLoader
 		
         if (themeName == this.lastThemeName && this.data != "") 
 		{
-			console.log("Theme styles already loaded.");
+			console.log("Theme styles already loaded.", themeName);
 			return;
 		}
 
         const themeCSS = await ThemeStyles.getThemeContent(themeName);
-		const themeStylesheet = new CSSStyleSheet();
-		// @ts-ignore
-		await themeStylesheet.replace(themeCSS);
-		this.data = AssetHandler.filterStyleRules(themeStylesheet, ThemeStyles.obsidianStylesFilter, ThemeStyles.stylesKeep);
+		this.data = await AssetHandler.filterStyleRules(themeCSS, ThemeStyles.obsidianStylesFilter, [], ThemeStyles.stylesKeep);
         this.lastThemeName = themeName;
 
 		console.log("Theme styles loaded " + themeName);

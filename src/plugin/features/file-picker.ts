@@ -2,7 +2,7 @@ import { TFile } from "obsidian";
 import { FileTree, FileTreeItem } from "src/plugin/features/file-tree";
 import { Path } from "src/plugin/utils/path";
 import { Website } from "src/plugin/website/website";
-import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
+import { _MarkdownRendererInternal, MarkdownRendererAPI } from "src/plugin/render-api/render-api";
 import { i18n } from "../translations/language";
 
 export class FilePickerTree extends FileTree
@@ -82,7 +82,7 @@ export class FilePickerTree extends FileTree
 				parent.dataRef = path.path;
 				if (tfile)
 				{
-					parent.title = (await Website.getTitle(tfile)).title;
+					parent.title = (await _MarkdownRendererInternal.getTitleForFile(tfile)).title;
 				}
 			}
 		}

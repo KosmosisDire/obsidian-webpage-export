@@ -29,9 +29,11 @@ export namespace TabManager
 		return leaf;
 	}
 
-	export function openNewTab(navType: PaneType | boolean, splitDirection: SplitDirection = 'vertical'): WorkspaceLeaf
+	export function openNewTab(navType: PaneType | boolean, splitDirection: SplitDirection = 'vertical', makeActive: boolean = false): WorkspaceLeaf
 	{
-		return getLeaf(navType, splitDirection);
+		let leaf = getLeaf(navType, splitDirection);
+		if (makeActive) app.workspace.setActiveLeaf(leaf);
+		return leaf;
 	}
 }
 

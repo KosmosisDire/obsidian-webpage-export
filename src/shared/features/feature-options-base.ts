@@ -67,7 +67,7 @@ export class FeatureSettingInfo
 				browseButton?: boolean, 
 				onChanged?: (path: string)=>void
 			}
-			dropdownTypes?: Record<string, string>
+			dropdownTypes?: Record<string, any>
 		})
 	{
 		if (options)
@@ -86,7 +86,14 @@ export class FeatureOptions
 {
 	featureId: string = "feature";
 	enabled: boolean = true;
+	unavailable: boolean = false;
 	alwaysEnabled: boolean = false;
+
+	public setAvailable(value: boolean)
+	{
+		this.unavailable = !value;
+		this.enabled = value;
+	}
 }
 
 export class InsertedFeatureOptions extends FeatureOptions

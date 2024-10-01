@@ -26,6 +26,8 @@ import { fileTypeFromBuffer } from "file-type";
 import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
 import { Shared } from "src/shared/shared.js";
 import { WebsiteJS } from "./website-js.js";
+import postcss from 'postcss';
+import safeParser from 'postcss-safe-parser';
 const mime = require('mime');
 
 
@@ -102,8 +104,6 @@ export class AssetHandler
 	public static renderWorkerJS: AssetLoader;
 	public static deferredJS: AssetLoader;
 	public static themeLoadJS: AssetLoader;
-
-	public static minisearchJS: AssetLoader;
 	 
 	// other
 	public static favicon: Favicon;
@@ -139,7 +139,6 @@ export class AssetHandler
 		this.renderWorkerJS = new AssetLoader("graph-render-worker.js", renderWorkerJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static);
 		this.deferredJS = new AssetLoader("deferred.js", deferredJS, null, AssetType.Script, InlinePolicy.InlineHead, true, Mutability.Static, LoadMethod.Defer, -1000);
 		this.themeLoadJS = new AssetLoader("theme-load.js", themeLoadJS, null, AssetType.Script, InlinePolicy.Inline, true, Mutability.Static, LoadMethod.Defer);
-		this.minisearchJS = new AssetLoader("minisearch.js", minisearchJS, null, AssetType.Script, InlinePolicy.AutoHead, true, Mutability.Static, LoadMethod.Async, 100, "https://cdn.jsdelivr.net/npm/minisearch@7.1.0/dist/umd/index.min.js");
 		this.favicon = new Favicon();
 		this.customHeadContent = new CustomHeadContent();
 
@@ -158,8 +157,6 @@ export class AssetHandler
 			loadPromises.push(asset.load());
 		}
 		await Promise.all(loadPromises);
-
-		console.log(this.allAssets);
 	}
 
 	public static async reloadAssets(options: ExportPipelineOptions)
@@ -173,13 +170,14 @@ export class AssetHandler
 		let i = 0;
 
 		const loadPromises = []
+		ExportLog.addToProgressCap(this.dynamicAssets.length / 4);
 		for (const asset of this.dynamicAssets)
 		{
 			const loadPromise = asset.load();
 			loadPromise.then(() =>
 			{
 				i++;
-				ExportLog.progress(i / this.dynamicAssets.length, "Initialize Export", "Loading asset: " + asset.filename, "var(--color-yellow)");
+				ExportLog.progress(0.25, "Initialize Export", "Loading asset: " + asset.filename, "var(--color-yellow)");
 			});
 			loadPromises.push(loadPromise);
 		}
@@ -204,14 +202,7 @@ export class AssetHandler
 	{
 		if (!options.graphViewOptions.enabled)
 		{
-			console.log("Filtering graph view assets");
 			downloads = downloads.filter(asset => ![this.graphWASMJS, this.graphWASM, this.renderWorkerJS].includes(asset));
-		}
-
-		if (!options.searchOptions.enabled)
-		{
-			console.log("Filtering search assets");
-			downloads = downloads.filter(asset => ![this.minisearchJS].includes(asset));
 		}
 
 		if (!options.includeCSS) 
@@ -368,6 +359,10 @@ export class AssetHandler
 			} 
 
 			const path = new Path(url);
+			if (path.isDirectory || path.isEmpty)
+			{
+				continue;	
+			}
 			const type = AssetLoader.extentionToType(path.extension);
 			const childAsset = new FetchBuffer(path.fullName, url, type, InlinePolicy.Download, false, Mutability.Child);
 			asset.childAssets.push(childAsset);
@@ -406,25 +401,60 @@ export class AssetHandler
 		return content;
 	}
 
-	public static filterStyleRules(appSheet: CSSStyleSheet, discard: string[], keep: string[]): string
-	{
-		let result = "";
-		const cssRules = Array.from(appSheet.cssRules);
-		for (const element of cssRules)
-		{
-			const rule = element;
-			let selectors = rule.cssText.split("{")[0].split(",");
-			selectors = selectors.map((selector) => selector.trim());
-			selectors = selectors.filter((selector) => keep.some((keep) => selector.includes(keep)) || !discard.some((filter) => selector.includes(filter)));
+	private static async filterStyleRulesCore(
+        cssContent: string,
+        alwaysDiscard: string[],
+        discard: string[],
+        keep: string[]
+    ): Promise<string> {
+        const result = await postcss([
+            (root: postcss.Root) => {
+                root.walkRules((rule: postcss.Rule) => {
+                    const filteredSelectors = rule.selectors.filter((selector: string) => {
+                        const selectorParts = selector.split(/[\s.#:>+~]+/).filter(Boolean);
+                        
+                        if (selectorParts.some(part => alwaysDiscard.some(d => part.includes(d)))) {
+                            return false;
+                        }
+                        
+                        if (selectorParts.some(part => keep.some(k => part.includes(k)))) {
+                            return true;
+                        }
+                        
+                        return !selectorParts.some(part => discard.some(d => part.includes(d)));
+                    });
 
-			if (selectors.length == 0)
-			{
-				continue;
-			}
+                    if (filteredSelectors.length === 0) {
+                        rule.remove();
+                    } else if (filteredSelectors.length !== rule.selectors.length) {
+                        rule.selectors = filteredSelectors;
+                    }
+                });
+            }
+        ]).process(cssContent, { 
+            from: undefined,
+            parser: safeParser
+        });
 
-			result += rule.cssText + "\n";
-		}
+        return result.css;
+    }
 
-		return result;
-	}
+    public static async filterStyleRules(
+        input: CSSStyleSheet | string,
+        alwaysDiscard: string[],
+        discard: string[],
+        keep: string[]
+    ): Promise<string> {
+        let cssContent: string;
+
+        if (typeof input === 'string') {
+            cssContent = input;
+        } else {
+            const cssRules: CSSRule[] = Array.from(input.cssRules);
+            cssContent = cssRules.map(rule => rule.cssText).join('\n');
+        }
+
+        return this.filterStyleRulesCore(cssContent, alwaysDiscard, discard, keep);
+    }
+
 }

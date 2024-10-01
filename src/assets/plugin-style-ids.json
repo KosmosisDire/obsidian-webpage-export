@@ -1,0 +1,13 @@
+{
+	"version": 1,
+	"ids": 
+	[
+		"ADMONITIONS_CUSTOM_STYLE_SHEET",
+		"css-settings-manager"
+	],
+	"ignoreIds": 
+	[
+		"minimal-theme",
+		"MJX-CHTML-styles"
+	]
+}

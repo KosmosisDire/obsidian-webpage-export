@@ -10,6 +10,11 @@ body
 	--sidebar-margin: 12px;
 }
 
+:root
+{
+	background-color: #202124;
+}
+
 /*#region Sidebars */
 
 .sidebar {
@@ -84,6 +89,7 @@ body
 {
 	contain: none !important;
 	container-type: normal !important;
+	animation: none !important;
 }
 
 /* Hide empty sidebars */
@@ -234,6 +240,7 @@ body
 {
 	opacity: 0 !important;
 	transition: opacity 0.2s ease-in-out;
+	pointer-events: none;
 }
 
 #center-content>.obsidian-document 
@@ -290,7 +297,7 @@ body #center-content>.obsidian-document>.markdown-sizer
 	object-fit: contain;
 }
 
-:not(h1,h2,h3,h4,h5,h6):has(> :is(.math, table)) 
+:not(h1,h2,h3,h4,h5,h6):has(> :is(.math:not(.math-inline), table)) 
 {
     overflow-x: auto !important;
 }
@@ -324,20 +331,18 @@ body #center-content>.obsidian-document>.markdown-sizer
 
 .obsidian-document[data-type="attachment"] :is(img)
 {
-	width: 100%;
-	height: 100%;
 	max-width: 90%;
 	max-height: 90%;
 	object-fit: contain;
 }
 
-.obsidian-document[data-type="attachment"] :is(audio)
+.obsidian-document[data-type="attachment"] > :is(audio)
 {
 	width: 100%;
-	max-width: 90%;
+	max-width: min(90%, var(--line-width));
 }
 
-.obsidian-document[data-type="attachment"] :is(embed, iframe, video)
+.obsidian-document[data-type="attachment"] > :is(embed, iframe, video)
 {
 	width: 100%;
 	height: 100%;

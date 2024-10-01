@@ -60,6 +60,7 @@ export const language: i18n =
 		title: "HTML Export Settings",
 		support: "Support the continued development of this plugin.",
 		debug: "Copy debug info to clipboard",
+		unavailableSetting: "⚠️ This feature is not available in {0} mode.",
 		pageFeatures: {
 			title: "Page Features",
 			description: "Control various features of the exported page."
@@ -89,6 +90,7 @@ export const language: i18n =
 		fileNavigation: {
 			title: "File Navigation",
 			description: "Shows a file tree used to explore the exported vault.",
+			info_showCustomIcons: "Show custom icons for files and folders",
 			info_showDefaultFolderIcons: "Show a default icon of a folder for every folder in the tree",
 			info_showDefaultFileIcons: "Show a default icon of a file for every file in the tree",
 			info_defaultFolderIcon: "The icon to use for folders. Prefix with 'lucide//' to use a Lucide icon",
@@ -100,7 +102,7 @@ export const language: i18n =
 			title: "Outline", 
 			description: "Shows a list of the open document's headers.",
 			info_startCollapsed: "Should the outline start collapsed?",
-			info_minCollapseDepth: "The minimum depth at which headings should be collapsed"
+			info_minCollapseDepth: "Only allow outline items to be collapsed if they are at least this many levels deep in the tree."
 		},
 		graphView: {
 			title: "Graph View",
@@ -151,21 +153,73 @@ export const language: i18n =
 			description: "Displays all the properties of the currently opened document as a table.",
 			info_hideProperties: "A list of properties to hide from the properties view"
 		},
-		assetOptions: {
-			title: "Asset Options",
-			description: "Add plugin styles, or make the page offline compatible."
+		rss: {
+			title: "RSS",
+			description: "Generate an RSS feed for the exported site",
+			info_siteUrl: "The url that this site will be hosted at",
+			info_siteUrlPlaceholder: "https://example.com/mysite",
+			info_siteName: "The name of the vault / exported site",
+			info_authorName: "The name of the author of the site"
+		},
+		styleOptionsSection: {
+			title: "Style Options",
+			description: "Configure which styles are included with the export"
 		},
 		makeOfflineCompatible: {
 			title: "Make Offline Compatible",
 			description: "Download any online assets / images / scripts so the page can be viewed offline. Or so the website does not depend on a CDN."
 		},
-		includeSvelteCSS: {
-			title: "Include Svelte CSS",
-			description: "Include the CSS from any plugins that use the svelte framework. These can not be chosen individually because their styles are not associated with their respective plugins."
-		},
 		includePluginCSS: {
 			title: "Include CSS from Plugins",
 			description: "Include the CSS from the following plugins in the exported HTML. If plugin features aren't rendering correctly, try adding the plugin to this list. Avoid adding plugins unless you specifically notice a problem, because more CSS will increase the loading time of your page."
-		}
+		},
+		includeStyleCssIds: {
+			title: "Include Styles with IDs",
+			description: "Include CSS from style tags with the following IDs in the exported HTML"
+		},
+		generalSettingsSection:{
+			title: "General Settings",
+			description: "Control simple settings like the favicon and site metadata",
+		},
+		favicon: {
+			title: "Favicon image",
+			description: "The local path to the favicon for the site",
+		},
+		iconEmojiStyle: {
+			title: "Icon emoji style",
+			description: "The style of emoji to use for custom icons",
+		},
+		themeName: {
+			title: "Theme",
+			description: "The installed theme to use for the export",
+		},
+		exportSettingsSection: {
+			title: "Export Settings",
+			description: "Control more technical export settings like controling how links are generated",
+		},
+		relativeHeaderLinks: {
+			title: "Use Relative Header Links",
+			description: "Use relative links for headers instead of absolute links",
+		},
+		slugifyPaths: {
+			title: "Slugify Paths",
+			description: "Make all paths and file names web style (lowercase, no spaces)",
+		},
+		addPageIcon: {
+			title: "Add Page Icon",
+			description: "Add the file's icon to the page header",
+		},
+		obsidianSettingsSection: {
+			title: "Obsidian Settings",
+			description: "Control how the plugin functions inside Obsidian",
+		},
+		logLevel: {
+			title: "Log Level",
+			description: "Set the level of logging to display in the console",
+		},
+		titleProperty: {
+			title: "Title Property",
+			description: "The property to use as the title of the document",
+		},
 	}
 }

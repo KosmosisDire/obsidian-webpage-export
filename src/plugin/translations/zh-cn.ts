@@ -61,6 +61,7 @@ export const language: i18n =
 		title: "HTML导出设置",
 		support: "支持该插件的持续开发。",
 		debug: "将调试信息复制到剪贴板",
+		unavailableSetting: "⚠️ This feature is not available in {0} mode.",
 		pageFeatures: {
 			title: "页面功能",
 			description: "控制导出页面的各种功能。"
@@ -90,6 +91,7 @@ export const language: i18n =
 		fileNavigation: {
 			title: "文件导航",
 			description: "显示一个文件树，用于浏览导出的库。",
+			info_showCustomIcons: "为树中的每个文件显示一个自定义图标",
 			info_showDefaultFolderIcons: "为树中的每个文件夹显示一个默认图标",
 			info_showDefaultFileIcons: "为树中的每个文件显示一个默认图标",
 			info_defaultFolderIcon: "用于文件夹的图标。使用“lucide//”前缀使用Lucide图标",
@@ -152,22 +154,74 @@ export const language: i18n =
 			description: "以表格形式显示当前文档的所有属性。",
 			info_hideProperties: "要从属性视图中隐藏的属性列表"
 		},
-		assetOptions: {
-			title: "资源选项",
-			description: "添加插件样式或使页面离线兼容。"
+		rss: {
+			title: "RSS",
+			description: "Generate an RSS feed for the exported site",
+			info_siteUrl: "The url that this site will be hosted at",
+			info_siteUrlPlaceholder: "https://example.com/mysite",
+			info_siteName: "The name of the vault / exported site",
+			info_authorName: "The name of the author of the site"
+		},
+		styleOptionsSection: {
+			title: "样式选项",
+			description: "配置导出中包含的样式"
 		},
 		makeOfflineCompatible: {
 			title: "使页面离线兼容",
 			description: "下载所有在线资源、图像、脚本，使页面可以离线查看，或者使网站不依赖CDN。"
 		},
-		includeSvelteCSS: {
-			title: "包含Svelte的CSS",
-			description: "包含任何使用Svelte框架的插件的CSS。这些样式不能单独选择，因为它们的样式不与各自的插件关联。"
-		},
 		includePluginCSS: {
 			title: "包含插件的CSS",
 			description: "在导出的HTML中包含以下插件的CSS。如果插件功能未正确呈现，请尝试将插件添加到此列表中。避免无必要添加插件，因为更多的CSS会增加页面的加载时间。"
-		}
+		},
+		includeStyleCssIds: {
+			title: "Include Styles with IDs",
+			description: "Include CSS from style tags with the following IDs in the exported HTML."
+		},
+		generalSettingsSection:{
+			title: "General Settings",
+			description: "placeholder",
+		},
+		favicon: {
+			title: "Favicon image",
+			description: "placeholder",
+		},
+		iconEmojiStyle: {
+			title: "Icon emoji style",
+			description: "placeholder",
+		},
+		themeName: {
+			title: "Theme",
+			description: "placeholder",
+		},
+		exportSettingsSection: {
+			title: "Export Settings",
+			description: "placeholder",
+		},
+		relativeHeaderLinks: {
+			title: "Use Relative Header Links",
+			description: "placeholder",
+		},
+		slugifyPaths: {
+			title: "Slugify Paths",
+			description: "placeholder",
+		},
+		addPageIcon: {
+			title: "Add Page Icon",
+			description: "placeholder",
+		},
+		obsidianSettingsSection: {
+			title: "Obsidian Settings",
+			description: "Control how the plugin functions inside Obsidian",
+		},
+		logLevel: {
+			title: "Log Level",
+			description: "Set the level of logging to display in the console",
+		},
+		titleProperty: {
+			title: "Title Property",
+			description: "The property to use as the title of the document",
+		},
 	}
 }
 

@@ -54,6 +54,7 @@ export const language: i18n =
 		title: "Impostazioni Esportazione HTML",
 		support: "Supporta lo sviluppo continuo di questo plugin.",
 		debug: "Copia info di debug negli appunti",
+		unavailableSetting: "⚠️ This feature is not available in {0} mode.",
 		pageFeatures: {
 			title: "Funzionalità della pagina",
 			description: "Controlla varie funzionalità della pagina esportata."
@@ -82,6 +83,7 @@ export const language: i18n =
 		fileNavigation: {
 			title: "Navigazione File",
 			description: "Mostra un albero di file per esplorare il vault esportato.",
+			info_showCustomIcons: "Mostra un'icona personalizzata per ogni file nell'albero",
 			info_showDefaultFolderIcons: "Mostra un'icona predefinita per ogni cartella nell'albero",
 			info_showDefaultFileIcons: "Mostra un'icona predefinita per ogni file nell'albero",
 			info_defaultFolderIcon: "Icona da usare per le cartelle. Usa il prefisso 'lucide//' per usare un'icona Lucide",
@@ -144,21 +146,73 @@ export const language: i18n =
 			description: "Mostra tutte le proprietà del documento attualmente aperto in una tabella.",
 			info_hideProperties: "Un elenco di proprietà da nascondere nella vista delle proprietà"
 		},
-		assetOptions: {
-			title: "Opzioni risorse",
-			description: "Aggiungi stili dei plugin o rendi la pagina compatibile offline."
+		rss: {
+			title: "RSS",
+			description: "Generate an RSS feed for the exported site",
+			info_siteUrl: "The url that this site will be hosted at",
+			info_siteUrlPlaceholder: "https://example.com/mysite",
+			info_siteName: "The name of the vault / exported site",
+			info_authorName: "The name of the author of the site"
+		},
+		styleOptionsSection: {
+			title: "Opzioni di Stile",
+			description: "Configura quali stili includere nell'esportazione"
 		},
 		makeOfflineCompatible: {
 			title: "Rendi compatibile offline",
 			description: "Scarica risorse, immagini o script online per visualizzare la pagina offline o per non dipendere da una CDN."
 		},
-		includeSvelteCSS: {
-			title: "Includi CSS Svelte",
-			description: "Includi il CSS dai plugin che usano Svelte. Non possono essere scelti individualmente perché i loro stili non sono associati ai rispettivi plugin."
-		},
 		includePluginCSS: {
 			title: "Includi CSS dai plugin",
 			description: "Includi il CSS dei seguenti plugin nell'HTML esportato. Se le funzionalità dei plugin non si visualizzano correttamente, prova ad aggiungere il plugin a questo elenco. Evita di aggiungere plugin se non noti problemi specifici, poiché più CSS aumenterà il tempo di caricamento della pagina."
-		}
+		},
+		includeStyleCssIds: {
+			title: "Include Styles with IDs",
+			description: "Include CSS from style tags with the following IDs in the exported HTML."
+		},
+		generalSettingsSection:{
+			title: "General Settings",
+			description: "placeholder",
+		},
+		favicon: {
+			title: "Favicon image",
+			description: "placeholder",
+		},
+		iconEmojiStyle: {
+			title: "Icon emoji style",
+			description: "placeholder",
+		},
+		themeName: {
+			title: "Theme",
+			description: "placeholder",
+		},
+		exportSettingsSection: {
+			title: "Export Settings",
+			description: "placeholder",
+		},
+		relativeHeaderLinks: {
+			title: "Use Relative Header Links",
+			description: "placeholder",
+		},
+		slugifyPaths: {
+			title: "Slugify Paths",
+			description: "placeholder",
+		},
+		addPageIcon: {
+			title: "Add Page Icon",
+			description: "placeholder",
+		},
+		obsidianSettingsSection: {
+			title: "Obsidian Settings",
+			description: "Control how the plugin functions inside Obsidian",
+		},
+		logLevel: {
+			title: "Log Level",
+			description: "Set the level of logging to display in the console",
+		},
+		titleProperty: {
+			title: "Title Property",
+			description: "The property to use as the title of the document",
+		},
 	}
 };

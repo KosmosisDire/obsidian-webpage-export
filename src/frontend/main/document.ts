@@ -20,6 +20,7 @@ export class WebpageDocument
 	public tags: Tags;
 	public children: WebpageDocument[] = [];
 	public parent: WebpageDocument | null;
+	public isPreview: boolean = false;
 	public canvas: Canvas;
 
 	public documentType: DocumentType;
@@ -37,9 +38,9 @@ export class WebpageDocument
 	public queryParameters: URLSearchParams; 
 
 	public initialized: boolean = false;
-	public get isRootDocument(): boolean
+	public get isMainDocument(): boolean
 	{
-		return this.parent == null;
+		return this.parent == null && !this.isPreview;
 	}
 
 	public get bounds(): Bounds
@@ -65,20 +66,15 @@ export class WebpageDocument
 			return;
 		}
 
-		if (url == "" || url == "/" || url == "\\") url = "/index.html";
-		if (url.startsWith("#") || url.startsWith("?")) url = ObsidianSite.document.pathname + url;
-
 		this.pathname = LinkHandler.getPathnameFromURL(url);
+		this.hash = LinkHandler.getHashFromURL(url);
+		this.query = LinkHandler.getQueryFromURL(url);
 		let origin = window?.location?.origin;
 		if (origin == "null") origin = "file://";
-		const parsedURL = new URL(origin + "/" + url);
-		this.hash = parsedURL.hash;
-		this.query = parsedURL.search;
-		this.queryParameters = parsedURL.searchParams;
 
 		// load webpage data
 		this.info = ObsidianSite.getWebpageData(this.pathname) as WebpageData;
-		if (!this.info)
+		if (!this.info && !ObsidianSite.metadata.ignoreMetadata)
 		{
 			new Notice("This page does not exist yet.");
 			console.warn("This page does not exist yet.", this.pathname);
@@ -88,11 +84,10 @@ export class WebpageDocument
 		this._exists = true;
 
 		// set type
-		this.documentType = this.info.type as DocumentType;
-		console.log("Document type", this.documentType, this.info.type);
+		this.documentType = this.info?.type as DocumentType ?? DocumentType.Markdown;
 
 		// set title
-		this.title = this.info.title;
+		this.title = this.info?.title ?? this.pathname;
 	}
 
 	public findHeader(predicate: (header: Header) => boolean): Header | null
@@ -107,6 +102,7 @@ export class WebpageDocument
 
 	public scrollToHeader(headerId: string)
 	{
+		console.log("Scrolling to header", headerId);
 		const header = this.findHeader(h => h.id == headerId);
 		if (header) header.scrollTo();
 	}
@@ -128,9 +124,8 @@ export class WebpageDocument
 		
 		this.findElements();
 
-		if (this.isRootDocument)
+		if (this.isMainDocument)
 		{
-			LinkHandler.initializeLinks(this.sizerEl ?? this.documentEl ?? this.containerEl);
 			this.createHeaders();
 			this.createCallouts();
 			this.createLists();
@@ -156,10 +151,13 @@ export class WebpageDocument
 		ObsidianSite.document = this;
 	}
 
-	public async load(parent: WebpageDocument | null = null, containerEl: HTMLElement = ObsidianSite.centerContentEl): Promise<WebpageDocument>
+	public async load(parent: WebpageDocument | null = null, containerEl: HTMLElement = ObsidianSite.centerContentEl, isPreview: boolean = false, headerOnly: boolean = false): Promise<WebpageDocument>
 	{
+		this.parent = parent;
+		this.isPreview = isPreview;
+
 		if (!this.pathname || !this.exists) return this;
-		if (!parent && ObsidianSite.document.pathname == this.pathname)
+		if (this.isMainDocument && ObsidianSite.document.pathname == this.pathname)
 		{
 			console.log("Already on this page");
 			new Notice("This page is already open.", 2000);
@@ -167,13 +165,11 @@ export class WebpageDocument
 		}
 
 		let oldDocument = ObsidianSite.document;
-
 		await ObsidianSite.showLoading(true, containerEl);
 
-		this.parent = parent;
 		this.containerEl = containerEl;
 		
-		if (this.isRootDocument)
+		if (this.isMainDocument)
 		{
 			await this.setAsActive();
 		}
@@ -191,19 +187,40 @@ export class WebpageDocument
 			{
 				newDocumentEl = document.adoptNode(newDocumentEl);
 				const docEl = containerEl.querySelector(".obsidian-document");
-				if (docEl) docEl.replaceWith(newDocumentEl);
+				if (docEl)
+				{
+					docEl.before(newDocumentEl);
+					docEl.remove();
+				}
 				else containerEl.appendChild(newDocumentEl);
 			}
 
-			if (!parent && newOutlineEl) // only replace the outline if we are the root document
+			if (this.isMainDocument && newOutlineEl) // only replace the outline if we are the root document
 			{
 				newOutlineEl = document.adoptNode(newOutlineEl);
 				document.querySelector("#outline")?.replaceWith(newOutlineEl);
 				ObsidianSite.outlineTree = new Tree(newOutlineEl);
 			}
 
-			await this.postLoadInit()
 			await this.loadChildDocuments();
+			await this.postLoadInit()
+
+			// if we are only loading the header remove any .header-wrapper elements that are not the header or a child of the header (where the header is the url hash)
+			if (headerOnly && this.hash && this.hash != "")
+			{
+				let targetHeading = containerEl.querySelector(`#${this.hash}`);
+
+				if (targetHeading)
+				{
+					let targetHeadingWrapper = targetHeading.closest(".heading-wrapper");
+					if (targetHeadingWrapper)
+					{
+						targetHeadingWrapper.remove();
+						containerEl.querySelectorAll(".markdown-sizer > *:not(.markdown-preview-pusher)").forEach(el => el.remove());
+						this.sizerEl.appendChild(targetHeadingWrapper);
+					}
+				}
+			}
 
 			this.initialized = false;
 		}
@@ -223,16 +240,19 @@ export class WebpageDocument
 		this.findElements();
 		this.postProcess();
 
-		if (this.isRootDocument && ObsidianSite.metadata.featureOptions.backlinks.enabled) 
+		if (this.isMainDocument && !ObsidianSite.metadata.ignoreMetadata && ObsidianSite.metadata.featureOptions.backlinks.enabled && this.documentType == DocumentType.Markdown)
 			this.createBacklinks();
 
-		if (this.isRootDocument && ObsidianSite.metadata.featureOptions.tags.enabled) 
+		if (this.isMainDocument && !ObsidianSite.metadata.ignoreMetadata && ObsidianSite.metadata.featureOptions.tags.enabled && this.documentType == DocumentType.Markdown) 
 			this.createTags();
 
 		if (this.documentType == DocumentType.Canvas)
 		{
 			this.canvas = new Canvas(this);
 		}
+
+		if (this.isMainDocument || this.isPreview)
+			LinkHandler.initializeLinks(this.documentEl ?? this.containerEl);
 
 		return this;
 	}
@@ -300,12 +320,16 @@ export class WebpageDocument
 		this.documentEl?.querySelectorAll(".kanban-plugin__item.is-complete input[type='checkbox']").forEach((el: HTMLInputElement) => el.checked = true);
 
 		// toggle list and header collapse CSS
-		this.documentEl?.classList.toggle("allow-fold-headings", ObsidianSite.metadata.featureOptions.document.allowFoldingHeadings);
-		this.documentEl?.classList.toggle("allow-fold-lists", ObsidianSite.metadata.featureOptions.document.allowFoldingLists);
+		if (!ObsidianSite.metadata.ignoreMetadata)
+		{
+			this.documentEl?.classList.toggle("allow-fold-headings", ObsidianSite.metadata.featureOptions.document.allowFoldingHeadings);
+			this.documentEl?.classList.toggle("allow-fold-lists", ObsidianSite.metadata.featureOptions.document.allowFoldingLists);
+		}
 	}
 
 	public async loadChildDocuments()
 	{
+		this.findElements();
 		// prevent infinite recursion
 		let parentTemp: WebpageDocument | null = this;
 		let parentCount = 0;
@@ -333,6 +357,20 @@ export class WebpageDocument
 		let childrenTemp = await Promise.all(initPromises);
 		console.log("Loaded child documents", childrenTemp);
 		this.children.push(...childrenTemp);
+	}
+
+	public async loadChild(url: string, containerEl: HTMLElement): Promise<WebpageDocument>
+	{
+		const child = new WebpageDocument(url);
+		await child.load(this, containerEl);
+		this.children.push(child);
+		return child;
+	}
+
+	public async unloadChild(child: WebpageDocument)
+	{
+		this.children = this.children.filter(c => c != child);
+		child.documentEl?.remove();
 	}
 
 	public getMinReadableWidth(): number

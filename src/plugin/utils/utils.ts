@@ -78,16 +78,17 @@ export namespace Utils
 		mode && await view.setMode(mode);
 	};
 
-	export async function  downloadAttachments(files: Attachment[])
+	export async function downloadAttachments(files: Attachment[])
 	{
-		ExportLog.progress(0, "Saving HTML files to disk", "...", "var(--color-green)");
+		ExportLog.addToProgressCap(files.length);
+		ExportLog.progress(0, "Saving files to disk", "...", "var(--color-green)");
 
 		let complete = 0;
 		
 		await Promise.all(files.map(async (file, i) => {
 			try {
 				complete++;
-				ExportLog.progress((complete+1) / files.length, "Saving HTML files to disk", "Saved: " + file.filename, "var(--color-green)");
+				ExportLog.progress(1, "Saving files to disk", "Saved: " + file.filename, "var(--color-green)");
 				await file.download();
 			} catch (e) {
 				ExportLog.error(e, "Could not save file: " + file.filename);

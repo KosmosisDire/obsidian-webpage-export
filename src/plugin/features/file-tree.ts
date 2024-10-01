@@ -1,7 +1,7 @@
 import { Tree, TreeItem } from "./tree";
 import { Path } from "src/plugin/utils/path";
 import { Website } from "src/plugin/website/website";
-import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
+import { _MarkdownRendererInternal, MarkdownRendererAPI } from "src/plugin/render-api/render-api";
 
 export class FileTree extends Tree
 {
@@ -78,7 +78,7 @@ export class FileTree extends Tree
 						const tfolder = app.vault.getFolderByPath(section.path);
 						if (tfolder)
 						{
-							child.icon = (await Website.getIcon(tfolder)).icon;
+							child.icon = (await _MarkdownRendererInternal.getIconForFile(tfolder)).icon;
 						}
 					}
 
@@ -105,8 +105,8 @@ export class FileTree extends Tree
 				parent.href = path.path;
 				if (tfile)
 				{
-					parent.title = (await Website.getTitle(tfile)).title;
-					parent.icon = (await Website.getIcon(tfile)).icon;
+					parent.title = (await _MarkdownRendererInternal.getTitleForFile(tfile)).title;
+					parent.icon = (await _MarkdownRendererInternal.getIconForFile(tfile)).icon;
 				}
 			}
 		}

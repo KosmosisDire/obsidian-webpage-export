@@ -6,10 +6,8 @@ import { Path } from "src/plugin/utils/path";
 import { ExportLog, MarkdownRendererAPI } from "src/plugin/render-api/render-api";
 import { AssetLoader } from "src/plugin/asset-loaders/base-asset";
 import { AssetType, InlinePolicy, Mutability } from "src/plugin/asset-loaders/asset-types.js";
-import { HTMLGeneration } from "src/plugin/render-api/html-generation-helpers";
 import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
 import { Index as WebsiteIndex } from "src/plugin/website/index";
-import { WebpageData } from "src/plugin/../shared/website-data";
 import { WebpageTemplate } from "./webpage-template";
 import { AssetHandler } from "src/plugin/asset-loaders/asset-handler";
 import { Webpage } from "./webpage";
@@ -17,7 +15,7 @@ import { GraphView } from "src/plugin/features/graph-view";
 import { ThemeToggle } from "src/plugin/features/theme-toggle";
 import { SearchInput } from "src/plugin/features/search-input";
 import { Utils } from "src/plugin/utils/utils";
-import { IconHandler } from "src/plugin/utils/icon-handler";
+
 
 export class Website
 {
@@ -29,15 +27,13 @@ export class Website
 	public fileTree: FileTree;
 	public fileTreeAsset: AssetLoader;
 	public webpageTemplate: WebpageTemplate;
-	
-	public bodyClasses: string;
 	public exportOptions: ExportPipelineOptions;
 
 	constructor(destination: Path | string, options?: ExportPipelineOptions)
 	{
 		if (typeof destination == "string") destination = new Path(destination);
 		this.exportOptions = Object.assign(Settings.exportOptions, options);
-		if (destination.isFile) throw new Error("Website destination must be a folder: " + destination.path);
+		if (!destination.isDirectoryFS) throw new Error("Website destination must be a folder: " + destination.path);
 		this.destination = destination;
 	}
 
@@ -83,38 +79,53 @@ export class Website
 		}
 	}
 
-	public async load(files?: TFile[]): Promise<this>
-	{
-		this.sourceFiles = files?.filter((file) => file) ?? [];
-		this.bodyClasses = await HTMLGeneration.getValidBodyClasses(true);
-
-		// Find root path
-		try
-		{
-			if (this.exportOptions.exportRoot == "" && files)
-			{
-				if (this.sourceFiles.length > 1)
-				{ 
-					let commonPath = "";
-					let paths = this.sourceFiles.map((file) => file.path.split("/"));
-					while (paths.every((path) => path[0] == paths[0][0]))
-					{
-						commonPath += paths[0][0] + "/";
-						paths = paths.map((path) => path.slice(1));
-						
-						const anyEmpty = paths.some((path) => path.length == 1);
-						if (anyEmpty) break;
-					}
-					console.log("Export root path: " + commonPath);
-					this.exportOptions.exportRoot = new Path(commonPath).path + "/";
-				}
-				else this.exportOptions.exportRoot = this.sourceFiles[0].parent?.path ?? "";
+	private findCommonRootPath(files: { path: string }[]): string {
+		if (!files || files.length === 0) {
+			return '';
+		}
+	
+		if (files.length === 1) {
+			return new Path(files[0].path).parent?.path ?? '';
+		}
+	
+		const paths = files.map(file => new Path(file.path).split());
+		let commonPath: string[] = [];
+		const shortestPathLength = Math.min(...paths.map(p => p.length));
+	
+		for (let i = 0; i < shortestPathLength; i++) {
+			const segment = paths[0][i];
+			if (paths.every(path => path[i] === segment)) {
+				commonPath.push(segment);
+			} else {
+				break;
 			}
 		}
-		catch (error)
-		{
-			ExportLog.error(error, "Problem finding export root");
+	
+		// If the common path is just the root, return an empty string
+		if (commonPath.length <= 1) {
+			return '';
 		}
+	
+		// Remove the last segment if it's not a common parent for all files
+		const lastCommonSegment = commonPath[commonPath.length - 1];
+		if (!paths.every(path => path.length > commonPath.length || path[commonPath.length - 1] !== lastCommonSegment)) {
+			commonPath.pop();
+		}
+	
+		return commonPath.length > 0 ? new Path(commonPath.join("/")).path : '';
+	}
+
+	public async load(files?: TFile[]): Promise<this>
+	{
+		ExportLog.resetProgress();
+		ExportLog.addToProgressCap((files?.length ?? 0));
+		ExportLog.addToProgressCap((files?.length ?? 0) * 0.1);
+
+		this.sourceFiles = files?.filter((file) => file) ?? [];
+
+		let rootPath = this.findCommonRootPath(this.sourceFiles);
+		this.exportOptions.exportRoot = rootPath;
+		console.log("Root path: " + rootPath);
 
 		await AssetHandler.reloadAssets(this.exportOptions);
 		this.index = new WebsiteIndex();
@@ -143,6 +154,7 @@ export class Website
 			{
 				const isConvertable = MarkdownRendererAPI.isConvertable(file.extension);
 
+				// Make sure files which need to be saved directly without conversion are added to the index as attachments
 				if (!isConvertable || (MarkdownRendererAPI.viewableMediaExtensions.contains(file.extension)))
 				{
 					const data = Buffer.from(await app.vault.readBinary(file));
@@ -152,12 +164,16 @@ export class Website
 					await this.index.addFile(attachment);
 				}
 
+				// Create pages for normal convertable files (md, canvas, excalidraw, etc) as well as convertable media files (png, pdf, etc)
 				if (isConvertable)
 				{
 					let webpage = new Webpage(file, file.name, this, this.exportOptions);
 					webpage.showInTree = true;
 					await this.index.addFile(webpage);
 				}
+
+				ExportLog.progress(0.1, "Initializing Document", file.path, "var(--color-yellow)");
+				await Utils.delay(0);
 			}
 			catch (error)
 			{
@@ -178,7 +194,7 @@ export class Website
 				this.fileTree.generateWithItemsClosed = true;
 				this.fileTree.showFileExtentionTags = true;
 				this.fileTree.hideFileExtentionTags = ["md"];
-				this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
+				this.fileTree.title = this.exportOptions.rssOptions.siteName ?? app.vault.getName();
 				this.fileTree.id = "file-explorer";
 				const tempContainer = document.createElement("div");
 				await this.fileTree.generate(tempContainer);
@@ -203,24 +219,24 @@ export class Website
 	 * @returns The website object.
 	 */
 	public async build(files?: TFile[]): Promise<Website | undefined>
-	{ 
+	{
 		if (files) await this.load(files);
 
-		console.log("Creating website with files: ", this.sourceFiles);
+		console.log("Creating website with files:\n" + this.sourceFiles.map(f => f.path).join("\n"));
 
 		await this.buildTemplate();
 		
-		this.refreshUpdatedFilesList();
+		// this.refreshUpdatedFilesList();
 		
 		// if body classes have changed write new body classes to existing files
-		if (this.bodyClasses != (this.index.oldWebsiteData?.bodyClasses ?? this.bodyClasses))
-		{
-			await this.index.applyToOldWebpages(async (document: Document, oldData: WebpageData) => 
-			{
-				document.body.className = this.bodyClasses;
-				ExportLog.progress(0, "Updating Body Classes", oldData.sourcePath);
-			});
-		}
+		// if (this.bodyClasses != (this.index.oldWebsiteData?.bodyClasses ?? this.bodyClasses))
+		// {
+		// 	await this.index.applyToOldWebpages(async (document: Document, oldData: WebpageData) => 
+		// 	{
+		// 		document.body.className = this.bodyClasses;
+		// 		ExportLog.progress(0, "Updating Body Classes", oldData.sourcePath);
+		// 	});
+		// }
 
 		await MarkdownRendererAPI.beginBatch(this.exportOptions);
 		this.validateSettings();
@@ -241,9 +257,12 @@ export class Website
 		{
 			if (ExportLog.isCancelled()) return;
 
+			ExportLog.progress(1, "Building Webpages", webpage.source.path);
+
 			const rendered = await webpage.renderDocument();
 			if (!rendered) continue;
 			await Utils.delay(0);
+			
 			const attachments = await webpage.getAttachments();
 			await Utils.delay(0);
 			this.index.addFiles(attachments);
@@ -252,7 +271,6 @@ export class Website
 			await Utils.delay(0);
 			if (built) await this.index.addFile(webpage);
 			else await this.index.removeFile(webpage);
-
 			// save the file and then dispose of the webpage
 			if (!this.exportOptions.combineAsSingleFile)
 				await webpage.download();
@@ -260,13 +278,12 @@ export class Website
 			if (this.exportOptions.autoDisposeWebpages)
 				webpage.dispose();
 
-			ExportLog.progress(progress / webpages.length, "Building Website", webpage.source.path);
 			progress += 1;
 
 			await Utils.delay(0);
 		}
 	
-		if (this.exportOptions.addRSS)
+		if (this.exportOptions.rssOptions.enabled)
 		{
 			try
 			{
@@ -277,8 +294,6 @@ export class Website
 				ExportLog.error(error, "Problem creating RSS feed");
 			}
 		}
-
-		console.log("Website created: ", this);
 		
 		try
 		{
@@ -289,7 +304,9 @@ export class Website
 			ExportLog.error(error, "Problem finalizing index");
 		}
 
-		this.refreshUpdatedFilesList();
+		console.log(this);
+
+		// this.refreshUpdatedFilesList();
 
 		this.validateSite();
 		return this;
@@ -360,7 +377,7 @@ export class Website
 		}
 
 		// warn the user if they are trying to create an rss feed without a site url
-		if (this.exportOptions.addRSS && (this.exportOptions.siteURL == "" || this.exportOptions.siteURL == undefined))
+		if (this.exportOptions.rssOptions.enabled && (this.exportOptions.rssOptions.siteUrl == "" || this.exportOptions.rssOptions.siteUrl == undefined))
 		{
 			ExportLog.warning("Creating an RSS feed requires a site url to be set in the export settings.");
 		}
@@ -395,109 +412,6 @@ export class Website
 		targetPath.setWorkingDirectory((this.destination ?? Path.vaultPath.joinString("Web Export")).path);
 		targetPath.slugify(this.exportOptions.slugifyPaths);
 		return targetPath;
-	}
-
-	public static async getIcon(file: TAbstractFile): Promise<{ icon: string; isDefault: boolean }>
-	{
-		if (!file) return { icon: "", isDefault: true };
-
-		let iconOutput = "";
-		let iconProperty: string | undefined = "";
-		let useDefaultIcon = false;
-
-		if (file instanceof TFile)
-		{
-			const fileCache = app.metadataCache.getFileCache(file);
-			const frontmatter = fileCache?.frontmatter;
-			iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support
-			if (!iconProperty && Settings.exportOptions.fileNavigationOptions.showDefaultFileIcons) 
-			{
-				useDefaultIcon = true;
-				const isMedia = AssetLoader.extentionToType(file.extension) == AssetType.Media;
-				iconProperty = isMedia ? Settings.exportOptions.fileNavigationOptions.defaultMediaIcon : Settings.exportOptions.fileNavigationOptions.defaultFileIcon;
-				if (file.extension == "canvas") iconProperty = "lucide//layout-dashboard";
-			}
-		}
-		
-		if (file instanceof TFolder && Settings.exportOptions.fileNavigationOptions.showDefaultFolderIcons)
-		{
-			iconProperty = Settings.exportOptions.fileNavigationOptions.defaultFolderIcon;
-			useDefaultIcon = true;
-		}
-
-		iconOutput = await IconHandler.getIcon(iconProperty ?? "");
-
-		// add iconize icon as frontmatter if iconize exists
-		const isUnchangedNotEmojiNotHTML = (iconProperty == iconOutput && iconOutput.length < 40) && !/\p{Emoji}/u.test(iconOutput) && !iconOutput.includes("<") && !iconOutput.includes(">");
-		let parsedAsIconize = false;
-
-		//@ts-ignore
-		if ((useDefaultIcon || !iconProperty || isUnchangedNotEmojiNotHTML) && app.plugins.enabledPlugins.has("obsidian-icon-folder"))
-		{
-			//@ts-ignore
-			const fileToIconName = app.plugins.plugins['obsidian-icon-folder'].data;
-			const noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;
-			
-			// only add icon if rendering note icons is enabled
-			// bectheause that is what we rely on to get  icon
-			if (noteIconsEnabled)
-			{
-				const iconIdentifier = fileToIconName.settings.iconIdentifier ?? ":";
-				let iconProperty = fileToIconName[file.path];
-
-				if (iconProperty && typeof iconProperty != "string")
-				{
-					iconProperty = iconProperty.iconName ?? "";
-				}
-
-				if (iconProperty && typeof iconProperty == "string" && iconProperty.trim() != "")
-				{
-					if (file instanceof TFile)
-						app.fileManager.processFrontMatter(file, (frontmatter) =>
-						{
-							frontmatter.icon = iconProperty;
-						});
-
-					iconOutput = iconIdentifier + iconProperty + iconIdentifier;
-					parsedAsIconize = true;
-				}
-			}
-		}
-
-		if (!parsedAsIconize && isUnchangedNotEmojiNotHTML) iconOutput = "";
-
-		return { icon: iconOutput, isDefault: useDefaultIcon };
-	}
-
-	public static async getTitle(file: TAbstractFile): Promise<{ title: string; isDefault: boolean }>
-	{
-		let title = file.name;
-		let isDefaultTitle = true;
-		if (file instanceof TFile)
-		{
-			const fileCache = app.metadataCache.getFileCache(file);
-			const frontmatter = fileCache?.frontmatter;
-			const titleFromFrontmatter = frontmatter?.[Settings.titleProperty] ?? frontmatter?.["banner_header"]; // banner plugin support
-			title = (titleFromFrontmatter ?? file.basename).toString() ?? "";
-
-			if (title.endsWith(".excalidraw")) 
-			{
-				title = title.substring(0, title.length - 11);
-			}
-
-			if (title != file.basename) 
-			{
-				isDefaultTitle = false;
-			}
-		}
-
-		if (file instanceof TFolder)
-		{
-			title = file.name;
-			isDefaultTitle = true;
-		}
-
-		return { title: title, isDefault: isDefaultTitle };
 	}
 
 	public async createAttachmentFromSrc(src: string, sourceFile: TFile): Promise<Attachment | undefined>
@@ -620,7 +534,7 @@ export class Website
 	public async saveAsCombinedHTML(): Promise<void>
 	{
 		const html = await this.getCombinedHTML();
-		const path = this.destination.joinString(this.exportOptions.siteName + ".html");
+		const path = this.destination.joinString(this.exportOptions.rssOptions.siteName + ".html");
 		await path.write(html);
 	}
 }

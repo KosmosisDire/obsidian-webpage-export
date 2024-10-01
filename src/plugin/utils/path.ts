@@ -288,6 +288,11 @@ export class Path
 		return this.path;
 	}
 
+	public split(): string[]
+	{
+		return this.path.split(/[\/\\]/);
+	}
+
 	/**
 	 * The root of the path
 	 * @example
@@ -506,6 +511,25 @@ export class Path
 	}
 
 	/**
+	 * Uses the file system to check if the path is a directory rather than just checking the extension.
+	 */
+	get isDirectoryFS(): boolean
+	{
+		if(this.isDirectory) return true;
+
+		try
+		{
+			const stat = statSync(this.absoluted().pathname);
+			return stat.isDirectory();
+		}
+		catch (error)
+		{
+			Path.log("Error checking if path is directory: " + this.pathname, error, "error");
+			return false;
+		}
+	}
+
+	/**
 	 * True if this is an empty path: "".
 	 * AKA is the path just referencing its working directory.
 	 */
@@ -520,6 +544,25 @@ export class Path
 	get isFile(): boolean
 	{
 		return this._isFile;
+	}
+
+	/**
+	 * Uses the file system to check if the path is a file rather than just checking the extension.
+	 */
+	get isFileFS(): boolean
+	{
+		if (!this.isFile) return false;
+		
+		try
+		{
+			const stat = statSync(this.absoluted().pathname);
+			return stat.isFile();
+		}
+		catch (error)
+		{
+			Path.log("Error checking if path is file: " + this.pathname, error, "error");
+			return false;
+		}
 	}
 	
 	get workingDirectory(): string
@@ -654,12 +697,12 @@ export class Path
 			error += lang.noRelative;
 			valid = false;
 		}
-		else if (!options.allowFiles && this.isFile)
+		else if (!options.allowFiles && this.isFileFS)
 		{
 			error += lang.noFiles;
 			valid = false;
 		}
-		else if (!options.allowDirectories && this.isDirectory)
+		else if (!options.allowDirectories && this.isDirectoryFS)
 		{
 			error += lang.noFolders;
 			valid = false;

@@ -208,6 +208,9 @@ export class TreeItem
 			a.replaceWith(span);
 		});
 
+		// remove new lines from the title
+		itemContentsEl.innerHTML = itemContentsEl.innerHTML.replace(/\n/g, "");
+
 		return itemContentsEl;
 	}
 
@@ -221,8 +224,11 @@ export class TreeItem
 
 		itemLinkEl.setAttribute("data-path", this.dataRef ?? this.href ?? this.title);
 
-		if (this.isCollapsible()) 
+		if (this.isCollapsible())
+		{
 			this.insertCollapseIcon(itemLinkEl);
+			itemLinkEl.classList.add("mod-collapsible");
+		}
 		
 		this.insertIcon(itemLinkEl);
 		await this.insertInner(itemLinkEl);

@@ -268,32 +268,6 @@ export class ExportModal extends Modal
 
 		const onChangedValidate = (path: Path) => (!validatePath(path).valid) ? setExportDisabled(true) : setExportDisabled(false);
 
-		const exportPathInput = createFileInput(contentEl, () => Settings.exportOptions.exportPath, (value) => Settings.exportOptions.exportPath = value,
-		{
-			name: '',
-			description: '',
-			placeholder: i18n.pathInputPlaceholder,
-			defaultPath: FileDialogs.idealDefaultPath(),
-			pickFolder: true,
-			validation: validatePath,
-			onChanged: onChangedValidate
-		});
-
-		const { fileInput } = exportPathInput;
-		
-		fileInput.addButton((button) => {
-			exportButton = button;
-			setExportDisabled(!this.validPath);
-			button.setButtonText(lang.exportButton).onClick(async () => 
-			{
-				this.canceled = false;
-				this.close();
-			});
-		});
-
-		// add description of export at this path
-		const exportDescription = contentEl.createEl('div', { text: 'Loading site at path...', cls: 'setting-item-description'});
-		exportDescription.style.marginBottom = "1em";
 		const onChanged = async (path: Path) =>
 		{
 			onChangedValidate(path);
@@ -302,12 +276,12 @@ export class ExportModal extends Modal
 			if (!valid)
 			{
 				exportDescription.setText("");
-				return
+				return;
 			}
 
 			const website = new Website(path);
 			const index = new Index();
-			await index.load(website, website.exportOptions)
+			await index.load(website, website.exportOptions);
 
 			if (!index.oldWebsiteData)
 			{
@@ -329,8 +303,32 @@ export class ExportModal extends Modal
 			exportDescription.style.whiteSpace = "pre-wrap";
 		}
 
-		exportPathInput.textInput.onChange(() => onChanged(new Path(exportPathInput.textInput.getValue())));
+		const exportPathInput = createFileInput(contentEl, () => Settings.exportOptions.exportPath, (value) => Settings.exportOptions.exportPath = value,
+		{
+			name: '',
+			description: '',
+			placeholder: i18n.pathInputPlaceholder,
+			defaultPath: FileDialogs.idealDefaultPath(),
+			pickFolder: true,
+			validation: validatePath,
+			onChanged: onChanged
+		});
 
+		const { fileInput } = exportPathInput;
+		
+		fileInput.addButton((button) => {
+			exportButton = button;
+			setExportDisabled(!this.validPath);
+			button.setButtonText(lang.exportButton).onClick(async () => 
+			{
+				this.canceled = false;
+				this.close();
+			});
+		});
+
+		// add description of export at this path
+		const exportDescription = contentEl.createEl('div', { text: 'Loading site at path...', cls: 'setting-item-description'});
+		exportDescription.style.marginBottom = "1em";
 		onChanged(new Path(exportPathInput.textInput.getValue()));
 
 		this.filePickerModalEl.style.height = this.modalEl.clientHeight * 2 + "px";

@@ -1,6 +1,6 @@
 import { Notice, TFile, TFolder } from "obsidian";
 import { Path } from "src/plugin/utils/path";
-import { Settings, SettingsPage } from "src/plugin/settings/settings";
+import { ExportPreset, Settings, SettingsPage } from "src/plugin/settings/settings";
 import { Utils } from "src/plugin/utils/utils";
 import { Website } from "src/plugin/website/website";
 import { ExportLog, MarkdownRendererAPI } from "src/plugin/render-api/render-api";
@@ -64,11 +64,12 @@ export class HTMLExporter
 			if (deleteOld)
 			{
 				let i = 0;
+				ExportLog.addToProgressCap(website.index.deletedFiles.length / 2);
 				for (const dFile of website.index.deletedFiles)
 				{
 					const path = new Path(dFile, destination.path);
 					await path.delete();
-					ExportLog.progress(i / website.index.deletedFiles.length, "Deleting Old Files", "Deleting: " + path.path, "var(--color-red)");
+					ExportLog.progress(0.5, "Deleting Old Files", "Deleting: " + path.path, "var(--color-red)");
 					i++;
 				};
 
@@ -85,9 +86,12 @@ export class HTMLExporter
 				{
 					await Utils.downloadAttachments(website.index.newFiles.filter((f) => !(f instanceof Webpage)));
 					await Utils.downloadAttachments(website.index.updatedFiles.filter((f) => !(f instanceof Webpage)));
-					await Utils.downloadAttachments([website.index.websiteDataAttachment()]);
-					await Utils.downloadAttachments([website.index.indexDataAttachment()]);
 
+					if (Settings.exportPreset != ExportPreset.RawDocuments)
+					{
+						await Utils.downloadAttachments([website.index.websiteDataAttachment()]);
+						await Utils.downloadAttachments([website.index.indexDataAttachment()]);
+					}
 				}
 			}
 		}

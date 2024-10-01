@@ -6,6 +6,7 @@ import { FileNavigationOptions } from "./features/file-navigation";
 import { GraphViewOptions } from "./features/graph-view";
 import { OutlineOptions } from "./features/outline";
 import { PropertiesOptions } from "./features/properties";
+import { RssOptions } from "./features/rss";
 import { SearchOptions } from "./features/search";
 import { SidebarOptions } from "./features/sidebar";
 import { TagsOptions } from "./features/tags";
@@ -123,27 +124,33 @@ export class WebsiteOptions
 	 * Document section options
 	 */
 	document: DocumentOptions;
+
+	/**
+	 * Rss feed options
+	 */
+	rss: RssOptions;
 }
 
 export class WebsiteData
 {
-	webpages: {[targetPath: string]: WebpageData};
-	fileInfo: {[targetPath: string]: FileData};
-	sourceToTarget: {[sourcePath: string]: string};
-	attachments: string[];
-	shownInTree: string[];
-	allFiles: string[];
+	ignoreMetadata: boolean = false;
+	webpages: {[targetPath: string]: WebpageData} = {};
+	fileInfo: {[targetPath: string]: FileData} = {};
+	sourceToTarget: {[sourcePath: string]: string} = {};
+	attachments: string[] = [];
+	shownInTree: string[] = [];
+	allFiles: string[] = [];
 
-	siteName: string;
-	vaultName: string;
-	createdTime: number;
-	modifiedTime: number;
-	pluginVersion: string;
-	exportRoot: string;
-	baseURL: string;
+	siteName: string = "";
+	vaultName: string = "";
+	createdTime: number = 0;
+	modifiedTime: number = 0;
+	pluginVersion: string = ""; 
+	exportRoot: string = "";
+	baseURL: string = "";
 
-	themeName: string;
-	bodyClasses: string;
-	hasFavicon: boolean;
-	featureOptions: WebsiteOptions;
+	themeName: string = "";
+	bodyClasses: string = "";
+	hasFavicon: boolean = false;
+	featureOptions: WebsiteOptions = new WebsiteOptions();
 }

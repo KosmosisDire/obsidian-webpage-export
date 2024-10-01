@@ -1,23 +1,23 @@
 import { Shared } from "src/shared/shared";
 import { LinkHandler } from "./links";
 import { getTextNodes } from "./utils";
-import { ObsidianWebsite } from "./website";
+import MiniSearch, { SearchResult } from "minisearch";
 
 export enum SearchType
 {
-	Title,
-	Aliases,
-	Headers,
-	Tags,
-	Path,
-	Content,
+	Title = 1,
+	Aliases = 2,
+	Headers = 4,
+	Tags = 8,
+	Path = 16,
+	Content = 32,
 }
 
 const allSearch = SearchType.Title | SearchType.Aliases | SearchType.Headers | SearchType.Tags | SearchType.Path | SearchType.Content;
 
 export class Search
 {
-	private index: any; // MiniSearch
+	private index: MiniSearch; // MiniSearch
 	private input: HTMLInputElement;
 	private container: HTMLElement;
 
@@ -51,9 +51,11 @@ export class Search
 		if (type & SearchType.Tags) searchFields.push('tags');
 		if (type & SearchType.Path) searchFields.push('path');
 		if (type & SearchType.Content) searchFields.push('content');
+
+		console.log(type & SearchType.Title, type & SearchType.Aliases, type & SearchType.Headers, type & SearchType.Tags, type & SearchType.Path, type & SearchType.Content);
 	
 		
-		const results: Array<any> = this.index.search(query, 
+		const results: Array<SearchResult> = this.index.search(query, 
 		{ 
 			prefix: true, 
 			fuzzy: 0.2, 
@@ -61,12 +63,14 @@ export class Search
 			fields: searchFields 
 		});
 
+		console.log("Search results", results);
+
 		// clamp results to at most the top 50
 		if (results.length > 50) results.splice(50);
 		
 		// filter results for the best matches and generate extra metadata
 		const showPaths: string[] = [];
-		const headerLinks: any[] = [];
+		const headerLinks: Map<string, string[]> = new Map();
 		for (const result of results)
 		{
 			// only show the most relevant results
@@ -76,33 +80,37 @@ export class Search
 			showPaths.push(result.path);
 
 			// generate matching header links to display under the search result
-			const headers: any[] = [];
-			let breakEarly = false;
-			for (const match in result.match)
+			if(query.length > 2)
 			{
-				if (result.match[match].includes("headers"))
+				const headers: string[] = [];
+				let breakEarly = false;
+				for (const match in result.match)
 				{
-					for (const header of result.headers)
+					if (result.match[match].includes("headers"))
 					{
-						if (header.toLowerCase().includes(match.toLowerCase()))
+						for (const header of result.headers)
 						{
-							if (!headers.includes(header)) headers.push(header);
-							if (query.toLowerCase() != match.toLowerCase()) 
+							if (header.toLowerCase().includes(match.toLowerCase()))
 							{
-								breakEarly = true;
-								break;
+								if (!headers.includes(header)) headers.push(header);
+								if (query.toLowerCase() != match.toLowerCase()) 
+								{
+									breakEarly = true;
+									break;
+								}
 							}
 						}
 					}
+
+					if (breakEarly) break;
 				}
 
-				if (breakEarly) break;
+				headerLinks.set(result.path, headers);
 			}
-
-			headerLinks.push(headers);
 		}
 
 		ObsidianSite.fileTree?.filter(showPaths);
+		ObsidianSite.fileTree?.setSubHeadings(headerLinks);
 		ObsidianSite.fileTree?.sort((a, b) =>
 		{
 			if (!a || !b) return 0;
@@ -135,12 +143,49 @@ export class Search
 	
 	}
 
+	public searchParseFilters(queryString: string)
+	{
+		if (queryString.startsWith("?")) queryString = queryString.substring(1);
+		let filterName = queryString.split(":")[0];
+		if (!queryString.includes(":")) filterName = "";
+
+		if (filterName == "content" || filterName == "text" || filterName == "body")
+		{
+			this.search(queryString, SearchType.Content);
+		}
+		else if (filterName == "title" || filterName == "name")
+		{
+			this.search(queryString, SearchType.Title);
+		}
+		else if (filterName == "path")
+		{
+			this.search(queryString, SearchType.Path);
+		}
+		else if (filterName == "header" || filterName == "headers")
+		{
+			this.search(queryString, SearchType.Headers);
+		}
+		else if (filterName == "tag" || filterName == "tags" || queryString.startsWith("#"))
+		{
+			this.search(queryString, SearchType.Tags);
+		}
+		else if (filterName == "alias" || filterName == "aliases")
+		{
+			this.search(queryString, SearchType.Aliases);
+		}
+		else
+		{
+			this.search(queryString);
+		}
+	}
+
 	public clear()
 	{
 		this.container?.classList.remove("has-content");
 		this.input.value = "";
 		this.clearCurrentDocumentSearch();
 		ObsidianSite.fileTree?.unfilter();
+		ObsidianSite.fileTree?.removeSubHeadings();
 	}
 
 	public async init(): Promise<Search | undefined>
@@ -182,7 +227,7 @@ export class Search
 				return;
 			}
 			
-			this.search(query);
+			this.searchParseFilters(query);
 		});
 
 		if (!ObsidianSite.fileTree)

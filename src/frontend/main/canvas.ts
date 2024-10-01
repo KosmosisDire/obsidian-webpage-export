@@ -1,4 +1,5 @@
 import { WebpageDocument } from "./document"
+import { LinkHandler } from "./links";
 import { Bounds, inOutQuadBlend, Vector2, getPointerPosition, lerp, lerpv, inOutQuadBlendv, lerpc, clamp, mapRange, mapRangeClamped } from "./utils";
 
 export enum NodeType
@@ -111,6 +112,12 @@ export class CanvasNode
 		this.labelEl = nodeEl.querySelector(".canvas-node-label") as HTMLElement;
 		this.containerEl = nodeEl.querySelector(".canvas-node-container") as HTMLElement;
 		this.contentEl = nodeEl.querySelector(".canvas-node-content") as HTMLElement;
+
+		if (!this.labelEl || !this.containerEl || !this.contentEl)
+		{
+			console.error("Failed to find all required elements for canvas node", this);
+			return;
+		}
 
 		const contentClasses = this.contentEl.classList;
 		if (contentClasses.contains("image-embed")) this.type = NodeType.Image;
@@ -373,8 +380,6 @@ export class Canvas
 			// zoom in animation
 			this.fitToBounds(this.nodeBounds, 0.9, false);
 		}, 100);
-
-
 	}
 
 	private lastTime: number = 0;

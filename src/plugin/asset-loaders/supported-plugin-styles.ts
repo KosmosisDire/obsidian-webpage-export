@@ -1,66 +1,54 @@
-import { Settings } from "src/plugin/settings/settings";
+import { Settings, SettingsPage } from "src/plugin/settings/settings";
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { ExportLog } from "src/plugin/render-api/render-api";
 import { OtherPluginStyles } from "./other-plugin-styles.js";
+import pluginIds from "src/assets/plugin-style-ids.json";
 
-export class SupportedPluginStyles extends AssetLoader
-{
-    constructor()
-    {
-        super("supported-plugins.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 5);
-    }
-    
-    override async load()
-    {
-        this.data = "";
-        const stylesheets = document.styleSheets;
+export class SupportedPluginStyles extends AssetLoader {
+	constructor() {
+		super("supported-plugins.css", "", null, AssetType.Style, InlinePolicy.AutoHead, true, Mutability.Dynamic, LoadMethod.Async, 5);
+	}
 
-		for(let i = 1; i < stylesheets.length; i++) 
-        {
-            // @ts-ignore
-            const styleID = stylesheets[i].ownerNode?.id;
+	override async load() {
+		SettingsPage.nameStyles();
+		const stylesheets = document.styleSheets;
+		this.data = "";
 
-            if 
-			(
-				styleID == "ADMONITIONS_CUSTOM_STYLE_SHEET" || 
-				styleID == "css-settings-manager" ||
-				styleID == "colored-tags-wrangler" ||
-				styleID == "highlightr-styles" ||
-				(Settings.exportOptions.includeSvelteCSS && this.isSvelteStylesheet(stylesheets[i]))
-			)
-            {
-                ExportLog.log("Including stylesheet: " + styleID);
-                const style = stylesheets[i].cssRules;
+		for (let i = 1; i < stylesheets.length; i++) {
+			// @ts-ignore
+			const styleID = stylesheets[i].ownerNode?.id;
 
-                for(const item in style) 
-                {
-                    if(style[item].cssText != undefined)
-                    {
-                        
-                        this.data += "\n" + style[item].cssText;
-                    }
-                }
-            }
+			if
+				(
+				pluginIds.ids.contains(styleID) || Settings.exportOptions.includeStyleCssIds.contains(styleID)
+			) {
+				ExportLog.log("Including stylesheet: " + styleID);
+				const style = stylesheets[i].cssRules;
+
+				for (const item in style) {
+					if (style[item].cssText != undefined) {
+
+						this.data += "\n" + style[item].cssText;
+					}
+				}
+			}
 
 			this.data += "\n\n /* ---- */\n\n";
-        }
+		}
 
 		// iconize
 		this.data += await OtherPluginStyles.getStyleForPlugin("obsidian-icon-folder");
 
-        await super.load();
-    }
+		await super.load();
+	}
 
-	getStylesheetContent(stylesheet: CSSStyleSheet): string
-	{
+	getStylesheetContent(stylesheet: CSSStyleSheet): string {
 		let content = "";
 		const style = stylesheet.cssRules;
 
-		for(const item in style) 
-		{
-			if(style[item].cssText != undefined)
-			{
+		for (const item in style) {
+			if (style[item].cssText != undefined) {
 				content += "\n" + style[item].cssText;
 			}
 		}
@@ -68,9 +56,8 @@ export class SupportedPluginStyles extends AssetLoader
 		return content;
 	}
 
-	isSvelteStylesheet(stylesheet: CSSStyleSheet): boolean
-	{
-		if(stylesheet.ownerNode == undefined) return false;
+	isSvelteStylesheet(stylesheet: CSSStyleSheet): boolean {
+		if (stylesheet.ownerNode == undefined) return false;
 		// @ts-ignore
 		const styleID = stylesheet.ownerNode.id;
 
@@ -78,8 +65,7 @@ export class SupportedPluginStyles extends AssetLoader
 
 		const sheetContent = this.getStylesheetContent(stylesheet);
 		const first1000 = sheetContent.substring(0, 1000);
-		if (first1000.contains(".svelte-")) 
-		{
+		if (first1000.contains(".svelte-")) {
 			return true;
 		}
 

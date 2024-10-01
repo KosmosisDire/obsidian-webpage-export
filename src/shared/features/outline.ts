@@ -14,7 +14,13 @@ export class OutlineOptions extends InsertedFeatureOptions
 	info_minCollapseDepth = new FeatureSettingInfo(
 	{
 		show: true,
-		description: i18n.settings.outline.info_minCollapseDepth
+		description: i18n.settings.outline.info_minCollapseDepth,
+		dropdownTypes: 
+		{
+			"1": 1,
+			"2": 2,
+			"No Collapse": 100
+		}
 	});
 
 	constructor()

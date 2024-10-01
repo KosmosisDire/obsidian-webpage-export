@@ -12,15 +12,6 @@ export class WebsiteJS extends AssetLoader
 	override async load()
 	{
 		this.data = websiteJS;
-
-		// remove excess shared code using regex
-
-		// remove info_ variables
-		this.data = this.data.replace(/this\.info_[\S\s]+?;/gm, "");
-
-		// remove require statements
-		this.data = this.data.replace(/var .+?__require\(.+?\);/gm, "");
-		
 		await super.load();
 	}
 }

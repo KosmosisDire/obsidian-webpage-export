@@ -4,13 +4,19 @@ import { i18n } from "src/plugin/translations/language";
 
 export class FileNavigationOptions extends FetchedFeatureOptions
 {
+	showCustomIcons: boolean = false;
 	showDefaultFolderIcons: boolean = false;
 	showDefaultFileIcons: boolean = false;
 	defaultFolderIcon: string = "lucide//folder";
 	defaultFileIcon: string = "lucide//file";
 	defaultMediaIcon: string = "lucide//file-image";
 	exposeStartingPath: boolean = true;
-		
+	
+	info_showCustomIcons: FeatureSettingInfo = new FeatureSettingInfo(
+	{
+		show: true, 
+		description: i18n.settings.fileNavigation.info_showCustomIcons
+	});
 	info_showDefaultFolderIcons: FeatureSettingInfo = new FeatureSettingInfo(
 	{
 		show: true, 

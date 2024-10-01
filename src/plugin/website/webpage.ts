@@ -3,9 +3,7 @@ import { Path } from "src/plugin/utils/path";
 import { Attachment } from "src/plugin/utils/downloadable";
 import { OutlineTree } from "src/plugin/features/outline-tree";
 import { Website } from "./website";
-import { HTMLGeneration } from "src/plugin/render-api/html-generation-helpers";
-import { Utils } from "src/plugin/utils/utils";
-import { ExportLog } from "src/plugin/render-api/render-api";
+import { _MarkdownRendererInternal, ExportLog } from "src/plugin/render-api/render-api";
 import { MarkdownRendererAPI } from "src/plugin/render-api/render-api";
 import { ExportPipelineOptions } from "src/plugin/website/pipeline-options.js";
 import { DocumentType } from "src/shared/website-data";
@@ -13,6 +11,31 @@ import { Settings } from "src/plugin/settings/settings";
 import { AssetHandler } from "src/plugin/asset-loaders/asset-handler";
 import { Shared } from "src/shared/shared";
 import { moment } from "obsidian";
+
+export class WebpageOutputData
+{
+	public html: string = "";
+	public title: string = "";
+	public icon: string = "";
+	public description: string = "";
+	public author: string = "";
+	public fullURL: string = "";
+	public rssDate: string = "";
+	public pathToRoot: string = "";
+	public coverImageURL: string = "";
+	public allTags: string[] = [];
+	public inlineTags: string[] = [];
+	public frontmatterTags: string[] = [];
+	public aliases: string[] = [];
+	public backlinks: Webpage[] = [];
+	public headings: {heading: string, level: number, id: string, headingEl: HTMLElement}[] = [];
+	public renderedHeadings: {heading: string, level: number, id: string}[] = [];
+	public descriptionOrShortenedContent: string = "";
+	public searchContent: string = "";
+	public srcLinks: string[] = [];
+	public hrefLinks: string[] = [];
+	public linksToOtherFiles: string[] = [];
+}
 
 export class Webpage extends Attachment
 {
@@ -31,9 +54,7 @@ export class Webpage extends Attachment
 	public attachments: Attachment[] = [];
 	public type: DocumentType = DocumentType.Markdown;
 	public title: string = "";
-	public isDefaultTitle: boolean = true;
 	public icon: string = "";
-	public isDefaultIcon: boolean = true;
 
 	/**
 	 * @param file The original markdown file to export
@@ -44,7 +65,6 @@ export class Webpage extends Attachment
 	 */
 	constructor(file: TFile, filename: string, website: Website, options?: ExportPipelineOptions)
 	{
-		console.log("Creating webpage for: " + file.path);
 		if (!MarkdownRendererAPI.isConvertable(file.extension)) throw new Error("File type not supported: " + file.extension);
 
 		const targetPath = website.getTargetPathForFile(file, filename);
@@ -60,10 +80,85 @@ export class Webpage extends Attachment
 			this.targetPath.parent = Path.emptyPath;
 	}
 
+	public outputData: WebpageOutputData = new WebpageOutputData();
+
+	public async generateOutput()
+	{
+		const output = new WebpageOutputData();
+		output.html = this.html;
+		output.title = this.title;
+		output.icon = this.icon;
+		output.description = this.descriptionOrShortenedContent;
+		output.author = this.author;
+		output.fullURL = this.fullURL;
+		output.rssDate = this.rssDate;
+		output.pathToRoot = this.pathToRoot.path;
+		output.coverImageURL = this.coverImageURL ?? "";
+		output.allTags = this.allTags;
+		output.frontmatterTags = this.frontmatterTags;
+		output.aliases = this.aliases;
+		output.backlinks = this.backlinks;
+		output.headings = this.headings;
+		output.renderedHeadings = await this.getRenderedHeadings();
+		output.descriptionOrShortenedContent = this.descriptionOrShortenedContent;
+		output.searchContent = this.searchContent;
+		output.srcLinks = this.srcLinks;
+		output.hrefLinks = this.hrefLinks;
+		output.linksToOtherFiles = this.linksToOtherFiles;
+
+		this.data = output.html;
+
+		this.outputData = output;
+	}
+
+	private get searchContent(): string
+	{
+		const contentElement = this.sizerElement ?? this.viewElement ?? this.pageDocument?.body;
+		if (!contentElement)
+		{
+			return "";
+		}
+
+		const skipSelector = ".math, svg, img, .frontmatter, .metadata-container, .heading-after, style, script";
+		function getTextNodes(element: HTMLElement): Node[]
+		{
+			const textNodes = [];
+			const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, null);
+	
+			let node;
+			while (node = walker.nextNode()) 
+			{
+				if (node.parentElement?.closest(skipSelector))
+				{
+					continue;
+				}
+
+				textNodes.push(node);
+			}
+	
+			return textNodes;
+		}
+
+		const textNodes = getTextNodes(contentElement);
+
+		let content = '';
+		for (const node of textNodes) 
+		{
+			content += ' ' + node.textContent + ' ';
+		}
+
+		content += this.hrefLinks.join(" ");
+		content += this.srcLinks.join(" ");
+
+		content = content.trim().replace(/\s+/g, ' ');
+
+		return content;
+	}
+
 	/**
 	 * The HTML string for the file
 	 */
-	get html(): string
+	private get html(): string
 	{
 		const htmlString = "<!DOCTYPE html> " + this.pageDocument.documentElement.outerHTML;
 		return htmlString;
@@ -72,7 +167,7 @@ export class Webpage extends Attachment
 	/**
 	 * The element that contains the content of the document, aka the markdown-preview-view or view-content
 	 */
-	get viewElement(): HTMLElement | undefined
+	private get viewElement(): HTMLElement | undefined
 	{
 		return this.pageDocument.querySelector(".obsidian-document") as HTMLElement;
 	}
@@ -80,7 +175,7 @@ export class Webpage extends Attachment
 	/**
 	 * The element that determines the size of the document, aka the markdown-preview-sizer
 	 */
-	get sizerElement(): HTMLElement | undefined
+	private get sizerElement(): HTMLElement | undefined
 	{
 		return (this.pageDocument.querySelector(".canvas-wrapper") ?? this.pageDocument.querySelector(".markdown-sizer") ?? this.pageDocument.querySelector(".obsidian-document")) as HTMLElement | undefined;
 	}
@@ -88,7 +183,7 @@ export class Webpage extends Attachment
 	/**
 	 * The header eleent which holds the title and various other non-body text info
 	 */
-	get headerElement(): HTMLElement | undefined
+	private get headerElement(): HTMLElement | undefined
 	{
 		return this.pageDocument.querySelector(".header") as HTMLElement | undefined;
 	}
@@ -96,7 +191,7 @@ export class Webpage extends Attachment
 	/**
 	 * The footer element which holds the footer text
 	 */
-	get footerElement(): HTMLElement | undefined
+	private get footerElement(): HTMLElement | undefined
 	{
 		return this.pageDocument.querySelector(".footer") as HTMLElement | undefined;
 	}
@@ -104,13 +199,13 @@ export class Webpage extends Attachment
 	/**
 	 * The relative path from exportPath to rootFolder
 	 */
-	get pathToRoot(): Path
+	private get pathToRoot(): Path
 	{
 		const ptr = Path.getRelativePath(this.targetPath, new Path(this.targetPath.workingDirectory), true);
 		return ptr;
 	}
 
-	get allTags(): string[]
+	private get allTags(): string[]
 	{
 		const tags = this.frontmatterTags.concat(this.inlineTags);
 
@@ -120,7 +215,7 @@ export class Webpage extends Attachment
 		return uniqueTags;
 	}
 
-	get frontmatterTags(): string[]
+	private get frontmatterTags(): string[]
 	{
 		const tags: string[] = this.frontmatter?.tags ?? [];
 		
@@ -133,7 +228,7 @@ export class Webpage extends Attachment
 		return tags;
 	}
 
-	get inlineTags(): string[]
+	private get inlineTags(): string[]
 	{
 		const tagCaches = app.metadataCache.getFileCache(this.source)?.tags?.values();
 		const tags: string[] = [];
@@ -145,7 +240,7 @@ export class Webpage extends Attachment
 		return tags;
 	}
 
-	get headings(): {heading: string, level: number, id: string, headingEl: HTMLElement}[]
+	public get headings(): {heading: string, level: number, id: string, headingEl: HTMLElement}[]
 	{
 		const headers: {heading: string, level: number, id: string, headingEl: HTMLElement}[] = [];
 		if (this.pageDocument)
@@ -162,35 +257,31 @@ export class Webpage extends Attachment
 		return headers;
 	}
 
-	public async getStrippedHeadings(): Promise<{ heading: string; level: number; id: string; }[]>
+	private async getRenderedHeadings(): Promise<{ heading: string; level: number; id: string; }[]>
 	{
 		const headings = this.headings.map((header) => {return {heading: header.heading, level: header.level, id: header.id}});
 		
 		for (const header of headings)
 		{
-			const tempContainer = document.body.createDiv();
-			await MarkdownRendererAPI.renderMarkdownSimpleEl(header.heading, tempContainer);
-			// @ts-ignore
-			const h = tempContainer.innerText ?? header.heading;
+			const h = await MarkdownRendererAPI.renderMarkdownSimple(header.heading) ?? header.heading;
 			header.heading = h;
-			tempContainer.remove();
 		}
 
 		return headings;
 	}
 
-	get aliases(): string[]
+	private get aliases(): string[]
 	{
 		const aliases = this.frontmatter?.aliases ?? [];
 		return aliases;
 	}
 
-	get description(): string
+	private get description(): string
 	{
 		return this.frontmatter["description"] || this.frontmatter["summary"] || "";
 	}
 
-	get descriptionOrShortenedContent(): string
+	private get descriptionOrShortenedContent(): string
 	{
 		let description = this.description;
 		let localThis = this;
@@ -215,7 +306,7 @@ export class Webpage extends Attachment
 				}
 				src = src.replace("app://obsidian", "");
 				src = src.replace(".md", "");
-				const path = Path.joinStrings(this.exportOptions.siteURL ?? "", src);
+				const path = Path.joinStrings(this.exportOptions.rssOptions.siteUrl ?? "", src);
 				el.setAttribute("src", path.path);
 			});
 
@@ -227,7 +318,7 @@ export class Webpage extends Attachment
 				if (href.startsWith("http") || href.startsWith("data:")) return;
 				href = href.replace("app://obsidian", "");
 				href = href.replace(".md", "");
-				const path = Path.joinStrings(this.exportOptions.siteURL ?? "", href);
+				const path = Path.joinStrings(this.exportOptions.rssOptions.siteUrl ?? "", href);
 				el.setAttribute("href", path.path);
 			});
 
@@ -297,47 +388,31 @@ export class Webpage extends Attachment
 		return description ?? "";
 	}
 
-	get tagsPreviewHTML(): string
+	private get author(): string
 	{
-		let tagsHTML = "";
-
-		const tags = this.allTags.map((tag) => `<a class="tag" href="${this.exportOptions.siteURL}?query=tag:${tag.replace("#", "")}">${tag.startsWith("#") ? tag : "#" + tag}</a>`).join(" ");
-		if (tags.length > 0)
-		{
-			const tagContainer = document.body.createDiv();
-			tagContainer.innerHTML = tags;
-			tagContainer.style.display = "flex";
-			tagContainer.style.gap = "0.4em";
-
-			tagContainer.querySelectorAll("a.tag").forEach((tag: HTMLElement) => 
-			{
-				tag.style.backgroundColor = "#046c74";
-				tag.style.color = "white";
-				tag.style.fontWeight = "700";
-				tag.style.border = "none";
-				tag.style.borderRadius = "1em";
-				tag.style.padding = "0.2em 0.5em";
-			});
-
-			tagsHTML = tagContainer.innerHTML + " <br> ";
-			tagContainer.remove();
-		}
-
-		return tagsHTML;
+		return this.frontmatter["author"] || this.exportOptions.rssOptions.authorName || "";
 	}
 
-	get author(): string
+	private get fullURL(): string
 	{
-		return this.frontmatter["author"] || this.exportOptions.authorName || "";
-	}
-
-	get fullURL(): string
-	{
-		const url = Path.joinStrings(this.exportOptions.siteURL ?? "", this.targetPath.path).path;
+		const url = Path.joinStrings(this.exportOptions.rssOptions.siteUrl ?? "", this.targetPath.path).path;
 		return url;
 	}
 
-	get backlinks(): Webpage[]
+	private get rssDate(): string
+	{
+		// if it has a date in the frontmatter, use that
+		const date = this.frontmatter[Settings.rssDateProperty];
+		console.log(date);
+		if (date) return date;
+
+		// if it doesn't, use the file's modified date
+		const mtimeMs = this.source.stat.mtime;
+		const rssDate = new Date(mtimeMs).toISOString();
+		return rssDate;
+	}
+
+	private get backlinks(): Webpage[]
 	{
 		// @ts-ignore
 		const backlinks = Object.keys(app.metadataCache.getBacklinksForFile(this.source)?.data) ?? [];
@@ -346,7 +421,7 @@ export class Webpage extends Attachment
 		return linkedWebpages;
 	}
 
-	get coverImageURL(): string | undefined
+	private get coverImageURL(): string | undefined
 	{
 		if (!this.viewElement) return undefined;
 		let mediaPathStr = this.viewElement.querySelector("img")?.getAttribute("src") ?? "";
@@ -356,40 +431,40 @@ export class Webpage extends Attachment
 
 		if (!mediaPathStr.startsWith("http") && !mediaPathStr.startsWith("data:"))
 		{
-			const mediaPath = Path.joinStrings(this.exportOptions.siteURL ?? "", mediaPathStr);
+			const mediaPath = Path.joinStrings(this.exportOptions.rssOptions.siteUrl ?? "", mediaPathStr);
 			mediaPathStr = mediaPath.path;
 		}
 
 		return mediaPathStr;
 	}
 
-	get frontmatter(): FrontMatterCache
+	private get frontmatter(): FrontMatterCache
 	{
 		const frontmatter = app.metadataCache.getFileCache(this.source)?.frontmatter ?? {};
 		return frontmatter;
 	}
 
-	get srcLinks(): string[]
+	private get srcLinks(): string[]
 	{
 		const srcEls = this.srcLinkElements.map((item) => item.getAttribute("src")) as string[];
 		return srcEls;
 	}
-	get hrefLinks(): string[]
+	private get hrefLinks(): string[]
 	{
 		const hrefEls = this.hrefLinkElements.map((item) => item.getAttribute("href")) as string[];
 		return hrefEls;
 	}
-	get srcLinkElements(): HTMLImageElement[]
+	private get srcLinkElements(): HTMLImageElement[]
 	{
 		const srcEls = (Array.from(this.pageDocument.querySelectorAll(".obsidian-document [src]:not(head *)")) as HTMLImageElement[]);
 		return srcEls;
 	}
-	get hrefLinkElements(): HTMLAnchorElement[]
+	private get hrefLinkElements(): HTMLAnchorElement[]
 	{
 		const hrefEls = (Array.from(this.pageDocument.querySelectorAll(".obsidian-document [href]:not(head *)")) as HTMLAnchorElement[]);
 		return hrefEls;
 	}
-	get linksToOtherFiles(): string[]
+	private get linksToOtherFiles(): string[]
 	{
 		const links = this.hrefLinks;
 		const otherFiles = links.filter((link) => !link.startsWith("#") && !link.startsWith(Shared.libFolderName + "/") && !link.startsWith("http") && !link.startsWith("data:"));
@@ -404,32 +479,18 @@ export class Webpage extends Attachment
 		this.viewElement?.setAttribute("data-type", this.type);
 
 		// get title and icon
-		const titleInfo = await Website.getTitle(this.source);
-		const iconInfo = await Website.getIcon(this.source);
+		const titleInfo = await _MarkdownRendererInternal.getTitleForFile(this.source);
+		const iconInfo = await _MarkdownRendererInternal.getIconForFile(this.source);
 		this.title = titleInfo.title;
-		this.isDefaultTitle = titleInfo.isDefault;
 		this.icon = iconInfo.icon;
-		this.isDefaultIcon = iconInfo.isDefault;
-		const iconRenderContainer = document.body.createDiv();
-		await MarkdownRendererAPI.renderMarkdownSimpleEl(this.icon, iconRenderContainer);
-		this.icon = iconRenderContainer.innerHTML;
-		iconRenderContainer.remove();
-
-		// create header and footer
-		const header = this.sizerElement?.createDiv({cls: "header"});
-		header?.createDiv({cls: "data-bar"});
-		const footer = this.sizerElement?.createDiv({cls: "footer"});
-		footer?.createDiv({cls: "data-bar"});
-		this.sizerElement?.prepend(this.headerElement!);
+		this.icon = await MarkdownRendererAPI.renderMarkdownSimple(this.icon) ?? this.icon;
+	
 
 		if (this.exportOptions.inlineMedia) 
 			await this.inlineMedia();
 
 		if (this.exportOptions.addHeadTag) 
 			await this.addHead();
-		
-		if (this.exportOptions.addTitle)
-			await this.addTitle();
 
 		if (this.exportOptions.fixLinks)
 		{
@@ -485,7 +546,7 @@ export class Webpage extends Attachment
 
 		this.pageDocument.documentElement.lang = moment.locale();
 
-		this.data = this.html;
+		await this.generateOutput();
 
 		return this;
 	}
@@ -500,6 +561,7 @@ export class Webpage extends Attachment
 
 		const options = {...this.exportOptions, container: centerContent};
 		const renderInfo = await MarkdownRendererAPI.renderFile(this.source, options);
+
 		const contentEl = renderInfo?.contentEl;
 		if (!contentEl) return undefined;
 		if (MarkdownRendererAPI.checkCancelled()) return undefined;
@@ -549,12 +611,7 @@ export class Webpage extends Attachment
 		return this.attachments;
 	}
 
-	private headingTextToID(heading: string | null): string
-	{
-		return heading?.replaceAll(" ", "_").replaceAll(":", "") ?? "";
-	}
-
-	public resolveLink(link: string | null, preferAttachment: boolean = false): string | undefined
+	public resolveLink(link: string | null, linkEl: HTMLElement, preferAttachment: boolean = false): string | undefined
 	{
 		if (!link) return "";
 		if ((!link.startsWith("app://") && /\w+:(\/\/|\\\\)/.exec(link)))
@@ -566,7 +623,8 @@ export class Webpage extends Attachment
 
 		if (link.startsWith("#"))
 		{
-			let hrefValue = this.headingTextToID(link);
+			let headerText = (linkEl?.getAttribute("data-href") ?? link).replaceAll(" ", "_").replaceAll(":", "").replaceAll("__", "_").substring(1);
+			let hrefValue = `#${headerText}_${this.headerMap.get(headerText) ?? 0}`;
 			if (!this.exportOptions.relativeHeaderLinks)
 				hrefValue = this.targetPath + hrefValue;
 			
@@ -574,50 +632,55 @@ export class Webpage extends Attachment
 		}
 
 		const linkSplit = link.split("#")[0].split("?")[0];
-		const attachmentPath = this.website.getFilePathFromSrc(linkSplit, this.source.path).pathname;
-		const attachment = this.website.index.getFile(attachmentPath, preferAttachment);
+		const attachmentPath = this.website.getFilePathFromSrc(linkSplit, this.source.path);
+		const attachment = this.website.index.getFile(attachmentPath.pathname, preferAttachment);
 		if (!attachment)
 		{
-			return;
+			// otherwise resolve it as best as possible
+			const resolved = attachmentPath.slugify(this.exportOptions.slugifyPaths).setExtension("html");
+			return resolved.path;
 		}
 
-		let hash = link.split("#")[1] ?? "";
+		let hash = (linkEl?.getAttribute("data-href") ?? link).split("#")[1] ?? "";
 		if (hash != "") hash = "#" + hash;
-		if (attachment.targetPath.extensionName == "html") hash = this.headingTextToID(hash);
+
+		if (attachment.targetPath.extensionName == "html")
+		{
+			const headerText = hash.replaceAll(" ", "_").replaceAll(":", "").replaceAll("__", "_").substring(1);
+			const headerId = this.headerMap.get(headerText);
+			hash = `#${headerText}_${headerId ?? 0}`;
+		}
+
 		return attachment.targetPath.path + hash;
 	}
 
+	readonly headerMap = new Map();
 	private remapLinks()
 	{
 		// convert the data-heading to the id
-
-		const hMap = new Map();
-
 		this.pageDocument
 			.querySelectorAll("h1, h2, h3, h4, h5, h6")
 			.forEach((headerEl) => {
-				let headerText =
-					headerEl.getAttribute("data-heading") ??
-					headerEl.textContent;
-				let headerId = hMap.get(headerText);
+				let headerText = (headerEl.getAttribute("data-heading") ?? headerEl.textContent ?? "").replaceAll(" ", "_").replaceAll(":", "").replaceAll("__", "_");
+				let headerId = this.headerMap.get(headerText);
 				if (headerId) {
 					headerId = `${+headerId + 1}`;
 				} else {
 					headerId = "0";
 				}
 
-				hMap.set(headerText, headerId);
+				this.headerMap.set(headerText, headerId);
 
 				headerEl.setAttribute(
 					"id",
-					`${headerText}_${headerId}`.replaceAll(" ", "_") ?? ""
+					`${headerText}_${headerId}`
 				);
 			});
 
 		const links = this.hrefLinkElements;
 		for (const link of links) {
 			const href = link.getAttribute("href");
-			const newHref = this.resolveLink(href);
+			const newHref = this.resolveLink(href, link);
 			link.setAttribute("href", newHref ?? href ?? "");
 			link.setAttribute("target", "_self");
 			link.classList.toggle("is-unresolved", !newHref);
@@ -630,116 +693,18 @@ export class Webpage extends Attachment
 		for (const link of links)
 		{
 			const src = link.getAttribute("src");
-			const newSrc = this.resolveLink(src, true);
+			const newSrc = this.resolveLink(src, link, true);
 			link.setAttribute("src", newSrc ?? src ?? "");
 			link.setAttribute("target", "_self");
 			link.classList.toggle("is-unresolved", !newSrc);
 		}
-	}
- 
-	private async addTitle() 
-	{
-		if (!this.sizerElement || this.type != "markdown") return;
-		
-		// remove inline title
-		const inlineTitle = this.pageDocument.querySelector(".inline-title");
-		inlineTitle?.remove();
-
-		// remove make.md title
-		const makeTitle = this.pageDocument.querySelector(".mk-inline-context");
-		makeTitle?.remove();
-
-		// remove mod-header
-		const modHeader = this.pageDocument.querySelector(".mod-header");
-		modHeader?.remove();
-
-		// if the first header element is basically the same as the title, use it's text and remove it
-		const firstHeader = this.pageDocument.querySelector(":is(h1, h2, h3, h4, h5, h6):not(.markdown-embed-content *)");
-		if (firstHeader)
-		{
-			const firstHeaderText = (firstHeader.getAttribute("data-heading") ?? firstHeader.textContent)?.toLowerCase() ?? "";
-			const lowerTitle = this.title.toLowerCase();
-			const titleDiff = Utils.levenshteinDistance(firstHeaderText, lowerTitle) / lowerTitle.length;
-			const basenameDiff = Utils.levenshteinDistance(firstHeaderText, this.source.basename.toLowerCase()) / this.source.basename.length;
-			const difference = Math.min(titleDiff, basenameDiff);
-
-			if ((firstHeader.tagName == "H1" && difference < 0.2) || (firstHeader.tagName == "H2" && difference < 0.1))
-			{
-				if(this.isDefaultTitle) 
-				{
-					firstHeader.querySelector(".heading-collapse-indicator")?.remove();
-					this.title = firstHeader.innerHTML;
-					ExportLog.log(`Using "${firstHeaderText}" header because it was very similar to the file's title.`);
-				}
-				else
-				{
-					ExportLog.log(`Replacing "${firstHeaderText}" header because it was very similar to the file's title.`);
-				}
-				firstHeader.remove();
-			}
-			else if (firstHeader.tagName == "H1" && !this.pageDocument.body.classList.contains("show-inline-title"))
-			{
-				// if the difference is too large but the first header is an h1 and it's the first element in the body and there is no inline title, use it as the title
-				const headerEl = firstHeader.closest(".heading-wrapper") ?? firstHeader;
-				const headerParent = headerEl.parentElement;
-				if (headerParent && headerParent.classList.contains("markdown-preview-sizer"))
-				{
-					const childPosition = Array.from(headerParent.children).indexOf(headerEl);
-					if (childPosition <= 2)
-					{
-						if(this.isDefaultTitle) 
-						{
-							firstHeader.querySelector(".heading-collapse-indicator")?.remove();
-							this.title = firstHeader.innerHTML;
-							ExportLog.log(`Using "${firstHeaderText}" header as title because it was H1 at the top of the page`);
-						}
-						else
-						{
-							ExportLog.log(`Replacing "${firstHeaderText}" header because it was H1 at the top of the page`);
-						}
-
-						firstHeader.remove();
-					}
-				}
-			}
-		}
-
-		// remove banner header
-		this.pageDocument.querySelector(".banner-header")?.remove();
-
-		// Create h1 inline title
-		const titleEl = this.pageDocument.createElement("h1");
-		titleEl.classList.add("page-title", "heading");
-		if (this.pageDocument.body.classList.contains("show-inline-title")) titleEl.classList.add("inline-title");
-		titleEl.id = this.title;
-
-		if (this.exportOptions.addPageIcon)
-		{
-			let pageIcon = undefined;
-			// Create a div with icon
-			if ((this.icon != "" && !this.isDefaultIcon))
-			{
-				pageIcon = this.pageDocument.createElement("div");
-				pageIcon.id = "webpage-icon";
-				pageIcon.innerHTML = this.icon;
-			}
-		
-			// Insert title into the title element
-			MarkdownRendererAPI.renderMarkdownSimpleEl(this.title, titleEl);
-			if (pageIcon) 
-			{
-				titleEl.prepend(pageIcon);
-			}
-		}
-		// Insert title into the document
-		(this.headerElement ?? this.sizerElement).prepend(titleEl);
 	}
 
 	private async addHead()
 	{
 		let rootPath = this.pathToRoot.slugified(this.exportOptions.slugifyPaths).path;
 		if (rootPath == "") rootPath = ".";
-		const description = this.description || (this.exportOptions.siteName + " - " + this.title);
+		const description = this.description || (this.exportOptions.rssOptions.siteName + " - " + this.title);
 		let head =
 `
 <title>${this.title}</title>
@@ -762,14 +727,11 @@ export class Webpage extends Attachment
 
 	private async inlineMedia()
 	{
-		console.log("Inlining media for: " + this.source.path);
 		const elements = Array.from(this.pageDocument.querySelectorAll("[src]:not(head [src])"))
-		console.log(elements);
 		for (const mediaEl of elements)
 		{
 			const rawSrc = mediaEl.getAttribute("src") ?? "";
 			const filePath = this.website.getFilePathFromSrc(rawSrc, this.source.path);
-			console.log(rawSrc, filePath);
 			if (filePath.isEmpty || filePath.isDirectory || filePath.isAbsolute) continue;
 
 			const base64 = await filePath.readAsString("base64");

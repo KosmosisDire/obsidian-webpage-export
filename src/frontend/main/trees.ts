@@ -229,6 +229,49 @@ export class TreeItem
 		this.restoreAnimationLength();
 	}
 
+	public setSubHeadings(hintLabelLists: Map<string, string[]>)
+	{
+		this.removeSubHeadings();
+
+		for (const [path, hintLabels] of hintLabelLists)
+		{
+			if (hintLabels.length == 0) continue;
+			const item = this.findByPath(path);
+			if (!item) continue;
+
+			item.itemEl.classList.add("has-hints");
+			const hintContainer = document.createElement("div");
+			hintContainer.classList.add("tree-hint-container");
+			item.itemEl.appendChild(hintContainer);
+
+			hintLabels.forEach((label) =>
+			{
+				const hintLabelEl = document.createElement("a");
+				hintLabelEl.classList.add("tree-hint-label");
+				hintLabelEl.classList.add("internal-link");
+				hintLabelEl.textContent = label;
+				hintLabelEl.href = path + "#" + label;
+				hintContainer.appendChild(hintLabelEl);
+			});
+
+			LinkHandler.initializeLinks(hintContainer);
+		}
+	}
+
+	public removeSubHeadings()
+	{
+		this.itemEl.classList.remove("has-hints");
+		this.itemEl.querySelectorAll(".tree-hint-container").forEach((el) =>
+		{
+			el.remove();
+		});
+		this.itemEl.querySelectorAll(".has-hints").forEach((el) =>
+		{
+			el.classList.remove("has-hints");
+		});
+
+	}
+
 	public sort(sortFunction: (a: TreeItem, b: TreeItem) => number)
 	{
 		this.itemEl.classList.add("sorted");
