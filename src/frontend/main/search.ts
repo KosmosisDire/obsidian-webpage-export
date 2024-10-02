@@ -242,7 +242,7 @@ export class Search
 	private async searchCurrentDocument(query: string)
 	{
 		this.clearCurrentDocumentSearch();
-		const textNodes = getTextNodes(ObsidianSite.document.sizerEl);
+		const textNodes = getTextNodes(ObsidianSite.document.sizerEl ?? ObsidianSite.document.documentEl);
 
 		textNodes.forEach(async (node) =>
 		{

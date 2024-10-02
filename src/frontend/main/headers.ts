@@ -1,152 +1,175 @@
-import { slideDown, slideUp } from "./utils";
+export class Header {
+    private static headerMap: WeakMap<HTMLElement, Header> = new WeakMap();
 
-export class Header
-{
-	private _id: string;
-	public get id(): string
+    private _id: string;
+    private _level: number;
+	private _divParent: HTMLElement;
+    private _headerElement: HTMLElement;
+    private _collapseIndicatorElement: HTMLElement | null;
+    private _children: Header[] = [];
+    private _isCollapsed: boolean = false;
+    private _content: HTMLElement[] = [];
+
+    constructor(element: HTMLElement) {
+		this._divParent = element.parentElement as HTMLElement;
+        this._headerElement = element;
+        this._collapseIndicatorElement = this._headerElement.querySelector(".heading-collapse-indicator");
+        this._id = element.id;
+        this._level = parseInt(element.tagName.replace("H", ""));
+
+        Header.headerMap.set(element, this);
+
+        if (this._collapseIndicatorElement) {
+            this._collapseIndicatorElement.addEventListener("click", () => {
+                this.toggleCollapse();
+            });
+        }
+    }
+
+    public get id(): string {
+        return this._id;
+    }
+
+    public get text(): string {
+        return this._headerElement.textContent ?? "";
+    }
+
+    public set text(value: string) {
+        this._headerElement.textContent = value;
+    }
+
+    public get level(): number {
+        return this._level;
+    }
+
+    public get headerElement(): HTMLElement {
+        return this._headerElement;
+    }
+
+    public get collapseIndicatorElement(): HTMLElement | null {
+        return this._collapseIndicatorElement;
+    }
+
+    public get children(): Header[] {
+        return this._children;
+    }
+
+    public get isCollapsed(): boolean {
+        return this._isCollapsed;
+    }
+
+    public scrollTo(options: ScrollIntoViewOptions = { behavior: "smooth", block: "start" }): void {
+        this._headerElement.scrollIntoView(options);
+    }
+
+    public find(predicate: (header: Header) => boolean): Header | undefined {
+        if (predicate(this)) {
+            return this;
+        }
+
+        for (const child of this.children) {
+            const result = child.find(predicate);
+            if (result) {
+                return result;
+            }
+        }
+
+        return undefined;
+    }
+
+    public findByID(id: string): Header | undefined {
+        if (id.startsWith("#")) {
+            id = id.substring(1);
+        }
+        
+        return this.find(header => header.id === id);
+    }
+
+	public toggleCollapse() {
+        this._isCollapsed = !this._isCollapsed;
+        this._collapseIndicatorElement?.classList.toggle("is-collapsed", this._isCollapsed);
+        this._headerElement.classList.toggle("is-collapsed", this._isCollapsed);
+        this.updateVisibility(this._isCollapsed);
+    }
+
+    private updateVisibility(collapse: boolean) {
+        this._collapseIndicatorElement?.classList.toggle("is-collapsed", collapse);
+        this._headerElement.classList.toggle("is-collapsed", collapse);
+
+        for (const element of this._content) {
+            element.style.display = collapse ? "none" : "";
+        }
+
+        for (const child of this._children) {
+            child.headerElement.style.display = collapse ? "none" : "";
+            if (collapse) {
+                child.updateVisibility(true);
+            } else {
+                child.updateVisibility(child._isCollapsed);
+            }
+        }
+    }
+
+	// return content and child content
+	public getHeaderWithContentRecursive(): HTMLElement[] 
 	{
-		return this._id;
-	}
-
-	public get text(): string
-	{
-		return this.headerElement.textContent ?? "";
-	}
-
-	public set text(value: string)
-	{
-		this.headerElement.textContent = value;
-	}
-
-	private _level: number;
-	public get level(): number
-	{
-		return this._level;
-	}
-
-	private _headerElement: HTMLElement;
-	public get headerElement(): HTMLElement
-	{
-		return this._headerElement;
-	}
-
-	private _wrapperElement: HTMLElement;
-	public get wrapperElement(): HTMLElement
-	{
-		return this._wrapperElement;
-	}
-
-	private _collapseIndicatorElement: HTMLElement;
-	public get collapseIndicatorElement(): HTMLElement
-	{
-		return this._collapseIndicatorElement;
-	}
-
-	private _children: Header[] = [];
-	public get children(): Header[]
-	{
-		return this._children;
-	}
-
-	private _childContainer: HTMLElement;
-
-	public constructor(element: HTMLElement)
-	{
-		if (element.tagName.startsWith("H") && element.parentElement?.classList.contains("heading-wrapper"))
+		let content: HTMLElement[] = [];
+		content.push(this._divParent);
+		for (const element of this._content) 
 		{
-			element = element.parentElement;
+			content.push(element);
 		}
-
-		if (element.tagName.startsWith("H") && element.parentElement?.classList.contains("header") && element.parentElement.parentElement)
+		for (const child of this._children) 
 		{
-			this._childContainer = element.parentElement.parentElement;
+			content = content.concat(child.getHeaderWithContentRecursive());
 		}
+		return content;
+	}
 
-		if (element.classList.contains("heading-wrapper"))
-		{
-			this._wrapperElement = element;
-			this._childContainer = element.querySelector(".heading-children") as HTMLElement;
-			this._headerElement = element.querySelector("h1, h2, h3, h4, h5, h6") as HTMLElement;
-		}
+    public static createHeaderTree(html: HTMLElement): Header[] {
+        const headers = Array.from(html.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+        const headerObjects = headers.map(el => new Header(el as HTMLElement));
+        const rootHeaders: Header[] = [];
+        const stack: Header[] = [];
 
-		if (element.tagName.startsWith("H"))
-		{
-			this._headerElement = element;
-		}
+        for (let i = 0; i < headerObjects.length; i++) {
+            const currentHeader = headerObjects[i];
+            
+            while (stack.length > 0 && stack[stack.length - 1].level >= currentHeader.level) {
+                stack.pop();
+            }
 
-		if (!this._headerElement)
-		{
-			console.error("Header element not found in wrapper element", element);
-			return;
-		}
+            if (stack.length > 0) {
+                stack[stack.length - 1].children.push(currentHeader);
+            } else {
+                rootHeaders.push(currentHeader);
+            }
 
-		this._collapseIndicatorElement = this._headerElement.querySelector(".heading-collapse-indicator") as HTMLElement;
-		if (this.collapseIndicatorElement)
-		{
-			this.collapseIndicatorElement.addEventListener("click", () =>
+            stack.push(currentHeader);
+
+            // Collect inline block content
+            let nextElement = currentHeader.headerElement.nextElementSibling;
+            while (nextElement && !(nextElement instanceof HTMLHeadingElement)) {
+                if (nextElement instanceof HTMLElement) {
+                    currentHeader._content.push(nextElement);
+                }
+                nextElement = nextElement.nextElementSibling;
+            }
+
+			// collect outer block content
+			nextElement = currentHeader.headerElement.parentElement?.nextElementSibling ?? null;
+			while (nextElement && !nextElement.querySelector('h1, h2, h3, h4, h5, h6'))
 			{
-				this.collapseIndicatorElement.classList.toggle("is-collapsed");
-				this.wrapperElement?.classList.toggle("is-collapsed");
-			});
-		}
-
-		this._id = this.headerElement.id;
-		this._level = parseInt(this.headerElement.tagName.replace("H", ""));
-
-		if (this._childContainer)
-		{
-			this.initializeChildren();
-		}
-	}
-
-	private initializeChildren(): void
-	{
-		// walk through all immediate children of the child container
-		// if the child is a header, add it to the children array
-
-		let child = this._childContainer.firstElementChild;
-		while (child)
-		{
-			if (child.classList.contains("heading-wrapper"))
-			{
-				this._children.push(new Header(child as HTMLElement));
+				if (nextElement instanceof HTMLElement)
+				{
+					currentHeader._content.push(nextElement);
+				}
+				nextElement = nextElement.nextElementSibling;
 			}
 
-			child = child.nextElementSibling;
-		}
-	}
+        }
 
-	public scrollTo(options: ScrollIntoViewOptions = { behavior: "smooth", block: "start" }): void
-	{
-		this.headerElement.scrollIntoView(options);
-	}
+        return rootHeaders;
+    }
 
-	public find(predicate: (header: Header) => boolean): Header | undefined
-	{
-		if (predicate(this))
-		{
-			return this;
-		}
-
-		for (const child of this.children)
-		{
-			const result = child.find(predicate);
-			if (result)
-			{
-				return result;
-			}
-		}
-
-		return undefined;
-	}
-
-	public findByID(id: string): Header | undefined
-	{
-		if (id.startsWith("#"))
-		{
-			id = id.substring(1);
-		}
-		
-		return this.find(header => header.id == id);
-	}
 }

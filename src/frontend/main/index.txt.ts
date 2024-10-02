@@ -17,7 +17,7 @@ declare global
 		Bounds: typeof Bounds;
 		Vector2: typeof Vector2;
 		LinkHandler: typeof LinkHandler;
-		LinkPreview: typeof FilePreviewPopover;
+		FilePreviewPopover: typeof FilePreviewPopover;
 
 		ObsidianSite: ObsidianWebsite;
 	}
@@ -34,7 +34,7 @@ if (window && window.location)
 	window.Bounds = Bounds;
 	window.Vector2 = Vector2;
 	window.LinkHandler = LinkHandler;
-	window.LinkPreview = FilePreviewPopover;
+	window.FilePreviewPopover = FilePreviewPopover;
 
 	ObsidianSite.init();
 }

@@ -44,7 +44,7 @@ export class WebpageTemplate
 
 		const body = this.doc.body;
 		if (this.options.addBodyClasses)
-			body.setAttribute("class", await this.getValidBodyClasses(false));
+			body.setAttribute("class", await WebpageTemplate.getValidBodyClasses());
 
 		const layout = this.doc.body.createDiv({attr: {id: "layout"}});
 			const leftContent = layout.createDiv({attr: {id: "left-content", class: "leaf"}});
@@ -133,13 +133,9 @@ export class WebpageTemplate
 		return this.doc.documentElement.innerHTML;
 	}
 
-	private readonly ignoreClasses = ["publish", "css-settings-manager", "theme-light", "theme-dark"];
-	private _validBodyClasses: string | undefined = undefined;
-	public async getValidBodyClasses(cleanCache: boolean): Promise<string>
+	private static readonly ignoreClasses = ["publish", "css-settings-manager", "theme-light", "theme-dark"];
+	public static async getValidBodyClasses(): Promise<string>
 	{
-		if (cleanCache) this._validBodyClasses = undefined;
-		if (this._validBodyClasses) return this._validBodyClasses;
-		
 		const bodyClasses = Array.from(document.body.classList); 
 
 		let validClasses = "";
@@ -177,7 +173,7 @@ export class WebpageTemplate
 		{
 			ExportLog.progress(0, "Collecting valid classes", "Scanning: " + bodyClass, "var(--color-yellow)");
 
-			if (classes.includes(bodyClass) && !this.ignoreClasses.includes(bodyClass))
+			if (classes.includes(bodyClass) && !WebpageTemplate.ignoreClasses.includes(bodyClass))
 			{
 				validClasses += bodyClass + " ";
 			}
@@ -186,14 +182,14 @@ export class WebpageTemplate
 		}
 
 		ExportLog.progress(0, "Cleanup classes", "...", "var(--color-yellow)");
-		this._validBodyClasses = validClasses.replace(/\s\s+/g, ' ');
+		let result = validClasses.replace(/\s\s+/g, ' ');
 
 		// convert to array and remove duplicates
-		ExportLog.progress(0, "Filter duplicate classes", this._validBodyClasses.length + " classes", "var(--color-yellow)");
-		this._validBodyClasses = this._validBodyClasses.split(" ").filter((value, index, self) => self.indexOf(value) === index).join(" ").trim();
+		ExportLog.progress(0, "Filter duplicate classes", result.length + " classes", "var(--color-yellow)");
+		result = result.split(" ").filter((value, index, self) => self.indexOf(value) === index).join(" ").trim();
 		
 		ExportLog.progress(0, "Classes done", "...", "var(--color-yellow)");
 
-		return this._validBodyClasses;
+		return result;
 	}
 }

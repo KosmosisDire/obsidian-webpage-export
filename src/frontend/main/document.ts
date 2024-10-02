@@ -26,7 +26,7 @@ export class WebpageDocument
 	public documentType: DocumentType;
 	public containerEl: HTMLElement;
 	public documentEl: HTMLElement;
-	public sizerEl: HTMLElement;
+	public sizerEl: HTMLElement | undefined;
 	public footerEl: HTMLElement;
 	public headerEl: HTMLElement;
 	public info: WebpageData;
@@ -109,29 +109,11 @@ export class WebpageDocument
 
 	private findElements()
 	{
-		this.sizerEl = this.containerEl.querySelector(".markdown-sizer") as HTMLElement;
+		if (!this.containerEl) this.containerEl = ObsidianSite.centerContentEl;
+		this.sizerEl = (this.documentType == DocumentType.Markdown ? this.containerEl.querySelector(".markdown-preview-sizer") : undefined) as HTMLElement;
 		this.documentEl = this.containerEl.querySelector(".obsidian-document") as HTMLElement;
 		this.headerEl = this.containerEl.querySelector(".header") as HTMLElement;
 		this.footerEl = this.containerEl.querySelector(".footer") as HTMLElement;
-	}
- 
-	public async init(): Promise<WebpageDocument>
-	{
-		if (!this.pathname || this.initialized || !this.exists) return this;
-		this.initialized = true;
-
-		if (!this.containerEl) this.containerEl = ObsidianSite.centerContentEl;
-		
-		this.findElements();
-
-		if (this.isMainDocument)
-		{
-			this.createHeaders();
-			this.createCallouts();
-			this.createLists();
-		}
-
-		return this;
 	}
 
 	public async setAsActive()
@@ -203,22 +185,14 @@ export class WebpageDocument
 			}
 
 			await this.loadChildDocuments();
-			await this.postLoadInit()
+			await this.postLoadInit();
 
-			// if we are only loading the header remove any .header-wrapper elements that are not the header or a child of the header (where the header is the url hash)
-			if (headerOnly && this.hash && this.hash != "")
+			if (this.sizerEl && headerOnly && this.hash && this.hash != "")
 			{
-				let targetHeading = containerEl.querySelector(`#${this.hash}`);
-
-				if (targetHeading)
+				var header = this.headers.find(h => h.findByID(this.hash))?.findByID(this.hash);
+				if (header)
 				{
-					let targetHeadingWrapper = targetHeading.closest(".heading-wrapper");
-					if (targetHeadingWrapper)
-					{
-						targetHeadingWrapper.remove();
-						containerEl.querySelectorAll(".markdown-sizer > *:not(.markdown-preview-pusher)").forEach(el => el.remove());
-						this.sizerEl.appendChild(targetHeadingWrapper);
-					}
+					this.sizerEl.innerHTML = header.getHeaderWithContentRecursive().map(e => e.outerHTML).join("");
 				}
 			}
 
@@ -246,6 +220,13 @@ export class WebpageDocument
 		if (this.isMainDocument && !ObsidianSite.metadata.ignoreMetadata && ObsidianSite.metadata.featureOptions.tags.enabled && this.documentType == DocumentType.Markdown) 
 			this.createTags();
 
+		if (this.isMainDocument || this.isPreview)
+		{
+			this.createHeaders();
+			this.createCallouts();
+			this.createLists();
+		}
+
 		if (this.documentType == DocumentType.Canvas)
 		{
 			this.canvas = new Canvas(this);
@@ -259,18 +240,7 @@ export class WebpageDocument
 
 	public createHeaders()
 	{
-		// get all headers that are not nested in another header
-		const pageHeader = this.documentEl.querySelector(".header .heading") as HTMLElement;
-		let headerEls: HTMLElement[] = [];
-
-		if (pageHeader) headerEls = [pageHeader];
-		else headerEls = Array.from(this.documentEl.querySelectorAll(":is(h1, h2, h3, h4, h5, h6):not(:is(.heading-wrapper . heading-wrapper :is(h1, h2, h3, h4, h5, h6)))"));
-		
-		this.headers = [];
-		for (const headerEl of headerEls)
-		{
-			this.headers.push(new Header(headerEl as HTMLElement));
-		}
+		this.headers = Header.createHeaderTree(this.documentEl);
 	}
 
 	public createCallouts()
@@ -353,8 +323,7 @@ export class WebpageDocument
 			ref.remove();
 		}
 
-		const initPromises = (await Promise.all(promises)).map(c => c.init());
-		let childrenTemp = await Promise.all(initPromises);
+		const childrenTemp = await Promise.all(promises);
 		console.log("Loaded child documents", childrenTemp);
 		this.children.push(...childrenTemp);
 	}
@@ -375,7 +344,7 @@ export class WebpageDocument
 
 	public getMinReadableWidth(): number
 	{
-		const fontSize = parseFloat(getComputedStyle(this.sizerEl).fontSize);
+		const fontSize = parseFloat(getComputedStyle(this.sizerEl ?? this.documentEl).fontSize);
 		return fontSize * 30;
 	}
 

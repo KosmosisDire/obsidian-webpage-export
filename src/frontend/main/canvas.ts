@@ -442,48 +442,42 @@ export class Canvas
 
 		// make canvas draggable / panable with mouse
 		const localThis = this;
-		const isWindows = navigator.userAgent.includes("Windows"); // used for smart scrolling
- 
-		this.backgroundEl.parentElement?.addEventListener("dblclick", () => 
-		{
-			console.log("fitting to bounds");
-			localThis.fitToBounds(this.nodeBounds, 0.9, false);
-		});
+        const isWindows = navigator.userAgent.includes("Windows");
 
-		function dragStart(event: PointerEvent)
-		{
-			if (event.pointerType != "mouse" && event.pointerType != "pen") return;
-			const startPointerPos = getPointerPosition(event);
-			const startCanvasPos = localThis.position;
-			const startingNode = localThis.focusedNode;
-			//@ts-ignore
-			// canvas.wrapperEl.setPointerCapture(event.pointerId);
+		function getRelativePointerPosition(event: MouseEvent | Touch): Vector2 {
+            const rect = localThis.wrapperEl.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
+            return new Vector2(x, y);
+        }
 
-			function drag(dragEvent: MouseEvent)
-			{
-				// skip drag if the focused node can be scrolled on windows
-				if (isWindows && 
-					startingNode?.isScrollable && 
-					dragEvent.buttons == 4) return;
+        function dragStart(event: PointerEvent) {
+            if (event.pointerType != "mouse" && event.pointerType != "pen") return;
+            const startPointerPos = getRelativePointerPosition(event);
+            const startCanvasPos = localThis.position;
+            const startingNode = localThis.focusedNode;
 
-				dragEvent.preventDefault();
-				const pointer = getPointerPosition(dragEvent);
-				const delta = pointer.sub(startPointerPos);
-				localThis.forcePosition = startCanvasPos.add(delta);
-			}
+            function drag(dragEvent: MouseEvent) {
+                if (isWindows && 
+                    startingNode?.isScrollable && 
+                    dragEvent.buttons == 4) return;
 
-			function dragEnd(e: MouseEvent)
-			{
-				document.body.removeEventListener("mousemove", drag);
-				document.body.removeEventListener("mouseup", dragEnd);
-				// canvas.wrapperEl.releasePointerCapture(event.pointerId);
-			}
+                dragEvent.preventDefault();
+                const pointer = getRelativePointerPosition(dragEvent);
+                const delta = pointer.sub(startPointerPos);
+                localThis.forcePosition = startCanvasPos.add(delta);
+            }
 
-			document.body.addEventListener("mousemove", drag);
-			document.body.addEventListener("mouseup", dragEnd);
-		}
+            function dragEnd(e: MouseEvent) {
+                document.removeEventListener("mousemove", drag);
+                document.removeEventListener("mouseup", dragEnd);
+            }
 
-		this.wrapperEl.addEventListener("pointerdown", dragStart);
+            document.addEventListener("mousemove", drag);
+            document.addEventListener("mouseup", dragEnd);
+        }
+
+        this.wrapperEl.addEventListener("pointerdown", dragStart);
 
 		function shouldOverrideScroll(deltaY: number, deltaX: number, node: CanvasNode | null | undefined): boolean
 		{
@@ -513,76 +507,67 @@ export class Canvas
 		}
 
 		// make canvas mouse zoomable
-		this.wrapperEl.addEventListener("wheel", function (event)
-		{
-			if (!shouldOverrideScroll(event.deltaY, event.deltaX, localThis.focusedNode)) return;
-			let scale = 1;
-			scale -= event.deltaY / 700 * scale;
-			localThis.scaleAround(scale, getPointerPosition(event));
-		}, { passive: true });
+		this.wrapperEl.addEventListener("wheel", function (event) {
+            if (!shouldOverrideScroll(event.deltaY, event.deltaX, localThis.focusedNode)) return;
+            let scale = 1;
+            scale -= event.deltaY / 700 * scale;
+            localThis.scaleAround(scale, getRelativePointerPosition(event));
+        }, { passive: true });
 
-		// make canvas pinch to zoom and drag to pan on touch devices
-		let touching = false;
-		this.wrapperEl.addEventListener("touchstart", function (event)
-		{
-			if (touching) return;
-			touching = true;
-			const touches = event.touches;
-			
-			function getTouchData(touches: TouchList)
-			{
-				const touch1 = new Vector2(touches[0].clientX, touches[0].clientY);
-				const touch2 = touches.length == 2 ? new Vector2(touches[1].clientX, touches[1].clientY) : null;
-				const center = touch2 ? touch1.add(touch2).scale(0.5) : touch1;
-				const distance = touch2 ? Vector2.distance(touch1, touch2) : 0;
+        let touching = false;
+        this.wrapperEl.addEventListener("touchstart", function (event) {
+            if (touching) return;
+            touching = true;
+            const touches = event.touches;
+            
+            function getTouchData(touches: TouchList) {
+                const touch1 = getRelativePointerPosition(touches[0]);
+                const touch2 = touches.length == 2 ? getRelativePointerPosition(touches[1]) : null;
+                const center = touch2 ? touch1.add(touch2).scale(0.5) : touch1;
+                const distance = touch2 ? Vector2.distance(touch1, touch2) : 0;
 
-				return { touch1, touch2, center, distance };
-			}
+                return { touch1, touch2, center, distance };
+            }
 
-			let lastTouchData = getTouchData(touches);
-			let isTwoFingerDrag = touches.length == 2;
-			const startingNode = localThis.focusedNode;
-		
-			function touchMove(event: TouchEvent)
-			{
-				const touches = event.touches;
-				const touchData = getTouchData(touches);
+            let lastTouchData = getTouchData(touches);
+            let isTwoFingerDrag = touches.length == 2;
+            const startingNode = localThis.focusedNode;
+        
+            function touchMove(event: TouchEvent) {
+                const touches = event.touches;
+                const touchData = getTouchData(touches);
 
-				if (touches.length == 2)
-				{
-					if (!isTwoFingerDrag)
-					{
-						lastTouchData = getTouchData(touches);
-						isTwoFingerDrag = true;
-					}
+                if (touches.length == 2) {
+                    if (!isTwoFingerDrag) {
+                        lastTouchData = getTouchData(touches);
+                        isTwoFingerDrag = true;
+                    }
 
-					const scaleDelta = (touchData.distance - lastTouchData.distance) / lastTouchData.distance;
-					localThis.scaleAround(1 + scaleDelta, touchData.center);
-				}
+                    const scaleDelta = (touchData.distance - lastTouchData.distance) / lastTouchData.distance;
+                    localThis.scaleAround(1 + scaleDelta, touchData.center);
+                }
 
-				const delta = touchData.center.sub(lastTouchData.center);
-				if (!isTwoFingerDrag && !shouldOverrideScroll(-delta.y, delta.x, startingNode))
-				{
-					lastTouchData = getTouchData(touches);
-					return;
-				}
+                const delta = touchData.center.sub(lastTouchData.center);
+                if (!isTwoFingerDrag && !shouldOverrideScroll(-delta.y, delta.x, startingNode)) {
+                    lastTouchData = getTouchData(touches);
+                    return;
+                }
 
-				event.preventDefault();
-				localThis.targetPosition = localThis.targetPosition.add(delta);
-				lastTouchData = getTouchData(touches);
-			}
+                event.preventDefault();
+                localThis.targetPosition = localThis.targetPosition.add(delta);
+                lastTouchData = getTouchData(touches);
+            }
 
-			function touchEnd(event: TouchEvent)
-			{
-				document.body.removeEventListener("touchmove", touchMove);
-				document.body.removeEventListener("touchend", touchEnd);
-				touching = false;
-			}
+            function touchEnd(event: TouchEvent) {
+                document.removeEventListener("touchmove", touchMove);
+                document.removeEventListener("touchend", touchEnd);
+                touching = false;
+            }
 
-			document.body.addEventListener("touchmove", touchMove);
-			document.body.addEventListener("touchend", touchEnd);
-		});
-	}
+            document.addEventListener("touchmove", touchMove);
+            document.addEventListener("touchend", touchEnd);
+        });
+    }
 
 	/**Sets the relative scale of the canvas around a point*/
 	public scaleAround(scaleBy: number, point: Vector2, instantScale: boolean = false): Vector2

@@ -263,7 +263,7 @@ body
 	contain: inline-size;
 }
 
-body #center-content>.obsidian-document>.markdown-sizer 
+body #center-content>.obsidian-document>.markdown-preview-sizer 
 {
     padding-bottom: 80vh;
     width: 100%;

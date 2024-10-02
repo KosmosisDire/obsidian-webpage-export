@@ -52,17 +52,15 @@ export class AssetLoader extends Attachment
     }
 
 	private static readonly replacements: {[key: string]: string} = {
-		"\\.markdown-preview-section>div": "\\.heading-children>div",
 		"\\[href": "[data-href",
 		"\\.search-input-": "#search-",
-		"\\.workspace-leaf-content\\[[\\W\\S]+?\\]": "",
+		"\\.workspace-leaf-content\\[data-type.+?(markdown|pdf|canvas|kanban|excalidraw).*?\\]": "",
 		"\\.nav-files-container": "#file-explorer",
 		"\\.workspace-leaf-content": ".leaf-content",
 		"\\.leaf>.leaf-content": ".leaf .leaf-content",
 		"\\.markdown-reading-view": "#center-content",
-		"\\.markdown-preview-sizer|\\.markdown-preview-section": ".markdown-sizer",
-		"\\.markdown-preview-pusher": ".markdown-pusher",
-		"\\.horizontal-main-container|\\.workspace": "#layout", 
+		"\\.markdown-preview-sizer|\\.markdown-preview-section": ".markdown-preview-sizer",
+		"\\.horizontal-main-container|\\.workspace": "#layout",
 	}
 
     public async load(): Promise<void>

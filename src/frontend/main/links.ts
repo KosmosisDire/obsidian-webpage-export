@@ -38,35 +38,27 @@ export class LinkHandler
 	public static getPathnameFromURL(url: string): string
 	{
 		if(url == "" || url == "/" || url == "\\") return "/index.html";
-		if(url.startsWith("#") || url.startsWith("?")) return ObsidianSite.document.pathname.split("#")[0].split("?")[0] + url;
-		return url.split("?")[0].split("#")[0];
+		if(url?.startsWith("#") || url?.startsWith("?")) return (ObsidianSite.document?.pathname?.split("#")[0]?.split("?")[0] ?? "") + (url ?? "");
+		return url?.split("?")[0]?.split("#")[0]?.trim() ?? "";
 	}
 
 	public static getHashFromURL(url: string): string
 	{
-		return (url.split("#")[1] ?? "").split("?")[0] ?? "";
+		return (url.split("#")[1] ?? "").split("?")[0]?.trim() ?? "";
 	}
 
 	public static getQueryFromURL(url: string): string
 	{
-		return url.split("?")[1] ?? "";
+		return url.split("?")[1]?.trim() ?? "";
 	}
 
 	public static getFileDataIdFromURL(url: string): string
 	{
 		url = this.getPathnameFromURL(url);
 		if (url.startsWith("./")) url = url.substring(2);
-		if (url.startsWith("../")) url = url.substring(3);
-		if (url.startsWith("../")) url = url.substring(3);
-		if (url.startsWith("../")) url = url.substring(3);
-		if (url.startsWith("../")) url = url.substring(3);
-		if (url.startsWith("../")) url = url.substring(3);
-		if (url.startsWith("../")) url = url.substring(3);
-		if (url.startsWith("../")) url = url.substring(3);
-		if (url.startsWith("../")) url = url.substring(3);
-		if (url.startsWith("../")) url = url.substring(3);
-		if (url.startsWith("../")) url = url.substring(3);
-		if (url.startsWith("../")) url = url.substring(3);
+		while (url.startsWith("../")) {
+			url = url.substring(3);
+		}
 		return btoa(encodeURI(url));
 	}
 }

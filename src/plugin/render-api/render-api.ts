@@ -1,5 +1,5 @@
 import { MarkdownRendererOptions } from "./api-options";
-import { Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, MarkdownPreviewView, loadMermaid, TFile, MarkdownView, View, MarkdownPreviewRenderer, TAbstractFile, TFolder } from "obsidian";
+import { Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, MarkdownPreviewView, loadMermaid, TFile, MarkdownView, View, MarkdownPreviewRenderer, TAbstractFile, TFolder, Setting } from "obsidian";
 import { TabManager } from "src/plugin/utils/tab-manager";
 import * as electron from 'electron';
 import { Settings, SettingsPage } from "src/plugin/settings/settings";
@@ -24,90 +24,11 @@ export namespace MarkdownRendererAPI {
 		else return "iframe";
 	}
 
-	function makeHeadingsTrees(html: HTMLElement) {
-
-		// make headers into format:
-		/*
-		- .heading-wrapper
-			- h1.heading
-				- .heading-collapse-indicator.collapse-indicator.collapse-icon
-				- "Text"
-			- .heading-children 
-		*/
-
-		function getHeaderEl(headingContainer: HTMLDivElement) {
-			const first = headingContainer.firstElementChild;
-			if (first && /[Hh][1-6]/g.test(first.tagName)) return first;
-			else return;
-		}
-
-		function makeHeaderTree(headerDiv: HTMLDivElement, childrenContainer: HTMLElement) {
-			const headerEl = getHeaderEl(headerDiv);
-
-			if (!headerEl) return;
-
-			let possibleChild = headerDiv.nextElementSibling;
-
-			while (possibleChild != null) {
-				const possibleChildHeader = getHeaderEl(possibleChild as HTMLDivElement);
-
-				if (possibleChildHeader) {
-					// if header is a sibling of this header then break
-					if (possibleChildHeader.tagName <= headerEl.tagName) {
-						break;
-					}
-
-					// if we reached the footer then break
-					if (possibleChildHeader.querySelector(":has(section.footnotes)") || possibleChildHeader.classList.contains("mod-footer")) {
-						break;
-					}
-				}
-
-				const nextEl = possibleChild.nextElementSibling;
-				childrenContainer.appendChild(possibleChild);
-				possibleChild = nextEl;
-			}
-		}
-
-		html.querySelectorAll("div:has(> :is(h1, h2, h3, h4, h5, h6):not([class^='block-language-'] *)):not(.markdown-sizer)").forEach(function (header: HTMLDivElement) {
-			header.classList.add("heading-wrapper");
-
-			const hEl = getHeaderEl(header) as HTMLHeadingElement;
-
-			if (!hEl || hEl.classList.contains("heading")) return;
-
-			hEl.classList.add("heading");
-
-			let collapseIcon = hEl.querySelector(".heading-collapse-indicator");
-			if (!collapseIcon) {
-				collapseIcon = hEl.createDiv({ cls: "heading-collapse-indicator collapse-indicator collapse-icon" });
-				collapseIcon.innerHTML = _MarkdownRendererInternal.arrowHTML;
-				hEl.prepend(collapseIcon);
-			}
-
-			const children = header.createDiv({ cls: "heading-children" });
-
-			makeHeaderTree(header, children);
-		});
-
-		// add "heading" class to all headers that don't have it
-		html.querySelectorAll(":is(h1, h2, h3, h4, h5, h6):not(.heading)").forEach((el) => el.classList.add("heading"));
-
-		// remove collapsible arrows from h1 and inline titles
-		html.querySelectorAll("div h1, div .inline-title").forEach((element) => {
-			element.querySelector(".heading-collapse-indicator")?.remove();
-		});
-
-		// remove all new lines from header elements which cause spacing issues
-		html.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((el) => el.innerHTML = el.innerHTML.replaceAll("\n", ""));
-	}
-
 	export async function renderMarkdownToString(markdown: string, options?: MarkdownRendererOptions): Promise<string | undefined> {
 		options = Object.assign(new MarkdownRendererOptions(), options);
 		const html = await _MarkdownRendererInternal.renderMarkdown(markdown, options);
 		if (!html) return;
 		if (options.postProcess) await _MarkdownRendererInternal.postProcessHTML(html, options);
-		if (options.makeHeadersTrees) makeHeadingsTrees(html);
 		const text = html.innerHTML;
 		if (!options.container) html.remove();
 		return text;
@@ -118,7 +39,6 @@ export namespace MarkdownRendererAPI {
 		const html = await _MarkdownRendererInternal.renderMarkdown(markdown, options);
 		if (!html) return;
 		if (options.postProcess) await _MarkdownRendererInternal.postProcessHTML(html, options);
-		if (options.makeHeadersTrees) makeHeadingsTrees(html);
 		return html;
 	}
 
@@ -126,11 +46,7 @@ export namespace MarkdownRendererAPI {
 		options = Object.assign(new MarkdownRendererOptions(), options);
 		const result = await _MarkdownRendererInternal.renderFile(file, options);
 		if (!result) return;
-
-
 		if (options.postProcess) await _MarkdownRendererInternal.postProcessHTML(result.contentEl, options);
-		if (options.makeHeadersTrees) makeHeadingsTrees(result.contentEl);
-
 		return result;
 	}
 
@@ -352,7 +268,7 @@ export namespace _MarkdownRendererInternal {
 
 		// @ts-ignore
 		const newMarkdownEl = document.body.createDiv({ attr: { class: "obsidian-document " + (preview.renderer?.previewEl?.className ?? "") } });
-		const newSizerEl = newMarkdownEl.createDiv({ attr: { class: "markdown-sizer" } });
+		const newSizerEl = newMarkdownEl.createDiv({ attr: { class: "markdown-preview-sizer" } });
 
 		if (!newMarkdownEl || !newSizerEl) return failRender(preview.file, "Please specify a container element, or enable keepViewContainer!");
 
@@ -390,7 +306,7 @@ export namespace _MarkdownRendererInternal {
 				dataviewContainer.classList.add(`block-language-${dataviewInfo.keyword}`);
 				dataviewInfo.preEl.replaceWith(dataviewContainer);
 				await new DataviewRenderer(preview, preview.file, dataviewInfo?.query, dataviewInfo.keyword).generate(dataviewContainer);
-			} 
+			}
 
 			// @ts-ignore
 			await preview.postProcess(section, promises, renderer.frontmatter);
@@ -461,7 +377,7 @@ export namespace _MarkdownRendererInternal {
 
 		// get banner plugin banner and insert it before the sizer element
 		const banner = preview.containerEl.querySelector(".obsidian-banner-wrapper");
-		if (banner) { 
+		if (banner) {
 			newSizerEl.before(banner);
 		}
 
@@ -472,8 +388,7 @@ export namespace _MarkdownRendererInternal {
 
 		options.container?.appendChild(newMarkdownEl);
 
-		if (options.unifyTitleFormat)
-		{
+		if (options.unifyTitleFormat) {
 			var title = await _MarkdownRendererInternal.getTitleForFile(preview.file);
 			var icon = await _MarkdownRendererInternal.getIconForFile(preview.file);
 			let iconSVG = await MarkdownRendererAPI.renderMarkdownSimple(icon.icon) ?? icon.icon;
@@ -489,8 +404,7 @@ export namespace _MarkdownRendererInternal {
 			// @ts-ignore
 			preview.show();
 
-		if (!preview.rerender)
-		{
+		if (!preview.rerender) {
 			console.log(`Rendering ${preview.file.name} using fallback method`);
 			return renderMarkdownViewFallback(preview, options);
 		}
@@ -516,7 +430,7 @@ export namespace _MarkdownRendererInternal {
 
 		// @ts-ignore
 		const newMarkdownEl = batchDocument.body.createDiv({ attr: { class: "obsidian-document " + (preview.renderer?.previewEl?.className ?? "") } });
-		const newSizerEl = newMarkdownEl.createDiv({ attr: { class: "markdown-sizer markdown-preview-section" } });
+		const newSizerEl = newMarkdownEl.createDiv({ attr: { class: "markdown-preview-sizer markdown-preview-section" } });
 
 		if (!newMarkdownEl || !newSizerEl) return failRender(preview.file, "Please specify a container element, or enable keepViewContainer!");
 
@@ -627,11 +541,10 @@ export namespace _MarkdownRendererInternal {
 		if (options.createDocumentContainer === false) {
 			newMarkdownEl.outerHTML = newSizerEl.innerHTML;
 		}
-		
+
 		options.container?.appendChild(newMarkdownEl);
 
-		if (options.unifyTitleFormat)
-		{
+		if (options.unifyTitleFormat) {
 			let title = await _MarkdownRendererInternal.getTitleForFile(preview.file);
 			let icon = await _MarkdownRendererInternal.getIconForFile(preview.file);
 			let iconSVG = await MarkdownRendererAPI.renderMarkdownSimple(icon.icon) ?? icon.icon;
@@ -723,8 +636,7 @@ export namespace _MarkdownRendererInternal {
 		return contentEl;
 	}
 
-	export async function getIconForFile(file: TAbstractFile): Promise<{ icon: string; isDefault: boolean }>
-	{
+	export async function getIconForFile(file: TAbstractFile): Promise<{ icon: string; isDefault: boolean }> {
 		if (!file) return { icon: "", isDefault: true };
 
 		let iconOutput = "";
@@ -732,35 +644,31 @@ export namespace _MarkdownRendererInternal {
 		let useDefaultIcon = false;
 		let useFile = file;
 
-		if (useFile instanceof TFolder)
-		{
+		if (useFile instanceof TFolder) {
 			// look for icon property on a file inside the folder with the same name as the folder
 			let childFile = app.vault.getFileByPath(file.path + "/" + file.name + ".md");
 			if (childFile) useFile = childFile;
 			console.log(file.path + "/" + file.name + ".md", childFile);
-			
-			if (!childFile && Settings.exportOptions.fileNavigationOptions.showDefaultFolderIcons)
-			{
+
+			if (!childFile && Settings.exportOptions.fileNavigationOptions.showDefaultFolderIcons) {
 				iconProperty = Settings.exportOptions.fileNavigationOptions.defaultFolderIcon;
 				useDefaultIcon = true;
 			}
 		}
 
-		if (useFile instanceof TFile)
-		{
+		if (useFile instanceof TFile) {
 			const fileCache = app.metadataCache.getFileCache(useFile);
 			const frontmatter = fileCache?.frontmatter;
 			iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support
-			if (!iconProperty && Settings.exportOptions.fileNavigationOptions.showDefaultFileIcons) 
-			{
+			if (!iconProperty && Settings.exportOptions.fileNavigationOptions.showDefaultFileIcons) {
 				useDefaultIcon = true;
 				const isMedia = AssetLoader.extentionToType(useFile.extension) == AssetType.Media;
 				iconProperty = isMedia ? Settings.exportOptions.fileNavigationOptions.defaultMediaIcon : Settings.exportOptions.fileNavigationOptions.defaultFileIcon;
 				if (useFile.extension == "canvas") iconProperty = "lucide//layout-dashboard";
 			}
 		}
-		
-		
+
+
 
 		iconOutput = await IconHandler.getIcon(iconProperty ?? "");
 
@@ -769,35 +677,30 @@ export namespace _MarkdownRendererInternal {
 		let parsedAsIconize = false;
 
 		//@ts-ignore
-		if ((useDefaultIcon || !iconProperty || isUnchangedNotEmojiNotHTML) && app.plugins.enabledPlugins.has("obsidian-icon-folder"))
-		{
+		if ((useDefaultIcon || !iconProperty || isUnchangedNotEmojiNotHTML) && app.plugins.enabledPlugins.has("obsidian-icon-folder")) {
 			//@ts-ignore
 			const fileToIconName = app.plugins.plugins['obsidian-icon-folder'].data;
 			const noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;
-			
+
 			// only add icon if rendering note icons is enabled
 			// bectheause that is what we rely on to get  icon
-			if (noteIconsEnabled)
-			{
+			if (noteIconsEnabled) {
 				const iconIdentifier = fileToIconName.settings.iconIdentifier ?? ":";
 				let iconProperty = fileToIconName[file.path];
 
-				if (iconProperty && typeof iconProperty != "string")
-				{
+				if (iconProperty && typeof iconProperty != "string") {
 					iconProperty = iconProperty.iconName ?? "";
 				}
-				
-				if (iconProperty && typeof iconProperty == "string" && iconProperty.trim() != "")
-				{
+
+				if (iconProperty && typeof iconProperty == "string" && iconProperty.trim() != "") {
 					if (file instanceof TFile)
-						app.fileManager.processFrontMatter(file, (frontmatter) =>
-						{
+						app.fileManager.processFrontMatter(file, (frontmatter) => {
 							frontmatter.icon = iconProperty;
 						});
 
 					let emojiMatch = iconProperty.trim().match(/\p{Emoji}/u);
 					let isEmoji = emojiMatch && emojiMatch.length == 1 && emojiMatch.index == 0;
-					
+
 					if (isEmoji) iconOutput = iconProperty;
 					else iconOutput = iconIdentifier + iconProperty + iconIdentifier;
 
@@ -811,30 +714,25 @@ export namespace _MarkdownRendererInternal {
 		return { icon: iconOutput, isDefault: useDefaultIcon };
 	}
 
-	export async function getTitleForFile(file: TAbstractFile): Promise<{ title: string; isDefault: boolean }>
-	{
+	export async function getTitleForFile(file: TAbstractFile): Promise<{ title: string; isDefault: boolean }> {
 		let title = file.name;
 		let isDefaultTitle = true;
-		if (file instanceof TFile)
-		{
+		if (file instanceof TFile) {
 			const fileCache = app.metadataCache.getFileCache(file);
 			const frontmatter = fileCache?.frontmatter;
 			const titleFromFrontmatter = frontmatter?.[Settings.titleProperty] ?? frontmatter?.["banner_header"]; // banner plugin support
 			title = (titleFromFrontmatter ?? file.basename).toString() ?? "";
 
-			if (title.endsWith(".excalidraw")) 
-			{
+			if (title.endsWith(".excalidraw")) {
 				title = title.substring(0, title.length - 11);
 			}
 
-			if (title != file.basename) 
-			{
+			if (title != file.basename) {
 				isDefaultTitle = false;
 			}
 		}
 
-		if (file instanceof TFolder)
-		{
+		if (file instanceof TFolder) {
 			title = file.name;
 			isDefaultTitle = true;
 		}
@@ -842,8 +740,7 @@ export namespace _MarkdownRendererInternal {
 		return { title: title, isDefault: isDefaultTitle };
 	}
 
-	export async function addTitle(documentRoot: HTMLElement, title: string, isDefaultTitle: boolean, icon: string, isDefaultIcon: boolean, source: TFile, exportOptions: MarkdownRendererOptions) 
-	{
+	export async function addTitle(documentRoot: HTMLElement, title: string, isDefaultTitle: boolean, icon: string, isDefaultIcon: boolean, source: TFile, exportOptions: MarkdownRendererOptions) {
 		// remove inline title
 		const inlineTitle = documentRoot.querySelector(".inline-title");
 		inlineTitle?.remove();
@@ -857,64 +754,13 @@ export namespace _MarkdownRendererInternal {
 		modHeader?.remove();
 
 		// create header and footer
-		const sizerElement = documentRoot.querySelector(".markdown-sizer");
-		const header = sizerElement?.createDiv({cls: "header"});
-		header?.createDiv({cls: "data-bar"});
-		const footer = sizerElement?.createDiv({cls: "footer"});
-		footer?.createDiv({cls: "data-bar"});
+		const sizerElement = documentRoot.querySelector(".markdown-preview-sizer");
+		const header = sizerElement?.createDiv({ cls: "header" });
+		header?.createDiv({ cls: "data-bar" });
+		const footer = sizerElement?.createDiv({ cls: "footer" });
+		footer?.createDiv({ cls: "data-bar" });
 
 		if (header) sizerElement?.prepend(header);
-
-		// if the first header element is basically the same as the title, use it's text and remove it
-		const firstHeader = documentRoot.querySelector(":is(h1, h2, h3, h4, h5, h6):not(.markdown-embed-content *)");
-		if (firstHeader)
-		{
-			const firstHeaderText = (firstHeader.getAttribute("data-heading") ?? firstHeader.textContent)?.toLowerCase() ?? "";
-			const lowerTitle = title.toLowerCase();
-			const titleDiff = Utils.levenshteinDistance(firstHeaderText, lowerTitle) / lowerTitle.length;
-			const basenameDiff = Utils.levenshteinDistance(firstHeaderText, source.basename.toLowerCase()) / source.basename.length;
-			const difference = Math.min(titleDiff, basenameDiff);
-
-			if ((firstHeader.tagName == "H1" && difference < 0.2) || (firstHeader.tagName == "H2" && difference < 0.1))
-			{
-				if(isDefaultTitle) 
-				{
-					firstHeader.querySelector(".heading-collapse-indicator")?.remove();
-					title = firstHeader.innerHTML;
-					ExportLog.log(`Using "${firstHeaderText}" header because it was very similar to the file's title.`);
-				}
-				else
-				{
-					ExportLog.log(`Replacing "${firstHeaderText}" header because it was very similar to the file's title.`);
-				}
-				firstHeader.remove();
-			}
-			else if (firstHeader.tagName == "H1" && !document.body.classList.contains("show-inline-title"))
-			{
-				// if the difference is too large but the first header is an h1 and it's the first element in the body and there is no inline title, use it as the title
-				const headerEl = firstHeader.closest(".heading-wrapper") ?? firstHeader;
-				const headerParent = headerEl.parentElement;
-				if (headerParent && headerParent.classList.contains("markdown-preview-sizer"))
-				{
-					const childPosition = Array.from(headerParent.children).indexOf(headerEl);
-					if (childPosition <= 2)
-					{
-						if(isDefaultTitle) 
-						{
-							firstHeader.querySelector(".heading-collapse-indicator")?.remove();
-							title = firstHeader.innerHTML;
-							ExportLog.log(`Using "${firstHeaderText}" header as title because it was H1 at the top of the page`);
-						}
-						else
-						{
-							ExportLog.log(`Replacing "${firstHeaderText}" header because it was H1 at the top of the page`);
-						}
-
-						firstHeader.remove();
-					}
-				}
-			}
-		}
 
 		// remove banner header
 		documentRoot.querySelector(".banner-header")?.remove();
@@ -925,25 +771,22 @@ export namespace _MarkdownRendererInternal {
 		if (document.body.classList.contains("show-inline-title")) titleEl.classList.add("inline-title");
 		titleEl.id = title;
 
-		if (exportOptions.addPageIcon)
-		{
+		if (exportOptions.addPageIcon) {
 			let pageIcon = undefined;
 			// Create a div with icon
-			if ((icon != "" && !isDefaultIcon))
-			{
+			if ((icon != "" && !isDefaultIcon)) {
 				pageIcon = documentRoot.createEl("div");
 				pageIcon.id = "webpage-icon";
 				pageIcon.innerHTML = icon;
 			}
-		
+
 			// Insert title into the title element
 			await _MarkdownRendererInternal.renderSimpleMarkdown(title, titleEl);
-			
+
 			// remove new lines
 			titleEl.innerHTML = titleEl.innerHTML.replace(/\n/g, "");
 
-			if (pageIcon) 
-			{
+			if (pageIcon) {
 				titleEl.prepend(pageIcon);
 			}
 		}
@@ -966,11 +809,11 @@ export namespace _MarkdownRendererInternal {
 		canvas.zoomToFit();
 		await delay(500);
 
-		for (const node of nodes) 
-		{
+		for (const node of nodes) {
 			let n = node[1];
-			n.containerEl?.appendChild(n.contentEl)
-        	n.placeholderEl?.detach()
+			n.placeholderEl?.detach();
+			n.containerEl?.appendChild(n.contentEl);
+			n.render();
 		}
 
 		for (const edge of edges) {
@@ -983,23 +826,20 @@ export namespace _MarkdownRendererInternal {
 		const edgeContainer = canvasEl.createEl("svg", { cls: "canvas-edges" });
 		const edgeHeadContainer = canvasEl.createEl("svg", { cls: "canvas-edges" });
 
-		for (const pair of nodes)
-		{
+		for (const pair of nodes) {
 			const node = pair[1]; // value is the node
 			const nodeEl = node.nodeEl;
 			const nodeFile: TFile | undefined = node.file ?? undefined;
 			const embedEl = nodeEl.querySelector(".markdown-embed-content.node-insert-event");
 			const childPreview = node?.child?.previewMode;
 
-			if (embedEl)
-				embedEl.innerHTML = "";
-
 			const optionsCopy = Object.assign({}, options);
 			optionsCopy.container = embedEl;
 			optionsCopy.unifyTitleFormat = (nodeFile && nodeFile != view.file) ?? false;
 
-			if (nodeFile && embedEl)
-			{
+			if (nodeFile && embedEl && childPreview) {
+				embedEl.innerHTML = "";
+
 				if ((options.inlineHTML || !allExportedPaths.contains(nodeFile.path)) && childPreview) {
 					console.log("Inlining child preview", nodeFile.path);
 					if (childPreview.owner) {
@@ -1007,20 +847,19 @@ export namespace _MarkdownRendererInternal {
 							childPreview.file ??
 							childPreview.owner.file ??
 							view.file;
-					} 
+					}
 					childPreview.owner.file =
 						childPreview.file ??
 						childPreview.owner.file ??
 						view.file;
 				}
 
-				let renderedEl = await renderMarkdownView(childPreview, optionsCopy);
+				await renderMarkdownView(childPreview, optionsCopy);
 			}
 
 			if (node.url) {
 				const iframe = node.contentEl?.createEl("iframe");
-				if (iframe)
-				{
+				if (iframe) {
 					iframe.src = node.url;
 					iframe.classList.add("canvas-link");
 					iframe.setAttribute("style", "border:none; width:100%; height:100%;");
@@ -1043,7 +882,7 @@ export namespace _MarkdownRendererInternal {
 				canvasEl.appendChild(labelEl);
 			}
 		}
-		
+
 
 		if (checkCancelled()) return undefined;
 
@@ -1054,12 +893,10 @@ export namespace _MarkdownRendererInternal {
 		}
 
 		let newContentEl: HTMLElement;
-		if (options.createDocumentContainer === false) 
-		{
+		if (options.createDocumentContainer === false) {
 			newContentEl = canvasEl.cloneNode(true) as HTMLElement;
 		}
-		else
-		{
+		else {
 			newContentEl = contentEl.cloneNode(true) as HTMLElement;
 		}
 
@@ -1092,8 +929,7 @@ export namespace _MarkdownRendererInternal {
 		return contentEl;
 	}
 
-	export async function postProcessHTML(html: HTMLElement, options: MarkdownRendererOptions) 
-	{
+	export async function postProcessHTML(html: HTMLElement, options: MarkdownRendererOptions) {
 		if (!html.classList.contains("obsidian-document")) {
 			const viewContainer = (html.classList.contains("view-content") || html.classList.contains("markdown-preview-view")) ? html : html.querySelector(".view-content, .markdown-preview-view");
 			if (!viewContainer) {
@@ -1109,9 +945,13 @@ export namespace _MarkdownRendererInternal {
 			html.querySelectorAll(".mod-header, .mod-footer").forEach((e: HTMLElement) => e.remove());
 		}
 
+		// add .heading to every header
+		html.querySelectorAll("h1, h2, h3, h4, h5, h6").forEach((element: HTMLElement) => {
+			element.classList.add("heading");
+		});
+
 		// transclusions put a div inside a p tag, which is invalid html. Fix it here
-		html.querySelectorAll("p:has(> .inline-embed.markdown-embed)").forEach((element) => 
-		{
+		html.querySelectorAll("p:has(> .inline-embed.markdown-embed)").forEach((element) => {
 			const elParent = element.parentElement as HTMLElement;
 			const span = batchDocument.body.createEl("span");
 			span.style.display = "block";
@@ -1156,7 +996,7 @@ export namespace _MarkdownRendererInternal {
 				element.style.width = (width.trim() != "") ? (width + "px") : "";
 				element.style.maxWidth = "100%";
 			}
-		}); 
+		});
 
 		// replace obsidian's pdf embeds with normal embeds
 		html.querySelectorAll("span.internal-embed.pdf-embed").forEach((pdf: HTMLElement) => {
@@ -1182,7 +1022,7 @@ export namespace _MarkdownRendererInternal {
 		const frontmatter = html.querySelector(".frontmatter");
 		if (frontmatter) {
 			const frontmatterParent = frontmatter.parentElement;
-			const sizer = html.querySelector(".markdown-sizer");
+			const sizer = html.querySelector(".markdown-preview-sizer");
 			if (sizer) {
 				sizer.before(frontmatter);
 			}
@@ -1469,20 +1309,14 @@ export namespace ExportLog {
 	}
 
 	function humanReadableJSON(object: any) {
-		const string = JSON.stringify(object, null, 2).replaceAll(/\"|\{|\}|,/g, "").split("\n").map((s) => s.trim()).join("\n\t");
-		// make the properties into a table
-		let lines = string.split("\n");
-		lines = lines.filter((line) => line.contains(":"));
-		const names = lines.map((line) => line.split(":")[0] + " ");
-		const values = lines.map((line) => line.split(":").slice(1).join(":"));
-		const maxLength = Math.max(...names.map((name) => name.length)) + 3;
-		let table = "";
-		for (let i = 0; i < names.length; i++) {
-			const padString = i % 2 == 0 ? "-" : " ";
-			table += `${names[i].padEnd(maxLength, padString)}${values[i]}\n`;
-		}
-
-		return table;
+		// remove any properties starting with info_
+		object = SettingsPage.deepCopy(object);
+		object = SettingsPage.deepRemoveStartingWith(object, "info_");
+		object = SettingsPage.deepRemoveStartingWith(object, "filesToExport");
+		object = SettingsPage.deepRemoveStartingWith(object, "alwaysEnabled");
+		object = SettingsPage.deepRemoveStartingWith(object, "featureId");
+		const string = JSON.stringify(object, null, 2);
+		return string;
 	}
 
 	export function log(message: any, messageTitle: string = "") {
@@ -1577,10 +1411,7 @@ export namespace ExportLog {
 
 		debugInfo += `Log:\n${fullLog}\n\n`;
 
-		const settingsCopy = Object.assign({}, Settings);
-		//@ts-ignore
-		settingsCopy.filesToExport = settingsCopy.filesToExport[0].length;
-		debugInfo += `Settings:\n${humanReadableJSON(settingsCopy)}\n\n`;
+		debugInfo += `Settings:\n${humanReadableJSON({ ...Settings })}\n\n`;
 
 		// @ts-ignore
 		const loadedPlugins = Object.values(app.plugins.plugins).filter((plugin) => plugin._loaded == true).map((plugin) => plugin.manifest.name).join("\n\t");

@@ -177,7 +177,7 @@ export class Webpage extends Attachment
 	 */
 	private get sizerElement(): HTMLElement | undefined
 	{
-		return (this.pageDocument.querySelector(".canvas-wrapper") ?? this.pageDocument.querySelector(".markdown-sizer") ?? this.pageDocument.querySelector(".obsidian-document")) as HTMLElement | undefined;
+		return (this.pageDocument.querySelector(".canvas-wrapper") ?? this.pageDocument.querySelector(".markdown-preview-sizer") ?? this.pageDocument.querySelector(".obsidian-document")) as HTMLElement | undefined;
 	}
 
 	/**

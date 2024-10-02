@@ -146,7 +146,7 @@ h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-i
 	cursor: default !important;
 }
 
-.canvas-node .obsidian-document.is-readable-line-width .markdown-sizer {
+.canvas-node .obsidian-document.is-readable-line-width .markdown-preview-sizer {
     max-width: 100%;
     margin-left: unset;
     margin-right: unset;

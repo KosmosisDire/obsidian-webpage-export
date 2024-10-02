@@ -103,7 +103,7 @@ export class ObsidianWebsite
 		const pathname = document.querySelector("meta[name='pathname']")?.getAttribute("content") ?? "unknown";
 		this.entryPage = pathname;
 
-		this.document = await new WebpageDocument(pathname).init();
+		this.document = await new WebpageDocument(pathname);
 		await this.document.loadChildDocuments();
 		await this.document.postLoadInit();
 		
@@ -165,7 +165,7 @@ export class ObsidianWebsite
 			return undefined;
 		}
 
-		let page = await (await new WebpageDocument(url).load()).init();
+		let page = await new WebpageDocument(url).load();
 		
 		setTimeout(() => 
 		{

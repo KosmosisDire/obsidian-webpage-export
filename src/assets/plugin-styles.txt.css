@@ -41,6 +41,9 @@ a.tree-item-self.is-clickable {
 	color: var(--text-normal) !important;
 }
 
+.tree-item-children:empty {
+	display: none !important;
+}
 
 .tree-item.filtered-out {
 	display: none;
@@ -113,7 +116,7 @@ h1 li {
 	position: relative;
 }
 
-.heading-wrapper.is-collapsed>.heading::after {
+.heading.is-collapsed::after {
 	content: "..." !important;
 	display: inline-block !important;
 	position: absolute !important;
@@ -123,67 +126,16 @@ h1 li {
 	color: var(--text-muted);
 }
 
-.heading-wrapper {
-	transition: height ease-in-out, margin-bottom ease-in-out;
-	transition-duration: 0.2s;
-	display: flow;
-	position: relative;
-}
-
 /* high specificity in order to override other style */
-html>body>#layout>#center-content>.obsidian-document>.markdown-sizer>div:not(:is(.footer, .header)) {
+html>body>#layout>#center-content>.obsidian-document>.markdown-preview-sizer>div:not(:is(.footer, .header)) {
 	margin-inline: 0 !important;
 	margin: 0 !important;
 	padding: 0 !important;
 }
 
-html>body>#layout>#center-content>.obsidian-document>.markdown-sizer>div {
+html>body>#layout>#center-content>.obsidian-document>.markdown-preview-sizer>div {
 	width: 100%;
 	max-width: 100%;
-}
-
-.markdown-rendered .heading-wrapper:has(> .heading-children > div:last-child > :is(p, pre, table, ul, ol))+.heading-wrapper>.heading:first-child {
-	margin-top: var(--heading-spacing);
-}
-
-.heading-children {
-	transition: height ease-in-out, margin-bottom ease-in-out;
-	transition-duration: 0.2s;
-	display: flow;
-	position: relative;
-	contain: inline-size;
-}
-
-.heading-wrapper.is-collapsed>.heading-children {
-	display: none;
-}
-
-
-.heading-wrapper.is-collapsed>.heading-children,
-.heading-wrapper.is-animating>.heading-children {
-	overflow: hidden;
-	overflow: clip;
-}
-
-.heading-wrapper>.heading>.heading-after {
-	display: none;
-}
-
-.heading-wrapper.is-collapsed>.heading>.heading-after {
-	display: inline-block;
-	margin-left: 0.3em;
-	opacity: 0.4;
-	font-size: 1em;
-	cursor: auto;
-	user-select: none;
-}
-
-.heading-wrapper.is-hidden>* {
-	display: none;
-}
-
-.heading-wrapper.is-hidden {
-	visibility: hidden;
 }
 
 .collapse-icon:not(.list-collapse-indicator) svg.svg-icon {
@@ -203,24 +155,19 @@ html>body>#layout>#center-content>.obsidian-document>.markdown-sizer>div {
 	transform: rotate(-90deg);
 }
 
-.heading-wrapper .heading-collapse-indicator {
+.heading .heading-collapse-indicator {
 	opacity: 0;
 	transition: opacity 0.15s ease-in-out;
 	position: absolute;
 	z-index: 1;
 	padding: 0 !important;
-	padding-left: 40px !important;
-	padding-right: 40px !important;
-	left: -40px !important;
+	padding-left: 2em !important;
+	padding-right: 1em !important;
+	left: -2em !important;
 }
 
-.heading:hover>.heading-collapse-indicator,
-.heading-wrapper .heading-collapse-indicator:hover {
+.heading:hover>.heading-collapse-indicator{
 	opacity: 1;
-}
-
-.markdown-embed .markdown-embed-content .obsidian-document .heading-wrapper-span {
-	width: 100%;
 }
 
 .tree-container {
@@ -551,10 +498,6 @@ body.is-phone {
 	--tree-vertical-spacing: 0.8em;
 }
 
-body.is-phone .heading-wrapper .heading-collapse-indicator {
-	transition: transform 0.2s ease-in-out 0.2s;
-}
-
 /*#endregion */
 
 /*#region Loading */
@@ -667,7 +610,7 @@ body.is-phone .heading-wrapper .heading-collapse-indicator {
 		background: var(--background-primary);
 	}
 
-	body #center-content>.obsidian-document>.markdown-sizer {
+	body #center-content>.obsidian-document>.markdown-preview-sizer {
 		padding: 0;
 		margin: 0;
 		padding: var(--file-margins);

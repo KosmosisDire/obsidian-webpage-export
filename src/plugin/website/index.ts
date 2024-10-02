@@ -14,6 +14,7 @@ import { AssetLoader } from "src/plugin/asset-loaders/base-asset";
 import { FileData, WebpageData, WebsiteData } from "src/shared/website-data";
 import { Utils } from "src/plugin/utils/utils";
 import { Shared } from "src/shared/shared";
+import { WebpageTemplate } from "./webpage-template";
 
 export class Index
 {
@@ -106,7 +107,7 @@ export class Index
 			this.websiteData.baseURL = this.website.exportOptions.rssOptions.siteUrl ?? "";
 			this.websiteData.pluginVersion = HTMLExportPlugin.pluginVersion;
 			this.websiteData.themeName = this.website.exportOptions.themeName ?? "Default";
-			this.websiteData.bodyClasses = await this.website.webpageTemplate.getValidBodyClasses(false) ?? "";
+			this.websiteData.bodyClasses = await WebpageTemplate.getValidBodyClasses() ?? "";
 			this.websiteData.hasFavicon = this.exportOptions.faviconPath != "";
 		}
 		catch (e)
