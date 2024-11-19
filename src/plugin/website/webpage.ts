@@ -121,21 +121,17 @@ export class Webpage extends Attachment
 
 	get frontmatterTags(): string[]
 	{
-		const tags: string[] | string = this.frontmatter?.tags || [];
-		// if tags is string
-		if (typeof tags === "string") {
-			if (!tags.startsWith("#")) {
-				return ["#" + tags];
-			} else {
-				return [tags];
-			}
+		let tags: string[] = [];
+		const frontmatterTags = this.frontmatter?.tags || [];
+		
+		if (typeof frontmatterTags === "string") {
+			tags = [frontmatterTags];
+		} else {
+			tags = frontmatterTags;
 		}
 
 		// if a tag doesn't start with a #, add it
-		tags.forEach((tag, index) =>
-		{
-			if (!tag.startsWith("#")) tags[index] = "#" + tag;
-		});
+		tags = tags.map(tag => tag.startsWith("#") ? tag : "#" + tag);
 		
 		return tags;
 	}
