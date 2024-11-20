@@ -124,8 +124,9 @@ export class Webpage extends Attachment
 		let tags: string[] = [];
 		const frontmatterTags = this.frontmatter?.tags || [];
 		
-		if (typeof frontmatterTags === "string") {
-			tags = [frontmatterTags];
+		// if frontmatter.tags is not an array, make it an array
+		if(!Array.isArray(frontmatterTags)){
+			tags = [String(frontmatterTags)];
 		} else {
 			tags = frontmatterTags;
 		}
