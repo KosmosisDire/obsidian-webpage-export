@@ -128,7 +128,7 @@ export class Webpage extends Attachment
 		if(!Array.isArray(frontmatterTags)){
 			tags = [String(frontmatterTags)];
 		} else {
-			tags = frontmatterTags;
+			tags = frontmatterTags.map((tag) => String(tag));
 		}
 
 		// if a tag doesn't start with a #, add it
