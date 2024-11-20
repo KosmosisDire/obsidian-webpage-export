@@ -217,13 +217,18 @@ export class Webpage extends Attachment
 
 	private get frontmatterTags(): string[]
 	{
-		const tags: string[] = this.frontmatter?.tags ?? [];
+		let tags: string[] = [];
+		const frontmatterTags = this.frontmatter?.tags || [];
 		
+		// if frontmatter.tags is not an array, make it an array
+		if(!Array.isArray(frontmatterTags)){
+			tags = [String(frontmatterTags)];
+		} else {
+			tags = frontmatterTags.map((tag) => String(tag));
+		}
+
 		// if a tag doesn't start with a #, add it
-		tags.forEach((tag, index) =>
-		{
-			if (!tag.startsWith("#")) tags[index] = "#" + tag;
-		});
+		tags = tags.map(tag => tag.startsWith("#") ? tag : "#" + tag);
 		
 		return tags;
 	}
