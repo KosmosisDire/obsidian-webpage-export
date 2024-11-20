@@ -415,7 +415,7 @@ export class Webpage extends Attachment
 	private get backlinks(): Webpage[]
 	{
 		// @ts-ignore
-		const backlinks = Object.keys(app.metadataCache.getBacklinksForFile(this.source)?.data) ?? [];
+		const backlinks = Array.from(app.metadataCache.getBacklinksForFile(this.source)?.data?.keys?.() || []);
 		let linkedWebpages = backlinks.map((path) => this.website.index.getWebpage(path)) as Webpage[];
 		linkedWebpages = linkedWebpages.filter((page) => page != undefined);
 		return linkedWebpages;
