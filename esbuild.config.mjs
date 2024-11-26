@@ -2,6 +2,7 @@ import esbuild from "esbuild";
 import process from "process";
 import builtins from "builtin-modules";
 import fs from "fs";
+import path from "path";
 
 const banner =
 `/*
@@ -11,6 +12,15 @@ if you want to view the source, please visit the github repository of this plugi
 `;
 
 const prod = (process.argv[2] === 'production');
+
+// Ensure output directory exists
+const ensureDirectoryExists = (filePath) => {
+  const dirname = path.dirname(filePath);
+  if (!fs.existsSync(dirname)) {
+    fs.mkdirSync(dirname, { recursive: true });
+    console.log(`Created directory: ${dirname}`);
+  }
+};
 
 // Define a custom plugin for post-processing with regex replacements
 const regexReplacementPlugin = {
@@ -22,29 +32,32 @@ const regexReplacementPlugin = {
         result.outputFiles.forEach(file => {
           console.log(`Processing file: ${file.path}`);
           
+          // Ensure the output directory exists
+          ensureDirectoryExists(file.path);
+          
           // Access the raw text output
           let contents = file.text;
           
           console.log("Original content length:", contents.length);
-
           // Apply regex replacements
           contents = contents
             // Remove info_ variables
             .replace(/this\.info_[\S\s]+?;/gm, "")
             // Remove require statements
             .replace(/var .+?__require\(.+?\);/gm, "");
-
+          
           console.log("Content length after replacements:", contents.length);
-
           // Add banner
           contents = banner + '\n' + contents;
-
-          // Update the file contents
-          file.contents = new TextEncoder().encode(contents);
-
-          // Write the file to disk manually
-          fs.writeFileSync(file.path, contents);
-          console.log(`File written to: ${file.path}`);
+          
+          // Write the file to disk
+          try {
+            fs.writeFileSync(file.path, contents);
+            console.log(`Successfully wrote file to: ${file.path}`);
+          } catch (error) {
+            console.error(`Error writing file ${file.path}:`, error);
+            throw error;
+          }
         });
       } else {
         console.log("No output files found");
@@ -53,6 +66,7 @@ const regexReplacementPlugin = {
   }
 };
 
+// First build
 await esbuild.build({
   entryPoints: ["src/frontend/main/index.txt.ts"],
   external: ['moment', "src/plugin/*"],
@@ -64,51 +78,51 @@ await esbuild.build({
   tsconfig: "tsconfig.frontend.json",
   watch: !prod,
   plugins: [regexReplacementPlugin],
-  write: false, // Keep this false to allow our plugin to handle file writing
+  write: false, // Keep this false to allow the plugin to handle file writing
 }).then(() => {
-  console.log("Build completed");
+  console.log("Frontend build completed");
 }).catch((error) => {
-  console.error("Build failed:", error);
+  console.error("Frontend build failed:", error);
   process.exit(1);
 });
 
+// Second build
 await esbuild.build({
-	loader: {
-		'.txt.js': 'text',
-		'.txt.css': 'text',
-		'.wasm': 'binary',
-		'.png': 'binary',
-	},
-	banner: {
-		js: banner,
-	},
-	entryPoints: ['src/plugin/main.ts'],
-	bundle: true,
-	tsconfig: 'tsconfig.json',
-	external: [
-		'obsidian',
-		'electron',
-		'@codemirror/autocomplete',
-		'@codemirror/collab',
-		'@codemirror/commands',
-		'@codemirror/language',
-		'@codemirror/lint',
-		'@codemirror/search',
-		'@codemirror/state',
-		'@codemirror/view',
-		'@lezer/common',
-		'@lezer/highlight',
-		'@lezer/lr',
-		'node:buffer',
-		'node:stream',
-		...builtins],
-	format: 'cjs',
-	watch: !prod,
-	target: 'es2018',
-	logLevel: "info",
-	sourcemap: prod ? false : 'inline',
-	treeShaking: true,
-	outfile: 'main.js'
+  loader: {
+    '.txt.js': 'text',
+    '.txt.css': 'text',
+    '.wasm': 'binary',
+    '.png': 'binary',
+  },
+  banner: {
+    js: banner,
+  },
+  entryPoints: ['src/plugin/main.ts'],
+  bundle: true,
+  tsconfig: 'tsconfig.json',
+  external: [
+    'obsidian',
+    'electron',
+    '@codemirror/autocomplete',
+    '@codemirror/collab',
+    '@codemirror/commands',
+    '@codemirror/language',
+    '@codemirror/lint',
+    '@codemirror/search',
+    '@codemirror/state',
+    '@codemirror/view',
+    '@lezer/common',
+    '@lezer/highlight',
+    '@lezer/lr',
+    'node:buffer',
+    'node:stream',
+    ...builtins
+  ],
+  format: 'cjs',
+  watch: !prod,
+  target: 'es2018',
+  logLevel: "info",
+  sourcemap: prod ? false : 'inline',
+  treeShaking: true,
+  outfile: 'main.js',
 }).catch(() => process.exit(1));
-
-
