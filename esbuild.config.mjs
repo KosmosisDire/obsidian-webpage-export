@@ -53,7 +53,7 @@ const regexReplacementPlugin = {
   }
 };
 
-esbuild.build({
+await esbuild.build({
   entryPoints: ["src/frontend/main/index.txt.ts"],
   external: ['moment', "src/plugin/*"],
   bundle: true,
