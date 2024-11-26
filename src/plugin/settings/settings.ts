@@ -11,6 +11,7 @@ import { EmojiStyle } from 'src/shared/website-data';
 import supportedStyleIds from "src/assets/plugin-style-ids.json";
 import { SupportedPluginStyles } from '../asset-loaders/supported-plugin-styles';
 import postcss from 'postcss';
+import safeParser from 'postcss-safe-parser';
 
 // #region Settings Definition
 
@@ -431,7 +432,7 @@ export class SettingsPage extends PluginSettingTab
 			'color', 'background', 'margin', 'padding', 'width', 'height', 'display', 'position', 'font', "cm", "pcr", "app", "workspace"
 		]);
 
-		const root = postcss.parse(stylesheet);
+		const root = safeParser(stylesheet);
 
 		// Extract words from top comments
 		root.nodes.forEach(node => {
