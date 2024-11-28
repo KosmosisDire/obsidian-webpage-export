@@ -85,6 +85,15 @@ export class FilePreviewPopover
 				preview.clearShowTimeout();
 			}
 		});
+
+		link.addEventListener("click", function(event) {
+			if (preview) {
+				if (!preview.isPinned) {
+					preview.startRemoveTimeout();
+				}
+				preview.clearShowTimeout();
+			}
+		});
 	}
 
 	constructor(link: HTMLElement | null, target: string, onRemove: () => void) {
