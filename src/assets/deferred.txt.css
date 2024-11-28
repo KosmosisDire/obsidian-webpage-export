@@ -45,6 +45,10 @@ body
     max-width: 0;
 }
 
+.sidebar.is-collapsed::after {
+    z-index: unset;
+}
+
 .sidebar.floating {
 	position: absolute;
 }
