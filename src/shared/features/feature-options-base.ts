@@ -122,6 +122,12 @@ export class InsertedFeatureOptions extends FeatureOptions
 	public insertFeature(container: HTMLElement, feature: HTMLElement): boolean
 	{
 		if (!container) return false;
+		if (feature.id) {
+			const existingFeature = container.querySelector(`#${feature.id}`);
+			if (existingFeature) {
+				existingFeature.remove();
+			}
+		}
 		let relation = container.querySelector(this.featurePlacement.selector) as HTMLElement;
 		if (relation)
 		{
