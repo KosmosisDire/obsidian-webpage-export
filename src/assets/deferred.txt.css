@@ -27,7 +27,7 @@ body
     overflow: hidden;
     overflow: clip;
 	
-    transition: min-width ease-in-out, max-width ease-in-out;
+    transition: min-width ease-in-out, max-width ease-in-out, z-index ease-in-out;
 	transition-duration: .2s;
 	contain: size;
 }
@@ -43,6 +43,7 @@ body
 .sidebar.is-collapsed {
     min-width: 0;
     max-width: 0;
+    z-index: auto;
 }
 
 .sidebar.floating {
