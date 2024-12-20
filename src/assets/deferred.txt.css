@@ -1,18 +1,18 @@
 /* Define default values for variables */
 body
 {
-	--line-width: 40em;
-	--line-width-adaptive: 40em;
-	--file-line-width: 40em;
-	--sidebar-width: min(20em, 80vw);
-	--collapse-arrow-size: 11px;
-	--tree-vertical-spacing: 1.3em;
-	--sidebar-margin: 12px;
+    --line-width: 40em;
+    --line-width-adaptive: 40em;
+    --file-line-width: 40em;
+    --sidebar-width: min(20em, 80vw);
+    --collapse-arrow-size: 11px;
+    --tree-vertical-spacing: 1.3em;
+    --sidebar-margin: 12px;
 }
 
 :root
 {
-	background-color: #202124;
+    background-color: #202124;
 }
 
 /*#region Sidebars */
@@ -21,15 +21,15 @@ body
     height: 100%;
     font-size: 14px;
     z-index: 10;
-	min-width: calc(var(--sidebar-width) + var(--divider-width-hover));
+    min-width: calc(var(--sidebar-width) + var(--divider-width-hover));
     max-width: calc(var(--sidebar-width) + var(--divider-width-hover));
     position: relative;
     overflow: hidden;
     overflow: clip;
-	
+
     transition: min-width ease-in-out, max-width ease-in-out;
-	transition-duration: .2s;
-	contain: size;
+    transition-duration: .2s;
+    contain: size;
 }
 
 #left-sidebar {
@@ -46,7 +46,7 @@ body
 }
 
 .sidebar.floating {
-	position: absolute;
+    position: absolute;
 }
 
 .sidebar .leaf-content {
@@ -75,27 +75,27 @@ body
 {
     left: 0;
     border-top-right-radius: var(--radius-l);
-	border-bottom-right-radius: var(--radius-l);
+    border-bottom-right-radius: var(--radius-l);
 }
 
 #right-sidebar-content
 {
     right: 0;
-	border-top-left-radius: var(--radius-l);
-	border-bottom-left-radius: var(--radius-l);
+    border-top-left-radius: var(--radius-l);
+    border-bottom-left-radius: var(--radius-l);
 }
 
 .sidebar #right-sidebar-content, .sidebar #left-sidebar-content
 {
-	contain: none !important;
-	container-type: normal !important;
-	animation: none !important;
+    contain: none !important;
+    container-type: normal !important;
+    animation: none !important;
 }
 
 /* Hide empty sidebars */
 .sidebar:has(.leaf-content:empty):has(.topbar-content:empty)
 {
-	display: none;
+    display: none;
 }
 
 .sidebar-topbar {
@@ -119,27 +119,27 @@ body
 
 .sidebar .sidebar-topbar.is-collapsed
 {
-	width: 0;
+    width: 0;
 }
 
 #left-sidebar .sidebar-topbar {
-	left: 0;
-	flex-direction: row;
+    left: 0;
+    flex-direction: row;
 }
 
 #right-sidebar .sidebar-topbar {
-	right: 0;
-	flex-direction: row-reverse;
+    right: 0;
+    flex-direction: row-reverse;
 }
 
 #left-sidebar .topbar-content {
-	margin-right: calc(2.3em + var(--sidebar-margin));
-	flex-direction: row;
+    margin-right: calc(2.3em + var(--sidebar-margin));
+    flex-direction: row;
 }
 
 #right-sidebar .topbar-content {
-	margin-left: calc(2.3em + var(--sidebar-margin));
-	flex-direction: row-reverse;
+    margin-left: calc(2.3em + var(--sidebar-margin));
+    flex-direction: row-reverse;
 }
 
 .topbar-content {
@@ -153,8 +153,8 @@ body
 }
 
 .sidebar.is-collapsed .topbar-content {
-	width: 0;
-	transition: inherit;
+    width: 0;
+    transition: inherit;
 }
 
 .clickable-icon.sidebar-collapse-icon {
@@ -163,24 +163,24 @@ body
     padding: 2px!important;
     margin: 0!important;
     height: 100%!important;
-	width: 2.3em !important;
+    width: 2.3em !important;
     margin-inline: 0.14em!important;
     position: absolute;
 }
 
 #left-sidebar .clickable-icon.sidebar-collapse-icon {
     transform: rotateY(180deg);
-	right: var(--sidebar-margin);
+    right: var(--sidebar-margin);
 }
 
 #right-sidebar .clickable-icon.sidebar-collapse-icon {
     transform: rotateY(180deg);
-	left: var(--sidebar-margin);
+    left: var(--sidebar-margin);
 }
 
 .clickable-icon.sidebar-collapse-icon svg.svg-icon {
     width: 100%;
-	height: 100%;
+    height: 100%;
 }
 
 .feature-title {
@@ -195,14 +195,14 @@ body
 {
     display: flex;
     align-items: center;
-	padding-top: 0;
+    padding-top: 0;
     font-size: 1em;
     padding-left: 0;
 }
 
 body.floating-sidebars .sidebar
 {
-	position: absolute;
+    position: absolute;
 }
 
 /*#endregion */
@@ -211,7 +211,7 @@ body.floating-sidebars .sidebar
 
 body
 {
-	transition: background-color var(--color-fade-speed) ease-in-out;
+    transition: background-color var(--color-fade-speed) ease-in-out;
 }
 
 #layout {
@@ -232,26 +232,26 @@ body
     display: flex;
     flex-direction: column;
     align-items: center;
-	transition: opacity 0.2s ease-in-out;
-	contain: inline-size;
+    transition: opacity 0.2s ease-in-out;
+    contain: inline-size;
 }
 
 .hide
 {
-	opacity: 0 !important;
-	transition: opacity 0.2s ease-in-out;
-	pointer-events: none;
+    opacity: 0 !important;
+    transition: opacity 0.2s ease-in-out;
+    pointer-events: none;
 }
 
 #center-content>.obsidian-document 
 {
-	padding-left: 2em;
-	padding-right: 1em;
-	margin-bottom: 0;
-	width: 100%;
-	width: -webkit-fill-available;
-	width: -moz-available;
-	width: fill-available;
+    padding-left: 2em;
+    padding-right: 1em;
+    margin-bottom: 0;
+    width: 100%;
+    width: -webkit-fill-available;
+    width: -moz-available;
+    width: fill-available;
     transition: background-color var(--color-fade-speed) ease-in-out;
     border-top-right-radius: var(--window-radius, var(--radius-m));
     border-top-left-radius: var(--window-radius, var(--radius-m));
@@ -260,7 +260,7 @@ body
     display: flex !important;
     flex-direction: column !important;
     align-items: center !important;
-	contain: inline-size;
+    contain: inline-size;
 }
 
 body #center-content>.obsidian-document>.markdown-preview-sizer 
@@ -270,14 +270,14 @@ body #center-content>.obsidian-document>.markdown-preview-sizer
     max-width: var(--line-width);
     flex-basis: var(--line-width);
     transition: background-color var(--color-fade-speed) ease-in-out;
-	contain: inline-size;
+    contain: inline-size;
 }
 
 #center-content>.obsidian-document>div
 {
     width: 100% !important;
     transition: background-color var(--color-fade-speed) ease-in-out;
-	contain: inline-size;
+    contain: inline-size;
 }
 
 /* If the markdown view is displaying a raw file or embed then increase it's size to make everything as large as possible */
@@ -292,9 +292,9 @@ body #center-content>.obsidian-document>.markdown-preview-sizer
 
 #center-content > .obsidian-document:not([data-type='markdown']).embed > *
 {
-	max-width: 100%;
-	max-height: 100%;
-	object-fit: contain;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 :not(h1,h2,h3,h4,h5,h6):has(> :is(.math:not(.math-inline), table)) 
@@ -305,55 +305,55 @@ body #center-content>.obsidian-document>.markdown-preview-sizer
 /* For custom view exports */
 #center-content > .obsidian-document:not([data-type='markdown'])
 {
-	overflow-x: auto;
-	contain: content;
-	padding: 0;
-	margin: 0;
-	height: 100%;
+    overflow-x: auto;
+    contain: content;
+    padding: 0;
+    margin: 0;
+    height: 100%;
 }
 
 .obsidian-document[data-type="attachment"]
 {
-	display: flex;
-	flex-direction: column;
-	align-items: center;
-	justify-content: center;
-	height: 100%;
-	width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
 }
 
 .obsidian-document[data-type="attachment"] > *
 {
     outline: none;
-	border: none;
-	box-shadow: none;
+    border: none;
+    box-shadow: none;
 }
 
 .obsidian-document[data-type="attachment"] :is(img)
 {
-	max-width: 90%;
-	max-height: 90%;
-	object-fit: contain;
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
 }
 
 .obsidian-document[data-type="attachment"] > :is(audio)
 {
-	width: 100%;
-	max-width: min(90%, var(--line-width));
+    width: 100%;
+    max-width: min(90%, var(--line-width));
 }
 
 .obsidian-document[data-type="attachment"] > :is(embed, iframe, video)
 {
-	width: 100%;
-	height: 100%;
-	max-width: 100%;
-	max-height: 100%;
-	object-fit: contain;
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
 }
 
 .canvas-wrapper > :is(.header, .footer)
 {
-	z-index: 100;
+    z-index: 100;
     position: absolute;
     display: flex;
     justify-content: center;
