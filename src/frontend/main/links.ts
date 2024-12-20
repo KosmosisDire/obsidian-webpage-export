@@ -8,7 +8,7 @@ export class LinkHandler
 		console.log("Initializing links on element", onElement);
 		onElement?.querySelectorAll(".internal-link, a.tag, a.tree-item-self, a.footnote-link").forEach(function(link: HTMLElement)
 		{
-			let target = link.getAttribute("href") ?? "null";
+			const target = link.getAttribute("href") ?? "null";
 
 			if(target == "null")
 			{

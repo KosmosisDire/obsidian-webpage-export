@@ -1,5 +1,5 @@
 
-import { Search, SearchType } from "./search";
+import { Search } from "./search";
 import { Sidebar } from "./sidebars";
 import { Tree } from "./trees";
 import { Bounds, delay, getLengthInPixels, waitUntil } from "./utils";
@@ -15,7 +15,7 @@ import { FilePreviewPopover } from "./link-preview";
 export class ObsidianWebsite
 {
 	public LinkHandler: LinkHandler = LinkHandler;
-	public LinkPreview: any = FilePreviewPopover;
+	public LinkPreview: unknown = FilePreviewPopover;
 
 	public bodyEl: HTMLElement;
 	public websiteEl: HTMLElement;
@@ -75,8 +75,8 @@ export class ObsidianWebsite
 		console.log("Website init");
 		if(window.location.protocol != "file:") 
 		{
-			// @ts-ignore
-			await loadIncludes(); // defined in deferred.js
+			// @ts-expect-error defined in deferred.js
+			await loadIncludes();
 		}
 
 		this.theme = new Theme();
@@ -130,12 +130,12 @@ export class ObsidianWebsite
 			ObsidianSite.loadURL(pathname);
 		});
 		
-		let localThis = this;
-		window.addEventListener("resize", (e) => 
+		const localThis = this;
+		window.addEventListener("resize", () => 
 			{
 				localThis.onResize()
 			});
-		this.onResize(true);
+		this.onResize();
 	}
 
 	public async loadURL(url: string): Promise<WebpageDocument | undefined>
@@ -157,7 +157,7 @@ export class ObsidianWebsite
 			return this.document;
 		}
 
-		let data = ObsidianSite.getWebpageData(url) as WebpageData;
+		const data = ObsidianSite.getWebpageData(url) as WebpageData;
 		if (!data)
 		{
 			new Notice("This page does not exist yet.");
@@ -165,7 +165,7 @@ export class ObsidianWebsite
 			return undefined;
 		}
 
-		let page = await new WebpageDocument(url).load();
+		const page = await new WebpageDocument(url).load();
 		
 		setTimeout(() => 
 		{
@@ -199,14 +199,14 @@ export class ObsidianWebsite
 		}
 		else
 		{
-			let file = this.getFileData(url);
+			const file = this.getFileData(url);
 			if (!file?.data)
 			{
 				console.error("Failed to fetch", url);
 				return;
 			}
 
-			let req = new Response(file.data, {status: 200});
+			const req = new Response(file.data, { status: 200 });
 			return req;
 		}
 	}
@@ -299,7 +299,7 @@ export class ObsidianWebsite
 
 	public getLocalDataFromId(id: string): any | undefined
 	{
-		var el = document.getElementById(id);
+		const el = document.getElementById(id);
 		if (!el) return;
 		return JSON.parse(decodeURI(atob(el.getAttribute("value") ?? "")));
 	}
@@ -414,7 +414,7 @@ export class ObsidianWebsite
 	private isResizing = false;
 	private checkStillResizingTimeout: NodeJS.Timeout | undefined = undefined;
 	private deviceSize: string = "large-screen";
-	private onResize(isInitial = false)
+	private onResize()
 	{
 		if (!this.isResizing)
 		{
@@ -422,34 +422,34 @@ export class ObsidianWebsite
 			this.isResizing = true;
 		}
 
-		let localThis = this;
+		const localThis = this;
 	
 		function widthNowInRange(low: number, high: number)
 		{
-			let w = window.innerWidth;
+			const w = window.innerWidth;
 			return (w > low && w < high && localThis.lastScreenWidth == undefined) || ((w > low && w < high) && ((localThis.lastScreenWidth ?? 0) <= low || (localThis.lastScreenWidth ?? 0) >= high));
 		}
 	
 		function widthNowGreaterThan(value: number)
 		{
-			let w = window.innerWidth;
+			const w = window.innerWidth;
 			return (w > value && localThis.lastScreenWidth == undefined) || (w > value && (localThis.lastScreenWidth ?? 0) < value);
 		}
 	
 		function widthNowLessThan(value: number)
 		{
-			let w = window.innerWidth;
+			const w = window.innerWidth;
 			return (w < value && localThis.lastScreenWidth == undefined) || (w < value && (localThis.lastScreenWidth ?? 0) > value);
 		}
 
-		let docWidthCSS = this.metadata.featureOptions.document?.documentWidth ?? "45em";
-		let leftWdithCSS = this.metadata.featureOptions.sidebar?.leftDefaultWidth ?? "20em";
-		let rightWidthCSS = this.metadata.featureOptions.sidebar?.rightDefaultWidth ?? "20em";
+		const docWidthCSS = this.metadata.featureOptions.document?.documentWidth ?? "45em";
+		const leftWdithCSS = this.metadata.featureOptions.sidebar?.leftDefaultWidth ?? "20em";
+		const rightWidthCSS = this.metadata.featureOptions.sidebar?.rightDefaultWidth ?? "20em";
 
 		// calculate the css widths
-		let docWidth = getLengthInPixels(docWidthCSS, this.centerContentEl);
-		let leftWidth = this.leftSidebar ? getLengthInPixels(leftWdithCSS, this.leftSidebar?.containerEl) : 0;
-		let rightWidth = this.rightSidebar ? getLengthInPixels(rightWidthCSS, this.rightSidebar?.containerEl) : 0;
+		const docWidth = getLengthInPixels(docWidthCSS, this.centerContentEl);
+		const leftWidth = this.leftSidebar ? getLengthInPixels(leftWdithCSS, this.leftSidebar?.containerEl) : 0;
+		const rightWidth = this.rightSidebar ? getLengthInPixels(rightWidthCSS, this.rightSidebar?.containerEl) : 0;
 	
 		if (widthNowGreaterThan(docWidth + leftWidth + rightWidth) || widthNowGreaterThan(1025))
 		{
@@ -508,7 +508,7 @@ export class ObsidianWebsite
 		if (this.checkStillResizingTimeout != undefined) clearTimeout(this.checkStillResizingTimeout);
 	
 		// wait a little bit of time and if the width is still the same then we are done resizing
-		let screenWidthSnapshot = window.innerWidth;
+		const screenWidthSnapshot = window.innerWidth;
 		this.checkStillResizingTimeout = setTimeout(function ()
 		{
 			if (window.innerWidth == screenWidthSnapshot)

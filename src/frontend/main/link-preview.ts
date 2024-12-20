@@ -7,7 +7,7 @@ export class FilePreviewPopover
 	public static pinnedPreviews: FilePreviewPopover[] = [];
 	public static savePinnedPreviews()
 	{
-		var previewDatas = FilePreviewPopover.pinnedPreviews.map(preview => {
+		const previewDatas = FilePreviewPopover.pinnedPreviews.map(preview => {
 			return {
 				target: preview.target,
 				top: preview.filePreviewPopover.style.top,
@@ -23,10 +23,10 @@ export class FilePreviewPopover
 
 	public static loadPinnedPreviews()
 	{
-		var previewDatas = JSON.parse(localStorage.getItem("pinnedPreviews") ?? "[]");
+		const previewDatas = JSON.parse(localStorage.getItem("pinnedPreviews") ?? "[]");
 		previewDatas.forEach(async (previewData: any) => 
 		{
-			let preview = new FilePreviewPopover(null, previewData.target, () => {});
+			const preview = new FilePreviewPopover(null, previewData.target, () => {});
 			preview.setPinned(true);
 			preview.filePreviewPopover.style.top = previewData.top;
 			preview.filePreviewPopover.style.left = previewData.left;
@@ -68,7 +68,7 @@ export class FilePreviewPopover
 	public static initializeLink(link: HTMLElement, target: string) {
 		let preview: FilePreviewPopover | null = null;
 		
-		link.addEventListener("pointerenter", function(event) {
+		link.addEventListener("pointerenter", function() {
 			if (!preview) {
 				preview = new FilePreviewPopover(link, target, () => {
 					preview = null;  // Set preview to null when it's removed
@@ -77,7 +77,7 @@ export class FilePreviewPopover
 			}
 		});
 
-		link.addEventListener("pointerleave", function(event) {
+		link.addEventListener("pointerleave", function() {
 			if (preview) {
 				if (!preview.isPinned) {
 					preview.startRemoveTimeout();
@@ -186,8 +186,8 @@ export class FilePreviewPopover
 		this.filePreviewPopover.style.maxHeight = `${maxHeight}px`;
 
 		// Ensure the preview stays within the left and top edges of the viewport
-		let newLeft = Math.max(margin, rect.left);
-		let newTop = Math.max(margin, rect.top);
+		const newLeft = Math.max(margin, rect.left);
+		const newTop = Math.max(margin, rect.top);
 
 		// Apply position adjustments if necessary
 		if (newLeft !== rect.left) {
@@ -218,8 +218,8 @@ export class FilePreviewPopover
 	{
 		event.stopPropagation();
 		this.bringToFront();
-		let offsetX = event.clientX - this.filePreviewPopover.getBoundingClientRect().left;
-		let offsetY = event.clientY - this.filePreviewPopover.getBoundingClientRect().top;
+		const offsetX = event.clientX - this.filePreviewPopover.getBoundingClientRect().left;
+		const offsetY = event.clientY - this.filePreviewPopover.getBoundingClientRect().top;
 
 		const onPointerMove = (event: PointerEvent) => {
 			let newLeft = event.clientX - offsetX;
