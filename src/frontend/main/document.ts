@@ -215,16 +215,16 @@ export class WebpageDocument
 		this.postProcess();
 
 		if (this.isMainDocument && !ObsidianSite.metadata.ignoreMetadata && ObsidianSite.metadata.featureOptions.backlinks.enabled && this.documentType == DocumentType.Markdown)
-			this.createBacklinks();
+			this.insertBacklinks();
 
 		if (this.isMainDocument && !ObsidianSite.metadata.ignoreMetadata && ObsidianSite.metadata.featureOptions.tags.enabled && this.documentType == DocumentType.Markdown) 
-			this.createTags();
+			this.insertTags();
 
 		if (this.isMainDocument || this.isPreview)
 		{
-			this.createHeaders();
-			this.createCallouts();
-			this.createLists();
+			this.processHeaders();
+			this.processCallouts();
+			this.processLists();
 		}
 
 		if (this.documentType == DocumentType.Canvas)
@@ -238,12 +238,12 @@ export class WebpageDocument
 		return this;
 	}
 
-	public createHeaders()
+	public processHeaders()
 	{
 		this.headers = Header.createHeaderTree(this.documentEl);
 	}
 
-	public createCallouts()
+	public processCallouts()
 	{
 		const calloutEls = Array.from(this.documentEl.querySelectorAll(".callout"));
 		this.callouts = [];
@@ -253,7 +253,7 @@ export class WebpageDocument
 		}
 	}
 
-	public createLists()
+	public processLists()
 	{
 		const listEls = Array.from(this.documentEl.querySelectorAll(":is(ul, ol):not(:is(ul, ol) :is(ul, ol))"));
 		this.lists = [];
@@ -263,14 +263,14 @@ export class WebpageDocument
 		}
 	}
 
-	public createBacklinks()
+	public insertBacklinks()
 	{
 		const backlinks = this.info.backlinks?.filter(b => b != this.pathname);
 		if (!backlinks || backlinks.length == 0) return;
 		this.backlinkList = new BacklinkList(backlinks);
 	}
 
-	public createTags()
+	public insertTags()
 	{
 		const tags = [];
 

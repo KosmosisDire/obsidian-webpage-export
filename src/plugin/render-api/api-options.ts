@@ -63,5 +63,10 @@ export class MarkdownRendererOptions
 	 * A list of files to export. If empty, all files will be exported.
 	 */
 	filesToExport: string[] = [];
+
+	/**
+	 * Should the usage of the fallback rendering method which iterates all document sections be forced?
+	 */
+	useFallbackRenderer: boolean = false;
 }
 

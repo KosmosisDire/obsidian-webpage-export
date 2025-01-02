@@ -1,7 +1,7 @@
 import { Settings, SettingsPage } from "src/plugin/settings/settings";
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
-import { ExportLog } from "src/plugin/render-api/render-api";
+import { ExportLog } from "src/plugin/render-api/render-api.js";
 import { OtherPluginStyles } from "./other-plugin-styles.js";
 import pluginIds from "src/assets/plugin-style-ids.json";
 

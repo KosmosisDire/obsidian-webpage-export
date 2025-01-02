@@ -1,7 +1,7 @@
 import { AssetLoader } from "./base-asset.js";
 import { AssetType, InlinePolicy, LoadMethod, Mutability } from "./asset-types.js";
 import { Path } from "src/plugin/utils/path";
-import { ExportLog } from "src/plugin/render-api/render-api";
+import { ExportLog } from "src/plugin/render-api/render-api.js";
 import { RequestUrlResponse, requestUrl } from "obsidian";
 import { Utils } from "src/plugin/utils/utils";
 import { fileTypeFromBuffer } from "file-type";

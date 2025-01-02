@@ -59,6 +59,12 @@ export namespace MarkdownRendererAPI {
 		return text;
 	}
 
+	export async function renderFilePathToString(filePath: string, options?: MarkdownRendererOptions): Promise<string | undefined> {
+		const file = app.vault.getAbstractFileByPath(filePath);
+		if (!file || !(file instanceof TFile)) return;
+		return await this.renderFileToString(file, options);
+	}
+
 	export async function renderMarkdownSimple(markdown: string): Promise<string | undefined> {
 		const container = document.body.createDiv();
 		await _MarkdownRendererInternal.renderSimpleMarkdown(markdown, container);
@@ -404,7 +410,7 @@ export namespace _MarkdownRendererInternal {
 			// @ts-ignore
 			preview.show();
 
-		if (!preview.rerender) {
+		if (!preview.rerender || options.useFallbackRenderer) {
 			console.log(`Rendering ${preview.file.name} using fallback method`);
 			return renderMarkdownViewFallback(preview, options);
 		}
@@ -416,8 +422,7 @@ export namespace _MarkdownRendererInternal {
 			await renderer.unfoldAllHeadings();
 			await renderer.unfoldAllLists();
 			await renderer.parseSync();
-		}
-		catch (e) {
+		} catch (e) {
 			ExportLog.error(e, "Failed to unfold or parse renderer!");
 		}
 
@@ -426,34 +431,82 @@ export namespace _MarkdownRendererInternal {
 			await loadMermaid();
 		}
 
-		const sections = renderer.sections as { "rendered": boolean, "height": number, "computed": boolean, "lines": number, "lineStart": number, "lineEnd": number, "used": boolean, "highlightRanges": number, "level": number, "headingCollapsed": boolean, "shown": boolean, "usesFrontMatter": boolean, "html": string, "el": HTMLElement }[];
+		const sections = renderer.sections as {
+			rendered: boolean;
+			height: number;
+			computed: boolean;
+			lines: number;
+			lineStart: number;
+			lineEnd: number;
+			used: boolean;
+			highlightRanges: number;
+			level: number;
+			headingCollapsed: boolean;
+			shown: boolean;
+			usesFrontMatter: boolean;
+			html: string;
+			el: HTMLElement;
+		}[];
 
 		// @ts-ignore
-		const newMarkdownEl = batchDocument.body.createDiv({ attr: { class: "obsidian-document " + (preview.renderer?.previewEl?.className ?? "") } });
-		const newSizerEl = newMarkdownEl.createDiv({ attr: { class: "markdown-preview-sizer markdown-preview-section" } });
+		const newMarkdownEl = batchDocument.body.createDiv({
+			attr: {
+				// @ts-ignore
+				class: "obsidian-document " + (preview.renderer?.previewEl?.className ?? ""),
+			},
+		});
+		const newSizerEl = newMarkdownEl.createDiv({
+			attr: { class: "markdown-preview-sizer markdown-preview-section" },
+		});
 
-		if (!newMarkdownEl || !newSizerEl) return failRender(preview.file, "Please specify a container element, or enable keepViewContainer!");
+		if (!newMarkdownEl || !newSizerEl)
+			return failRender(
+				preview.file,
+				"Please specify a container element, or enable keepViewContainer!"
+			);
 
 		const previewEl: HTMLElement = renderer.previewEl;
-		const sizerEl: HTMLElement = previewEl.querySelector(".markdown-preview-sizer") ?? previewEl;
+		const sizerEl: HTMLElement =
+			previewEl.querySelector(".markdown-preview-sizer") ?? previewEl;
 		previewEl.style.minHeight = sizerEl.style.minHeight;
 
-		await Utils.delay(5);
+		await Utils.delay(16);
+
+		let rendered = false;
+		// @ts-ignore
+		preview.renderer.onRendered(() => {
+			console.log("Rendered");
+			rendered = true;
+		});
 
 		// @ts-ignore
-		preview.rerender();
+		preview.rerender(true);
 
 		await Utils.delay(5);
 
 		previewEl.style.minHeight = sizerEl.style.minHeight;
 
 		await Utils.delay(5);
+
+		// wait for rendering to finish using callback
+		let renderSuccess = await waitUntil(
+			() => rendered || checkCancelled(),
+			2000,
+			16
+		);
+		if (checkCancelled()) return undefined;
+		if (!renderSuccess)
+			return failRender(preview.file, "Failed to render preview!");
 
 		// @ts-ignore
 		const foldedCallouts: HTMLElement[] = [];
 		for (const section of sections) {
 			// unfold callouts
-			const folded = Array.from(section.el.querySelectorAll(".callout-content[style*='display: none']")) as HTMLElement[];
+			const folded = Array.from(
+				section.el.querySelectorAll(
+					".callout-content[style*='display: none']"
+				)
+			) as HTMLElement[];
 			for (const callout of folded) {
 				callout.style.display = "";
 			}
@@ -464,48 +517,118 @@ export namespace _MarkdownRendererInternal {
 
 		// wait until the sizer contains all the sections
 		ExportLog.log("Waiting for all sections to be counted...");
-		var sectionsSuccess = await waitUntil(() => sizerEl.children.length >= sections.length || checkCancelled(), 4000, 5);
+		var sectionsSuccess = await waitUntil(
+			() => {
+				console.log(sizerEl.children.length, sections.length);
+				return (
+					sizerEl.children.length >= sections.length ||
+					checkCancelled()
+				);
+			},
+			4000,
+			5
+		);
 		if (checkCancelled()) return undefined;
 
 		if (!sectionsSuccess) {
-			ExportLog.warning("Failed to render all sections in file " + preview.file.name + ", using fallback!");
+			console.log(
+				sizerEl.children.length,
+				sections.length,
+				sizerEl.children,
+				sections
+			);
+			ExportLog.warning(
+				"Failed to render all sections in file " +
+					preview.file.name +
+					", using fallback!"
+			);
 			return renderMarkdownViewFallback(preview, options);
 		}
 
 		await Utils.delay(50);
 
 		// compile dataview
-		const dataviewInfos = DataviewRenderer.getDataViewsFromHTML(preview.containerEl);
+		const dataviewInfos = DataviewRenderer.getDataViewsFromHTML(
+			preview.containerEl
+		);
 		for (const dataviewInfo of dataviewInfos) {
-			await new DataviewRenderer(preview, preview.file, dataviewInfo?.query, dataviewInfo.keyword).generate(dataviewInfo.preEl);
+			await new DataviewRenderer(
+				preview,
+				preview.file,
+				dataviewInfo?.query,
+				dataviewInfo.keyword
+			).generate(dataviewInfo.preEl);
 		}
 
 		// wait for transclusions
 		ExportLog.log("Waiting for transclusions to render...");
-		await waitUntil(() => !preview.containerEl.querySelector(".markdown-preview-pusher") || preview.containerEl.querySelector(".markdown-preview-pusher + *") != null || checkCancelled(), 2000, 5);
+		await waitUntil(
+			() =>
+				!preview.containerEl.querySelector(
+					".markdown-preview-pusher"
+				) ||
+				preview.containerEl.querySelector(
+					".markdown-preview-pusher + *"
+				) != null ||
+				checkCancelled(),
+			2000,
+			5
+		);
 		if (checkCancelled()) return undefined;
 
-		if ((preview.containerEl.querySelector(".markdown-preview-pusher") && !preview.containerEl.querySelector(".markdown-preview-pusher + *"))) {
-			ExportLog.warning("Transclusions were not rendered correctly in file " + preview.file.name + "!");
+		if (
+			preview.containerEl.querySelector(".markdown-preview-pusher") &&
+			!preview.containerEl.querySelector(".markdown-preview-pusher + *")
+		) {
+			ExportLog.warning(
+				"Transclusions were not rendered correctly in file " +
+					preview.file.name +
+					"!"
+			);
 		}
 
 		// wait for generic plugins
 		ExportLog.log("Waiting for generic plugins to render...");
-		await waitUntil(() => !preview.containerEl.querySelector("[class^='block-language-']:empty") || checkCancelled(), 2000, 5);
+		await waitUntil(
+			() =>
+				!preview.containerEl.querySelector(
+					"[class^='block-language-']:empty"
+				) || checkCancelled(),
+			2000,
+			16
+		);
 		if (checkCancelled()) return undefined;
 
 		// check for invalid plugin blocks
-		const invalidPluginBlocks = Array.from(preview.containerEl.querySelectorAll("[class^='block-language-']:empty"));
+		const invalidPluginBlocks = Array.from(
+			preview.containerEl.querySelectorAll(
+				"[class^='block-language-']:empty"
+			)
+		);
 		for (const block of invalidPluginBlocks) {
-			ExportLog.warning(`Plugin element ${block.className || block.parentElement?.className || "unknown"} from ${preview.file.name} not rendered correctly!`);
+			ExportLog.warning(
+				`Plugin element ${
+					block.className ||
+					block.parentElement?.className ||
+					"unknown"
+				} from ${preview.file.name} not rendered correctly!`
+			);
 		}
 
 		// convert canvas elements into images here because otherwise they will lose their data when moved
-		const canvases = Array.from(preview.containerEl.querySelectorAll("canvas:not(.pdf-embed canvas)")) as HTMLCanvasElement[];
+		const canvases = Array.from(
+			preview.containerEl.querySelectorAll(
+				"canvas:not(.pdf-embed canvas)"
+			)
+		) as HTMLCanvasElement[];
 		for (const canvas of canvases) {
 			// wait until the canvas is rendered
 			ExportLog.log("Waiting for canvas-based plugin to render...");
-			let canvasSuccess = await waitUntil(() => canvas.toDataURL().length > 100 || checkCancelled(), 1000, 5);
+			let canvasSuccess = await waitUntil(
+				() => canvas.toDataURL().length > 100 || checkCancelled(),
+				1000,
+				16
+			);
 			if (!canvasSuccess) continue;
 
 			const data = canvas.toDataURL();
@@ -515,7 +638,7 @@ export namespace _MarkdownRendererInternal {
 			image.style.width = canvas.style.width || "100%";
 			image.style.maxWidth = "100%";
 			canvas.replaceWith(image);
-		};
+		}
 
 		// refold callouts
 		for (const callout of foldedCallouts) {
@@ -526,14 +649,20 @@ export namespace _MarkdownRendererInternal {
 
 		// create the markdown-preview-pusher element
 		if (options.createPusherElement) {
-			newSizerEl.createDiv({ attr: { class: "markdown-pusher", style: "width: 1px; height: 0.1px; margin-bottom: 0px;" } });
+			newSizerEl.createDiv({
+				attr: {
+					class: "markdown-pusher",
+					style: "width: 1px; height: 0.1px; margin-bottom: 0px;",
+				},
+			});
 		}
-
 
 		newSizerEl.innerHTML = sizerEl.innerHTML;
 
 		// get banner plugin banner and insert it before the sizer element
-		const banner = preview.containerEl.querySelector(".obsidian-banner-wrapper");
+		const banner = preview.containerEl.querySelector(
+			".obsidian-banner-wrapper"
+		);
 		if (banner) {
 			newSizerEl.before(banner);
 		}
@@ -545,10 +674,24 @@ export namespace _MarkdownRendererInternal {
 		options.container?.appendChild(newMarkdownEl);
 
 		if (options.unifyTitleFormat) {
-			let title = await _MarkdownRendererInternal.getTitleForFile(preview.file);
-			let icon = await _MarkdownRendererInternal.getIconForFile(preview.file);
-			let iconSVG = await MarkdownRendererAPI.renderMarkdownSimple(icon.icon) ?? icon.icon;
-			_MarkdownRendererInternal.addTitle(options.container ?? newMarkdownEl, title.title, title.isDefault, iconSVG, icon.isDefault, preview.file, options);
+			let title = await _MarkdownRendererInternal.getTitleForFile(
+				preview.file
+			);
+			let icon = await _MarkdownRendererInternal.getIconForFile(
+				preview.file
+			);
+			let iconSVG =
+				(await MarkdownRendererAPI.renderMarkdownSimple(icon.icon)) ??
+				icon.icon;
+			_MarkdownRendererInternal.addTitle(
+				options.container ?? newMarkdownEl,
+				title.title,
+				title.isDefault,
+				iconSVG,
+				icon.isDefault,
+				preview.file,
+				options
+			);
 		}
 
 		return newMarkdownEl;
@@ -667,8 +810,6 @@ export namespace _MarkdownRendererInternal {
 				if (useFile.extension == "canvas") iconProperty = "lucide//layout-dashboard";
 			}
 		}
-
-
 
 		iconOutput = await IconHandler.getIcon(iconProperty ?? "");
 
