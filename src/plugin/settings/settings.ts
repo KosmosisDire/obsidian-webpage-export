@@ -482,29 +482,40 @@ export class SettingsPage extends PluginSettingTab
 			if (!styleID || styleID == "")
 			{
 				// first check if it has any non-statandard attributes that can be used to uniquely identify it
-				let hasUniqueAttr = false;
-				// @ts-ignore
-				const attributes = stylesheets[i].ownerNode?.attributes;
-				if (attributes)
-				{
-					for (const attr of attributes)
-					{
-						if (!["type", "id"].contains(attr.name) && !attr.name.startsWith("data-"))
-						{
-							// check if the attribute is unique
-							const elements = document.querySelectorAll(`[${attr.name}]`);
-							if (elements.length == 1)
-							{
-								// @ts-ignore
-								stylesheets[i].ownerNode.id = attr.name;
-								hasUniqueAttr = true;
-								break;
-							}
-						}
-					}
-				}
+                let hasDataAttr = false;
+                // @ts-ignore
+                const attributes = stylesheets[i].ownerNode?.attributes;
+                if (attributes) {
+                    for (const attr of attributes) {
+                        if (attr.name.startsWith("data-")) {
+                            // @ts-ignore
+                            stylesheets[i].ownerNode.id = `${attr.name.substring(5)}${attr.value ? `-${attr.value}` : ''}-stylesheet`;
+                            hasDataAttr = true;
+                            break;
+                        }
+                    }
+                }
 
-				if (hasUniqueAttr) continue;
+                if (hasDataAttr) continue;
+
+                // Check for other unique attributes if no data- attributes found
+                let hasUniqueAttr = false;
+                if (attributes) {
+                    for (const attr of attributes) {
+                        if (!["type", "id"].contains(attr.name) && !attr.name.startsWith("data-")) {
+                            // check if the attribute is unique
+                            const elements = document.querySelectorAll(`[${attr.name}]`);
+                            if (elements.length == 1) {
+                                // @ts-ignore
+                                stylesheets[i].ownerNode.id = `${attr.name}-stylesheet`;
+                                hasUniqueAttr = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (hasUniqueAttr) continue;
 
 				if (!stylesheets[i].ownerNode?.textContent?.contains("svelte-")) 
 					continue;
