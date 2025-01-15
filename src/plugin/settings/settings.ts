@@ -248,26 +248,10 @@ export class SettingsPage extends PluginSettingTab
 				browseButton: true,
 			});
 
-		// createText(section, lang.siteName.title, 
-		// 	() => Settings.exportOptions.siteName,
-		// 	(value) => Settings.exportOptions.siteName = value,
-		// 	lang.siteName.description);
-
-		// createText(section, lang.authorName.title,
-		// 	() => Settings.exportOptions.authorName,
-		// 	(value) => Settings.exportOptions.authorName = value,
-		// 	lang.authorName.description);
-
-		// createFileInput(section,
-		// 	() => Settings.exportOptions.siteUrl,
-		// 	(value) => Settings.exportOptions.siteUrl = value,
-		// 	{
-		// 		name: lang.siteUrl.title,
-		// 		description: lang.siteUrl.description,
-		// 		placeholder: lang.siteUrl.placeholder,
-		// 		makeRelativeToVault: false,
-		// 		pickFolder: false,
-		// 	});
+		createText(section, lang.siteName.title, 
+			() => Settings.exportOptions.siteName,
+			(value) => Settings.exportOptions.siteName = value,
+			lang.siteName.description);
 
 		// #endregion
 
