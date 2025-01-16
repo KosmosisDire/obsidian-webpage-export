@@ -490,7 +490,7 @@ export class SettingsPage extends PluginSettingTab
                     let foundPriorityAttr = false;
                     
                     for (const prefix of priorityPrefixes) {
-                        const attr = Array.from(attributes).find(a => a.name === `data-${prefix}`);
+                        const attr = Array.from(attributes).find((a: Attr) => a.name === `data-${prefix}`);
                         if (attr) {
                             // @ts-ignore
                             stylesheets[i].ownerNode.id = `${prefix}-${attr.value}-stylesheet`;
@@ -502,8 +502,8 @@ export class SettingsPage extends PluginSettingTab
                     if (!foundPriorityAttr) {
                         // Collect all data attributes
                         const dataAttrs = Array.from(attributes)
-                            .filter(attr => attr.name.startsWith('data-'))
-                            .map(attr => ({
+                            .filter((attr: Attr) => attr.name.startsWith('data-'))
+                            .map((attr: Attr) => ({
                                 name: attr.name.substring(5),
                                 value: attr.value
                             }));
