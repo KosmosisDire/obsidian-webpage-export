@@ -47,7 +47,7 @@ Either follow the instructions above for a beta release, or:
 ## Contributing
 
 Only start work on features which have an issue created for them and have been accepted by me!
-Contributiong guide coming soon.
+A contribution guide may come soon.
 
 ## Support This Plugin
 
