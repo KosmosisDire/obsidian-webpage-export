@@ -482,21 +482,45 @@ export class SettingsPage extends PluginSettingTab
 			if (!styleID || styleID == "")
 			{
 				// first check if it has any non-statandard attributes that can be used to uniquely identify it
-                let hasDataAttr = false;
                 // @ts-ignore
                 const attributes = stylesheets[i].ownerNode?.attributes;
                 if (attributes) {
-                    for (const attr of attributes) {
-                        if (attr.name.startsWith("data-")) {
+                    // First try to find most meaningful data attribute
+                    const priorityPrefixes = ['source-plugin', 'type', 'name', 'source'];
+                    let foundPriorityAttr = false;
+                    
+                    for (const prefix of priorityPrefixes) {
+                        const attr = Array.from(attributes).find(a => a.name === `data-${prefix}`);
+                        if (attr) {
                             // @ts-ignore
-                            stylesheets[i].ownerNode.id = `${attr.name.substring(5)}${attr.value ? `-${attr.value}` : ''}-stylesheet`;
-                            hasDataAttr = true;
+                            stylesheets[i].ownerNode.id = `${prefix}-${attr.value}-stylesheet`;
+                            foundPriorityAttr = true;
                             break;
                         }
                     }
-                }
 
-                if (hasDataAttr) continue;
+                    if (!foundPriorityAttr) {
+                        // Collect all data attributes
+                        const dataAttrs = Array.from(attributes)
+                            .filter(attr => attr.name.startsWith('data-'))
+                            .map(attr => ({
+                                name: attr.name.substring(5),
+                                value: attr.value
+                            }));
+                        
+                        if (dataAttrs.length > 0) {
+                            // Combine all data attributes into ID
+                            const id = dataAttrs
+                                .map(attr => `${attr.name}${attr.value ? `-${attr.value}` : ''}`)
+                                .join('-');
+                            // @ts-ignore
+                            stylesheets[i].ownerNode.id = `${id}-stylesheet`;
+                            continue;
+                        }
+                    } else {
+                        continue;
+                    }
+                }
 
                 // Check for other unique attributes if no data- attributes found
                 let hasUniqueAttr = false;
