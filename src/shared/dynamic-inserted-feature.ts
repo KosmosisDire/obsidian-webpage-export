@@ -1,151 +1,104 @@
-import { FeatureRelation, InsertedFeatureOptions } from "./features/feature-options-base";
+import { InsertedFeatureOptions } from "./features/feature-options-base";
 import { InsertedFeature } from "./inserted-feature";
 
-export class DynamicInsertedFeature<
+export abstract class DynamicInsertedFeature<
 	TOptions extends InsertedFeatureOptions,
 	TDependencies extends object = {}
 > extends InsertedFeature<TOptions> {
 	private dependencies: TDependencies;
-	private proxyHandler: ProxyHandler<TDependencies>;
-	private dependencyProxy: TDependencies;
-	private lastDependencyValues: Map<string, any> = new Map();
-	private dependencyPaths: Set<string> = new Set();
-	private isDestroyed: boolean = false;
 
-	constructor(options: TOptions, dependencies: TDependencies) {
-		super(options);
+	constructor(
+		options: TOptions,
+		dependencies: TDependencies,
+		existingElement?: HTMLElement
+	) {
+		super(options, existingElement);
 		this.dependencies = dependencies;
-
-		// Setup proxy handler for dependency tracking
-		this.proxyHandler = this.createProxyHandler();
-		this.dependencyProxy = new Proxy(this.dependencies, this.proxyHandler);
-
-		this.setupDependencyTracking();
+		this.updateContent(); // Initial content generation
 	}
 
-	private createProxyHandler(): ProxyHandler<TDependencies> {
-		const handler: ProxyHandler<TDependencies> = {
-			get: (target: any, prop: string | symbol) => {
-				const value = target[prop];
-
-				// Track accessed path
-				this.dependencyPaths.add(String(prop));
-
-				// If the value is an object, return a new proxy for it
-				if (value && typeof value === "object") {
-					return new Proxy(value, {
-						get: (obj: any, nested: string | symbol) => {
-							const nestedValue = obj[nested];
-							this.dependencyPaths.add(
-								`${String(prop)}.${String(nested)}`
-							);
-							return nestedValue;
-						},
-					});
-				}
-
-				return value;
-			},
-		};
-
-		return handler;
+	/**
+	 * Manually regenerate the feature content.
+	 * Call this method whenever the dependencies have changed and the feature needs to update.
+	 */
+	public regenerate(): void {
+		this.updateContent();
 	}
 
-	private setupDependencyTracking() {
-		// Initial value capture
-		this.captureValues();
-
-		const checkForChanges = () => {
-			if (this.isDestroyed) return;
-
-			if (this.hasValuesChanged()) {
-				this.updateContent();
-				this.captureValues();
-			}
-		};
-
-		// Start periodic checks
-		const intervalId = setInterval(checkForChanges, 100);
-
-		// Clear interval on destroy
-		const originalDestroy = this.destroy.bind(this);
-		this.destroy = () => {
-			this.isDestroyed = true;
-			clearInterval(intervalId);
-			originalDestroy();
-		};
-	}
-
-	private captureValues() {
-		this.lastDependencyValues.clear();
-		this.dependencyPaths.forEach((path) => {
-			const value = this.getValueByPath(this.dependencies, path);
-			this.lastDependencyValues.set(path, this.cloneValue(value));
-		});
-	}
-
-	private cloneValue(value: any): any {
-		if (Array.isArray(value)) {
-			return [...value];
+	/**
+	 * Update the dependencies object and optionally regenerate the content
+	 * @param newDependencies The new dependencies object
+	 * @param autoRegenerate Whether to automatically regenerate the content (defaults to true)
+	 */
+	public updateDependencies(
+		newDependencies: TDependencies,
+		autoRegenerate: boolean = true
+	): void {
+		this.dependencies = newDependencies;
+		if (autoRegenerate) {
+			this.regenerate();
 		}
-		if (typeof value === "object" && value !== null) {
-			return { ...value };
+	}
+
+	/**
+	 * Modify dependencies using a lambda function and optionally regenerate the content
+	 * @param modifier Function that takes current dependencies and returns modified dependencies
+	 * @param autoRegenerate Whether to automatically regenerate the content (defaults to true)
+	 */
+	public modifyDependencies(
+		modifier: (deps: TDependencies) => void,
+		autoRegenerate: boolean = true
+	): void {
+		modifier(this.dependencies);
+		if (autoRegenerate) {
+			this.regenerate();
 		}
-		return value;
 	}
 
-	private hasValuesChanged(): boolean {
-		return Array.from(this.dependencyPaths).some((path) => {
-			const currentValue = this.getValueByPath(this.dependencies, path);
-			const lastValue = this.lastDependencyValues.get(path);
-			return !this.areValuesEqual(currentValue, lastValue);
-		});
-	}
-
-	private areValuesEqual(a: any, b: any): boolean {
-		if (Array.isArray(a) && Array.isArray(b)) {
-			return (
-				a.length === b.length &&
-				a.every((val, idx) => this.areValuesEqual(val, b[idx]))
-			);
-		}
-		if (
-			typeof a === "object" &&
-			a !== null &&
-			typeof b === "object" &&
-			b !== null
-		) {
-			const keysA = Object.keys(a);
-			const keysB = Object.keys(b);
-			return (
-				keysA.length === keysB.length &&
-				keysA.every((key) => this.areValuesEqual(a[key], b[key]))
-			);
-		}
-		return a === b;
-	}
-
-	private getValueByPath(obj: any, path: string): any {
-		return path
-			.split(".")
-			.reduce(
-				(curr, key) =>
-					curr && typeof curr === "object" ? curr[key] : undefined,
-				obj
-			);
-	}
-
-	protected generateContent(): HTMLElement | string {
-		// Access dependencies through proxy to track usage
-		return this.generateFeatureContent();
-	}
-
-	protected generateFeatureContent(): HTMLElement | string {
-		// Override this method in subclasses
-		return document.createElement("div");
-	}
-
+	/**
+	 * Get the current dependencies
+	 */
 	protected getDependencies(): TDependencies {
-		return this.dependencyProxy;
+		return this.dependencies;
+	}
+
+	/**
+	 * Update the feature's content
+	 */
+	protected updateContent(): void {
+		const contentEl = this.getElement(InsertedFeature.CONTENT_KEY);
+		if (!contentEl) return;
+
+		// Clear existing content
+		while (contentEl.firstChild) {
+			contentEl.removeChild(contentEl.firstChild);
+		}
+		
+		// check if feature exists in the document, and if not reinsert it
+		const featureEl = this.getElement(InsertedFeature.FEATURE_KEY);
+		if (!featureEl?.isConnected && featureEl) {
+			this.options.insertFeature(document.body, featureEl);
+		}
+
+		this.generateContent(contentEl);
+	}
+
+	/**
+	 * Generate the feature content - must be implemented by subclasses
+	 */
+	protected abstract generateContent(container: HTMLElement): void;
+
+	public hide(): void {
+		const featureEl = this.getElement(InsertedFeature.FEATURE_KEY);
+		if (featureEl) {
+			featureEl.style.display = "none";
+		}
+	}
+
+	public show(): void {
+		const featureEl = this.getElement(InsertedFeature.FEATURE_KEY);
+		if (featureEl) {
+			featureEl.style.display = "";
+		}
 	}
 }

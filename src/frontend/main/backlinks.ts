@@ -48,7 +48,10 @@ interface BacklinksDependencies {
 	backlinkPaths: string[];
 }
 
-export class BacklinkList extends DynamicInsertedFeature<BacklinksOptions, BacklinksDependencies> {
+export class BacklinkList extends DynamicInsertedFeature<
+	BacklinksOptions,
+	BacklinksDependencies
+> {
 	public backlinks: Backlink[];
 
 	constructor(backlinkPaths: string[]) {
@@ -57,14 +60,11 @@ export class BacklinkList extends DynamicInsertedFeature<BacklinksOptions, Backl
 		});
 	}
 
-	protected generateFeatureContent(): HTMLElement {
-		const container = document.createElement("div");
+	protected generateContent(container: HTMLElement) {
 		const deps = this.getDependencies();
 
 		this.backlinks = deps.backlinkPaths.map(
 			(url) => new Backlink(container, url)
 		);
-
-		return container;
 	}
 }

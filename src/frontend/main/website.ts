@@ -4,6 +4,7 @@ import { Tree } from "./trees";
 import { Bounds, delay, getLengthInPixels, waitUntil } from "./utils";
 import { WebpageDocument as ObsidianDocument } from "./document";
 import {
+	DocumentType,
 	FileData,
 	WebpageData,
 	WebsiteData,
@@ -22,6 +23,9 @@ import {
 	InsertedFeatureOptions,
 	RelationType,
 } from "src/shared/features/feature-options-base";
+import { BacklinkList } from "./backlinks";
+import { Tags } from "./tags";
+import { Aliases } from "./aliases";
 
 type Constructor<T> = new () => T;
 
@@ -39,7 +43,7 @@ export class ObsidianWebsite {
 	public LinkPreview: unknown = FilePreviewPopover;
 
 	public bodyEl: HTMLElement;
-	public websiteEl: HTMLElement;
+	public horizontalLayout: HTMLElement;
 	public centerContentEl: HTMLElement;
 	public loadingEl: HTMLElement;
 
@@ -54,6 +58,9 @@ export class ObsidianWebsite {
 	public rightSidebar: Sidebar | undefined = undefined;
 	public document: ObsidianDocument;
 	public graphView: GraphView | undefined = undefined;
+	public backlinkList: BacklinkList | undefined = undefined;
+	public tags: Tags | undefined = undefined;
+	public aliases: Aliases | undefined = undefined;
 
 	public entryPage: string;
 
@@ -95,7 +102,7 @@ export class ObsidianWebsite {
 		this.theme = new Theme();
 
 		this.bodyEl = document.body;
-		this.websiteEl = document.querySelector("#layout") as HTMLElement;
+		this.horizontalLayout = document.querySelector("#main-horizontal") as HTMLElement;
 		this.centerContentEl = document.querySelector(
 			"#center-content"
 		) as HTMLElement;
@@ -144,19 +151,105 @@ export class ObsidianWebsite {
 
 		FilePreviewPopover.loadPinnedPreviews();
 
+		this.onDocumentLoad((doc) => {
+			const insertBacklinks =
+				doc.isMainDocument &&
+				!ObsidianSite.metadata.ignoreMetadata &&
+				ObsidianSite.metadata.featureOptions.backlinks.enabled &&
+				doc.documentType == DocumentType.Markdown;
+			const insertTags =
+				doc.isMainDocument &&
+				!ObsidianSite.metadata.ignoreMetadata &&
+				ObsidianSite.metadata.featureOptions.tags.enabled &&
+				doc.documentType == DocumentType.Markdown;
+			const insertAliases =
+				doc.isMainDocument &&
+				!ObsidianSite.metadata.ignoreMetadata &&
+				ObsidianSite.metadata.featureOptions.alias.enabled &&
+				doc.documentType == DocumentType.Markdown;
+
+			// ------------------ BACKLINKS -----------------
+			if (insertBacklinks) {
+				const backlinks = doc.info.backlinks?.filter(
+					(b) => b != doc.pathname
+				);
+
+				if (!this.backlinkList) {
+					this.backlinkList = new BacklinkList(
+						doc.info.backlinks ?? []
+					);
+				} else {
+					this.backlinkList?.modifyDependencies((d) => {
+						d.backlinkPaths = doc.info.backlinks ?? [];
+					});
+				}
+
+				if (!backlinks || backlinks.length == 0) {
+					this.backlinkList?.hide();
+				} else {
+					this.backlinkList?.show();
+				}
+			} else {
+				this.backlinkList?.hide();
+			}
+
+			// ------------------ TAGS -----------------
+			if (insertTags) {
+				const tags: string[] = [];
+
+				if (
+					ObsidianSite.metadata.featureOptions.tags.showInlineTags &&
+					doc.info.inlineTags
+				)
+					tags.push(...doc.info.inlineTags);
+				if (
+					ObsidianSite.metadata.featureOptions.tags
+						.showFrontmatterTags &&
+					doc.info.frontmatterTags
+				)
+					tags.push(...doc.info.frontmatterTags);
+
+				if (!this.tags) {
+					this.tags = new Tags(tags);
+				} else {
+					this.tags?.modifyDependencies((d) => {
+						d.tags = tags;
+					});
+				}
+
+				if (tags.length == 0) {
+					this.tags?.hide();
+				} else {
+					this.tags?.show();
+				}
+			} else {
+				this.tags?.hide();
+			}
+
+			// ------------------ ALIASES -----------------
+			if (insertAliases) {
+				const aliases = doc.info.aliases;
+
+				if (!this.aliases) {
+					this.aliases = new Aliases(aliases ?? []);
+				} else {
+					this.aliases?.modifyDependencies((d) => {
+						d.aliases = aliases ?? [];
+					});
+				}
+
+				if (!aliases || aliases.length == 0) {
+					this.aliases?.hide();
+				} else {
+					this.aliases?.show();
+				}
+			} else {
+				this.aliases?.hide();
+			}
+		});
+
 		this.isLoaded = true;
 		this.onloadCallbacks.forEach((cb) => cb(this.document));
-
-		// example feature
-		const feature = new CounterFeature(
-			new InsertedFeatureOptions(
-				"counter-feature",
-				new FeatureRelation("#right-sidebar-content", RelationType.End)
-			),
-			{
-				document: this.document,
-			}
-		);
 	}
 
 	private initEvents() {
@@ -182,6 +275,7 @@ export class ObsidianWebsite {
 
 		if (query && query.startsWith("query=")) {
 			this.search?.searchParseFilters(query.substring(6));
+			return;
 		}
 
 		// if this document is already loaded
@@ -197,11 +291,25 @@ export class ObsidianWebsite {
 			return undefined;
 		}
 
+		// Save current state before loading new document
+		if (this.document && this.isHttp) {
+			let currentPath = this.document.pathname;
+			if (currentPath == "index.html") currentPath = "";
+			history.pushState(
+				{ pathname: currentPath },
+				this.document.title,
+				currentPath
+			);
+		}
+
 		const page = await new ObsidianDocument(url).load();
 
-		setTimeout(() => {
+		setTimeout(async () => {
+			
 			this.onloadCallbacks.forEach((cb) => cb(page));
-
+			
+			await page.show();
+			
 			if (header) {
 				page.scrollToHeader(header);
 			}

@@ -190,8 +190,8 @@ h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-i
 
 /*#region Lists */
 
-#layout .is-collapsed .list-collapse-indicator svg.svg-icon, 
-#layout .is-collapsed .collapse-indicator svg.svg-icon
+#main-horizontal .is-collapsed .list-collapse-indicator svg.svg-icon, 
+#main-horizontal .is-collapsed .collapse-indicator svg.svg-icon
 {
 	color: var(--collapse-icon-color-collapsed);
 }

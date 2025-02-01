@@ -85,6 +85,14 @@ export class Header {
         return this.find(header => header.id === id);
     }
 
+	public getFlatChildren(): Header[] {
+		let headers: Header[] = [this];
+		for (const child of this._children) {
+			headers = headers.concat(child.getFlatChildren());
+		}
+		return headers;
+	}
+
 	public toggleCollapse() {
         this._isCollapsed = !this._isCollapsed;
         this._collapseIndicatorElement?.classList.toggle("is-collapsed", this._isCollapsed);

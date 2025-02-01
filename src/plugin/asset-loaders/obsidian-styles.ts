@@ -17,7 +17,7 @@ export class ObsidianStyles extends AssetLoader
 	static readonly obsidianStylesFilter =
 	["ghost", "pdf", "annotation", "data-main-rotation", "spread",
 	"load",  "setting", "filter", "decorator", "node-insert", "app-container",
-	"dictionary", "status", "windows", "titlebar", "source", "#layout",
+	"dictionary", "status", "windows", "titlebar", "source", "#main-horizontal",
 	"menu", "message", "suggestion", "prompt", 
 	"tab", "HyperMD", "workspace", "publish", 
 	"backlink", "sync", "vault",  

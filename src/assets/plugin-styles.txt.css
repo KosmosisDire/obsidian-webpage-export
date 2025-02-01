@@ -127,13 +127,13 @@ h1 li {
 }
 
 /* high specificity in order to override other style */
-html>body>#layout>#center-content>.obsidian-document>.markdown-preview-sizer>div:not(:is(.footer, .header)) {
+html>body>#main-horizontal>#center-content>.obsidian-document>.markdown-preview-sizer>div:not(:is(.footer, .header)) {
 	margin-inline: 0 !important;
 	margin: 0 !important;
 	padding: 0 !important;
 }
 
-html>body>#layout>#center-content>.obsidian-document>.markdown-preview-sizer>div {
+html>body>#main-horizontal>#center-content>.obsidian-document>.markdown-preview-sizer>div {
 	width: 100%;
 	max-width: 100%;
 }
@@ -596,7 +596,7 @@ body.is-phone {
 	}
 
 	:root,
-	html body.publish> :is(#layout, #center-content, .obsidian-document):not(script, style, include) {
+	html body.publish> :is(#main-horizontal, #center-content, .obsidian-document):not(script, style, include) {
 		display: contents !important;
 	}
 
@@ -724,7 +724,6 @@ input[type=search] {
 }
 
 .search-input-container {
-	width: 100% !important;
 	display: flex !important;
 }
 
@@ -842,15 +841,21 @@ a.backlink:hover {
 
 /*#region Tags */
 
-#tags {
+#tags, #aliases {
 	display: flex;
 	align-items: baseline;
 	gap: 1em;
 }
 
-#tags .tags-content {
+#tags .tags-content, #aliases .aliases-content {
 	display: flex;
 	gap: 0.5em;
+}
+
+#aliases .aliases-content .alias
+{
+	font-size: var(--tag-size);
+	padding-inline: 0.25em;
 }
 
 /*#endregion */
@@ -871,6 +876,19 @@ a.backlink:hover {
 /*#endregion */
 
 /*#region Header & Footer */
+
+.header .data-bar
+{
+	display: flex;
+	flex-wrap: wrap;
+}
+
+.header .data-bar > :not(:first-child)
+{
+	border-left: 1px solid var(--background-modifier-border);
+	padding-left: 0.5em;
+	margin-left: 0.5em;
+}
 
 .header .data-bar:not(:empty) {
 	padding-bottom: 1em;

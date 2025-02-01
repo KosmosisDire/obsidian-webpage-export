@@ -1,128 +1,184 @@
-import { InsertedFeatureOptions, InsertedFeatureOptionsWithTitle } from "./features/feature-options-base";
+import {
+	InsertedFeatureOptions,
+	InsertedFeatureOptionsWithTitle,
+} from "./features/feature-options-base";
 
-export class InsertedFeature<
-	TOptions extends InsertedFeatureOptions
-> {
+interface ElementDefinition {
+	type: string;
+	className?: string | string[];
+	id?: string;
+	attributes?: Record<string, string>;
+}
+
+export class InsertedFeature<TOptions extends InsertedFeatureOptions> {
 	protected _options: TOptions;
+	protected elements: Map<string, HTMLElement> = new Map();
 
-	// DOM elements
-	protected featureEl: HTMLElement | null = null;
-	protected contentEl: HTMLElement | null = null;
-	protected headerEl: HTMLElement | null = null;
-	protected titleEl: HTMLElement | null = null;
-	private createdElements: Set<HTMLElement> = new Set();
+	// Standard element keys
+	protected static readonly FEATURE_KEY = "feature";
+	protected static readonly HEADER_KEY = "header";
+	protected static readonly CONTENT_KEY = "content";
+	protected static readonly TITLE_KEY = "title";
 
-	constructor(options: TOptions, featureEl?: HTMLElement) {
+	constructor(options: TOptions, existingElement?: HTMLElement) {
 		this._options = options;
 
-		if (featureEl) {
-			this.replaceFeature(featureEl);
+		if (existingElement) {
+			this.replaceFeature(existingElement);
 		} else {
 			this.setupFeatureContainer();
 		}
 
-		this.options.insertFeature(document.body, this.featureEl!);
+		this.options.insertFeature(
+			document.body,
+			this.getElement(InsertedFeature.FEATURE_KEY)!
+		);
+		this.onAfterMount();
 	}
 
-	/**
-	 * Replaces the entire feature with new content, maintaining the feature structure
-	 */
-	protected replaceFeature(featureEl: HTMLElement) {
-		// Clean up any previously created elements
-		this.destroy();
+	protected getElementDefinitions(): Record<string, ElementDefinition> {
+		return {
+			[InsertedFeature.FEATURE_KEY]: {
+				type: "div",
+				className: ["feature", "hide"],
+				id: this.options.featureId,
+			},
+			[InsertedFeature.HEADER_KEY]: {
+				type: "div",
+				className: "feature-header",
+			},
+			[InsertedFeature.CONTENT_KEY]: {
+				type: "div",
+				className: `${this.options.featureId}-content`,
+			},
+			[InsertedFeature.TITLE_KEY]: {
+				type: "div",
+				className: "feature-title",
+			},
+		};
+	}
 
-		this.featureEl = featureEl;
-		this.featureEl.id = this.options.featureId;
+	protected getElementHierarchy(): Record<string, string | null> {
+		return {
+			[InsertedFeature.FEATURE_KEY]: null, // root
+			[InsertedFeature.HEADER_KEY]: InsertedFeature.FEATURE_KEY,
+			[InsertedFeature.TITLE_KEY]: InsertedFeature.HEADER_KEY,
+			[InsertedFeature.CONTENT_KEY]: InsertedFeature.FEATURE_KEY,
+		};
+	}
 
-		// Find or create header
-		this.headerEl = this.featureEl.querySelector(".feature-header");
-		if (!this.headerEl) {
-			this.headerEl = document.createElement("div");
-			this.headerEl.classList.add("feature-header");
-			this.featureEl.prepend(this.headerEl);
-			this.createdElements.add(this.headerEl);
+	protected createElement(definition: ElementDefinition): HTMLElement {
+		const element = document.createElement(definition.type);
+
+		if (definition.className) {
+			const classes = Array.isArray(definition.className)
+				? definition.className
+				: [definition.className];
+			element.classList.add(...classes);
 		}
+
+		if (definition.id) {
+			element.id = definition.id;
+		}
+
+		if (definition.attributes) {
+			Object.entries(definition.attributes).forEach(([key, value]) => {
+				element.setAttribute(key, value);
+			});
+		}
+
+		return element;
+	}
+
+	protected getElement(key: string): HTMLElement | undefined {
+		return this.elements.get(key);
+	}
+
+	protected setupFeatureContainer(): void {
+		const definitions = this.getElementDefinitions();
+		const hierarchy = this.getElementHierarchy();
+
+		// Create all elements first
+		Object.entries(definitions).forEach(([key, def]) => {
+			this.elements.set(key, this.createElement(def));
+		});
+
+		// Build hierarchy
+		Object.entries(hierarchy).forEach(([key, parentKey]) => {
+			if (parentKey === null) return; // Skip root
+
+			const element = this.elements.get(key);
+			const parent = this.elements.get(parentKey);
+
+			if (element && parent) {
+				parent.appendChild(element);
+			}
+		});
 
 		// Handle title if needed
 		if (
 			this._options instanceof InsertedFeatureOptionsWithTitle &&
-			(this._options.displayTitle || "").length > 0
+			this._options.displayTitle?.length > 0
 		) {
-			this.titleEl = this.headerEl.querySelector(".feature-title");
-			if (!this.titleEl) {
-				this.titleEl = document.createElement("div");
-				this.titleEl.classList.add("feature-title");
-				this.headerEl.prepend(this.titleEl);
-				this.createdElements.add(this.titleEl);
+			const titleEl = this.getElement(InsertedFeature.TITLE_KEY);
+			if (titleEl) {
+				titleEl.innerText = this._options.displayTitle;
 			}
-			this.titleEl.innerText = this._options.displayTitle;
 		}
 
-		// Find or create content container
-		this.contentEl = this.featureEl.querySelector(
-			"." + this.options.featureId + "-content"
-		);
-		if (!this.contentEl) {
-			this.contentEl = document.createElement("div");
-			this.contentEl.classList.add(this.options.featureId + "-content");
-			this.featureEl.appendChild(this.contentEl);
-			this.createdElements.add(this.contentEl);
-		}
-
-		// Update content
-		this.updateContent();
+		// Show after small delay
+		setTimeout(() => {
+			const featureEl = this.getElement(InsertedFeature.FEATURE_KEY);
+			featureEl?.classList.remove("hide");
+		}, 0);
 	}
 
-	private setupFeatureContainer() {
-		const featureEl = document.createElement("div");
-		featureEl.classList.add("hide");
+	protected replaceFeature(existingElement: HTMLElement): void {
+		this.destroy();
 
-		// Create an empty feature and then use replaceFeature to set it up
-		this.replaceFeature(featureEl);
+		const definitions = this.getElementDefinitions();
+		const hierarchy = this.getElementHierarchy();
 
-		// Handle initial hide/show
-		setTimeout(() => this.featureEl?.classList.remove("hide"), 0);
+		// Store root element
+		this.elements.set(InsertedFeature.FEATURE_KEY, existingElement);
+
+		// Find or create other elements
+		Object.entries(definitions).forEach(([key, def]) => {
+			if (key === InsertedFeature.FEATURE_KEY) return; // Skip root
+
+			let element = existingElement.querySelector(
+				`.${
+					Array.isArray(def.className)
+						? def.className[0]
+						: def.className
+				}`
+			);
+
+			if (!element) {
+				element = this.createElement(def);
+				const parentKey = hierarchy[key];
+				if (parentKey) {
+					const parent = this.elements.get(parentKey);
+					parent?.appendChild(element);
+				}
+			}
+
+			this.elements.set(key, element as HTMLElement);
+		});
 	}
 
-	protected generateContent(): HTMLElement | string {
-		// Override this method in subclasses
-		return document.createElement("div");
-	}
-
-	protected updateContent() {
-		if (!this.contentEl) return;
-
-		const content = this.generateContent();
-
-		// Clear existing content
-		while (this.contentEl.firstChild) {
-			this.contentEl.removeChild(this.contentEl.firstChild);
-		}
-
-		// Add new content
-		if (content instanceof HTMLElement) {
-			this.contentEl.appendChild(content);
-		} else {
-			this.contentEl.innerHTML = content;
-		}
-	}
+	protected onAfterMount(): void {}
 
 	public get options(): TOptions {
 		return this._options;
 	}
 
-	public destroy() {
-		this.createdElements.forEach((element) => {
+	public destroy(): void {
+		this.elements.forEach((element) => {
 			if (element.parentNode) {
 				element.parentNode.removeChild(element);
 			}
 		});
-		this.createdElements.clear();
-
-		// Clear references
-		this.featureEl = null;
-		this.contentEl = null;
-		this.headerEl = null;
-		this.titleEl = null;
+		this.elements.clear();
 	}
 }

@@ -60,7 +60,7 @@ export class AssetLoader extends Attachment
 		"\\.leaf>.leaf-content": ".leaf .leaf-content",
 		"\\.markdown-reading-view": "#center-content",
 		"\\.markdown-preview-sizer|\\.markdown-preview-section": ".markdown-preview-sizer",
-		"\\.horizontal-main-container|\\.workspace": "#layout",
+		"\\.horizontal-main-container|\\.workspace": "#main-horizontal",
 	}
 
     public async load(): Promise<void>

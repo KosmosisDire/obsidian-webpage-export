@@ -10,7 +10,7 @@ export class AliasesOptions extends InsertedFeatureOptionsWithTitle
 	{
 		super();
 		this.featureId = "aliases";
-		this.displayTitle = "";
+		this.displayTitle = "Aliases";
 		this.featurePlacement = new FeatureRelation(".header .data-bar", RelationType.Start);
 	}
 }

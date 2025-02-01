@@ -194,6 +194,8 @@ export class Search
 		this.container = this.input?.closest("#search-container") as HTMLElement;
 		if (!this.input || !this.container) return;
 
+		ObsidianSite.metadata.featureOptions.search.insertFeature(document.body, this.container);
+
 		const indexResp = await ObsidianSite.fetch(Shared.libFolderName + '/search-index.json');
 		if (!indexResp?.ok)
 		{

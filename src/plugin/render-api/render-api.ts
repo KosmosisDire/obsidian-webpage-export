@@ -791,7 +791,6 @@ export namespace _MarkdownRendererInternal {
 			// look for icon property on a file inside the folder with the same name as the folder
 			let childFile = app.vault.getFileByPath(file.path + "/" + file.name + ".md");
 			if (childFile) useFile = childFile;
-			console.log(file.path + "/" + file.name + ".md", childFile);
 
 			if (!childFile && Settings.exportOptions.fileNavigationOptions.showDefaultFolderIcons) {
 				iconProperty = Settings.exportOptions.fileNavigationOptions.defaultFolderIcon;
@@ -799,7 +798,8 @@ export namespace _MarkdownRendererInternal {
 			}
 		}
 
-		if (useFile instanceof TFile) {
+		if (useFile instanceof TFile)
+		{
 			const fileCache = app.metadataCache.getFileCache(useFile);
 			const frontmatter = fileCache?.frontmatter;
 			iconProperty = frontmatter?.icon ?? frontmatter?.sticker ?? frontmatter?.banner_icon; // banner plugin support

@@ -1,17 +1,20 @@
 import { DynamicInsertedFeature } from "src/shared/dynamic-inserted-feature";
 import { InsertedFeatureOptions } from "src/shared/features/feature-options-base";
+import { LinkHandler } from "./links";
 
 interface TagsDependencies {
 	tags: string[];
 }
 
-export class Tags extends DynamicInsertedFeature<InsertedFeatureOptions,TagsDependencies> {
+export class Tags extends DynamicInsertedFeature<
+	InsertedFeatureOptions,
+	TagsDependencies
+> {
 	constructor(tags: string[]) {
 		super(ObsidianSite.metadata.featureOptions.tags, { tags });
 	}
 
-	protected generateFeatureContent(): HTMLElement {
-		const container = document.createElement("div");
+	protected generateContent(container: HTMLElement) {
 		const deps = this.getDependencies();
 
 		for (const tagName of deps.tags) {
@@ -25,6 +28,6 @@ export class Tags extends DynamicInsertedFeature<InsertedFeatureOptions,TagsDepe
 			container.appendChild(tagEl);
 		}
 
-		return container;
+		LinkHandler.initializeLinks(container);
 	}
 }

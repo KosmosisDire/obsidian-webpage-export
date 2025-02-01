@@ -46,8 +46,10 @@ export class WebpageTemplate
 		if (this.options.addBodyClasses)
 			body.setAttribute("class", await WebpageTemplate.getValidBodyClasses());
 
-		const layout = this.doc.body.createDiv({attr: {id: "layout"}});
-			const leftContent = layout.createDiv({attr: {id: "left-content", class: "leaf"}});
+		const main = body.createDiv({attr: {id: "main"}});
+		const navbar = main.createDiv({ attr: { id: "navbar" } });
+		const mainHorizontal = main.createDiv({ attr: { id: "main-horizontal" } });
+			const leftContent = mainHorizontal.createDiv({attr: {id: "left-content", class: "leaf"}});
 				const leftSidebar = leftContent.createDiv({attr: {id: "left-sidebar", class: "sidebar"}});
 					const leftSidebarHandle = leftSidebar.createDiv({attr: {class: "sidebar-handle"}});
 					const leftTopbar = leftSidebar.createDiv({attr: {class: "sidebar-topbar"}});
@@ -56,8 +58,8 @@ export class WebpageTemplate
 							leftCollapseIcon.innerHTML = collapseSidebarIcon;
 					const leftSidebarContentWrapper = leftSidebar.createDiv({attr: {class: "sidebar-content-wrapper"}});
 						const leftSidebarContent = leftSidebarContentWrapper.createDiv({attr: {id: "left-sidebar-content", class: "leaf-content"}});
-			const centerContent = layout.createDiv({attr: {id: "center-content", class: "leaf"}});
-			const rightContent = layout.createDiv({attr: {id: "right-content", class: "leaf"}});
+			const centerContent = mainHorizontal.createDiv({attr: {id: "center-content", class: "leaf"}});
+			const rightContent = mainHorizontal.createDiv({attr: {id: "right-content", class: "leaf"}});
 				const rightSidebar = rightContent.createDiv({attr: {id: "right-sidebar", class: "sidebar"}});
 					const rightSidebarHandle = rightSidebar.createDiv({attr: {class: "sidebar-handle"}});
 					const rightTopbar = rightSidebar.createDiv({attr: {class: "sidebar-topbar"}});
