@@ -1,24 +1,30 @@
-import { InsertedFeature } from "src/shared/feature";
+import { DynamicInsertedFeature } from "src/shared/dynamic-inserted-feature";
+import { InsertedFeatureOptions } from "src/shared/features/feature-options-base";
 
-export class Tags extends InsertedFeature
-{
-	public tagNames: string[];
-	public tagElements: HTMLSpanElement[];
+interface TagsDependencies {
+	tags: string[];
+}
 
-	constructor(tags: string[])
-	{
-		super(ObsidianSite.metadata.featureOptions.tags);
+export class Tags extends DynamicInsertedFeature<InsertedFeatureOptions,TagsDependencies> {
+	constructor(tags: string[]) {
+		super(ObsidianSite.metadata.featureOptions.tags, { tags });
+	}
 
-		this.tagNames = tags;
-		this.tagElements = [];
-		for (let tagName of tags)
-		{
+	protected generateFeatureContent(): HTMLElement {
+		const container = document.createElement("div");
+		const deps = this.getDependencies();
+
+		for (const tagName of deps.tags) {
 			const tagEl = document.createElement("a");
 			tagEl.classList.add("tag");
-			tagEl.setAttribute("href", `?query=tag:${tagName.replace("#", "")}`);
+			tagEl.setAttribute(
+				"href",
+				`?query=tag:${tagName.replace("#", "")}`
+			);
 			tagEl.innerText = tagName;
-			this.contentEl.appendChild(tagEl);
-			this.tagElements.push(tagEl);
+			container.appendChild(tagEl);
 		}
+
+		return container;
 	}
 }

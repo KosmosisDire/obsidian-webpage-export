@@ -24,7 +24,6 @@ export class CustomHeadOptions extends FetchedFeatureOptions
 	{
 		super();
 		this.featureId = "custom-head";
-		this.displayTitle = "";
 		this.featurePlacement = new FeatureRelation("head", RelationType.End);
 		this.includePath = `${Shared.libFolderName}/${Shared.htmlFolderName}/custom-head.html`;
 	}

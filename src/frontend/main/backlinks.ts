@@ -1,26 +1,21 @@
 import { WebpageData } from "src/shared/website-data";
-import { InsertedFeature } from "src/shared/feature";
+import { DynamicInsertedFeature } from "src/shared/dynamic-inserted-feature";
+import { BacklinksOptions } from "src/shared/features/backlinks";
 
-// this is for backlinks but it can actually be used to display any link technically
-
-export class Backlink
-{
+export class Backlink {
 	public backlinkEl: HTMLAnchorElement;
 	public backlinkIconEl: HTMLElement;
 	public backlinkTitleEl: HTMLElement;
 	public targetData: WebpageData;
 
 	private _url: string;
-	public get url(): string
-	{
+	public get url(): string {
 		return this._url;
 	}
 
-	constructor(container: HTMLElement, targetURL: string)
-	{
+	constructor(container: HTMLElement, targetURL: string) {
 		this.targetData = ObsidianSite.getWebpageData(targetURL) as WebpageData;
-		if (!this.targetData)
-		{
+		if (!this.targetData) {
 			console.error("Failed to find target for backlink", targetURL);
 			return;
 		}
@@ -49,14 +44,27 @@ export class Backlink
 	}
 }
 
-export class BacklinkList extends InsertedFeature
-{
+interface BacklinksDependencies {
+	backlinkPaths: string[];
+}
+
+export class BacklinkList extends DynamicInsertedFeature<BacklinksOptions, BacklinksDependencies> {
 	public backlinks: Backlink[];
 
-	constructor(backlinkPaths: string[])
-	{
-		super(ObsidianSite.metadata.featureOptions.backlinks);
+	constructor(backlinkPaths: string[]) {
+		super(ObsidianSite.metadata.featureOptions.backlinks, {
+			backlinkPaths,
+		});
+	}
 
-		this.backlinks = backlinkPaths.map(url => new Backlink(this.contentEl, url));
+	protected generateFeatureContent(): HTMLElement {
+		const container = document.createElement("div");
+		const deps = this.getDependencies();
+
+		this.backlinks = deps.backlinkPaths.map(
+			(url) => new Backlink(container, url)
+		);
+
+		return container;
 	}
 }

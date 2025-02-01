@@ -42,9 +42,10 @@ const regexReplacementPlugin = {
           // Apply regex replacements
           contents = contents
             // Remove info_ variables
-            .replace(/this\.info_[\S\s]+?;/gm, "")
+            .replace(/this\.info_[^=]+=\s*(?:[^;{]|{(?:[^}]*{[^}]*})*[^}]*})*;/gm, "")
             // Remove require statements
-            .replace(/var .+?__require\(.+?\);/gm, "");
+            .replace(/var .+?__require\(.+?\);/gm, "")
+			.replace(/import_.+i18n.+;/gm, "'';");
           
           console.log("Content length after replacements:", contents.length);
           // Add banner

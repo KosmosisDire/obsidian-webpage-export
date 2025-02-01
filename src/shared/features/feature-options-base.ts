@@ -98,25 +98,18 @@ export class FeatureOptions
 
 export class InsertedFeatureOptions extends FeatureOptions
 {
-	displayTitle: string = "Feature";
 	featurePlacement: FeatureRelation = new FeatureRelation();
-
-	info_displayTitle = new FeatureSettingInfo(
-	{
-		show: true, 
-		description: i18n.settings.baseFeatures.info_displayTitle
-	});
 	info_featurePlacement = new FeatureSettingInfo(
 	{
 		show: true, 
 		description: i18n.settings.baseFeatures.info_featurePlacement,
 	});
 
-	constructor(options?: InsertedFeatureOptions)
+	constructor(featureId?: string, featurePlacement?: FeatureRelation)
 	{
 		super();
-		// object assign
-		Object.assign(this, options);
+		this.featureId = featureId ?? "inserted-feature";
+		this.featurePlacement = featurePlacement ?? new FeatureRelation();
 	}
 
 	public insertFeature(container: HTMLElement, feature: HTMLElement): boolean
@@ -146,6 +139,17 @@ export class InsertedFeatureOptions extends FeatureOptions
 
 		return false;
 	}
+}
+
+export class InsertedFeatureOptionsWithTitle extends InsertedFeatureOptions
+{
+	displayTitle: string = "Feature";
+
+	info_displayTitle = new FeatureSettingInfo(
+	{
+		show: true, 
+		description: i18n.settings.baseFeatures.info_displayTitle
+	});
 }
 
 export class FetchedFeatureOptions extends InsertedFeatureOptions

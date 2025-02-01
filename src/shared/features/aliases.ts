@@ -1,6 +1,10 @@
-import { FeatureRelation, InsertedFeatureOptions, RelationType } from "./feature-options-base";
+import {
+	FeatureRelation,
+	InsertedFeatureOptionsWithTitle,
+	RelationType,
+} from "./feature-options-base";
 
-export class AliasesOptions extends InsertedFeatureOptions
+export class AliasesOptions extends InsertedFeatureOptionsWithTitle
 {
 	constructor()
 	{

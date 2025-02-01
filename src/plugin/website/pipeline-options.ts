@@ -179,6 +179,11 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	faviconPath: string = '';
 
 	/**
+	 * The name of the site.
+	 */
+	siteName: string = app?.vault?.getName() ?? '';
+
+	/**
 	 * The style of emoji to use for custom icons.
 	 */
 	iconEmojiStyle: EmojiStyle = EmojiStyle.Native;

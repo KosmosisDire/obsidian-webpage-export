@@ -194,7 +194,7 @@ export class Website
 				this.fileTree.generateWithItemsClosed = true;
 				this.fileTree.showFileExtentionTags = true;
 				this.fileTree.hideFileExtentionTags = ["md"];
-				this.fileTree.title = this.exportOptions.rssOptions.siteName ?? app.vault.getName();
+				this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
 				this.fileTree.id = "file-explorer";
 				const tempContainer = document.createElement("div");
 				await this.fileTree.generate(tempContainer);
@@ -534,7 +534,7 @@ export class Website
 	public async saveAsCombinedHTML(): Promise<void>
 	{
 		const html = await this.getCombinedHTML();
-		const path = this.destination.joinString(this.exportOptions.rssOptions.siteName + ".html");
+		const path = this.destination.joinString(this.exportOptions.siteName + ".html");
 		await path.write(html);
 	}
 }

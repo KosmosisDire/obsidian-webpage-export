@@ -709,7 +709,7 @@ export class Webpage extends Attachment
 	{
 		let rootPath = this.pathToRoot.slugified(this.exportOptions.slugifyPaths).path;
 		if (rootPath == "") rootPath = ".";
-		const description = this.description || (this.exportOptions.rssOptions.siteName + " - " + this.title);
+		const description = this.description || (this.exportOptions.siteName + " - " + this.title);
 		let head =
 `
 <title>${this.title}</title>

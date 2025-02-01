@@ -1,8 +1,12 @@
 import { i18n } from "src/plugin/translations/language";
-import { FeatureRelation, FeatureSettingInfo, InsertedFeatureOptions, RelationType } from "./feature-options-base";
+import {
+	FeatureRelation,
+	FeatureSettingInfo,
+	InsertedFeatureOptionsWithTitle,
+	RelationType,
+} from "./feature-options-base";
 
-export class GraphViewOptions extends InsertedFeatureOptions
-{
+export class GraphViewOptions extends InsertedFeatureOptionsWithTitle {
 	showOrphanNodes: boolean = true;
 	showAttachments: boolean = false;
 	allowGlobalGraph: boolean = true;
@@ -16,67 +20,58 @@ export class GraphViewOptions extends InsertedFeatureOptions
 	minNodeRadius: number = 3;
 	maxNodeRadius: number = 7;
 
-	info_showOrphanNodes = new FeatureSettingInfo(
-	{
+	info_showOrphanNodes = new FeatureSettingInfo({
 		show: true,
-		description: i18n.settings.graphView.info_showOrphanNodes
+		description: i18n.settings.graphView.info_showOrphanNodes,
 	});
-	info_showAttachments = new FeatureSettingInfo(
-	{
+	info_showAttachments = new FeatureSettingInfo({
 		show: true,
-		description: i18n.settings.graphView.info_showAttachments
+		description: i18n.settings.graphView.info_showAttachments,
 	});
-	info_allowGlobalGraph = new FeatureSettingInfo(
-	{
+	info_allowGlobalGraph = new FeatureSettingInfo({
 		show: true,
-		description: i18n.settings.graphView.info_allowGlobalGraph
+		description: i18n.settings.graphView.info_allowGlobalGraph,
 	});
-	info_allowExpand = new FeatureSettingInfo(
-	{
+	info_allowExpand = new FeatureSettingInfo({
 		show: true,
-		description: i18n.settings.graphView.info_allowExpand
+		description: i18n.settings.graphView.info_allowExpand,
 	});
-	info_attractionForce = new FeatureSettingInfo(
-	{
+	info_attractionForce = new FeatureSettingInfo({
 		show: true,
-		description: i18n.settings.graphView.info_attractionForce
+		description: i18n.settings.graphView.info_attractionForce,
 	});
-	info_linkLength = new FeatureSettingInfo(
-	{
+	info_linkLength = new FeatureSettingInfo({
 		show: true,
-		description: i18n.settings.graphView.info_linkLength
+		description: i18n.settings.graphView.info_linkLength,
 	});
-	info_repulsionForce = new FeatureSettingInfo(
-	{
+	info_repulsionForce = new FeatureSettingInfo({
 		show: true,
-		description: i18n.settings.graphView.info_repulsionForce
+		description: i18n.settings.graphView.info_repulsionForce,
 	});
-	info_centralForce = new FeatureSettingInfo(
-	{
+	info_centralForce = new FeatureSettingInfo({
 		show: true,
-		description: i18n.settings.graphView.info_centralForce
+		description: i18n.settings.graphView.info_centralForce,
 	});
-	info_edgePruning = new FeatureSettingInfo(
-	{
+	info_edgePruning = new FeatureSettingInfo({
 		show: true,
-		description: i18n.settings.graphView.info_edgePruning
+		description: i18n.settings.graphView.info_edgePruning,
 	});
-	info_minNodeRadius = new FeatureSettingInfo(
-	{
+	info_minNodeRadius = new FeatureSettingInfo({
 		show: true,
-		description: i18n.settings.graphView.info_minNodeRadius
+		description: i18n.settings.graphView.info_minNodeRadius,
 	});
-	info_maxNodeRadius = new FeatureSettingInfo(
-	{
+	info_maxNodeRadius = new FeatureSettingInfo({
 		show: true,
-		description: i18n.settings.graphView.info_maxNodeRadius
+		description: i18n.settings.graphView.info_maxNodeRadius,
 	});
 
-	constructor()
-	{
+	constructor() {
 		super();
 		this.featureId = "graph-view";
 		this.displayTitle = i18n.settings.graphView.title;
-		this.featurePlacement = new FeatureRelation("#right-sidebar-content", RelationType.Start);
+		this.featurePlacement = new FeatureRelation(
+			"#right-sidebar-content",
+			RelationType.Start
+		);
 	}
 }

@@ -160,7 +160,6 @@ export interface i18n
 			description: string;
 			info_siteUrl: string;
 			info_siteUrlPlaceholder: string;
-			info_siteName: string;
 			info_authorName: string;
 		},
 		styleOptionsSection: {
@@ -184,6 +183,10 @@ export interface i18n
 			description: string;
 		},
 		favicon: {
+			title: string;
+			description: string;
+		},
+		siteName: {
 			title: string;
 			description: string;
 		},

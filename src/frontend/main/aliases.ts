@@ -1,24 +1,28 @@
-import { InsertedFeature } from "src/shared/feature";
+import { DynamicInsertedFeature } from "src/shared/dynamic-inserted-feature";
+import { AliasesOptions } from "src/shared/features/aliases";
 
+interface AliasesDependencies {
+	aliases: string[];
+}
 
-export class Aliases extends InsertedFeature
-{
-	public aliasNames: string[];
-	public aliasElements: HTMLSpanElement[];
+export class Aliases extends DynamicInsertedFeature<AliasesOptions, AliasesDependencies> {
+	constructor(aliases: string[]) {
+		super(ObsidianSite.metadata.featureOptions.alias, {
+			aliases,
+		});
+	}
 
-	constructor(aliases: string[])
-	{
-		super(ObsidianSite.metadata.featureOptions.alias);
+	protected generateFeatureContent(): HTMLElement {
+		const container = document.createElement("div");
+		const deps = this.getDependencies();
 
-		this.aliasNames = aliases;
-		this.aliasElements = [];
-		for (let tagName of aliases)
-		{
+		for (const aliasName of deps.aliases) {
 			const aliasEl = document.createElement("span");
 			aliasEl.classList.add("alias");
-			aliasEl.innerText = tagName;
-			this.contentEl.appendChild(aliasEl);
-			this.aliasElements.push(aliasEl);
+			aliasEl.innerText = aliasName;
+			container.appendChild(aliasEl);
 		}
+
+		return container;
 	}
 }

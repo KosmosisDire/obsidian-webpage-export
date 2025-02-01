@@ -3,9 +3,9 @@ import { GraphWASMHelper } from "src/frontend/graph-view/graph-wasm-helper";
 import { GraphRenderWorker } from "../graph-view/graph-worker-helper";
 import { LinkHandler } from "./links";
 import { GraphViewOptions } from "src/shared/features/graph-view";
-import { InsertedFeature } from "src/shared/feature";
+import { InsertedFeature } from "src/shared/inserted-feature";
 
-export class GraphView extends InsertedFeature
+export class GraphView extends InsertedFeature<GraphViewOptions>
 {
 	public set options(value: GraphViewOptions)
 	{

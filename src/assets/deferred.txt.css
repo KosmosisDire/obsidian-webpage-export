@@ -297,7 +297,7 @@ body #center-content>.obsidian-document>.markdown-preview-sizer
     object-fit: contain;
 }
 
-:not(h1,h2,h3,h4,h5,h6):has(> :is(.math:not(.math-inline), table)) 
+:not(h1,h2,h3,h4,h5,h6,li):has(> :is(.math, table)) 
 {
     overflow-x: auto !important;
 }

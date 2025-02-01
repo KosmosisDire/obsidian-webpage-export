@@ -964,6 +964,12 @@ export namespace _MarkdownRendererInternal {
 		let contentEl = view.contentEl;
 		const canvasEl = contentEl.querySelector(".canvas");
 
+		if (!canvasEl)
+		{
+			console.log(contentEl.innerHTML);
+			return failRender(view.file, "Failed to render canvas! Canvas element not found!");	
+		}
+
 		const edgeContainer = canvasEl.createEl("svg", { cls: "canvas-edges" });
 		const edgeHeadContainer = canvasEl.createEl("svg", { cls: "canvas-edges" });
 

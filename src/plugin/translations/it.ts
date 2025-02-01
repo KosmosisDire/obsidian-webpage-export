@@ -151,7 +151,6 @@ export const language: i18n =
 			description: "Generate an RSS feed for the exported site",
 			info_siteUrl: "The url that this site will be hosted at",
 			info_siteUrlPlaceholder: "https://example.com/mysite",
-			info_siteName: "The name of the vault / exported site",
 			info_authorName: "The name of the author of the site"
 		},
 		styleOptionsSection: {
@@ -176,6 +175,10 @@ export const language: i18n =
 		},
 		favicon: {
 			title: "Favicon image",
+			description: "placeholder",
+		},
+		siteName: {
+			title: "Site name",
 			description: "placeholder",
 		},
 		iconEmojiStyle: {

@@ -101,7 +101,7 @@ export class Index
 			
 			// set global values
 			this.websiteData.modifiedTime = Date.now();
-			this.websiteData.siteName = this.website.exportOptions.rssOptions.siteName ?? "";
+			this.websiteData.siteName = this.website.exportOptions.siteName ?? "";
 			this.websiteData.vaultName = app.vault.getName();
 			this.websiteData.exportRoot = this.website.exportOptions.exportRoot ?? "";
 			this.websiteData.baseURL = this.website.exportOptions.rssOptions.siteUrl ?? "";
@@ -222,7 +222,7 @@ export class Index
 
 		this.rssFeed = new RSS(
 		{
-			title: this.exportOptions.rssOptions.siteName ?? app.vault.getName(),
+			title: this.exportOptions.siteName ?? app.vault.getName(),
 			description: "Obsidian digital garden",
 			generator: "Webpage HTML Export plugin for Obsidian",
 			feed_url: this.rssURL.path,

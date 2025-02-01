@@ -1,7 +1,5 @@
 async function loadIncludes()
 {
-	// if (location.protocol != "file:") 
-	// {
 	// replace include tags with the contents of the file
 	let includeTags = document.querySelectorAll("link[itemprop='include']");
 	for (const includeTag of includeTags)
@@ -36,18 +34,6 @@ async function loadIncludes()
 
 
 			let docFrag = document.createRange().createContextualFragment(includeText);
-			let includeChildren = Array.from(docFrag.children);
-			for (let child of includeChildren)
-			{
-				child?.classList?.add("hide");
-				child.style.transition = "opacity 0.5s ease-in-out";
-
-				setTimeout(() => 
-				{
-					child?.classList?.remove("hide");
-				}, 10);
-			};
-
 			includeTag.before(docFrag);
 			includeTag.remove();
 
@@ -62,26 +48,6 @@ async function loadIncludes()
 			continue;
 		}
 	}
-	// }
-	// else
-	// {
-	// 	let e = document.querySelectorAll("link[itemprop='include']");
-	// 	if (e.length > 0)
-	// 	{
-	// 		var error = document.createElement("div");
-	// 		error.id = "error";
-	// 		error.textContent = "Web server exports must be hosted on an http / web server to be viewed correctly.";
-	// 		error.style.position = "fixed";
-	// 		error.style.top = "50%";
-	// 		error.style.left = "50%";
-	// 		error.style.transform = "translate(-50%, -50%)";
-	// 		error.style.fontSize = "1.5em";
-	// 		error.style.fontWeight = "bold";
-	// 		error.style.textAlign = "center";
-	// 		document.body.appendChild(error);
-	// 		document.querySelector("#center-content")?.classList?.remove("hide");
-	// 	}
-	// }
 }
 
 document.addEventListener("DOMContentLoaded", () => 

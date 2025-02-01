@@ -129,6 +129,26 @@ export class WebsiteOptions
 	 * Rss feed options
 	 */
 	rss: RssOptions;
+
+	public static fromJSON(json: string): WebsiteOptions
+	{
+		let data = Object.assign(new WebsiteOptions(), JSON.parse(json));
+		data.backlinks = Object.assign(new BacklinksOptions(), data.backlinks);
+		data.tags = Object.assign(new TagsOptions(), data.tags);
+		data.alias = Object.assign(new AliasesOptions(), data.alias);
+		data.properties = Object.assign(new PropertiesOptions(), data.properties);
+		data.fileNavigation = Object.assign(new FileNavigationOptions(), data.fileNavigation);
+		data.search = Object.assign(new SearchOptions(), data.search);
+		data.outline = Object.assign(new OutlineOptions(), data.outline);
+		data.themeToggle = Object.assign(new ThemeToggleOptions(), data.themeToggle);
+		data.graphView = Object.assign(new GraphViewOptions(), data.graphView);
+		data.sidebar = Object.assign(new SidebarOptions(), data.sidebar);
+		data.customHead = Object.assign(new CustomHeadOptions(), data.customHead);
+		data.document = Object.assign(new DocumentOptions(), data.document);
+		data.rss = Object.assign(new RssOptions(), data.rss);
+
+		return data;
+	}
 }
 
 export class WebsiteData
@@ -153,4 +173,12 @@ export class WebsiteData
 	bodyClasses: string = "";
 	hasFavicon: boolean = false;
 	featureOptions: WebsiteOptions = new WebsiteOptions();
+
+
+	public static fromJSON(json: string): WebsiteData
+	{
+		let data = Object.assign(new WebsiteData(), JSON.parse(json));
+		data.featureOptions = WebsiteOptions.fromJSON(JSON.stringify(data.featureOptions));
+		return data;
+	}
 }
