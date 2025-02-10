@@ -194,6 +194,32 @@ export class ExportModal extends Modal
 				));
 		exportModeSetting.descEl.style.whiteSpace = "pre-wrap";
 
+		SettingsPage.createToggle(contentEl, "Recursive Export",
+			() => Settings.recursiveExport, 
+			(value) => Settings.recursiveExport = value)
+		.setDesc("Export linked files as well as the selected files.");
+
+		if (Settings.recursiveExport) {
+			SettingsPage.createText(
+				contentEl,
+				"Max recursive depth",
+				() => Settings.recursiveExportDepth.toString(),
+				(value) => {
+					const num = parseInt(value);
+					if (!isNaN(num)) {
+						Settings.recursiveExportDepth = num;
+					}
+				},
+				"number",
+				(value) => {
+					const num = parseInt(value);
+					if (isNaN(num)) return "Not a number";
+					return "";
+				}
+			).setClass("number-input-field");
+		}
+
+
 		SettingsPage.createToggle(contentEl, "Open after export", () => Settings.openAfterExport, (value) => Settings.openAfterExport = value);
 		
 		let exportButton : ButtonComponent | undefined = undefined;

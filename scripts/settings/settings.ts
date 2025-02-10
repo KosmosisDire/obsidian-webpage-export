@@ -55,6 +55,8 @@ export class Settings
 	public static makeNamesWebStyle: boolean;
 	public static onlyExportModified: boolean;
 	public static deleteOldFiles: boolean;
+	public static recursiveExport: boolean;
+	public static recursiveExportDepth: number;
 
 	// Page Features
 	public static addThemeToggle: boolean;
@@ -123,6 +125,8 @@ export const DEFAULT_SETTINGS: Settings =
 	makeNamesWebStyle: true,
 	onlyExportModified: true,
 	deleteOldFiles: true,
+	recursiveExport: false,
+	recursiveExportDepth: 3,
 	
 	// Page Features
 	addThemeToggle: true,
