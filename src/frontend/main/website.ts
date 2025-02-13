@@ -152,101 +152,115 @@ export class ObsidianWebsite {
 		FilePreviewPopover.loadPinnedPreviews();
 
 		this.onDocumentLoad((doc) => {
-			const insertBacklinks =
-				doc.isMainDocument &&
-				!ObsidianSite.metadata.ignoreMetadata &&
-				ObsidianSite.metadata.featureOptions.backlinks.enabled &&
-				doc.documentType == DocumentType.Markdown;
-			const insertTags =
-				doc.isMainDocument &&
-				!ObsidianSite.metadata.ignoreMetadata &&
-				ObsidianSite.metadata.featureOptions.tags.enabled &&
-				doc.documentType == DocumentType.Markdown;
-			const insertAliases =
-				doc.isMainDocument &&
-				!ObsidianSite.metadata.ignoreMetadata &&
-				ObsidianSite.metadata.featureOptions.alias.enabled &&
-				doc.documentType == DocumentType.Markdown;
 
-			// ------------------ BACKLINKS -----------------
-			if (insertBacklinks) {
-				const backlinks = doc.info.backlinks?.filter(
-					(b) => b != doc.pathname
-				);
+			if (!ObsidianSite.metadata.ignoreMetadata) {
+				const insertBacklinks =
+					doc.isMainDocument &&
+					!ObsidianSite.metadata.ignoreMetadata &&
+					ObsidianSite.metadata.featureOptions.backlinks.enabled &&
+					doc.documentType == DocumentType.Markdown;
+				const insertTags =
+					doc.isMainDocument &&
+					!ObsidianSite.metadata.ignoreMetadata &&
+					ObsidianSite.metadata.featureOptions.tags.enabled &&
+					doc.documentType == DocumentType.Markdown;
+				const insertAliases =
+					doc.isMainDocument &&
+					!ObsidianSite.metadata.ignoreMetadata &&
+					ObsidianSite.metadata.featureOptions.alias.enabled &&
+					doc.documentType == DocumentType.Markdown;
 
-				if (!this.backlinkList) {
-					this.backlinkList = new BacklinkList(
-						doc.info.backlinks ?? []
+				// ------------------ BACKLINKS -----------------
+				if (insertBacklinks) {
+					const backlinks = doc.info.backlinks?.filter(
+						(b) => b != doc.pathname
 					);
-				} else {
-					this.backlinkList?.modifyDependencies((d) => {
-						d.backlinkPaths = doc.info.backlinks ?? [];
-					});
-				}
 
-				if (!backlinks || backlinks.length == 0) {
+					if (!this.backlinkList) {
+						this.backlinkList = new BacklinkList(
+							doc.info.backlinks ?? []
+						);
+					} else {
+						this.backlinkList?.modifyDependencies((d) => {
+							d.backlinkPaths = doc.info.backlinks ?? [];
+						});
+					}
+
+					if (!backlinks || backlinks.length == 0) {
+						this.backlinkList?.hide();
+					} else {
+						this.backlinkList?.show();
+					}
+				} else {
 					this.backlinkList?.hide();
-				} else {
-					this.backlinkList?.show();
 				}
-			} else {
-				this.backlinkList?.hide();
-			}
 
-			// ------------------ TAGS -----------------
-			if (insertTags) {
-				const tags: string[] = [];
+				// ------------------ TAGS -----------------
+				if (insertTags) {
+					const tags: string[] = [];
 
-				if (
-					ObsidianSite.metadata.featureOptions.tags.showInlineTags &&
-					doc.info.inlineTags
-				)
-					tags.push(...doc.info.inlineTags);
-				if (
-					ObsidianSite.metadata.featureOptions.tags
+					if (ObsidianSite.metadata.featureOptions.tags.showInlineTags &&
+						doc.info.inlineTags
+					) {
+						tags.push(...doc.info.inlineTags);
+					}
+					if (ObsidianSite.metadata.featureOptions.tags
 						.showFrontmatterTags &&
-					doc.info.frontmatterTags
-				)
-					tags.push(...doc.info.frontmatterTags);
+						doc.info.frontmatterTags
+					) {
+						tags.push(...doc.info.frontmatterTags);
+					}
 
-				if (!this.tags) {
-					this.tags = new Tags(tags);
+					if (!this.tags) {
+						this.tags = new Tags(tags);
+					} else {
+						this.tags?.modifyDependencies((d) => {
+							d.tags = tags;
+						});
+					}
+
+					if (tags.length == 0) {
+						this.tags?.hide();
+					} else {
+						this.tags?.show();
+					}
 				} else {
-					this.tags?.modifyDependencies((d) => {
-						d.tags = tags;
-					});
-				}
-
-				if (tags.length == 0) {
 					this.tags?.hide();
-				} else {
-					this.tags?.show();
-				}
-			} else {
-				this.tags?.hide();
-			}
-
-			// ------------------ ALIASES -----------------
-			if (insertAliases) {
-				const aliases = doc.info.aliases;
-
-				if (!this.aliases) {
-					this.aliases = new Aliases(aliases ?? []);
-				} else {
-					this.aliases?.modifyDependencies((d) => {
-						d.aliases = aliases ?? [];
-					});
 				}
 
-				if (!aliases || aliases.length == 0) {
+				// ------------------ ALIASES -----------------
+				if (insertAliases) {
+					const aliases = doc.info.aliases;
+
+					if (!this.aliases) {
+						this.aliases = new Aliases(aliases ?? []);
+					} else {
+						this.aliases?.modifyDependencies((d) => {
+							d.aliases = aliases ?? [];
+						});
+					}
+
+					if (!aliases || aliases.length == 0) {
+						this.aliases?.hide();
+					} else {
+						this.aliases?.show();
+					}
+				} else {
 					this.aliases?.hide();
-				} else {
-					this.aliases?.show();
 				}
-			} else {
-				this.aliases?.hide();
 			}
 		});
+
+		// Set initial history state
+		if (this.isHttp) {
+			let initialPath = this.document.pathname;
+			if (initialPath == "index.html") initialPath = "";
+			history.replaceState(
+				{ pathname: initialPath },
+				this.document.title,
+				initialPath
+			);
+		}
 
 		this.isLoaded = true;
 		this.onloadCallbacks.forEach((cb) => cb(this.document));
@@ -257,7 +271,7 @@ export class ObsidianWebsite {
 			console.log("popstate", e);
 			if (!e.state) return;
 			const pathname = e.state.pathname;
-			ObsidianSite.loadURL(pathname);
+			await ObsidianSite.loadURL(pathname, false);
 		});
 
 		const localThis = this;
@@ -281,7 +295,7 @@ export class ObsidianWebsite {
 		meta.setAttribute('content', content);
 	}
 
-	public async loadURL(url: string): Promise<ObsidianDocument | undefined> {
+	public async loadURL(url: string, pushState: boolean = true): Promise<ObsidianDocument | undefined> {
 		const header = LinkHandler.getHashFromURL(url);
 		const query = LinkHandler.getQueryFromURL(url);
 		url = LinkHandler.getPathnameFromURL(url);
@@ -295,6 +309,10 @@ export class ObsidianWebsite {
 		// if this document is already loaded
 		if (this.document.pathname == url) {
 			if (header) this.document.scrollToHeader(header);
+			else {
+				new Notice("This page is already loaded.");
+			}
+
 			return this.document;
 		}
 
@@ -305,8 +323,32 @@ export class ObsidianWebsite {
 			return undefined;
 		}
 
-		// Save current state before loading new document
-		if (this.document && this.isHttp) {
+		const page = await new ObsidianDocument(url).load();
+
+		if (!page)
+		{
+			new Notice("Failed to load page. Unknown error.");
+			return;	
+		}
+
+		// Update meta tags
+		document.title = page.title;
+		this.updateMetaTag("pathname", page.pathname);
+		this.updateMetaTag("description", page.info?.description || "");
+		this.updateMetaTag("author", page.info?.author || "");
+		this.updateMetaTag("og:title", page.title);
+		this.updateMetaTag("og:description", page.info?.description || "");
+		this.updateMetaTag("og:url", window.location.href);
+		this.updateMetaTag("og:image", page.info?.coverImageURL || "");
+
+		// Update graph view and file tree
+		await this.graphView?.showGraph([page.pathname]);
+		this.fileTree?.findByPath(page.pathname)?.setActive();
+		this.fileTree?.revealPath(page.pathname);
+		this.graphView?.setActiveNodeByPath(page.pathname);
+		this.document = page;
+
+		if (this.document && this.isHttp && pushState) {
 			let currentPath = this.document.pathname;
 			if (currentPath == "index.html") currentPath = "";
 			history.pushState(
@@ -316,14 +358,20 @@ export class ObsidianWebsite {
 			);
 		}
 
-		const page = await new ObsidianDocument(url).load();
+		// update outline - TODO: make this a dynamic inserted feature
+		let newOutlineEl = page.sourceHtml.querySelector("#outline") as HTMLElement;
+		if (newOutlineEl) {
+			newOutlineEl = document.adoptNode(newOutlineEl);
+			document.querySelector("#outline")?.replaceWith(newOutlineEl);
+			ObsidianSite.outlineTree = new Tree(newOutlineEl);
+		}
 
 		setTimeout(async () => {
-			
+
 			this.onloadCallbacks.forEach((cb) => cb(page));
-			
+
 			await page.show();
-			
+
 			if (header) {
 				page.scrollToHeader(header);
 			}

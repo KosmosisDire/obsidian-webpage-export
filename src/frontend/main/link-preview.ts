@@ -335,7 +335,7 @@ export class FilePreviewPopover
 
 	public async show() {
 		this.filePreviewDocument = new WebpageDocument(this.target);
-		await (await this.filePreviewDocument.load(null, this.markdownEmbedContent, true, true)).show();
+		await (await this.filePreviewDocument.load(null, this.markdownEmbedContent, true, true))?.show();
 		this.positionPreview();
 		this.filePreviewPopover.classList.remove('hide');
 	}

@@ -29,6 +29,8 @@ export class WebpageDocument {
 	public headerEl: HTMLElement;
 	public info: WebpageData;
 
+	public sourceHtml: Document;
+
 	// url stuff
 	public pathname: string;
 	public hash: string;
@@ -126,71 +128,31 @@ export class WebpageDocument {
 		) as HTMLElement;
 	}
 
-	public async setAsActive() {
-		if (ObsidianSite.document) {
-			// Update current history state
-			let pathname: string | null = this.pathname;
-			console.log("Replace history: ", pathname);
-			if (pathname == "index.html") pathname = "";
-			if (!ObsidianSite.isHttp) pathname = null;
-			history.replaceState({ pathname: pathname }, this.title, pathname);
-		}
-
-		// Update head metadata
-		document.title = this.title;
-		ObsidianSite.updateMetaTag("pathname", this.pathname);
-		ObsidianSite.updateMetaTag("description", this.info?.description || "");
-		ObsidianSite.updateMetaTag("author", this.info?.author || "");
-		ObsidianSite.updateMetaTag("og:title", this.title);
-		ObsidianSite.updateMetaTag("og:description", this.info?.description || "");
-		ObsidianSite.updateMetaTag("og:url", window.location.href);
-		ObsidianSite.updateMetaTag("og:image", this.info?.coverImageURL || "");
-
-		await ObsidianSite.graphView?.showGraph([this.pathname]);
-		ObsidianSite.fileTree?.findByPath(this.pathname)?.setActive();
-		ObsidianSite.fileTree?.revealPath(this.pathname);
-		ObsidianSite.graphView?.setActiveNodeByPath(this.pathname);
-		ObsidianSite.document = this;
-	}
-
 	public async load(
 		parent: WebpageDocument | null = null,
 		containerEl: HTMLElement = ObsidianSite.centerContentEl,
 		isPreview: boolean = false,
 		headerOnly: boolean = false
-	): Promise<WebpageDocument> {
+	): Promise<WebpageDocument | undefined> {
 		this.parent = parent;
 		this.isPreview = isPreview;
 
 		if (!this.pathname || !this.exists) return this;
-		if (
-			this.isMainDocument &&
-			ObsidianSite.document.pathname == this.pathname
-		) {
-			console.log("Already on this page");
-			new Notice("This page is already open.", 2000);
-			return ObsidianSite.document;
-		}
 
 		let oldDocument = ObsidianSite.document;
 		await ObsidianSite.showLoading(true, containerEl);
 
 		this.containerEl = containerEl;
 
-		if (this.isMainDocument) {
-			await this.setAsActive();
-		}
-
 		const documentReq = await ObsidianSite.fetch(this.pathname);
 		if (documentReq?.ok) {
 			const documentText = await documentReq.text();
-			const html = new DOMParser().parseFromString(
+			this.sourceHtml = new DOMParser().parseFromString(
 				documentText,
 				"text/html"
 			);
 
-			let newDocumentEl = html.querySelector(".obsidian-document");
-			let newOutlineEl = html.querySelector("#outline") as HTMLElement;
+			let newDocumentEl = this.sourceHtml.querySelector(".obsidian-document");
 
 			if (newDocumentEl) {
 				newDocumentEl = document.adoptNode(newDocumentEl);
@@ -199,13 +161,6 @@ export class WebpageDocument {
 					docEl.before(newDocumentEl);
 					docEl.remove();
 				} else containerEl.appendChild(newDocumentEl);
-			}
-
-			if (this.isMainDocument && newOutlineEl) {
-				// only replace the outline if we are the root document
-				newOutlineEl = document.adoptNode(newOutlineEl);
-				document.querySelector("#outline")?.replaceWith(newOutlineEl);
-				ObsidianSite.outlineTree = new Tree(newOutlineEl);
 			}
 
 			await this.loadChildDocuments();
@@ -227,7 +182,7 @@ export class WebpageDocument {
 		} else {
 			new Notice("This document could not be loaded.");
 			console.error("Failed to load document", this.pathname);
-			oldDocument?.setAsActive();
+			return undefined;
 		}
 
 		return this;
@@ -323,7 +278,7 @@ export class WebpageDocument {
 				"link[itemprop='include-document']"
 			)
 		);
-		const promises: Promise<WebpageDocument>[] = [];
+		const promises: Promise<WebpageDocument | undefined>[] = [];
 		for (const ref of childRefs) {
 			const url = ref.getAttribute("href");
 			if (!url) continue;
@@ -338,17 +293,17 @@ export class WebpageDocument {
 
 		const childrenTemp = await Promise.all(promises);
 		console.log("Loaded child documents", childrenTemp);
-		this.children.push(...childrenTemp);
+		this.children.push(...childrenTemp.filter((c) => c != undefined) as WebpageDocument[]);
 	}
 
 	public async loadChild(
 		url: string,
 		containerEl: HTMLElement
-	): Promise<WebpageDocument> {
-		const child = new WebpageDocument(url);
-		await child.load(this, containerEl);
-		this.children.push(child);
-		return child;
+	): Promise<WebpageDocument | undefined> {
+		let child = new WebpageDocument(url);
+		let loaded = await child.load(this, containerEl);
+		if (loaded) this.children.push(loaded);
+		return loaded;
 	}
 
 	public async unloadChild(child: WebpageDocument) {

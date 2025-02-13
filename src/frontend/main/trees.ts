@@ -1,3 +1,4 @@
+import { DynamicInsertedFeature } from "src/shared/dynamic-inserted-feature";
 import { LinkHandler } from "./links";
 import { slideDown, slideUp } from "./utils";
 
