@@ -168,7 +168,7 @@ export class Header {
 			nextElement = currentHeader.headerElement.parentElement?.nextElementSibling ?? null;
 			while (nextElement && !nextElement.querySelector('h1, h2, h3, h4, h5, h6'))
 			{
-				if (nextElement instanceof HTMLElement)
+				if (nextElement instanceof HTMLElement && !nextElement.classList.contains('footer'))
 				{
 					currentHeader._content.push(nextElement);
 				}
