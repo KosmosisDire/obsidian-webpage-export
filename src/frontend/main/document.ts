@@ -136,6 +136,16 @@ export class WebpageDocument {
 			history.replaceState({ pathname: pathname }, this.title, pathname);
 		}
 
+		// Update head metadata
+		document.title = this.title;
+		ObsidianSite.updateMetaTag("pathname", this.pathname);
+		ObsidianSite.updateMetaTag("description", this.info?.description || "");
+		ObsidianSite.updateMetaTag("author", this.info?.author || "");
+		ObsidianSite.updateMetaTag("og:title", this.title);
+		ObsidianSite.updateMetaTag("og:description", this.info?.description || "");
+		ObsidianSite.updateMetaTag("og:url", window.location.href);
+		ObsidianSite.updateMetaTag("og:image", this.info?.coverImageURL || "");
+
 		await ObsidianSite.graphView?.showGraph([this.pathname]);
 		ObsidianSite.fileTree?.findByPath(this.pathname)?.setActive();
 		ObsidianSite.fileTree?.revealPath(this.pathname);

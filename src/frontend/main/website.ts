@@ -267,6 +267,20 @@ export class ObsidianWebsite {
 		this.onResize();
 	}
 
+	public updateMetaTag(name: string, content: string) {
+		let meta = document.querySelector(`meta[name="${name}"], meta[property="${name}"]`);
+		if (!meta) {
+			meta = document.createElement('meta');
+			if (name.startsWith('og:')) {
+				meta.setAttribute('property', name);
+			} else {
+				meta.setAttribute('name', name);
+			}
+			document.head.appendChild(meta);
+		}
+		meta.setAttribute('content', content);
+	}
+
 	public async loadURL(url: string): Promise<ObsidianDocument | undefined> {
 		const header = LinkHandler.getHashFromURL(url);
 		const query = LinkHandler.getQueryFromURL(url);
