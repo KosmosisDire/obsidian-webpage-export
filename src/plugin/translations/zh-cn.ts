@@ -1,4 +1,3 @@
-import { info } from "console";
 import { i18n } from "./language";
 
 export const language: i18n = 
@@ -61,7 +60,7 @@ export const language: i18n =
 		title: "HTML导出设置",
 		support: "支持该插件的持续开发。",
 		debug: "将调试信息复制到剪贴板",
-		unavailableSetting: "⚠️ This feature is not available in {0} mode.",
+		unavailableSetting: "⚠️ 此功能在 {0} 模式下不可用。",
 		pageFeatures: {
 			title: "页面功能",
 			description: "控制导出页面的各种功能。"
@@ -94,9 +93,9 @@ export const language: i18n =
 			info_showCustomIcons: "为树中的每个文件显示一个自定义图标",
 			info_showDefaultFolderIcons: "为树中的每个文件夹显示一个默认图标",
 			info_showDefaultFileIcons: "为树中的每个文件显示一个默认图标",
-			info_defaultFolderIcon: "用于文件夹的图标。使用“lucide//”前缀使用Lucide图标",
-			info_defaultFileIcon: "用于文件的图标。使用“lucide//”前缀使用Lucide图标",
-			info_defaultMediaIcon: "用于媒体文件的图标。使用“lucide//”前缀使用Lucide图标",
+			info_defaultFolderIcon: "用于文件夹的图标。使用'lucide//'前缀使用Lucide图标",
+			info_defaultFileIcon: "用于文件的图标。使用'lucide//'前缀使用Lucide图标",
+			info_defaultMediaIcon: "用于媒体文件的图标。使用'lucide//'前缀使用Lucide图标",
 			info_exposeStartingPath: "在页面首次加载时是否显示文件树中的当前文件"
 		},
 		outline: {
@@ -156,10 +155,10 @@ export const language: i18n =
 		},
 		rss: {
 			title: "RSS",
-			description: "Generate an RSS feed for the exported site",
-			info_siteUrl: "The url that this site will be hosted at",
+			description: "为导出的站点生成RSS源",
+			info_siteUrl: "此站点将托管的URL",
 			info_siteUrlPlaceholder: "https://example.com/mysite",
-			info_authorName: "The name of the author of the site"
+			info_authorName: "站点作者的名称"
 		},
 		styleOptionsSection: {
 			title: "样式选项",
@@ -174,57 +173,56 @@ export const language: i18n =
 			description: "在导出的HTML中包含以下插件的CSS。如果插件功能未正确呈现，请尝试将插件添加到此列表中。避免无必要添加插件，因为更多的CSS会增加页面的加载时间。"
 		},
 		includeStyleCssIds: {
-			title: "Include Styles with IDs",
-			description: "Include CSS from style tags with the following IDs in the exported HTML."
+			title: "包含特定ID的样式",
+			description: "在导出的HTML中包含带有以下ID的样式标签的CSS。"
 		},
 		generalSettingsSection:{
-			title: "General Settings",
-			description: "placeholder",
+			title: "通用设置",
+			description: "控制网站图标和站点元数据等简单设置",
 		},
 		favicon: {
-			title: "Favicon image",
-			description: "placeholder",
+			title: "网站图标",
+			description: "站点的网站图标的本地路径",
 		},
 		siteName: {
-			title: "Site Name",
-			description: "placeholder",
+			title: "站点名称",
+			description: "库/导出站点的名称",
 		},
 		iconEmojiStyle: {
-			title: "Icon emoji style",
-			description: "placeholder",
+			title: "图标表情符号样式",
+			description: "用于自定义图标的表情符号样式",
 		},
 		themeName: {
-			title: "Theme",
-			description: "placeholder",
+			title: "主题",
+			description: "导出使用的已安装主题",
 		},
 		exportSettingsSection: {
-			title: "Export Settings",
-			description: "placeholder",
+			title: "导出设置",
+			description: "控制更多技术性导出设置，如控制链接的生成方式",
 		},
 		relativeHeaderLinks: {
-			title: "Use Relative Header Links",
-			description: "placeholder",
+			title: "使用相对标题链接",
+			description: "为标题使用相对链接而不是绝对链接",
 		},
 		slugifyPaths: {
-			title: "Slugify Paths",
-			description: "placeholder",
+			title: "路径别名化",
+			description: "使所有路径和文件名符合网络风格（小写，无空格）",
 		},
 		addPageIcon: {
-			title: "Add Page Icon",
-			description: "placeholder",
+			title: "添加页面图标",
+			description: "在页面标题中添加文件的图标",
 		},
 		obsidianSettingsSection: {
-			title: "Obsidian Settings",
-			description: "Control how the plugin functions inside Obsidian",
+			title: "Obsidian设置",
+			description: "控制插件在Obsidian中的运行方式",
 		},
 		logLevel: {
-			title: "Log Level",
-			description: "Set the level of logging to display in the console",
+			title: "日志级别",
+			description: "设置在控制台中显示的日志级别",
 		},
 		titleProperty: {
-			title: "Title Property",
-			description: "The property to use as the title of the document",
+			title: "标题属性",
+			description: "用作文档标题的属性",
 		},
 	}
 }
-

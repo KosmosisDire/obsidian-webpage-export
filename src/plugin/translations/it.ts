@@ -54,7 +54,7 @@ export const language: i18n =
 		title: "Impostazioni Esportazione HTML",
 		support: "Supporta lo sviluppo continuo di questo plugin.",
 		debug: "Copia info di debug negli appunti",
-		unavailableSetting: "⚠️ This feature is not available in {0} mode.",
+		unavailableSetting: "⚠️ Questa funzionalità non è disponibile in modalità {0}.",
 		pageFeatures: {
 			title: "Funzionalità della pagina",
 			description: "Controlla varie funzionalità della pagina esportata."
@@ -86,9 +86,9 @@ export const language: i18n =
 			info_showCustomIcons: "Mostra un'icona personalizzata per ogni file nell'albero",
 			info_showDefaultFolderIcons: "Mostra un'icona predefinita per ogni cartella nell'albero",
 			info_showDefaultFileIcons: "Mostra un'icona predefinita per ogni file nell'albero",
-			info_defaultFolderIcon: "Icona da usare per le cartelle. Usa il prefisso 'lucide//' per usare un'icona Lucide",
-			info_defaultFileIcon: "Icona da usare per i file. Usa il prefisso 'lucide//' per usare un'icona Lucide",
-			info_defaultMediaIcon: "Icona da usare per i file multimediali. Usa il prefisso 'lucide//' per usare un'icona Lucide",
+			info_defaultFolderIcon: "Icona da usare per le cartelle. Usa il prefisso \"lucide//\" per usare un'icona Lucide",
+			info_defaultFileIcon: "Icona da usare per i file. Usa il prefisso \"lucide//\" per usare un'icona Lucide",
+			info_defaultMediaIcon: "Icona da usare per i file multimediali. Usa il prefisso \"lucide//\" per usare un'icona Lucide",
 			info_exposeStartingPath: "Mostra il file corrente nell'albero all'apertura della pagina"
 		},
 		outline: {
@@ -148,10 +148,10 @@ export const language: i18n =
 		},
 		rss: {
 			title: "RSS",
-			description: "Generate an RSS feed for the exported site",
-			info_siteUrl: "The url that this site will be hosted at",
+			description: "Genera un feed RSS per il sito esportato",
+			info_siteUrl: "L'URL su cui sarà ospitato questo sito",
 			info_siteUrlPlaceholder: "https://example.com/mysite",
-			info_authorName: "The name of the author of the site"
+			info_authorName: "Il nome dell'autore del sito"
 		},
 		styleOptionsSection: {
 			title: "Opzioni di Stile",
@@ -166,56 +166,56 @@ export const language: i18n =
 			description: "Includi il CSS dei seguenti plugin nell'HTML esportato. Se le funzionalità dei plugin non si visualizzano correttamente, prova ad aggiungere il plugin a questo elenco. Evita di aggiungere plugin se non noti problemi specifici, poiché più CSS aumenterà il tempo di caricamento della pagina."
 		},
 		includeStyleCssIds: {
-			title: "Include Styles with IDs",
-			description: "Include CSS from style tags with the following IDs in the exported HTML."
+			title: "Includi stili con ID",
+			description: "Includi CSS dai tag di stile con i seguenti ID nell'HTML esportato."
 		},
 		generalSettingsSection:{
-			title: "General Settings",
-			description: "placeholder",
+			title: "Impostazioni Generali",
+			description: "Controlla impostazioni semplici come favicon e metadati del sito",
 		},
 		favicon: {
-			title: "Favicon image",
-			description: "placeholder",
+			title: "Immagine Favicon",
+			description: "Il percorso locale della favicon per il sito",
 		},
 		siteName: {
-			title: "Site name",
-			description: "placeholder",
+			title: "Nome del Sito",
+			description: "Il nome del vault / sito esportato",
 		},
 		iconEmojiStyle: {
-			title: "Icon emoji style",
-			description: "placeholder",
+			title: "Stile emoji per le icone",
+			description: "Lo stile di emoji da utilizzare per le icone personalizzate",
 		},
 		themeName: {
-			title: "Theme",
-			description: "placeholder",
+			title: "Tema",
+			description: "Il tema installato da utilizzare per l'esportazione",
 		},
 		exportSettingsSection: {
-			title: "Export Settings",
-			description: "placeholder",
+			title: "Impostazioni di Esportazione",
+			description: "Controlla impostazioni tecniche più avanzate come la generazione dei link",
 		},
 		relativeHeaderLinks: {
-			title: "Use Relative Header Links",
-			description: "placeholder",
+			title: "Usa Link Relativi per i Titoli",
+			description: "Usa link relativi per i titoli invece di link assoluti",
 		},
 		slugifyPaths: {
-			title: "Slugify Paths",
-			description: "placeholder",
+			title: "Percorsi Slugificati",
+			description: "Rendi tutti i percorsi e i nomi dei file in stile web (minuscoli, senza spazi)",
 		},
 		addPageIcon: {
-			title: "Add Page Icon",
-			description: "placeholder",
+			title: "Aggiungi Icona Pagina",
+			description: "Aggiungi l'icona del file all'intestazione della pagina",
 		},
 		obsidianSettingsSection: {
-			title: "Obsidian Settings",
-			description: "Control how the plugin functions inside Obsidian",
+			title: "Impostazioni Obsidian",
+			description: "Controlla come funziona il plugin all'interno di Obsidian",
 		},
 		logLevel: {
-			title: "Log Level",
-			description: "Set the level of logging to display in the console",
+			title: "Livello di Log",
+			description: "Imposta il livello di registrazione da visualizzare nella console",
 		},
 		titleProperty: {
-			title: "Title Property",
-			description: "The property to use as the title of the document",
+			title: "Proprietà del Titolo",
+			description: "La proprietà da utilizzare come titolo del documento",
 		},
 	}
 };
