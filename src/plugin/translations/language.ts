@@ -2,6 +2,7 @@ import moment from "moment";
 import { language as cn } from './zh-cn';
 import { language as en } from './en';
 import { language as it } from './it';
+import { language as uk } from './uk';
 
 export interface i18n
 {
@@ -232,7 +233,6 @@ export interface i18n
 
 function getUserLanguage(): string {
 	let locale = window.moment.locale();
-	console.log(`Locale: ${locale}`);
 	
 	if (!locale)
 	{
@@ -246,7 +246,6 @@ function getLanguage()
 {
 	const settingLanguages = getUserLanguage();
 	const language = translations[settingLanguages];
-	console.log(`Setting language to ${settingLanguages}`);
 	if (!language)
 	{
 		console.log(`Language ${settingLanguages} not found, defaulting to English`);
@@ -259,7 +258,8 @@ export let translations: { [key: string]: i18n } =
 {
 	"en": en, // English
 	"zh-cn": cn, // Chinese
-	"it": it // Italian
+	"it": it, // Italian
+	"uk": uk, // Ukrainian
 };
 
 export let i18n: i18n = getLanguage();
