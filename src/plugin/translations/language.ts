@@ -231,16 +231,25 @@ export interface i18n
 }
 
 function getUserLanguage(): string {
-	const locale = moment.locale();
-	const language = locale ? moment.locale() : "en";
-	return language;
+	let locale = window.moment.locale();
+	console.log(`Locale: ${locale}`);
+	
+	if (!locale)
+	{
+		locale = "en";	
+	}
+
+	return locale;
 }
 
 function getLanguage()
 {
 	const settingLanguages = getUserLanguage();
 	const language = translations[settingLanguages];
-	if (!language) {
+	console.log(`Setting language to ${settingLanguages}`);
+	if (!language)
+	{
+		console.log(`Language ${settingLanguages} not found, defaulting to English`);
 		return translations["en"];
 	}
 	return language;
