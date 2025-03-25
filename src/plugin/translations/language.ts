@@ -3,6 +3,7 @@ import { language as cn } from './zh-cn';
 import { language as en } from './en';
 import { language as it } from './it';
 import { language as uk } from './uk';
+import { language as pt } from './pt';
 
 export interface i18n
 {
@@ -260,6 +261,7 @@ export let translations: { [key: string]: i18n } =
 	"zh-cn": cn, // Chinese
 	"it": it, // Italian
 	"uk": uk, // Ukrainian
+	"pt": pt, // Brazilian Portuguese
 };
 
 export let i18n: i18n = getLanguage();
