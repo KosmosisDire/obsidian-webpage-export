@@ -5,7 +5,7 @@ import { ExportPreset, Settings, SettingsPage } from './settings';
 import { FilePickerTree } from 'src/plugin/features/file-picker';
 import { Path } from 'src/plugin/utils/path';
 import { FileDialogs } from 'src/plugin/utils/file-dialogs';
-import { createFileInput, createToggle } from './settings-components';
+import { createFileInput, createText, createToggle } from './settings-components';
 import { Website } from 'src/plugin/website/website';
 import { Index } from 'src/plugin/website';
 import { i18n } from '../translations/language';
@@ -241,6 +241,25 @@ export class ExportModal extends Modal
 			})).setDesc(lang.purgeExport.description);
 
 		
+		createToggle(contentEl, "Recursive Export",
+			() => Settings.recursiveExport,
+			(value) => Settings.recursiveExport = value)
+		.setDesc("Export linked notes recursively up to the specified depth.");
+
+		const depthSetting = createText(contentEl, "Max Depth",
+			() => Settings.recursiveExportDepth.toString(),
+			(value) => {
+				const num = parseInt(value);
+				if (!isNaN(num)) Settings.recursiveExportDepth = num;
+			},
+			"Maximum link depth (e.g. 3 for immediate links only)",
+			(value) => {
+				const num = parseInt(value);
+				return isNaN(num) || num < 1 ? "Enter a number ≥1" : "";
+			}
+		);
+		depthSetting.controlEl.querySelector('input')?.setAttribute('type', 'number');
+		depthSetting.controlEl.querySelector('input')?.setAttribute('min', '1');
 
 		createToggle(contentEl, lang.openAfterExport, () => Settings.openAfterExport, (value) => Settings.openAfterExport = value);
 

@@ -49,6 +49,12 @@ export class HTMLExporter
 
 	public static async exportFiles(files: TFile[], destination: Path, saveFiles: boolean, deleteOld: boolean) : Promise<Website | undefined>
 	{
+		if (Settings.recursiveExport) {
+			files = await LinkCollector.collectLinkedFiles(files);
+			const uniquePaths = new Set<string>();
+			files = files.filter(file => !uniquePaths.has(file.path) && uniquePaths.add(file.path));
+		}
+
 		MarkdownRendererAPI.beginBatch();
 		let website = undefined;
 		try
@@ -121,4 +127,36 @@ export class HTMLExporter
 		return await this.exportFiles(files, rootExportPath, saveFiles, clearDirectory);
 	}
 
+}
+
+class LinkCollector {
+    static async collectLinkedFiles(
+        files: TFile[],
+        maxDepth: number = Settings.recursiveExportDepth
+    ): Promise<TFile[]> {
+        const visited = new Set<string>();
+        const result: TFile[] = [];
+
+        async function collect(file: TFile, currentDepth: number) {
+            if (currentDepth > maxDepth || visited.has(file.path)) return;
+            visited.add(file.path);
+            result.push(file);
+
+            const cache = app.metadataCache.getFileCache(file);
+            const links = [
+                ...(cache?.links?.map(l => l.link) || []),
+                ...(cache?.embeds?.map(l => l.link) || [])
+            ];
+
+            await Promise.all(links.map(async link => {
+                const linkedFile = app.metadataCache.getFirstLinkpathDest(link, file.path);
+                if (linkedFile?.extension === "md") {
+                    await collect(linkedFile, currentDepth + 1);
+                }
+            }));
+        }
+
+        await Promise.all(files.map(file => collect(file, 1)));
+        return result.filter(file => file.extension === "md");
+    }
 }
