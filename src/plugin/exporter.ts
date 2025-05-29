@@ -68,6 +68,15 @@ export class HTMLExporter
 				for (const dFile of website.index.deletedFiles)
 				{
 					const path = new Path(dFile, destination.path);
+					
+					// don't delete font files
+					// this is a hacky way to prevent it from deleting the matjax and other font files used in only certain files
+					if (path.extension == "woff" || path.extension == "woff2" || path.extension == "ttf" || path.extension == "otf")
+					{
+						ExportLog.progress(0.5, "Deleting Old Files", "Skipping: " + path.path, "var(--color-yellow)");
+						continue;
+					}
+
 					await path.delete();
 					ExportLog.progress(0.5, "Deleting Old Files", "Deleting: " + path.path, "var(--color-red)");
 					i++;
