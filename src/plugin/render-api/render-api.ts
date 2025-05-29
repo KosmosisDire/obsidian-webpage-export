@@ -14,7 +14,7 @@ import { AssetHandler } from "../asset-loaders/asset-handler";
 
 export namespace MarkdownRendererAPI {
 	export const viewableMediaExtensions = ["png", "jpg", "jpeg", "svg", "gif", "bmp", "ico", "mp4", "mov", "avi", "webm", "mpeg", "mp3", "wav", "ogg", "aac", "pdf", "html", "htm", "json", "txt", "yaml"];
-	export const convertableExtensions = ["md", "canvas", "drawing", "excalidraw", ...viewableMediaExtensions]; // drawing is an alias for excalidraw
+	export const convertableExtensions = ["md", "canvas", "base", "drawing", "excalidraw", ...viewableMediaExtensions]; // drawing is an alias for excalidraw
 
 	export function extentionToTag(extention: string) {
 		if (["png", "jpg", "jpeg", "svg", "gif", "bmp", "ico"].includes(extention)) return "img";
