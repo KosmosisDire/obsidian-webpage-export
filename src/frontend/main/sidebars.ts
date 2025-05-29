@@ -19,15 +19,45 @@ export class Sidebar
 	get resizing(): boolean { return this._resizing; }
 	private _collapsed: boolean;
 	get collapsed(): boolean { return this._collapsed; }
-	set collapsed(collapse: boolean)
+		set collapsed(collapse: boolean)
 	{
+		// If the sidebar is already in the target state, do nothing
+		// This check is important to prevent infinite loops if sidebars try to close each other repeatedly.
+		if (this._collapsed === collapse) {
+			return;
+		}
+
 		this._collapsed = collapse;	
 
-		if (!collapse && this.floating)
-		{
-			document.body.addEventListener("click", this.clickOutsideCollapse);
+		const isPhone = ObsidianSite.deviceSize === "phone";
+		const isTablet = ObsidianSite.deviceSize === "tablet"; // Tablets also often have floating sidebars
+
+		if (!collapse) { // Sidebar is being opened
+			if (isPhone) {
+				// Ticket 1: Close the other sidebar if it's open on phone
+				if (this.isLeft) {
+					if (ObsidianSite.rightSidebar && !ObsidianSite.rightSidebar.collapsed) {
+						ObsidianSite.rightSidebar.collapsed = true;
+					}
+				} else { // This is the right sidebar
+					if (ObsidianSite.leftSidebar && !ObsidianSite.leftSidebar.collapsed) {
+						ObsidianSite.leftSidebar.collapsed = true;
+					}
+				}
+			}
+
+			// Ticket 2 (for phone) & general click-outside for floating sidebars (tablet)
+			// Add body click listener if on phone or tablet
+			if (isPhone || isTablet) {
+				// Ensure listener isn't added multiple times by removing it first (just in case)
+				// The bound method this.clickOutsideCollapse is used.
+				document.body.removeEventListener("click", this.clickOutsideCollapse);
+				document.body.addEventListener("click", this.clickOutsideCollapse);
+			}
+		} else { // Sidebar is being closed
+			// Remove body click listener if it was potentially added for phone or tablet
+			document.body.removeEventListener("click", this.clickOutsideCollapse);
 		}
-		if (collapse) document.body.removeEventListener("click", this.clickOutsideCollapse);
 
 		this.containerEl.classList.toggle("is-collapsed", collapse);
 	}
@@ -62,7 +92,7 @@ export class Sidebar
 		if(ObsidianSite.graphView) ObsidianSite.graphView.graphRenderer.autoResizeCanvas();
 	}
 
-	constructor(container: HTMLElement)
+		constructor(container: HTMLElement)
 	{
 		if (!container.classList.contains("sidebar")) throw new Error("Invalid sidebar container");
 		this.containerEl = container;
@@ -79,7 +109,10 @@ export class Sidebar
 			this.collapsed = !this.collapsed;
 		});
 
-		this.minResizeWidth = parseFloat(getComputedStyle(this.resizeHandleEl.parentElement ?? this.resizeHandleEl).fontSize) * this.minWidthEm;
+		// Bind the clickOutsideCollapse method to this instance
+		this.clickOutsideCollapse = this.clickOutsideCollapse.bind(this);
+
+		this.minResizeWidth = parseFloat(getComputedStyle(this.resizeHandleEl?.parentElement ?? this.resizeHandleEl).fontSize) * this.minWidthEm;
 		this.collapseWidth = this.minResizeWidth / 4.0;
 
 		this.setupSidebarResize();
@@ -145,8 +178,19 @@ export class Sidebar
 
 	private clickOutsideCollapse(event: MouseEvent)
 	{
-		// don't allow bubbling into sidebar
-		if ((event.target as HTMLElement)?.closest(".sidebar")) return;
-		this.collapsed = true;
+		// If the click target is inside this specific sidebar, do nothing.
+		if ((event.target as HTMLElement)?.closest(`#${this.containerEl.id}`)) {
+			return;
+		}
+
+		const isPhone = ObsidianSite.deviceSize === "phone";
+		const isTablet = ObsidianSite.deviceSize === "tablet";
+
+		// Only collapse if on phone or tablet (where this floating behavior is desired)
+		if (isPhone || isTablet) {
+			this.collapsed = true; 
+			// Setting this.collapsed = true will trigger the setter, 
+			// which in turn will remove the event listener from document.body.
+		}
 	}
 }

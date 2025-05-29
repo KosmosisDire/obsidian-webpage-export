@@ -573,7 +573,14 @@ export class ObsidianWebsite {
 	private lastScreenWidth: number | undefined = undefined;
 	private isResizing = false;
 	private checkStillResizingTimeout: NodeJS.Timeout | undefined = undefined;
-	private deviceSize: string = "large-screen";
+	private _deviceSize: string = "large-screen";
+	public get deviceSize(): string {
+		return this._deviceSize;
+	}
+	private set deviceSize(size: string) {
+		this._deviceSize = size;
+	}
+	
 	private onResize() {
 		if (!this.isResizing) {
 			this.onStartResize();
