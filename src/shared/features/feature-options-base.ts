@@ -88,6 +88,7 @@ export class FeatureOptions
 	enabled: boolean = true;
 	unavailable: boolean = false;
 	alwaysEnabled: boolean = false;
+	hideSettingsButton: boolean = false;
 
 	public setAvailable(value: boolean)
 	{

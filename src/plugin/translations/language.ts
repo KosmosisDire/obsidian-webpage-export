@@ -120,11 +120,15 @@ export interface i18n
 			info_edgePruning: string;
 			info_minNodeRadius: string;
 			info_maxNodeRadius: string;
-		},
+		},		
 		search: {
 			title: string;
 			description: string;
 			placeholder: string;
+		},
+		linkPreview: {
+			title: string;
+			description: string;
 		},
 		themeToggle: {
 			title: string;

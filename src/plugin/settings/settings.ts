@@ -212,6 +212,7 @@ export class SettingsPage extends PluginSettingTab
 		createFeatureSetting(section, lang.outline.title,			Settings.exportOptions.outlineOptions,			lang.outline.description);
 		createFeatureSetting(section, lang.graphView.title, 		Settings.exportOptions.graphViewOptions,		lang.graphView.description);
 		createFeatureSetting(section, lang.search.title,			Settings.exportOptions.searchOptions,			lang.search.description);
+		createFeatureSetting(section, lang.linkPreview.title,		Settings.exportOptions.linkPreviewOptions,		lang.linkPreview.description);
 		createFeatureSetting(section, lang.themeToggle.title,		Settings.exportOptions.themeToggleOptions,		lang.themeToggle.description);
 		createFeatureSetting(section, lang.customHead.title,		Settings.exportOptions.customHeadOptions,		lang.customHead.description);
 		createFeatureSetting(section, lang.backlinks.title,			Settings.exportOptions.backlinkOptions,			lang.backlinks.description);
@@ -430,8 +431,6 @@ export class SettingsPage extends PluginSettingTab
 			}
 		});
 
-		console.log(commentWords);
-
 		// Extract words from selectors
 		root.walkRules((rule) => {
 			const selectors = rule.selector.match(/[.#][\w-]+/g) || [];
@@ -474,7 +473,6 @@ export class SettingsPage extends PluginSettingTab
 	public static nameStyles() {
 		// name all stylesheets and add the name as their id
 		const stylesheets = document.styleSheets;
-		console.log(stylesheets);
 		for (let i = 1; i < stylesheets.length; i++) {
 			// @ts-ignore
 			const styleID = stylesheets[i].ownerNode?.id;
@@ -544,7 +542,6 @@ export class SettingsPage extends PluginSettingTab
 				if (!stylesheets[i].ownerNode?.textContent?.contains("svelte-")) 
 					continue;
 
-				console.log(stylesheets[i].ownerNode);
 				// @ts-ignore
 				stylesheets[i].ownerNode.id = this.nameStylesheet(stylesheets[i].ownerNode.textContent);
 			}
@@ -638,6 +635,8 @@ export class SettingsPage extends PluginSettingTab
 		const loadedSettings = await SettingsPage.plugin.loadData();
 		// do a deep object assign so any non exisant values anywhere in the default settings are preserved
 		SettingsPage.deepAssign(Settings, loadedSettings);
+		// Reconstruct feature option instances to preserve constructor-set properties
+		Settings.exportOptions.reconstructFeatureOptions();
 		SettingsPage.saveSettings();
 		SettingsPage.loaded = true;
 	}

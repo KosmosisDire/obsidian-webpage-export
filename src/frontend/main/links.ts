@@ -30,7 +30,12 @@ export class LinkHandler
 			}
 			else if (link.classList.contains("internal-link"))
 			{
-				FilePreviewPopover.initializeLink(link, target);
+				// Only initialize link preview if the feature is enabled
+				if (!ObsidianSite.metadata?.ignoreMetadata && 
+					ObsidianSite.metadata?.featureOptions?.linkPreview?.enabled)
+				{
+					FilePreviewPopover.initializeLink(link, target);
+				}
 			}
 		});
 	}

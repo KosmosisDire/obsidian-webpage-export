@@ -194,7 +194,6 @@ export class Path
 	 */
 	slugify(makeWebStyle: boolean = true): Path
 	{
-		console.log("Web style slugify: " + makeWebStyle);
 		if (!makeWebStyle) return this;
 		this._fullPath = Path.slugify(this.path);
 		this.reparse(this.path);

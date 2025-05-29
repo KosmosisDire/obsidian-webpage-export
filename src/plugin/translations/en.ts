@@ -122,6 +122,10 @@ export const language: i18n =
 			description: "Allows you search the vault, listing matching files and headers. (NOTE: this is only available for exports hosted on a web server)",
 			placeholder: "Search..."
 		},
+		linkPreview: {
+			title: "Link Previews",
+			description: "Show hover previews when you hover over internal links to other documents."
+		},
 		themeToggle: {
 			title: "Theme Toggle",
 			description: "Allows you to switch between dark and light theme dynamically."

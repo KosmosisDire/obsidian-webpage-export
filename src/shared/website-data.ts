@@ -4,6 +4,7 @@ import { CustomHeadOptions } from "./features/custom-head";
 import { DocumentOptions } from "./features/document";
 import { FileNavigationOptions } from "./features/file-navigation";
 import { GraphViewOptions } from "./features/graph-view";
+import { LinkPreviewOptions } from "./features/link-preview";
 import { OutlineOptions } from "./features/outline";
 import { PropertiesOptions } from "./features/properties";
 import { RssOptions } from "./features/rss";
@@ -130,6 +131,11 @@ export class WebsiteOptions
 	 */
 	rss: RssOptions;
 
+	/**
+	 * The options for the link preview feature.
+	 */
+	linkPreview: LinkPreviewOptions;
+
 	public static fromJSON(json: string): WebsiteOptions
 	{
 		let data = Object.assign(new WebsiteOptions(), JSON.parse(json));
@@ -146,6 +152,7 @@ export class WebsiteOptions
 		data.customHead = Object.assign(new CustomHeadOptions(), data.customHead);
 		data.document = Object.assign(new DocumentOptions(), data.document);
 		data.rss = Object.assign(new RssOptions(), data.rss);
+		data.linkPreview = Object.assign(new LinkPreviewOptions(), data.linkPreview);
 
 		return data;
 	}

@@ -121,6 +121,10 @@ export const language: i18n =
 			description: "允许您搜索库，列出匹配的文件和标题。（注意：此功能仅适用于托管在Web服务器上的导出）",
 			placeholder: "搜索..."
 		},
+		linkPreview: {
+			title: "链接预览",
+			description: "当鼠标悬停在指向其他文档的内部链接上时显示预览。"
+		},
 		themeToggle: {
 			title: "主题切换",
 			description: "允许动态切换暗色和亮色主题。"

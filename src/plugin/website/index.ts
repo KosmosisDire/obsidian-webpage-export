@@ -97,6 +97,7 @@ export class Index
 				customHead: options.customHeadOptions,
 				document: options.documentOptions,
 				rss: options.rssOptions,
+				linkPreview: options.linkPreviewOptions,
 			};
 			
 			// set global values

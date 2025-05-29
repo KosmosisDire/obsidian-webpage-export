@@ -358,20 +358,32 @@ export function createFeatureSetting(container: HTMLElement, name: string, featu
 		});
 	}
 
+	// Always add the settings button to maintain consistent spacing
 	setting.addExtraButton(button => 
 	{
-		button.setTooltip(feature.unavailable ? i18n.settings.unavailableSetting.format(Settings.exportPreset) : "", {delay: 0});
-		button.setDisabled(feature.unavailable);
-		button.setIcon("settings")
-		button.onClick(() => 
+		button.setIcon("settings");
+		
+		if (feature.hideSettingsButton)
 		{
-			// create a modal with all the feature's properties as settings
-			let modal = new Modal(app);
-			let contentEl = modal.contentEl;
-			modal.open()
-			modal.setTitle(name);
-			generateSettingsFromObject(feature, contentEl);
-			if (addSettings) addSettings(contentEl);
-		})
+			// Make the button invisible and non-interactive but still take up space
+			button.extraSettingsEl.style.opacity = "0";
+			button.extraSettingsEl.style.pointerEvents = "none";
+			button.extraSettingsEl.style.cursor = "default";
+		}
+		else
+		{
+			button.setTooltip(feature.unavailable ? i18n.settings.unavailableSetting.format(Settings.exportPreset) : "", {delay: 0});
+			button.setDisabled(feature.unavailable);
+			button.onClick(() => 
+			{
+				// create a modal with all the feature's properties as settings
+				let modal = new Modal(app);
+				let contentEl = modal.contentEl;
+				modal.open()
+				modal.setTitle(name);
+				generateSettingsFromObject(feature, contentEl);
+				if (addSettings) addSettings(contentEl);
+			})
+		}
 	});
 }
