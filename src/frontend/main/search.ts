@@ -186,6 +186,7 @@ export class Search
 		this.clearCurrentDocumentSearch();
 		ObsidianSite.fileTree?.unfilter();
 		ObsidianSite.fileTree?.removeSubHeadings();
+		ObsidianSite.fileTree?.unsort();
 	}
 
 	public async init(): Promise<Search | undefined>

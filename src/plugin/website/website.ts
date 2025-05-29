@@ -199,6 +199,16 @@ export class Website
 				const tempContainer = document.createElement("div");
 				await this.fileTree.generate(tempContainer);
 				const data = tempContainer.innerHTML;
+				
+				// extract file order and apply to attachments
+				this.index.attachmentsShownInTree.forEach((file) => 
+				{
+					if (!file.sourcePathRootRelative) return;
+					const fileTreeItem = this.fileTree?.getItemBySourcePath(file.sourcePathRootRelative);
+					file.treeOrder = fileTreeItem?.treeOrder ?? 0;
+					console.log("File tree order for " + file.sourcePathRootRelative + ": " + file.treeOrder);
+				});
+
 				tempContainer.remove();
 				this.fileTreeAsset = new AssetLoader("file-tree.html", data, null, AssetType.HTML, InlinePolicy.Auto, true, Mutability.Temporary);
 			}

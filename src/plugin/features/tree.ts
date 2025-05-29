@@ -56,8 +56,8 @@ export class Tree implements FeatureGenerator
 		{
 			if (this.title)
 			{
-				const title = header.createDiv("feature-title");
-				title.textContent = this.title;
+				const titleEl = header.createDiv("feature-title"); // Renamed to avoid conflict
+				titleEl.textContent = this.title;
 			}
 			if (this.addCollapseAllButton)
 			{
@@ -107,6 +107,7 @@ export class TreeItem
 	public minCollapsableDepth: number = 1;
 	public isCollapsed: boolean = false;
 	public childContainer: HTMLDivElement | undefined = undefined;
+	public treeOrder: number = 0;
 
 	public itemEl: HTMLDivElement | undefined = undefined;
 	public collapseIcon: HTMLElement | undefined = undefined;
@@ -142,23 +143,23 @@ export class TreeItem
 		if (!this.isCollapsible()) return;
 		if (!this.itemEl || !this.itemEl.classList.contains("mod-collapsible")) return;
 
-		const children = this.itemEl.querySelector(".tree-item-children") as HTMLElement;
+		const childrenEl = this.itemEl.querySelector(".tree-item-children") as HTMLElement; // Renamed to avoid conflict
 
-		if (children == null) return;
+		if (childrenEl == null) return;
 
 		if (collapsed)
 		{
 			this.itemEl.classList.add("is-collapsed");
 			this.collapseIcon?.classList.add("is-collapsed");
-			if(animate) this.slideUp(children, 100);
-			else children.style.display = "none";
+			if(animate) this.slideUp(childrenEl, 100);
+			else childrenEl.style.display = "none";
 		}
 		else
 		{
 			this.itemEl.classList.remove("is-collapsed");
 			this.collapseIcon?.classList.remove("is-collapsed");
-			if(animate) this.slideDown(children, 100);
-			else children.style.removeProperty("display");
+			if(animate) this.slideDown(childrenEl, 100);
+			else childrenEl.style.removeProperty("display");
 		}
 
 		this.isCollapsed = collapsed;
