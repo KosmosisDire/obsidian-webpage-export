@@ -123,7 +123,7 @@ export class ObsidianWebsite {
 		this.createLoadingEl();
 
 		if (fileTreeEl) this.fileTree = new Tree(fileTreeEl);
-		if (outlineTreeEl) this.outlineTree = new Tree(outlineTreeEl);
+		if (outlineTreeEl) this.outlineTree = new Tree(outlineTreeEl, this.metadata.featureOptions.outline.minCollapseDepth);
 		if (leftSidebarEl) this.leftSidebar = new Sidebar(leftSidebarEl);
 		if (rightSidebarEl) this.rightSidebar = new Sidebar(rightSidebarEl);
 		this.search = await new Search().init();
