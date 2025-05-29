@@ -33,6 +33,8 @@ export class TreeItem
 	public children: TreeItem[];
 	public parent: TreeItem | undefined;
 	public root: Tree;
+	public depth: number;
+	protected minCollapseDepth: number;
 
 	protected _isFolder: boolean;
 	protected _isLink: boolean;
@@ -53,6 +55,7 @@ export class TreeItem
 	 */
 	set collapsed(collapse: boolean)
 	{
+		if (!this.collapsable) collapse = false;
 		if (this.collapsed == collapse) return;
 		// open parents if we are opening this one and it is hidden
 		if (!collapse && this.parent instanceof TreeItem && this.parent.collapsed)
@@ -133,10 +136,11 @@ export class TreeItem
 		});
 	}
 
-	constructor(itemEl: HTMLElement, parent: TreeItem | undefined)
+	constructor(itemEl: HTMLElement, parent: TreeItem | undefined, depth: number = 0, minCollapseDepth: number = 1)
 	{
 		this.root = (this instanceof Tree ? this : (parent?.root ?? (parent instanceof Tree ? parent : undefined))) as Tree;
 		this.parent = parent;
+		this.minCollapseDepth = minCollapseDepth;
 		
 		let isRoot = this instanceof Tree;
 		this.itemEl = itemEl;
@@ -151,15 +155,34 @@ export class TreeItem
 		const childItems = Array.from(this.childrenEl.children).filter((el) => el.classList.contains("tree-item"));
 		childItems.forEach((child) =>
 		{
-			this.children.push(new TreeItem(child as HTMLElement, this));
+			this.children.push(new TreeItem(child as HTMLElement, this, depth + 1, this.minCollapseDepth));
 		});
 
+		// TODO: fix min collapse depth being passed from plugin
 		this._isFolder = this.itemEl.classList.contains("nav-folder");
 		this._isLink = this.selfEl.tagName == "A";
-		this._isCollapsible = this.itemEl.classList.contains("mod-collapsible");
+		this.depth = depth;
+		this._isCollapsible = this.itemEl.classList.contains("mod-collapsible") && this.depth >= this.minCollapseDepth;
+		
+		if (!this._isCollapsible)
+		{
+			// Remove collapse icon if not collapsible
+			if (this.collapseIconEl && !(this instanceof Tree))
+			{
+				console.log(this);
+				this.collapseIconEl.remove();
+				this.collapseIconEl = undefined;
+			}
+			
+			// Remove collapsible classes
+			this.selfEl.classList.remove("mod-collapsible");
+			this.itemEl.classList.remove("mod-collapsible");
+			this.itemEl.classList.remove("is-collapsed");
+		}
+		
 		this.collapsed = this.itemEl.classList.contains("is-collapsed");
 
-		if (this._isCollapsible)
+		if (this._isCollapsible) 
 		{
 			const clickItem = this.isLink ? this.collapseIconEl ?? this.selfEl : this.selfEl;
 			clickItem.addEventListener("click", (e) =>
@@ -341,11 +364,11 @@ export class Tree extends TreeItem
 		return open;
 	}
 
-	constructor(container: HTMLElement)
+	constructor(container: HTMLElement, minCollapseDepth: number = 1)
 	{
 		const wrapperEl = container.classList.contains("tree-container") ? container : container.querySelector(".tree-container") as HTMLElement;
 		if (wrapperEl == null) throw new Error("Invalid tree container");
-		super(wrapperEl, undefined);
+		super(wrapperEl, undefined, 0, minCollapseDepth);
 
 		this.rootEl = wrapperEl;
 		this.childrenEl = this.rootEl;

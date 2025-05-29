@@ -52,10 +52,8 @@ export interface i18n
 		purgeExport: {
 			description: string;
 			clearCache: string;
-			purgeSite: string;
 			confirmation: string;
 			clearWarning: string;
-			purgeWarning: string;
 		},
 	}
 	settings:

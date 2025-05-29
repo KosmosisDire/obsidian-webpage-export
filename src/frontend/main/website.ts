@@ -363,7 +363,7 @@ export class ObsidianWebsite {
 		if (newOutlineEl) {
 			newOutlineEl = document.adoptNode(newOutlineEl);
 			document.querySelector("#outline")?.replaceWith(newOutlineEl);
-			ObsidianSite.outlineTree = new Tree(newOutlineEl);
+			ObsidianSite.outlineTree = new Tree(newOutlineEl, this.metadata.featureOptions.outline.minCollapseDepth);
 		}
 
 		setTimeout(async () => {

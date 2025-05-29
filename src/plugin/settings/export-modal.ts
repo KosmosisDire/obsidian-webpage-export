@@ -211,33 +211,6 @@ export class ExportModal extends Modal
 					onChanged(path);
 					confirmModal.close();
 				}));
-			}))
-
-			.addButton((button) => button
-			.setButtonText(lang.purgeExport.purgeSite)
-			.onClick(async () =>
-			{
-				// create a modal to confirm the deletion
-				const confirmModal = new Modal(app);
-				confirmModal.titleEl.setText(lang.purgeExport.confirmation);
-				let warning = confirmModal.contentEl.createEl('p', { text: lang.purgeExport.purgeWarning });
-				warning.style.whiteSpace = "pre-wrap";
-				confirmModal.open();
-
-				new Setting(confirmModal.contentEl)
-				.addButton((button) => button
-				.setButtonText(i18n.cancel)
-				.onClick(() => confirmModal.close()))
-				.addButton((button) => button
-				.setButtonText(lang.purgeExport.purgeSite)
-				.onClick(async () =>
-				{
-					const path = new Path(exportPathInput.textInput.getValue());
-					const website = await new Website(path).load();
-					await website.index.purge();
-					onChanged(path);
-					confirmModal.close();
-				}));
 			})).setDesc(lang.purgeExport.description);
 
 		

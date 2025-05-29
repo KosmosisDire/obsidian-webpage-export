@@ -3,7 +3,7 @@ import { DataviewApi, getAPI } from "obsidian-dataview";
 
 export class DataviewRenderer
 {
-	public static readonly api: DataviewApi = getAPI();
+	public static api: DataviewApi = getAPI();
 	public static readonly jsKeyword = DataviewRenderer.api?.settings?.dataviewJsKeyword ?? "dataviewjs";
 
 	public view: MarkdownPreviewView;
@@ -13,12 +13,24 @@ export class DataviewRenderer
 	public container: HTMLElement;
 	public rendered: boolean = false;
 
+	public static isDataviewEnabled(): boolean
+	{
+		//@ts-ignore
+		return app.plugins?.enabledPlugins?.has("dataview") ?? false;
+	}
+
 	constructor(view: MarkdownPreviewView, file: TFile, query: string, keyword: string)
 	{
+		if (!DataviewRenderer.isDataviewEnabled()) 
+		{
+			throw new Error("Dataview plugin is not enabled or not installed.");
+		}
+
 		this.view = view;
 		this.file = file;
 		this.query = query;
 		this.keyword = keyword;
+		DataviewRenderer.api = getAPI();
 	}
 
 	public async generate(container?: HTMLElement): Promise<HTMLElement>

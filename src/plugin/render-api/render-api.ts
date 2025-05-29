@@ -306,12 +306,15 @@ export namespace _MarkdownRendererInternal {
 			if (!success) return failRender(preview.file, "Failed to compute section!");
 
 			// compile dataview
-			const dataviewInfo = DataviewRenderer.getDataViewsFromHTML(section.el)[0];
-			if (dataviewInfo) {
-				const dataviewContainer = document.body.createDiv();
-				dataviewContainer.classList.add(`block-language-${dataviewInfo.keyword}`);
-				dataviewInfo.preEl.replaceWith(dataviewContainer);
-				await new DataviewRenderer(preview, preview.file, dataviewInfo?.query, dataviewInfo.keyword).generate(dataviewContainer);
+			if (DataviewRenderer.isDataviewEnabled())
+			{
+				const dataviewInfo = DataviewRenderer.getDataViewsFromHTML(section.el)[0];
+				if (dataviewInfo) {
+					const dataviewContainer = document.body.createDiv();
+					dataviewContainer.classList.add(`block-language-${dataviewInfo.keyword}`);
+					dataviewInfo.preEl.replaceWith(dataviewContainer);
+					await new DataviewRenderer(preview, preview.file, dataviewInfo?.query, dataviewInfo.keyword).generate(dataviewContainer);
+				}
 			}
 
 			// @ts-ignore
@@ -548,16 +551,19 @@ export namespace _MarkdownRendererInternal {
 		await Utils.delay(50);
 
 		// compile dataview
-		const dataviewInfos = DataviewRenderer.getDataViewsFromHTML(
-			preview.containerEl
-		);
-		for (const dataviewInfo of dataviewInfos) {
-			await new DataviewRenderer(
-				preview,
-				preview.file,
-				dataviewInfo?.query,
-				dataviewInfo.keyword
-			).generate(dataviewInfo.preEl);
+		if (DataviewRenderer.isDataviewEnabled())
+		{
+			const dataviewInfos = DataviewRenderer.getDataViewsFromHTML(
+				preview.containerEl
+			);
+			for (const dataviewInfo of dataviewInfos) {
+				await new DataviewRenderer(
+					preview,
+					preview.file,
+					dataviewInfo?.query,
+					dataviewInfo.keyword
+				).generate(dataviewInfo.preEl);
+			}
 		}
 
 		// wait for transclusions
@@ -818,7 +824,7 @@ export namespace _MarkdownRendererInternal {
 		let parsedAsIconize = false;
 
 		//@ts-ignore
-		if ((useDefaultIcon || !iconProperty || isUnchangedNotEmojiNotHTML) && app.plugins.enabledPlugins.has("obsidian-icon-folder")) {
+		if ((useDefaultIcon || !iconProperty || isUnchangedNotEmojiNotHTML) && app?.plugins?.enabledPlugins?.has("obsidian-icon-folder")) {
 			//@ts-ignore
 			const fileToIconName = app.plugins.plugins['obsidian-icon-folder'].data;
 			const noteIconsEnabled = fileToIconName.settings.iconsInNotesEnabled ?? false;

@@ -42,13 +42,11 @@ export const language: i18n =
 			rawDocuments: "Esporta documenti HTML semplici con stile e script di base, senza funzioni aggiuntive."
 		},
 		purgeExport: {
-			description: "Cancella la cache del sito per riesportare tutti i file o elimina il sito con tutti i suoi file.",
+			description: "Cancella la cache del sito per riesportare tutti i file.",
 			clearCache: "Cancella cache",
-			purgeSite: "Elimina e cancella",
 			confirmation: "Sei sicuro?",
 			clearWarning: "Questo eliminerà i metadati del sito (ma non tutti gli HTML esportati).\n\nCiò forzerà la riesportazione di tutti i file.\n\nInoltre, se cambi i file selezionati per l'esportazione, alcuni potrebbero rimanere inutilizzati sul sistema.\n\nQuesta azione non può essere annullata.",
-			purgeWarning: "Questo eliminerà l'intero sito esportato e tutti i suoi file.\n\nQuesta azione non può essere annullata."
-		}
+		},
 	},
 	settings: {
 		title: "Impostazioni Esportazione HTML",
@@ -169,7 +167,7 @@ export const language: i18n =
 			title: "Includi stili con ID",
 			description: "Includi CSS dai tag di stile con i seguenti ID nell'HTML esportato."
 		},
-		generalSettingsSection:{
+		generalSettingsSection: {
 			title: "Impostazioni Generali",
 			description: "Controlla impostazioni semplici come favicon e metadati del sito",
 		},

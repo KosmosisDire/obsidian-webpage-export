@@ -49,10 +49,14 @@ a.tree-item-self.is-clickable {
 	display: none;
 }
 
-.outline-tree .tree-item[data-depth="1"]:not(.mod-collapsible)>.tree-item-self {
-	padding-left: var(--nav-item-children-margin-left);
+#outline .tree-item[data-depth="1"]:not(.mod-collapsible)>.tree-item-self {
 	font-weight: 900;
 	font-size: 1.05em;
+}
+
+.tree-item:not(.mod-collapsible)>.tree-item-self
+{
+	padding-left: calc(var(--nav-item-children-margin-start,var(--nav-item-children-margin-left)) - 0.35em);
 }
 
 .tree-item-self {

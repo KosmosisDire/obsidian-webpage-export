@@ -47,12 +47,10 @@ export const language: i18n =
 		},
 		purgeExport:
 		{
-			description: "Clear the site cache to re-export all files, or purge / delete the site with all it's files.",
+			description: "Clear the site cache to re-export all files.",
 			clearCache: "Clear Cache",
-			purgeSite: "Purge & Delete",
 			confirmation: "Are you sure?",
 			clearWarning: "This will delete the site metadata (but not all the exported html).\n\nThis will force the site to re-export all files.\n\nAlso if you change which files are selected for export before exporting again some files may be left on your file system unused.\n\nThis action cannot be undone.",
-			purgeWarning: "This will delete the entire exported site and all it's files.\n\nThis action cannot be undone."
 		},
 	},
 	settings: 

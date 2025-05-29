@@ -194,6 +194,7 @@ export class Path
 	 */
 	slugify(makeWebStyle: boolean = true): Path
 	{
+		console.log("Web style slugify: " + makeWebStyle);
 		if (!makeWebStyle) return this;
 		this._fullPath = Path.slugify(this.path);
 		this.reparse(this.path);
@@ -986,13 +987,6 @@ export class Path
 	static slugify(path: string): string
 	{
 		return path.replaceAll(" ", "-").replaceAll(/-{2,}/g, "-").toLowerCase();
-	}
-
-	static equal(path1: string, path2: string): boolean
-	{
-		const path1Parsed = new Path(path1).slugify().path;
-		const path2Parsed = new Path(path2).slugify().path;
-		return path1Parsed == path2Parsed;
 	}
 
 	/**

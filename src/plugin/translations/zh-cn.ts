@@ -1,6 +1,6 @@
 import { i18n } from "./language";
 
-export const language: i18n = 
+export const language: i18n =
 {
 	cancel: "取消",
 	browse: "浏览",
@@ -18,20 +18,20 @@ export const language: i18n =
 	},
 	updateAvailable: "有更新可用",
 	exportAsHTML: "导出为HTML",
-	exportModal: 
+	exportModal:
 	{
 		title: "导出为HTML",
 		exportAsTitle: "将 {0} 导出为HTML",
 		moreOptions: "更多选项请查看插件设置页面。",
 		openAfterExport: "导出后打开",
 		exportButton: "导出",
-		filePicker: 
+		filePicker:
 		{
 			title: "选择导出库中的所有文件",
 			selectAll: "全选",
 			save: "保存",
 		},
-		currentSite: 
+		currentSite:
 		{
 			noSite: "此路径当前不包含已导出的网站。",
 			oldSite: "此路径包含使用不同插件版本创建的导出内容。",
@@ -45,17 +45,14 @@ export const language: i18n =
 			local: "这将导出一个包含所有内容的单个（较大）HTML文件。仅适用于离线共享。",
 			rawDocuments: "导出普通的HTML文档，带有简单的样式和脚本，但无额外功能。",
 		},
-		purgeExport:
-		{
-			description: "清除站点缓存以重新导出所有文件，或彻底清除/删除站点及其所有文件。",
+		purgeExport: {
+			description: "清除站点缓存以重新导出所有文件。",
 			clearCache: "清除缓存",
-			purgeSite: "彻底清除并删除",
 			confirmation: "您确定吗？",
 			clearWarning: "此操作将删除站点的元数据（但不会删除所有导出的HTML文件）。\n\n这将强制站点重新导出所有文件。\n\n此外，如果您在再次导出之前更改了选定的导出文件，某些文件可能会保留在文件系统中未使用。\n\n此操作不可撤销。",
-			purgeWarning: "此操作将删除整个导出的站点及其所有文件。\n\n此操作不可撤销。"
 		},
 	},
-	settings: 
+	settings:
 	{
 		title: "HTML导出设置",
 		support: "支持该插件的持续开发。",
@@ -138,7 +135,7 @@ export const language: i18n =
 			title: "反向链接",
 			description: "显示链接到当前文档的所有文档。"
 		},
-		tags:{
+		tags: {
 			title: "标签",
 			description: "显示当前打开文档的标签。",
 			info_showInlineTags: "在页面顶部显示文档内定义的标签。",
@@ -176,7 +173,7 @@ export const language: i18n =
 			title: "包含特定ID的样式",
 			description: "在导出的HTML中包含带有以下ID的样式标签的CSS。"
 		},
-		generalSettingsSection:{
+		generalSettingsSection: {
 			title: "通用设置",
 			description: "控制网站图标和站点元数据等简单设置",
 		},

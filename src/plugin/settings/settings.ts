@@ -341,8 +341,8 @@ export class SettingsPage extends PluginSettingTab
 			lang.relativeHeaderLinks.description);
 
 		createToggle(section, lang.slugifyPaths.title,
-			() => Settings.exportOptions.includeJS,
-			(value) => Settings.exportOptions.includeJS = value,
+			() => Settings.exportOptions.slugifyPaths,
+			(value) => Settings.exportOptions.slugifyPaths = value,
 			lang.slugifyPaths.description);
 
 		createToggle(section, lang.makeOfflineCompatible.title,

@@ -162,49 +162,6 @@ export class Index
 	}
 
 	/**
-	 * This will delete all exported files from the filesystem! Use with caution!
-	 */
-	public async purge()
-	{
-		if (!this.oldWebsiteData) return;
-
-		function allPromisesProgress<T>(promises: Promise<T>[], callback: (progress: number) => void): Promise<T[]>
-		{
-			let d = 0;
-			callback(0);
-			for (const p of promises) {
-			  p.then(()=> {    
-				d ++;
-				callback( (d * 100) / promises.length );
-			  });
-			}
-			return Promise.all(promises);
-		}
-
-
-		new Notice("Deleting website data. This may take a minute...", 10);
-
-		await Utils.delay(500);
-
-		const files = this.oldWebsiteData?.allFiles?.map((file) => new Path(file).setWorkingDirectory(this.website.destination.path));
-
-		const promises = files?.map((file) => file.delete());
-		await allPromisesProgress(promises, async (progress) => 
-		{
-			// @ts-ignore
-			if (progress % 10 == 0)
-			{
-				new Notice(`Deleting website data. ${progress.toFixed(0)}%`);
-			}
-			await Utils.delay(0);
-		});
-
-		Path.removeEmptyDirectories(this.website.destination.path);
-		
-		new Notice("Website data deletion finished.");
-	}
-
-	/**
 	 * Simply deletes metadata.json and search-index.json
 	 */
 	public async clearCache()
