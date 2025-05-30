@@ -45,6 +45,9 @@ export class Settings
 	public static exportPreset: ExportPreset = ExportPreset.Online;
 	public static openAfterExport: boolean = true;
 
+	public static recursiveExport: boolean = false;
+	public static recursiveExportDepth: number = 3;
+
 	// Graph View Settings
 	public static filePickerBlacklist: string[] = ["(^|\\/)node_modules\\/","(^|\\/)dist\\/","(^|\\/)dist-ssr\\/","(^|\\/)\\.vscode\\/"]; // ignore node_modules, dist, and .vscode
 	public static filePickerWhitelist: string[] = ["\\.\\w+$"]; // only include files with extensions
