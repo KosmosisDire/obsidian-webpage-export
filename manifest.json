@@ -8,5 +8,5 @@
 	"authorUrl": "https://github.com/KosmosisDire/obsidian-webpage-export",
 	"isDesktopOnly": true,
 	"fundingUrl": "https://www.buymeacoffee.com/nathangeorge",
-	"updateNote": "- Local and global graph view\n - Backlinks view!\n - Show tags, properties, and aliases views\n - Hover previews of pages\n - Local exports will now export only a single file containing the whole vault!\n - Notifications system\n - Place components anywhere you want on the page."
+	"updateNote": "- Local and global graph view\n- Backlinks view!\n- Show tags, properties, and aliases views\n- Hover previews of pages\n- Local exports will now export only a single file containing the whole vault!\n- Notifications system\n- Place components anywhere you want on the page."
 }
