@@ -1,7 +1,7 @@
 {
 	"id": "webpage-html-export",
 	"name": "Webpage HTML Export",
-	"version": "1.9.0",
+	"version": "1.9.1",
 	"minAppVersion": "1.6.0",
 	"description": "Export full websites or html documents from single files, canvas pages, or whole vaults. Similar to obsidian's publish or digital garden, but with direct access to the exported HTML. Focuses on flexibility, features, and style parity.",
 	"author": "Nathan George",
