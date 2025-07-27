@@ -1,0 +1,74 @@
+name: Bug Report
+description: File a bug report
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report!
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Also what did you expect to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Give detailed instructions to reproduce this problem
+    validations:
+      required: true
+  - type: input
+    id: last-working
+    attributes:
+      label: Last Working Version
+      description: Did this work in a previous version of the plugin? If so which one?
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: What version of the plugin are you using?
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating System
+    validations:
+      required: true
+  - type: input
+    id: ob-version
+    attributes:
+      label: Obsidian Version
+      description: What **current version** and **installer version** is shown in obsidian\'s general settings.
+    validations:
+      required: true
+  - type: dropdown
+    id: browsers
+    attributes:
+      label: Which browsers can you reproduce this in?
+      description: (optional)
+      multiple: true
+      options:
+        - Firefox
+        - Chrome
+        - Chrome IOS
+        - Safari
+        - Safari IOS
+        - Microsoft Edge
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log output
+      description: Please click the debug info button in the plugin settings and paste here. (If this is not relevant put N/A)
+      render: yaml
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Info
+      description: If relevant please include a screenshot of the developer log `Ctrl + Shift + i`

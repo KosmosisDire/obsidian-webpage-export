@@ -1,11 +1,14 @@
 # Webpage HTML Export
 
 Export html from single files, canvas pages, or whole vaults. Direct access to the exported HTML files allows you to publish your digital garden anywhere. Focuses on flexibility, features, and style parity.
-Demo / docs: https://docs.obsidianweb.net/
+Demo / docs: [docs.obsidianweb.net](https://docs.obsidianweb.net/)
 
 ![image](https://github.com/KosmosisDire/obsidian-webpage-export/assets/39423700/b8e227e4-b12c-47fb-b341-5c5c2f092ffa)
 
 ![image](https://github.com/KosmosisDire/obsidian-webpage-export/assets/39423700/06f29e1a-c067-45e7-9882-f9d6aa83776f)
+
+> [!NOTE]  
+> Although the plugin is fully functional it is still under development, so there may be frequent large changes between updates that could effect your workflow! Bugs are also not uncommon, please report anything you find, I am working to make the plugin more stable.
 
 ## Features:
 - Full text search
@@ -44,7 +47,7 @@ Either follow the instructions above for a beta release, or:
 ## Contributing
 
 Only start work on features which have an issue created for them and have been accepted by me!
-Contributiong guide coming soon.
+A contribution guide may come soon.
 
 ## Support This Plugin
 
@@ -55,3 +58,8 @@ This plugin takes a lot of work to maintain and continue adding features. If you
 or if you prefer paypal: 
 
 <a href="https://www.paypal.com/donate/?business=HHQBAXQQXT84Q&no_recurring=0&item_name=Hey+%F0%9F%91%8B+I+am+a+Computer+Science+student+working+on+obsidian+plugins.+Thanks+for+your+support%21&currency_code=USD"><img src="https://pics.paypal.com/00/s/MGNjZDA4MDItYzk3MC00NTQ1LTg4ZDAtMzM5MTc4ZmFlMGIy/file.PNG" style="width: 150px;"></a>
+
+## Testing
+
+This project is tested with BrowserStack.
+[BrowserStack](https://www.browserstack.com/open-source) offers free web testing to open source projects, but does not support this project in any other way.

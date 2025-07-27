@@ -32,5 +32,6 @@ dist
 
 
 todo.txt
+Dockerfile
 vault/
 output/

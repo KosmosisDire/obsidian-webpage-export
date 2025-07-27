@@ -1,0 +1,82 @@
+name: Label Issues with Links
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  label-issues-with-links:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+    - name: Check for Links and Label Issue
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{secrets.GITHUB_TOKEN}}
+        script: |
+          const issueBody = context.payload.issue.body;
+          const issueNumber = context.issue.number;
+          
+          console.log(`Processing issue #${issueNumber}`);
+          
+          // Regular expression to match URLs
+          const urlRegex = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)/gi;
+          
+          if (issueBody && urlRegex.test(issueBody)) {
+            console.log('Link detected in the issue body');
+            
+            try {
+              await github.rest.issues.addLabels({
+                issue_number: issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                labels: ['has-link']
+              });
+              console.log('Added "has-link" label to the issue');
+            } catch (error) {
+              if (error.status === 404) {
+                console.log('Label "has-link" does not exist. Creating it...');
+                await github.rest.issues.createLabel({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'has-link',
+                  color: '0366d6'  // You can change this color code as needed
+                });
+                
+                await github.rest.issues.addLabels({
+                  issue_number: issueNumber,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  labels: ['has-link']
+                });
+                console.log('Created "has-link" label and added it to the issue');
+              } else {
+                console.error('Error adding label:', error);
+              }
+            }
+          } else {
+            console.log('No link detected in the issue body');
+            
+            // Check if the label exists and remove it if it does
+            try {
+              const labels = await github.rest.issues.listLabelsOnIssue({
+                issue_number: issueNumber,
+                owner: context.repo.owner,
+                repo: context.repo.repo
+              });
+              
+              if (labels.data.some(label => label.name === 'has-link')) {
+                await github.rest.issues.removeLabel({
+                  issue_number: issueNumber,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  name: 'has-link'
+                });
+                console.log('Removed "has-link" label from the issue');
+              }
+            } catch (error) {
+              console.error('Error checking or removing label:', error);
+            }
+          }

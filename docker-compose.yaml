@@ -1,0 +1,12 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5900:5900"
+
+    volumes:
+      - ./vault:/vault
+      - ./output:/output
+      - ./data.json:/config.json
+
+    dns: 8.8.8.8
