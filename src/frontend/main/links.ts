@@ -59,7 +59,7 @@ export class LinkHandler
 
 	public static getPathnameFromURL(url: string): string
 	{
-		if(url == "" || url == "/" || url == "\\") return "/index.html";
+		if(url == "" || url == "/" || url == "\\") return "index.html";
 		if(url?.startsWith("#") || url?.startsWith("?")) return (ObsidianSite.document?.pathname?.split("#")[0]?.split("?")[0] ?? "") + (url ?? "");
 		return url?.split("?")[0]?.split("#")[0]?.trim() ?? "";
 	}
