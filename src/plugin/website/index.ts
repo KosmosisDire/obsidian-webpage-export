@@ -443,7 +443,7 @@ export class Index
 			webpageInfo.headers = await webpage.outputData.renderedHeadings;
 			webpageInfo.links = webpage.outputData.linksToOtherFiles;
 			webpageInfo.author = webpage.outputData.author;
-			webpageInfo.coverImageURL = "";
+			webpageInfo.coverImageURL = webpage.outputData.coverImageURL;
 			webpageInfo.fullURL = webpage.outputData.fullURL;
 			webpageInfo.pathToRoot = webpage.outputData.pathToRoot == "" ? "." : webpage.outputData.pathToRoot;
 			webpageInfo.attachments = webpage.attachments.map((download) => download.targetPath.path);
