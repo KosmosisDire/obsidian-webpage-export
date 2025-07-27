@@ -21,6 +21,23 @@ export class LinkHandler
 				event.preventDefault();
 				event.stopPropagation();
 				ObsidianSite.loadURL(target);
+
+				// Close the sidebar containing this link on phone
+				if (ObsidianSite.deviceSize === "phone")
+				{
+					// Find which sidebar contains this link
+					const leftSidebar = link.closest("#left-sidebar");
+					const rightSidebar = link.closest("#right-sidebar");
+
+					if (leftSidebar && ObsidianSite.leftSidebar?.collapsed === false)
+					{
+						ObsidianSite.leftSidebar.collapsed = true;
+					}
+					else if (rightSidebar && ObsidianSite.rightSidebar?.collapsed === false)
+					{
+						ObsidianSite.rightSidebar.collapsed = true;
+					}
+				}
 			});
 
 			// if the link doesn't point to a valid document in ObsidianSite set it to unresolved
