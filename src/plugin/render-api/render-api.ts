@@ -862,6 +862,8 @@ export namespace _MarkdownRendererInternal {
 	}
 
 	export async function getTitleForFile(file: TAbstractFile): Promise<{ title: string; isDefault: boolean }> {
+		if (!file) return { title: "NULL ERROR", isDefault: true };
+		
 		let title = file.name;
 		let isDefaultTitle = true;
 		if (file instanceof TFile) {
