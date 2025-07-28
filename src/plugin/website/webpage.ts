@@ -436,6 +436,17 @@ export class Webpage extends Attachment
 
 		if (!mediaPathStr.startsWith("http") && !mediaPathStr.startsWith("data:"))
 		{
+			// Use getFilePathFromSrc to properly resolve app:// URLs and other paths
+			const resolvedPath = this.website.getFilePathFromSrc(mediaPathStr, this.source.path);
+			const attachment = this.website.index.getFile(resolvedPath.pathname, true);
+			
+			if (attachment) {
+				mediaPathStr = attachment.targetPath.path;
+			} else {
+				// Fallback to resolved path if attachment not found
+				mediaPathStr = resolvedPath.path;
+			}
+			
 			const mediaPath = Path.joinStrings(this.exportOptions.rssOptions.siteUrl ?? "", mediaPathStr);
 			mediaPathStr = mediaPath.path;
 		}
@@ -625,15 +636,23 @@ export class Webpage extends Attachment
 			return;
 		if (link?.startsWith("?")) 
 			return;
+		if (link.startsWith("mailto:"))
+			return;
 
 		if (link.startsWith("#"))
 		{
 			let headerText = (linkEl?.getAttribute("data-href") ?? link).replaceAll(" ", "_").replaceAll(":", "").replaceAll("__", "_").substring(1);
-			let hrefValue = `#${headerText}_${this.headerMap.get(headerText) ?? 0}`;
-			if (!this.exportOptions.relativeHeaderLinks)
-				hrefValue = this.targetPath + hrefValue;
 			
-			return hrefValue;
+			// Only apply numbering if this header is in the headerMap (i.e., it's an actual header)
+			if (this.headerMap.has(headerText)) {
+				let hrefValue = `#${headerText}_${this.headerMap.get(headerText)}`;
+				if (!this.exportOptions.relativeHeaderLinks)
+					hrefValue = this.targetPath + hrefValue;
+				return hrefValue;
+			}
+			
+			// For non-header links (like footnotes), return the link unchanged
+			return link;
 		}
 
 		const linkSplit = link.split("#")[0].split("?")[0];
@@ -652,8 +671,12 @@ export class Webpage extends Attachment
 		if (attachment.targetPath.extensionName == "html")
 		{
 			const headerText = hash.replaceAll(" ", "_").replaceAll(":", "").replaceAll("__", "_").substring(1);
-			const headerId = this.headerMap.get(headerText);
-			hash = `#${headerText}_${headerId ?? 0}`;
+			// Only apply numbering if this header is in the headerMap
+			if (this.headerMap.has(headerText)) {
+				const headerId = this.headerMap.get(headerText);
+				hash = `#${headerText}_${headerId}`;
+			}
+			// Otherwise keep the hash unchanged (for footnotes, etc.)
 		}
 
 		return attachment.targetPath.path + hash;
