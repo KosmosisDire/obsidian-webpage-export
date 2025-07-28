@@ -1,7 +1,7 @@
 {
 	"id": "webpage-html-export",
 	"name": "Webpage HTML Export",
-	"version": "1.9.1",
+	"version": "1.9.2",
 	"minAppVersion": "1.6.0",
 	"description": "Export html from single files, canvas pages, or whole vaults. Direct access to the exported HTML files allows you to publish your digital garden anywhere. Focuses on flexibility, features, and style parity.",
 	"author": "Nathan George",
