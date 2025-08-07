@@ -53,7 +53,7 @@ A contribution guide may come soon.
 
 This plugin takes a lot of work to maintain and continue adding features. If you want to fund the continued development of this plugin you can do so here:
 
-<a href="https://www.buymeacoffee.com/nathangeorge"><img src="https://img.buymeacoffee.com/button-api/?text=Buy me a coffee&emoji=&slug=nathangeorge&button_colour=6a8695&font_colour=ffffff&font_family=Poppins&outline_colour=000000&coffee_colour=FFDD00"></a>
+<a href="https://www.buymeacoffee.com/nathangeorge"><img src="https://img.buymeacoffee.com/button-api/?text=Buy%20me%20a%20coffee&emoji=&slug=nathangeorge&button_colour=3ebba4&font_colour=ffffff&font_family=Poppins&outline_colour=ffffff&coffee_colour=FFDD00"></a>
 
 or if you prefer paypal: 
 
