@@ -627,93 +627,141 @@ export class Webpage extends Attachment
 		return this.attachments;
 	}
 
-	public resolveLink(link: string | null, linkEl: HTMLElement, preferAttachment: boolean = false): string | undefined
-	{
-		if (!link) return "";
-		if ((!link.startsWith("app://") && /\w+:(\/\/|\\\\)/.exec(link)))
-			return;
-		if (link.startsWith("data:"))
-			return;
-		if (link?.startsWith("?")) 
-			return;
-		if (link.startsWith("mailto:"))
-			return;
+	private normalizeHeaderId(text: string): string {
+        let normalized = text.replaceAll(" ", "_").replaceAll(":", "");
+        // Continuously replace double underscores to handle cases like "My___Header" becoming "My_Header"
+        while (normalized.includes("__")) {
+            normalized = normalized.replaceAll("__", "_");
+        }
+        return normalized;
+    }
 
-		if (link.startsWith("#"))
-		{
-			let headerText = (linkEl?.getAttribute("data-href") ?? link).replaceAll(" ", "_").replaceAll(":", "").replaceAll("__", "_").substring(1);
-			
-			// Only apply numbering if this header is in the headerMap (i.e., it's an actual header)
-			if (this.headerMap.has(headerText)) {
-				let hrefValue = `#${headerText}_${this.headerMap.get(headerText)}`;
-				if (!this.exportOptions.relativeHeaderLinks)
-					hrefValue = this.targetPath + hrefValue;
-				return hrefValue;
-			}
-			
-			// For non-header links (like footnotes), return the link unchanged
-			return link;
-		}
+	private getActualTargetHeaderText(fullHashString: string): string {
+        // Remove leading '#' if present, then split by '#' to get parts.
+        // For "#Header", parts = ["Header"]
+        // For "#Parent#Child", parts = ["Parent", "Child"]
+        const parts = fullHashString.startsWith("#") ? fullHashString.substring(1).split('#') : fullHashString.split('#');
+        // The last part is generally the relevant header text for direct lookup.
+        return parts[parts.length - 1];
+    }
 
-		const linkSplit = link.split("#")[0].split("?")[0];
-		const attachmentPath = this.website.getFilePathFromSrc(linkSplit, this.source.path);
-		const attachment = this.website.index.getFile(attachmentPath.pathname, preferAttachment);
-		if (!attachment)
-		{
-			// otherwise resolve it as best as possible
-			const resolved = attachmentPath.slugify(this.exportOptions.slugifyPaths).setExtension("html");
-			return resolved.path;
-		}
+	public resolveLink(link: string | null, linkEl: HTMLElement, preferAttachment: boolean = false): string | undefined {
+        if (!link) return "";
 
-		let hash = (linkEl?.getAttribute("data-href") ?? link).split("#")[1] ?? "";
-		if (hash != "") hash = "#" + hash;
+        // Handle external links or special protocols (e.g., app://, data:, mailto:, query params)
+        if ((!link.startsWith("app://") && /\w+:(\/\/|\\\\)/.exec(link)) ||
+            link.startsWith("data:") ||
+            link.startsWith("?") ||
+            link.startsWith("mailto:")) {
+            return link; // Return original link for external/special cases
+        }
 
-		if (attachment.targetPath.extensionName == "html")
-		{
-			const headerText = hash.replaceAll(" ", "_").replaceAll(":", "").replaceAll("__", "_").substring(1);
-			// Only apply numbering if this header is in the headerMap
-			if (this.headerMap.has(headerText)) {
-				const headerId = this.headerMap.get(headerText);
-				hash = `#${headerText}_${headerId}`;
-			}
-			// Otherwise keep the hash unchanged (for footnotes, etc.)
-		}
+        // IMPORTANT: Use data-href as the primary source for the full link target
+        // as we've stored the most canonical path there.
+        const fullLinkTarget = linkEl?.getAttribute("data-href") ?? link;
+        // Split the full target into base path and hash anchor parts
+        const partsOfLink = fullLinkTarget.split('#');
+        const baseLinkPart = partsOfLink[0]; // Represents the file path part (empty for local hashes)
+        // Reconstruct the full hash anchor, preserving multiple '#' if present
+        const hashAnchorPart = partsOfLink.length > 1 ? '#' + partsOfLink.slice(1).join('#') : '';
 
-		return attachment.targetPath.path + hash;
-	}
+
+        // --- Case 1: Link is purely a local header/anchor within the current file (e.g., [[#Header]], [[#Parent#Child]]) ---
+        if (baseLinkPart === "") {
+            if (hashAnchorPart === "") return link; // No hash, nothing to resolve internally
+
+			// find the target using data href, since we're on the same page and have already set our heading ids up
+			const headingQuerySelector = partsOfLink.map( (heading) => `[data-heading="${heading}"]`).join(' ');
+			const targetId = this.pageDocument.querySelector( headingQuerySelector )?.id;
+			// If we have a result, return it. Otherwise fall back to old behavior
+			if ( targetId ) return targetId
+
+            // Extract and normalize the specific header text targeted by the hash
+            const rawTargetHeaderText = this.getActualTargetHeaderText(hashAnchorPart);
+            const normalizedTargetId = this.normalizeHeaderId(rawTargetHeaderText);
+
+            // Check if this normalized header exists in the current file's header map
+            if (this.headerMap.has(normalizedTargetId)) {
+                // Construct the resolved URL with the header's unique ID
+                let hrefValue = `#${normalizedTargetId}_${this.headerMap.get(normalizedTargetId)}`;
+                // Apply relative path option if specified
+                if (!this.exportOptions.relativeHeaderLinks) {
+                    hrefValue = this.targetPath + hrefValue;
+                }
+                return hrefValue;
+            }
+            // If it's not a recognized header, it might be a footnote or a block ID; return the original hash
+            return hashAnchorPart;
+        }
+
+        // --- Case 2: Link includes a file path (e.g., [[File Name]], [[File Name#Header]]) ---
+        const linkWithoutHashAndQuery = baseLinkPart.split("?")[0];
+        // Resolve the file path part of the link
+        const attachmentPath = this.website.getFilePathFromSrc(linkWithoutHashAndQuery, this.source.path);
+        const attachment = this.website.index.getFile(attachmentPath.pathname, preferAttachment);
+
+        if (!attachment) {
+            // If the target file (attachment) itself is not found, construct a best-guess path
+            const resolved = attachmentPath.slugify(this.exportOptions.slugifyPaths).setExtension("html");
+            return resolved.path + hashAnchorPart; // Append original hash even if the file is missing
+        }
+
+        let finalHash = hashAnchorPart; // Start with the original hash from data-href
+
+        // If the target file is an HTML document and there's a hash, attempt to resolve it as a header
+        if (attachment.targetPath.extensionName === "html" && hashAnchorPart !== "") {
+            // Extract and normalize the specific header text from the hash
+            const rawTargetHeaderText = this.getActualTargetHeaderText(hashAnchorPart);
+            const normalizedTargetId = this.normalizeHeaderId(rawTargetHeaderText);
+
+            // Check if this normalized header exists in the header map
+            if (this.headerMap.has(normalizedTargetId)) {
+                const headerIdSuffix = this.headerMap.get(normalizedTargetId);
+                finalHash = `#${normalizedTargetId}_${headerIdSuffix}`;
+            }
+            // Else, 'finalHash' remains the original 'hashAnchorPart' for footnotes, block IDs, etc.
+        }
+
+        // Combine the resolved file path with the (potentially updated) hash
+        return attachment.targetPath.path + finalHash;
+    }
 
 	readonly headerMap = new Map();
-	private remapLinks()
-	{
-		// convert the data-heading to the id
-		this.pageDocument
-			.querySelectorAll("h1, h2, h3, h4, h5, h6")
-			.forEach((headerEl) => {
-				let headerText = (headerEl.getAttribute("data-heading") ?? headerEl.textContent ?? "").replaceAll(" ", "_").replaceAll(":", "").replaceAll("__", "_");
-				let headerId = this.headerMap.get(headerText);
-				if (headerId) {
-					headerId = `${+headerId + 1}`;
-				} else {
-					headerId = "0";
-				}
+    private remapLinks() {
+        this.pageDocument
+            .querySelectorAll("h1, h2, h3, h4, h5, h6")
+            .forEach((headerEl) => {
+                // Get the raw header text, preferring data-heading as Obsidian usually provides a cleaner string there
+                const rawHeaderText = headerEl.getAttribute("data-heading") ?? headerEl.textContent ?? "";
+                // Normalize the header text for consistent map key generation
+                const normalizedHeaderText = this.normalizeHeaderId(rawHeaderText);
 
-				this.headerMap.set(headerText, headerId);
+                let headerIdSuffix: number;
+                // Check if this normalized header text has been encountered before, to ensure uniqueness
+                if (this.headerMap.has(normalizedHeaderText)) {
+                    const currentSuffix = this.headerMap.get(normalizedHeaderText)!;
+                    headerIdSuffix = currentSuffix + 1;
+                } else {
+                    headerIdSuffix = 0;
+                }
 
-				headerEl.setAttribute(
-					"id",
-					`${headerText}_${headerId}`
-				);
-			});
+                this.headerMap.set(normalizedHeaderText, headerIdSuffix);
 
-		const links = this.hrefLinkElements;
-		for (const link of links) {
-			const href = link.getAttribute("href");
-			const newHref = this.resolveLink(href, link);
-			link.setAttribute("href", newHref ?? href ?? "");
-			link.setAttribute("target", "_self");
-			link.classList.toggle("is-unresolved", !newHref);
-		}
-	}
+                headerEl.setAttribute(
+                    "id",
+                    `${normalizedHeaderText}_${headerIdSuffix}`
+                );
+            });
+
+        const links = this.hrefLinkElements;
+        for (const link of links) {
+            const href = link.getAttribute("href");
+            const newHref = this.resolveLink(href, link);
+            link.setAttribute("href", newHref ?? href ?? "");
+            link.setAttribute("target", "_self");
+            link.classList.toggle("is-unresolved", !newHref);
+        }
+    }
 
 	private remapEmbedLinks()
 	{
