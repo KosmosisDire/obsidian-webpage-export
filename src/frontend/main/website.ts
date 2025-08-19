@@ -298,16 +298,25 @@ export class ObsidianWebsite {
 	public async loadURL(url: string, pushState: boolean = true): Promise<ObsidianDocument | undefined> {
 		const header = LinkHandler.getHashFromURL(url);
 		const query = LinkHandler.getQueryFromURL(url);
-		url = LinkHandler.getPathnameFromURL(url);
-		console.log("Loading URL", url, header, query);
+		const pathName = LinkHandler.getPathnameFromURL(url);
+		console.log("Loading URL", url, pathName, header, query);
 
 		if (query && query.startsWith("query=")) {
 			this.search?.searchParseFilters(query.substring(6));
 			return;
 		}
 
+		// if this is an anchor link, try to resolve with standard behavior first 
+		if ( url.startsWith('#') ) {
+			const target = document.querySelector(url);
+			if ( target ) {
+				target?.scrollIntoView( { behavior: "smooth", block: 'start', inline: 'nearest' });
+				return this.document
+			}
+		}
+
 		// if this document is already loaded
-		if (this.document.pathname == url) {
+		if (this.document.pathname == pathName) {
 			if (header) this.document.scrollToHeader(header);
 			else {
 				new Notice("This page is already loaded.");
@@ -316,14 +325,14 @@ export class ObsidianWebsite {
 			return this.document;
 		}
 
-		const data = ObsidianSite.getWebpageData(url) as WebpageData;
+		const data = ObsidianSite.getWebpageData(pathName) as WebpageData;
 		if (!data) {
 			new Notice("This page does not exist yet.");
 			console.warn("Page does not exist", url);
 			return undefined;
 		}
 
-		const page = await new ObsidianDocument(url).load();
+		const page = await new ObsidianDocument(pathName).load();
 
 		if (!page)
 		{
