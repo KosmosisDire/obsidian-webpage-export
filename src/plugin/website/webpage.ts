@@ -37,6 +37,14 @@ export class WebpageOutputData
 	public linksToOtherFiles: string[] = [];
 }
 
+export interface HierarchicalHeading {
+	heading: string;
+	level: number;
+	id: string;
+	headingEl: HTMLElement;
+	children: HierarchicalHeading[];
+}
+
 export class Webpage extends Attachment
 {
 	public get source(): TFile
@@ -260,6 +268,36 @@ export class Webpage extends Attachment
 		}
 
 		return headers;
+	}
+
+	public getHierarchicalHeadings(): HierarchicalHeading[] {
+		const flatHeadings = this.headings;
+		if (!flatHeadings || flatHeadings.length === 0) {
+			return [];
+		}
+	
+		// A dummy root node to simplify the logic. We'll return its children.
+		const root: HierarchicalHeading = { heading: 'root', level: 0, id: '', headingEl: null as any, children: [] };
+		const stack: HierarchicalHeading[] = [root];
+	
+		for (const heading of flatHeadings) {
+			const node: HierarchicalHeading = { ...heading, children: [] };
+	
+			// Go up the stack to find the correct parent for the current heading.
+			// A parent must have a level strictly less than the current heading's level.
+			while (stack[stack.length - 1].level >= node.level) {
+				stack.pop();
+			}
+	
+			// The top of the stack is now the correct parent.
+			const parent = stack[stack.length - 1];
+			parent.children.push(node);
+	
+			// The current heading becomes a potential parent for subsequent headings.
+			stack.push(node);
+		}
+	
+		return root.children;
 	}
 
 	private async getRenderedHeadings(): Promise<{ heading: string; level: number; id: string; }[]>
@@ -670,27 +708,51 @@ export class Webpage extends Attachment
         if (baseLinkPart === "") {
             if (hashAnchorPart === "") return link; // No hash, nothing to resolve internally
 
-			// find the target using data href, since we're on the same page and have already set our heading ids up
-			const headingQuerySelector = partsOfLink.map( (heading) => `[data-heading="${heading}"]`).join(' ');
-			const targetId = this.pageDocument.querySelector( headingQuerySelector )?.id;
-			// If we have a result, return it. Otherwise fall back to old behavior
-			if ( targetId ) return targetId
+			const linkParts = partsOfLink.slice(1).filter(p => p.length > 0);
 
-            // Extract and normalize the specific header text targeted by the hash
+			// Handle block links
+			if (linkParts.length > 0 && linkParts[linkParts.length - 1].startsWith("^"))
+			{
+				const blockId = linkParts[linkParts.length - 1].replaceAll( '^', 'blockid-' );
+				return `#${blockId}`;
+			}
+
+			const headings = this.getHierarchicalHeadings();
+			let searchList = headings;
+			let foundHeading: HierarchicalHeading | undefined;
+
+			for (const part of linkParts) 
+			{
+				foundHeading = searchList.find(h => h.heading === part);
+				if (foundHeading) 
+				{
+					searchList = foundHeading.children;
+				} 
+				else 
+				{
+					foundHeading = undefined;
+					break;
+				}
+			}
+
+			if (foundHeading)
+			{
+				return `#${foundHeading.id}`;
+			}
+
+            // Fallback to original behavior for single headers
             const rawTargetHeaderText = this.getActualTargetHeaderText(hashAnchorPart);
             const normalizedTargetId = this.normalizeHeaderId(rawTargetHeaderText);
 
-            // Check if this normalized header exists in the current file's header map
             if (this.headerMap.has(normalizedTargetId)) {
-                // Construct the resolved URL with the header's unique ID
-                let hrefValue = `#${normalizedTargetId}_${this.headerMap.get(normalizedTargetId)}`;
-                // Apply relative path option if specified
+				// if there's only a single item, we default to the first of its kind, even if there are multiple
+                let hrefValue = `#${normalizedTargetId}_0`;
                 if (!this.exportOptions.relativeHeaderLinks) {
                     hrefValue = this.targetPath + hrefValue;
                 }
                 return hrefValue;
             }
-            // If it's not a recognized header, it might be a footnote or a block ID; return the original hash
+            
             return hashAnchorPart;
         }
 
