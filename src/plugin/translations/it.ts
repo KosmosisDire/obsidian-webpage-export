@@ -175,6 +175,10 @@ export const language: i18n =
 			title: "Impostazioni Generali",
 			description: "Controlla impostazioni semplici come favicon e metadati del sito",
 		},
+		enablePublishFiltering: {
+			title: "Abilita Filtro Proprietà di Pubblicazione",
+			description: "Quando abilitato, i file con publish=false nel frontmatter saranno esclusi dall'esportazione",
+		},
 		favicon: {
 			title: "Immagine Favicon",
 			description: "Il percorso locale della favicon per il sito",
