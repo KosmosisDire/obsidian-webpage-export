@@ -44,6 +44,9 @@ export class Settings
 	public static deleteOldFiles: boolean = true;
 	public static exportPreset: ExportPreset = ExportPreset.Online;
 	public static openAfterExport: boolean = true;
+	public static enablePublishFiltering: boolean = true;
+	public static enableFooterInjection: boolean = false;
+	public static footerSnippetPath: string = "";
 
 	// Graph View Settings
 	public static filePickerBlacklist: string[] = ["(^|\\/)node_modules\\/","(^|\\/)dist\\/","(^|\\/)dist-ssr\\/","(^|\\/)\\.vscode\\/"]; // ignore node_modules, dist, and .vscode
@@ -350,6 +353,33 @@ export class SettingsPage extends PluginSettingTab
 			() => Settings.exportOptions.offlineResources,
 			(value) => Settings.exportOptions.offlineResources = value,
 			lang.makeOfflineCompatible.description);
+
+
+		createToggle(section, lang.enableFooterInjection.title,
+			() => Settings.enableFooterInjection,
+			(value) => Settings.enableFooterInjection = value,
+			lang.enableFooterInjection.description);
+
+		createFileInput(section,
+			() => Settings.footerSnippetPath,
+			(value) => Settings.footerSnippetPath = value,
+			{
+				name: lang.footerSnippetPath.title,
+				description: lang.footerSnippetPath.description,
+				placeholder: i18n.pathInputPlaceholder,
+				makeRelativeToVault: true,
+				pickFolder: false,
+				validation: (path) => path.validate(
+					{
+						allowEmpty: true,
+						allowAbsolute: true,
+						allowRelative: true,
+						allowFiles: true,
+						requireExists: true,
+						requireExtentions: ["md"]
+					}),
+				browseButton: true,
+			});
 
 		// #endregion
 
