@@ -121,7 +121,21 @@ export class Website
 		ExportLog.addToProgressCap((files?.length ?? 0));
 		ExportLog.addToProgressCap((files?.length ?? 0) * 0.1);
 
-		this.sourceFiles = files?.filter((file) => file) ?? [];
+		this.sourceFiles = files?.filter((file) => {
+			// Filter out null files
+			if (!file) return false;
+			
+			// Filter out files with publish=false in frontmatter if enabled
+			if (Settings.enablePublishFiltering) {
+				const frontmatter = app.metadataCache.getFileCache(file)?.frontmatter;
+				if (frontmatter && (frontmatter.publish === "false" || frontmatter.publish === false)) {
+					ExportLog.log(`Skipping file with publish=false: ${file.path}`);
+					return false;
+				}
+			}
+
+			return true;
+		}) ?? [];
 
 		let rootPath = this.findCommonRootPath(this.sourceFiles);
 		this.exportOptions.exportRoot = rootPath;

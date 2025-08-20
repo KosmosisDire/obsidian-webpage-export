@@ -230,6 +230,10 @@ export interface i18n
 			title: string;
 			description: string;
 		},
+		enablePublishFiltering: {
+			title: string;
+			description: string;
+		},
 
 	}
 }

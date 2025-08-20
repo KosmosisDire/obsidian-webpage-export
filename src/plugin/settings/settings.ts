@@ -44,6 +44,7 @@ export class Settings
 	public static deleteOldFiles: boolean = true;
 	public static exportPreset: ExportPreset = ExportPreset.Online;
 	public static openAfterExport: boolean = true;
+	public static enablePublishFiltering: boolean = true;
 
 	// Graph View Settings
 	public static filePickerBlacklist: string[] = ["(^|\\/)node_modules\\/","(^|\\/)dist\\/","(^|\\/)dist-ssr\\/","(^|\\/)\\.vscode\\/"]; // ignore node_modules, dist, and .vscode
@@ -350,6 +351,11 @@ export class SettingsPage extends PluginSettingTab
 			() => Settings.exportOptions.offlineResources,
 			(value) => Settings.exportOptions.offlineResources = value,
 			lang.makeOfflineCompatible.description);
+
+		createToggle(section, lang.enablePublishFiltering.title,
+			() => Settings.enablePublishFiltering,
+			(value) => Settings.enablePublishFiltering = value,
+			lang.enablePublishFiltering.description);
 
 		// #endregion
 
