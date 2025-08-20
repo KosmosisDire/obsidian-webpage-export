@@ -1,9 +1,10 @@
-import { getIcon, Modal, Setting, TextComponent } from "obsidian";
+import { getIcon, Modal, Notice, Setting, TextComponent } from "obsidian";
 import { Settings, SettingsPage } from "./settings";
 import { Path } from "src/plugin/utils/path";
 import { FileDialogs } from "src/plugin/utils/file-dialogs";
 import { FeatureOptions, FeatureRelation, FeatureSettingInfo } from "src/shared/features/feature-options-base";
 import { ExportPipelineOptions } from "src/plugin/website/pipeline-options";
+import { GraphViewOptions } from "src/shared/features/graph-view";
 import { i18n } from "../translations/language";
 
 export function createDivider(container: HTMLElement)
@@ -321,7 +322,26 @@ export function generateSettingsFromObject(obj: any, container: HTMLElement)
 		switch (type)
 		{
 			case "boolean":
-				createToggle(container, name, () => value, (v) => obj[key] = v, description);
+				// Special handling for enableTagColors in GraphViewOptions
+				if (key === 'enableTagColors' && obj.featureId === 'graph-view') {
+					const setting = createToggle(container, name, () => value, (v) => {
+						obj[key] = v;
+						SettingsPage.saveSettings();
+					}, description);
+					
+					// Add a palette icon button that opens the tag colors modal
+					setting.addExtraButton(button => {
+						button.setIcon("palette");
+						button.setTooltip("Tag Colors Settings");
+						
+						button.onClick(() => {
+							const modal = createTagColorsModal(obj as GraphViewOptions);
+							modal.open();
+						});
+					});
+				} else {
+					createToggle(container, name, () => value, (v) => obj[key] = v, description);
+				}
 				break;
 			case "string":
 				createText(container, name, () => value, (v) => obj[key] = v, description);
@@ -336,9 +356,145 @@ export function generateSettingsFromObject(obj: any, container: HTMLElement)
 	}
 }
 
+/**
+ * Creates a modal for managing tag colors in the graph view
+ * @param graphViewOptions The graph view options containing tag colors
+ * @returns The modal instance
+ */
+export function createTagColorsModal(graphViewOptions: GraphViewOptions): Modal {
+	const modal = new Modal(app);
+	modal.titleEl.setText("Tag Colors");
+	
+	const contentEl = modal.contentEl;
+	
+	// Add description
+	const descEl = contentEl.createEl("p", { 
+		text: "Assign colors to specific tags for the graph view.",
+		cls: "setting-item-description" 
+	});
+	descEl.style.marginBottom = "1em";
+	
+	// Add button to add new tag-color mapping
+	new Setting(contentEl)
+		.setName("Add Tag Color")
+		.setDesc("Add a new tag-color mapping")
+		.addButton(button => {
+			button.setButtonText("Add")
+				.setCta()
+				.onClick(() => {
+					// Create a modal for adding a new tag-color mapping
+					const addModal = new Modal(app);
+					addModal.titleEl.setText("Add Tag Color");
+					
+					// Create input for tag name
+					const tagNameSetting = new Setting(addModal.contentEl)
+						.setName("Tag")
+						.setDesc("Enter the tag name (without #)")
+						.addText(text => {
+							text.setPlaceholder("tag");
+						});
+					
+					// Create input for color
+					const colorSetting = new Setting(addModal.contentEl)
+						.setName("Color")
+						.setDesc("Choose a color for the tag")
+						.addColorPicker(colorPicker => {
+							colorPicker.setValue("#FF5733");
+						});
+					
+					// Create buttons for cancel and save
+					const buttonSetting = new Setting(addModal.contentEl)
+						.addButton(button => {
+							button.setButtonText("Cancel")
+								.onClick(() => {
+									addModal.close();
+								});
+						})
+						.addButton(button => {
+							button.setButtonText("Save")
+								.setCta()
+								.onClick(() => {
+									const tagNameInput = tagNameSetting.controlEl.querySelector("input");
+									const colorInput = colorSetting.controlEl.querySelector("input");
+									
+									if (!tagNameInput || !colorInput) {
+										new Notice("Error: Could not find input elements");
+										return;
+									}
+									
+									const tagName = tagNameInput.value;
+									const color = colorInput.value;
+									
+									if (tagName) {
+										// Add the new tag-color mapping
+										graphViewOptions.tagColors[tagName] = color;
+										SettingsPage.saveSettings();
+										
+										// Close the modal
+										addModal.close();
+										
+										// Create a new setting for the tag-color mapping
+										const newTagColorSetting = new Setting(tagColorMappingsContainer)
+											.setName(tagName)
+											.addColorPicker(colorPicker => {
+												colorPicker.setValue(color);
+												colorPicker.onChange(value => {
+													graphViewOptions.tagColors[tagName] = value;
+													SettingsPage.saveSettings();
+												});
+											})
+											.addExtraButton(button => {
+												button.setIcon("trash")
+													.setTooltip("Remove")
+													.onClick(() => {
+														delete graphViewOptions.tagColors[tagName];
+														newTagColorSetting.settingEl.remove();
+														SettingsPage.saveSettings();
+													});
+											});
+									}
+								});
+						});
+					
+					addModal.open();
+				});
+		});
+	
+	// Create a container for tag color mappings
+	const tagColorMappingsContainer = contentEl.createDiv();
+	
+	// Display existing tag color mappings
+	const tagColors = graphViewOptions.tagColors;
+	
+	// Create a list to display existing tag-color mappings
+	for (const tag in tagColors) {
+		const color = tagColors[tag];
+		const tagColorSetting = new Setting(tagColorMappingsContainer)
+			.setName(tag)
+			.addColorPicker(colorPicker => {
+				colorPicker.setValue(color);
+				colorPicker.onChange(value => {
+					graphViewOptions.tagColors[tag] = value;
+					SettingsPage.saveSettings();
+				});
+			})
+			.addExtraButton(button => {
+				button.setIcon("trash")
+					.setTooltip("Remove")
+					.onClick(() => {
+						delete graphViewOptions.tagColors[tag];
+						tagColorSetting.settingEl.remove();
+						SettingsPage.saveSettings();
+					});
+			});
+	}
+	
+	return modal;
+}
+
 export function createFeatureSetting(container: HTMLElement, name: string, feature: FeatureOptions, desc: string, addSettings?: (container: HTMLElement) => void)
 {
-	let setting = new Setting(container).setName(name).setDesc(desc);
+	const setting = new Setting(container).setName(name).setDesc(desc);
 
 	setting.setDisabled(feature.unavailable);
 	setting.setTooltip(feature.unavailable ? i18n.settings.unavailableSetting.format(Settings.exportPreset) : "", {delay: 0});
@@ -357,6 +513,7 @@ export function createFeatureSetting(container: HTMLElement, name: string, featu
 			});
 		});
 	}
+
 
 	// Always add the settings button to maintain consistent spacing
 	setting.addExtraButton(button => 
@@ -377,8 +534,8 @@ export function createFeatureSetting(container: HTMLElement, name: string, featu
 			button.onClick(() => 
 			{
 				// create a modal with all the feature's properties as settings
-				let modal = new Modal(app);
-				let contentEl = modal.contentEl;
+				const modal = new Modal(app);
+				const contentEl = modal.contentEl;
 				modal.open()
 				modal.setTitle(name);
 				generateSettingsFromObject(feature, contentEl);

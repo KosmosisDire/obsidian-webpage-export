@@ -108,7 +108,8 @@ export const language: i18n =
 			info_centralForce: "Quanto dovrebbero attrarsi i nodi verso il centro? Questo renderà il grafo più denso e circolare.",
 			info_edgePruning: "I collegamenti oltre questa soglia non verranno visualizzati, ma contribuiranno comunque alla simulazione. Passando il mouse su un nodo verranno comunque mostrati.",
 			info_minNodeRadius: "Quanto devono essere piccoli i nodi più piccoli? Nodi più piccoli attrarranno meno altri nodi.",
-			info_maxNodeRadius: "Quanto devono essere grandi i nodi più grandi? I nodi sono dimensionati in base ai collegamenti. Nodi più grandi attrarranno più nodi, creando gruppi intorno a quelli più importanti."
+			info_maxNodeRadius: "Quanto devono essere grandi i nodi più grandi? I nodi sono dimensionati in base ai collegamenti. Nodi più grandi attrarranno più nodi, creando gruppi intorno a quelli più importanti.",
+			info_enableTagColors: "Abilita la colorazione dei nodi in base ai loro tag."
 		},
 		search: {
 			title: "Barra di Ricerca",

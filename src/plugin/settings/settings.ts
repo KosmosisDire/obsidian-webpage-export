@@ -594,7 +594,20 @@ export class SettingsPage extends PluginSettingTab
 				}
 				else
 				{
-					SettingsPage.deepAssign(objects[i], source[key]);
+					// Special handling for tagColors in GraphViewOptions
+					if (key === 'tagColors' && typeof source[key] === 'object')
+					{
+						// Ensure tagColors exists in the truth
+						if (!truth[key]) {
+							truth[key] = {};
+						}
+						// Copy all tag color mappings
+						Object.assign(truth[key], source[key]);
+					}
+					else
+					{
+						SettingsPage.deepAssign(objects[i], source[key]);
+					}
 				}
 			}
 			else if (source[key] != undefined)
