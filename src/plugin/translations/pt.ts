@@ -181,6 +181,14 @@ export const language: i18n =
 			title: "Configurações Gerais",
 			description: "Controle configurações simples como favicon e metadados do site",
 		},
+		enableFooterInjection: {
+			title: "Ativar Injeção de Rodapé",
+			description: "Quando ativado, o conteúdo do arquivo markdown especificado será anexado ao rodapé das notas exportadas",
+		},
+		footerSnippetPath: {
+			title: "Caminho do Snippet de Rodapé",
+			description: "Caminho para um arquivo markdown cujo conteúdo será anexado ao rodapé das notas exportadas",
+		},
 		favicon: {
 			title: "Imagem do Favicon",
 			description: "Caminho local da imagem favicon do site",

@@ -1,4 +1,4 @@
-import { FrontMatterCache, TFile } from "obsidian";
+import {FrontMatterCache, MarkdownView, TFile} from "obsidian";
 import { Path } from "src/plugin/utils/path";
 import { Attachment } from "src/plugin/utils/downloadable";
 import { OutlineTree } from "src/plugin/features/outline-tree";
@@ -11,6 +11,7 @@ import { Settings } from "src/plugin/settings/settings";
 import { AssetHandler } from "src/plugin/asset-loaders/asset-handler";
 import { Shared } from "src/shared/shared";
 import { moment } from "obsidian";
+import {MarkdownRendererOptions} from "../render-api/api-options";
 
 export class WebpageOutputData
 {
@@ -487,6 +488,32 @@ export class Webpage extends Attachment
 		return otherFiles;
 	}
 
+ /**
+	 * Reads the footer snippet markdown file
+	 * @returns The raw markdown content of the footer snippet
+	 */
+	private async getFooterSnippetContent(): Promise<string | null> {
+		if (!Settings.enableFooterInjection || !Settings.footerSnippetPath) {
+			return null;
+		}
+
+		try {
+			const footerSnippetPath = Settings.footerSnippetPath;
+			const footerSnippetFile = app.vault.getAbstractFileByPath(footerSnippetPath);
+			
+			if (!footerSnippetFile || !(footerSnippetFile instanceof TFile)) {
+				ExportLog.warning(`Footer snippet file not found: ${footerSnippetPath}`);
+				return null;
+			}
+
+			const content = await app.vault.read(footerSnippetFile);
+			return content;
+		} catch (error) {
+			ExportLog.error(error, "Error reading footer snippet");
+			return null;
+		}
+	}
+
 	public async build(): Promise<Webpage | undefined>
 	{
 		let isMedia = MarkdownRendererAPI.viewableMediaExtensions.contains(this.source.extension);
@@ -567,6 +594,145 @@ export class Webpage extends Attachment
 		return this;
 	}
 
+	/**
+	 * Gets the combined markdown content of the original file and the footer snippet
+	 * @returns The combined markdown content
+	 */
+	private async getCombinedMarkdownContent(): Promise<string | null> {
+		try {
+			// Only process markdown files
+			if (this.source.extension !== "md") {
+				return null;
+			}
+
+			// Read the original file content
+			const originalContent = await app.vault.read(this.source);
+			
+			// Store the original content hash for verification
+			const originalContentHash = this.hashString(originalContent);
+			
+			// If footer injection is not enabled or there's no footer content, return the original content
+			if (!Settings.enableFooterInjection) {
+				return originalContent;
+			}
+			
+			// Get the footer snippet content
+			const footerContent = await this.getFooterSnippetContent();
+			if (!footerContent) {
+				return originalContent;
+			}
+			
+			// Check if the content already contains the footer snippet
+			if (this.contentContainsFooter(originalContent, footerContent)) {
+				ExportLog.log(`Footer snippet already exists in ${this.source.path}, skipping injection`);
+				return originalContent;
+			}
+			
+			// Combine the original content and the footer snippet
+			// Add two newlines to ensure proper separation
+			const combinedContent = originalContent + "\n\n" + footerContent;
+			
+			ExportLog.log(`Injected footer snippet into markdown for ${this.source.path}`);
+			
+			// Verify that the original file hasn't been modified
+			setTimeout(async () => {
+				try {
+					const currentContent = await app.vault.read(this.source);
+					const currentContentHash = this.hashString(currentContent);
+					
+					if (currentContentHash !== originalContentHash) {
+						ExportLog.warning(`WARNING: The original file ${this.source.path} appears to have been modified during export. This might be a caching issue in Obsidian.`);
+					}
+				} catch (error) {
+					ExportLog.error(error, "Error verifying original file content");
+				}
+			}, 1000); // Check after a short delay to allow any potential file operations to complete
+			
+			return combinedContent;
+		} catch (error) {
+			ExportLog.error(error, "Error combining markdown content with footer");
+			return null;
+		}
+	}
+	
+	/**
+	 * Simple string hashing function for content verification
+	 * @param str The string to hash
+	 * @returns A hash of the string
+	 */
+	private hashString(str: string): string {
+		let hash = 0;
+		for (let i = 0; i < str.length; i++) {
+			const char = str.charCodeAt(i);
+			hash = ((hash << 5) - hash) + char;
+			hash = hash & hash; // Convert to 32bit integer
+		}
+		return hash.toString();
+	}
+	
+	/**
+	 * Checks if the content already contains the footer snippet
+	 * @param content The content to check
+	 * @param footerContent The footer snippet content
+	 * @returns True if the content already contains the footer snippet
+	 */
+	private contentContainsFooter(content: string, footerContent: string): boolean {
+		if (!content || !footerContent) {
+			return false;
+		}
+		
+		// Trim both strings to handle whitespace differences
+		const trimmedContent = content.trim();
+		const trimmedFooter = footerContent.trim();
+		
+		// Check if the content ends with the footer
+		return trimmedContent.endsWith(trimmedFooter);
+	}
+
+	/**
+	 * Temporarily modifies the note by adding the footer snippet, exports it, and then restores it
+	 * @param options The export options
+	 * @returns The render info object
+	 */
+	private async modifyAndExportWithFooter(options: MarkdownRendererOptions): Promise<{ contentEl: HTMLElement; viewType: string; } | undefined> {
+		// Only process markdown files
+		if (this.source.extension !== "md") {
+			return await MarkdownRendererAPI.renderFile(this.source, options);
+		}
+
+		// Read the original file content
+		const originalContent = await app.vault.read(this.source);
+		
+		// Get the footer snippet content
+		const footerContent = await this.getFooterSnippetContent();
+		if (!footerContent) {
+			return await MarkdownRendererAPI.renderFile(this.source, options);
+		}
+		
+		// Check if the content already contains the footer snippet
+		if (this.contentContainsFooter(originalContent, footerContent)) {
+			ExportLog.log(`Footer snippet already exists in ${this.source.path}, skipping modification`);
+			return await MarkdownRendererAPI.renderFile(this.source, options);
+		}
+		
+		// Combine the original content and the footer snippet
+		// Add two newlines to ensure proper separation
+		const combinedContent = originalContent + "\n\n" + footerContent;
+		
+		try {
+			// Modify the original file with the combined content
+			ExportLog.log(`Temporarily modifying ${this.source.path} to add footer snippet`);
+			await app.vault.modify(this.source, combinedContent);
+			
+			// Export the modified file
+			return await MarkdownRendererAPI.renderFile(this.source, options);
+		} finally {
+			// Always restore the original content, even if there's an error
+			ExportLog.log(`Restoring original content for ${this.source.path}`);
+			await app.vault.modify(this.source, originalContent);
+		}
+	}
+
 	public async renderDocument(): Promise<Webpage | undefined>
 	{
 		this.pageDocument.documentElement.innerHTML = this.website.webpageTemplate.getDocElementInner();
@@ -576,7 +742,16 @@ export class Webpage extends Attachment
 		if (!centerContent) return undefined;
 
 		const options = {...this.exportOptions, container: centerContent};
-		const renderInfo = await MarkdownRendererAPI.renderFile(this.source, options);
+		
+		let renderInfo;
+		
+		// For markdown files with footer injection, use the new approach
+		if (this.source.extension === "md" && Settings.enableFooterInjection) {
+			ExportLog.log(`Using temporary file modification approach for footer injection in ${this.source.path}`);
+			renderInfo = await this.modifyAndExportWithFooter(options);
+		} else {
+			renderInfo = await MarkdownRendererAPI.renderFile(this.source, options);
+		}
 
 		const contentEl = renderInfo?.contentEl;
 		if (!contentEl) return undefined;

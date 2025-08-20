@@ -181,6 +181,14 @@ export const language: i18n =
 			title: "通用设置",
 			description: "控制网站图标和站点元数据等简单设置",
 		},
+		enableFooterInjection: {
+			title: "启用页脚注入",
+			description: "启用后，指定的 Markdown 文件的内容将被添加到导出笔记的页脚",
+		},
+		footerSnippetPath: {
+			title: "页脚片段路径",
+			description: "Markdown 文件的路径，其内容将被添加到导出笔记的页脚",
+		},
 		favicon: {
 			title: "网站图标",
 			description: "站点的网站图标的本地路径",

@@ -182,6 +182,14 @@ export const language: i18n =
 			title: "General Settings",
 			description: "Control simple settings like the favicon and site metadata",
 		},
+		enableFooterInjection: {
+			title: "Enable Footer Injection",
+			description: "When enabled, content from the specified markdown file will be appended to the footer of exported notes",
+		},
+		footerSnippetPath: {
+			title: "Footer Snippet Path",
+			description: "Path to a markdown file whose content will be appended to the footer of exported notes",
+		},
 		favicon: {
 			title: "Favicon image",
 			description: "The local path to the favicon for the site",

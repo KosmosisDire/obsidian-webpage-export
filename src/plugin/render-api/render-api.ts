@@ -96,6 +96,22 @@ export namespace MarkdownRendererAPI {
 		ExportLog.resetProgress();
 	}
 
+ export async function renderMarkdown(markdown: string, options?: MarkdownRendererOptions): Promise<HTMLElement | undefined> {
+		options = Object.assign(new MarkdownRendererOptions(), options);
+		const html = await _MarkdownRendererInternal.renderMarkdown(markdown, options);
+		if (!html) return;
+		if (options.postProcess) await _MarkdownRendererInternal.postProcessHTML(html, options);
+		return html;
+	}
+
+	export async function renderFileWithContent(file: TFile, content: string, options?: MarkdownRendererOptions): Promise<{ contentEl: HTMLElement; viewType: string; } | undefined> {
+		options = Object.assign(new MarkdownRendererOptions(), options);
+		const result = await _MarkdownRendererInternal.renderFileWithContent(file, content, options);
+		if (!result) return;
+		if (options.postProcess) await _MarkdownRendererInternal.postProcessHTML(result.contentEl, options);
+		return result;
+	}
+
 }
 
 export namespace _MarkdownRendererInternal {
@@ -249,6 +265,68 @@ export namespace _MarkdownRendererInternal {
 		if (loneFile) _MarkdownRendererInternal.endBatch();
 
 		return html;
+	}
+
+	export async function renderFileWithContent(file: TFile, content: string, options: MarkdownRendererOptions): Promise<{ contentEl: HTMLElement, viewType: string } | undefined> {
+		if (MarkdownRendererAPI.viewableMediaExtensions.contains(file.extension)) {
+			return { contentEl: await createMediaPage(file, options), viewType: "attachment" };
+		}
+
+		const loneFile = !batchStarted;
+		if (loneFile) {
+			ExportLog.log("Exporting single file with custom content, starting batch");
+			await _MarkdownRendererInternal.beginBatch(options);
+		}
+
+		const success = await waitUntil(() => renderLeaf != undefined || checkCancelled(), 2000, 1);
+		if (!success || !renderLeaf) return failRender(file, "Failed to get leaf for rendering!");
+
+		let html: HTMLElement | undefined;
+
+		try {
+			// First open the file to get the correct view type and metadata
+			await renderLeaf.openFile(file, { active: false });
+
+			// Get the view and view type
+			const view = renderLeaf.view;
+			const viewType = view.getViewType();
+
+			// For markdown files, we can set the content directly
+			if (viewType === "markdown" && view instanceof MarkdownView) {
+				// Set the custom content
+				view.setViewData(content, false);
+
+				// @ts-ignore
+				const preview = view.previewMode;
+				html = await renderMarkdownView(preview, options);
+			} else {
+				// For non-markdown files, just render normally
+				switch (viewType) {
+					case "kanban":
+						html = await renderGeneric(view, options);
+						break;
+					case "excalidraw":
+						html = await renderExcalidraw(view, options);
+						break;
+					case "canvas":
+						html = await renderCanvas(view, options);
+						break;
+					default:
+						html = await renderGeneric(view, options);
+						break;
+				}
+			}
+		}
+		catch (e) {
+			return failRender(file, e);
+		}
+
+		if (checkCancelled()) return undefined;
+		if (!html) return failRender(file, "Failed to render file with custom content!");
+
+		if (loneFile) _MarkdownRendererInternal.endBatch();
+
+		return { contentEl: html, viewType: renderLeaf.view.getViewType() };
 	}
 
 	async function renderMarkdownViewFallback(preview: MarkdownPreviewView, options: MarkdownRendererOptions): Promise<HTMLElement | undefined> {
