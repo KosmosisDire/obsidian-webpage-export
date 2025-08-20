@@ -421,6 +421,25 @@ export class GraphView extends InsertedFeature<GraphViewOptions>
 
 			this.labels.push(fileInfo.title);
 			
+			// Determine node color based on tags
+			let nodeColor = "";
+			if(this.options.enableTagColors){
+				const allTags = [...(fileInfo.inlineTags || []), ...(fileInfo.frontmatterTags || [])];
+
+				// Find the first tag that has a color mapping
+				for (const tag of allTags) {
+					const escapedTag = tag.replace("#", "")
+					if (this.options.tagColors[escapedTag]) {
+						console.log(`tag:${escapedTag} tag color:${this.options.tagColors[escapedTag]}`);
+						nodeColor = this.options.tagColors[escapedTag];
+						break;
+					}
+				}
+			}
+
+			// Add the color to the colors array
+			this.colors.push(nodeColor);
+			
 			const links = fileInfo.links.map(l => LinkHandler.getPathnameFromURL(l)).concat(fileInfo.attachments).concat(fileInfo.backlinks);
 			let uniqueLinks = [...new Set(links)];
 			uniqueLinks.push(source);

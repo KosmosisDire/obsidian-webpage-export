@@ -115,7 +115,8 @@ export const language: i18n =
 			info_centralForce: "Com qual intensidade os nós são atraídos para o centro do gráfico? Isso fará com que o gráfico seja mais denso e circular.",
 			info_edgePruning: "Arestas com copmrimeto menor que esse limite não serão renderizadas, no entanto, ainda contribuirão para a simulação. Isso pode ser útil para que gráficos enrolados sejam apresentados de forma mais organizada. Passando o mouse sobre um nó mostrará todas as arestas conectadas a ele.",
 			info_minNodeRadius: "Quão pequenos os menores nós devem ser? Quando menor um nó, menos atrairá outros nós.",
-			info_maxNodeRadius: "Quão grandes os maiores nós devem ser? Nós são escalados proporcionalmente ao número de conexões que têm. Quanto maior um nó, mais atrairá outros nós. Isso pode ser útil para agrupar e destacar nós importantes."
+			info_maxNodeRadius: "Quão grandes os maiores nós devem ser? Nós são escalados proporcionalmente ao número de conexões que têm. Quanto maior um nó, mais atrairá outros nós. Isso pode ser útil para agrupar e destacar nós importantes.",
+			info_enableTagColors: "Ativar coloração de nós com base em suas tags."
 		},		search: {
 			title: "Barra de Pesquisa",
 			description: "Permite pesquisar no cofre, listando arquivos e cabeçalhos correspondentes. (NOTA: disponível apenas em exportações hospedadas na web)",

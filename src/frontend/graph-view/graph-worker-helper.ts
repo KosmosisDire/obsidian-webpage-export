@@ -181,6 +181,7 @@ export class GraphRenderWorker
             nodeCount: this.graph.graphSim.nodeCount,
             radii: this.graph.graphSim.radii,
             labels: this.graph.labels,
+            nodeColors: this.graph.colors, // Add node colors based on tags
             linkLength: this.graph.options.linkLength,
             edgePruning: this.graph.options.edgePruning,
             options: options,
