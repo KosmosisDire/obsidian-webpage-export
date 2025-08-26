@@ -180,6 +180,10 @@ export const language: i18n =
 			title: "Загальні налаштування",
 			description: "Керування простими налаштуваннями, такими як favicon та метадані сайту",
 		},
+		enablePublishFiltering: {
+			title: "Увімкнути фільтрацію за властивістю публікації",
+			description: "Коли увімкнено, файли з publish=false у frontmatter будуть виключені з експорту",
+		},
 		enableFooterInjection: {
 			title: "Увімкнути вставку нижнього колонтитула",
 			description: "Коли увімкнено, вміст вказаного markdown-файлу буде додано до нижнього колонтитула експортованих нотаток",

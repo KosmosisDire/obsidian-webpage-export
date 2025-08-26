@@ -354,6 +354,11 @@ export class SettingsPage extends PluginSettingTab
 			(value) => Settings.exportOptions.offlineResources = value,
 			lang.makeOfflineCompatible.description);
 
+		createToggle(section, lang.enablePublishFiltering.title,
+			() => Settings.enablePublishFiltering,
+			(value) => Settings.enablePublishFiltering = value,
+			lang.enablePublishFiltering.description);
+
 
 		createToggle(section, lang.enableFooterInjection.title,
 			() => Settings.enableFooterInjection,

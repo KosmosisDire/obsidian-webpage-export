@@ -175,6 +175,10 @@ export const language: i18n =
 			title: "Impostazioni Generali",
 			description: "Controlla impostazioni semplici come favicon e metadati del sito",
 		},
+		enablePublishFiltering: {
+			title: "Abilita Filtro Proprietà di Pubblicazione",
+			description: "Quando abilitato, i file con publish=false nel frontmatter saranno esclusi dall'esportazione",
+		},
 		enableFooterInjection: {
 			title: "Abilita Iniezione Piè di Pagina",
 			description: "Quando abilitato, il contenuto del file markdown specificato verrà aggiunto al piè di pagina delle note esportate",

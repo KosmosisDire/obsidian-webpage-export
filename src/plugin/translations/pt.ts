@@ -181,6 +181,10 @@ export const language: i18n =
 			title: "Configurações Gerais",
 			description: "Controle configurações simples como favicon e metadados do site",
 		},
+		enablePublishFiltering: {
+			title: "Ativar Filtragem por Propriedade de Publicação",
+			description: "Quando ativado, arquivos com publish=false no frontmatter serão excluídos da exportação",
+		},
 		enableFooterInjection: {
 			title: "Ativar Injeção de Rodapé",
 			description: "Quando ativado, o conteúdo do arquivo markdown especificado será anexado ao rodapé das notas exportadas",
