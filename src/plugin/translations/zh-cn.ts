@@ -181,6 +181,10 @@ export const language: i18n =
 			title: "通用设置",
 			description: "控制网站图标和站点元数据等简单设置",
 		},
+		enablePublishFiltering: {
+			title: "启用发布属性过滤",
+			description: "启用后，前置元数据中包含 publish=false 的文件将被排除在导出之外",
+		},
 		favicon: {
 			title: "网站图标",
 			description: "站点的网站图标的本地路径",
