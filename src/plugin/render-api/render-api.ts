@@ -209,7 +209,7 @@ export namespace _MarkdownRendererInternal {
 						if (lines[line] && lines[line].match(regex))
 						{
 							lines[line] = lines[line].replace(regex, "");
-							lines[block.position.start.line] = `<span id="blockid-${blockId}"></span>` + lines[block.position.start.line];
+							lines[block.position.start.line] = `<span class="blockid-target" id="blockid-${blockId}"></span>` + lines[block.position.start.line];
 						}
 					}
 					modifiedMarkdown = lines.join("\n");
