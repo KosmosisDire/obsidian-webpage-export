@@ -3,6 +3,7 @@ import process from "process";
 import builtins from "builtin-modules";
 import fs from "fs";
 import path from "path";
+import { solidPlugin } from "esbuild-plugin-solid";
 
 const banner =
 `/*
@@ -13,81 +14,7 @@ if you want to view the source, please visit the github repository of this plugi
 
 const prod = (process.argv[2] === 'production');
 
-// Ensure output directory exists
-const ensureDirectoryExists = (filePath) => {
-  const dirname = path.dirname(filePath);
-  if (!fs.existsSync(dirname)) {
-    fs.mkdirSync(dirname, { recursive: true });
-    console.log(`Created directory: ${dirname}`);
-  }
-};
-
-// Define a custom plugin for post-processing with regex replacements
-const regexReplacementPlugin = {
-  name: 'regex-replacement',
-  setup(build) {
-    build.onEnd((result) => {
-      console.log("Plugin onEnd hook called");
-      if (result.outputFiles) {
-        result.outputFiles.forEach(file => {
-          console.log(`Processing file: ${file.path}`);
-          
-          // Ensure the output directory exists
-          ensureDirectoryExists(file.path);
-          
-          // Access the raw text output
-          let contents = file.text;
-          
-          console.log("Original content length:", contents.length);
-          // Apply regex replacements
-          contents = contents
-            // Remove info_ variables
-            .replace(/this\.info_[^=]+=\s*(?:[^;{]|{(?:[^}]*{[^}]*})*[^}]*})*;/gm, "")
-            // Remove require statements
-            .replace(/var .+?__require\(.+?\);/gm, "")
-			.replace(/import_.+i18n.+;/gm, "'';");
-          
-          console.log("Content length after replacements:", contents.length);
-          // Add banner
-          contents = banner + '\n' + contents;
-          
-          // Write the file to disk
-          try {
-            fs.writeFileSync(file.path, contents);
-            console.log(`Successfully wrote file to: ${file.path}`);
-          } catch (error) {
-            console.error(`Error writing file ${file.path}:`, error);
-            throw error;
-          }
-        });
-      } else {
-        console.log("No output files found");
-      }
-    });
-  }
-};
-
-// First build
-await esbuild.build({
-  entryPoints: ["src/frontend/main/index.txt.ts"],
-  external: ['moment', "src/plugin/*"],
-  bundle: true,
-  minify: false,
-  treeShaking: true,
-  platform: 'browser',
-  outdir: "src/frontend/dist",
-  tsconfig: "tsconfig.frontend.json",
-  watch: !prod,
-  plugins: [regexReplacementPlugin],
-  write: false, // Keep this false to allow the plugin to handle file writing
-}).then(() => {
-  console.log("Frontend build completed");
-}).catch((error) => {
-  console.error("Frontend build failed:", error);
-  process.exit(1);
-});
-
-// Second build
+// Plugin build
 await esbuild.build({
   loader: {
     '.txt.js': 'text',
@@ -120,10 +47,44 @@ await esbuild.build({
     ...builtins
   ],
   format: 'cjs',
-  watch: !prod,
   target: 'es2018',
   logLevel: "info",
   sourcemap: prod ? false : 'inline',
   treeShaking: true,
-  outfile: 'main.js',
+  outfile: 'C:\\Main\\Obsidian\\Export Development\\.obsidian\\plugins\\webpage-html-export\\main.js',
 }).catch(() => process.exit(1));
+
+// Frontend build with Solid.js
+await esbuild.build({
+  banner: {
+    js: banner,
+  },
+  entryPoints: ['src/frontend/index.tsx'],
+  bundle: true,
+  format: 'iife',
+  globalName: 'WebpageExport',
+  target: 'es2018',
+  logLevel: "info",
+  sourcemap: prod ? false : 'inline',
+  treeShaking: true,
+  outfile: 'src/frontend/dist/main.js',
+  plugins: [solidPlugin()],
+  define: {
+    'process.env.NODE_ENV': prod ? '"production"' : '"development"',
+  },
+}).catch(() => process.exit(1));
+
+// Copy HTML and CSS
+if (!fs.existsSync('src/frontend/dist')) {
+  fs.mkdirSync('src/frontend/dist', { recursive: true });
+}
+
+// Ensure styles directory exists
+if (!fs.existsSync('src/frontend/dist/styles')) {
+  fs.mkdirSync('src/frontend/dist/styles', { recursive: true });
+}
+
+fs.copyFileSync('src/frontend/index.html', 'src/frontend/dist/index.html');
+fs.copyFileSync('src/frontend/styles/main.css', 'src/frontend/dist/styles/main.css');
+
+console.log('Frontend build completed');

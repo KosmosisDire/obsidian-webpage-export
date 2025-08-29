@@ -21,7 +21,8 @@
 		"@typescript-eslint/parser": "5.29.0",
 		"builtin-modules": "3.3.0",
 		"electron": "^26.6.10",
-		"esbuild": "0.14.47",
+		"esbuild": "^0.25.9",
+		"esbuild-plugin-solid": "^0.6.0",
 		"eslint": "^8.57.0",
 		"globals": "^15.0.0",
 		"obsidian": "^1.4.11",
@@ -31,6 +32,8 @@
 		"typescript-eslint": "^7.7.0"
 	},
 	"dependencies": {
+		"@solidjs/router": "^0.15.3",
+		"fast-json-patch": "^3.1.1",
 		"file-type": "^19.0.0",
 		"html-minifier-terser": "^7.2.0",
 		"mime": "^3.0.0",
@@ -38,6 +41,7 @@
 		"postcss": "^8.4.47",
 		"postcss-safe-parser": "^7.0.0",
 		"rss": "^1.2.2",
+		"solid-js": "^1.9.9",
 		"upath": "^2.0.1"
 	}
 }

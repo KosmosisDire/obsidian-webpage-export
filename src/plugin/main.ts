@@ -1,189 +1,428 @@
-// imports from obsidian API
-import { Notice, Plugin, TFile, TFolder, requestUrl,moment, MarkdownPreviewRenderer, MarkdownPreviewView, MarkdownRenderer, Component} from 'obsidian';
+import { Component, MarkdownRenderer, Plugin, Notice, TFile } from "obsidian";
+import * as fs from "fs";
+import * as path from "path";
+import MiniSearch from "minisearch";
+import { ExportLog, MarkdownRendererAPI } from "./renderer";
 
-// modules that are part of the plugin
-import { AssetHandler } from 'src/plugin/asset-loaders/asset-handler';
-import { Settings, SettingsPage } from 'src/plugin/settings/settings';
-import { HTMLExporter } from 'src/plugin/exporter';
-import { Path } from 'src/plugin/utils/path';
-import { ExportModal } from 'src/plugin/settings/export-modal';
-import { _MarkdownRendererInternal, ExportLog, MarkdownRendererAPI } from 'src/plugin/render-api/render-api';
-import { DataviewRenderer } from './render-api/dataview-renderer';
-import { Website } from './website/website';
-import { i18n } from './translations/language';
+interface FileData {
+	path: string;
+	modified: number;
+	exported: number;
+	frontmatter: any;
+	content: {
+		markdown: string;
+		html: string;
+	};
+	links: {
+		outgoing: Record<string, number>;
+		incoming: string[];
+		unresolved: Record<string, number>;
+		embeds: string[];
+	};
+	elements: {
+		headers: Array<{ text: string; level: number }>;
+		tags: string[];
+		blocks: string[];
+		lists: number;
+	};
+}
 
-
+interface ExportData {
+	export: {
+		version: string;
+		timestamp: number;
+		vault: string;
+		totalFiles: number;
+	};
+	files: Record<string, FileData>;
+	indices: {
+		search?: any;
+		graph: {
+			nodes: Array<{ id: string; group: string }>;
+			edges: Array<{ source: string; target: string; type: string }>;
+		};
+		tags: Record<string, string[]>;
+	};
+}
 
 export default class HTMLExportPlugin extends Plugin {
-	static updateInfo: {
-		updateAvailable: boolean;
-		latestVersion: string;
-		currentVersion: string;
-		updateNote: string;
-	} = {
-		updateAvailable: false,
-		latestVersion: "0",
-		currentVersion: "0",
-		updateNote: "",
-	};
-	static pluginVersion: string = "0.0.0";
-	public api = MarkdownRendererAPI;
-	public internalAPI = _MarkdownRendererInternal;
-	public settings = Settings;
-	public assetHandler = AssetHandler;
-	public Path = Path;
-	public dv = DataviewRenderer;
-	public Website = Website;
-
-	public async exportDocker() {
-		await HTMLExporter.export(true, undefined, new Path("/output"));
-	}
+	static readonly VERSION = "1.0.0";
+	static readonly OUTPUT_PATH = path.join(
+		"C:",
+		"Main",
+		"Nathan",
+		"obsidian-webpage-export",
+		"src",
+		"frontend",
+		"dist",
+		"files.json"
+	);
 
 	async onload() {
 		console.log("Loading webpage-html-export plugin");
-		this.checkForUpdates();
-		HTMLExportPlugin.pluginVersion = this.manifest.version;
-
-		// @ts-ignore
-		window.WebpageHTMLExport = this;
-
-		this.addSettingTab(new SettingsPage(this));
-		await SettingsPage.loadSettings();
-		await AssetHandler.initialize();
-
-		this.addRibbonIcon("folder-up", i18n.exportAsHTML, () => {
-			HTMLExporter.export(false);
-		});
-
-		// register callback for file rename so we can update the saved files to export
-		this.registerEvent(
-			this.app.vault.on("rename", SettingsPage.renameFile)
+		this.addRibbonIcon("document", "Export to HTML", () =>
+			this.exportToHTML()
 		);
 
-		this.addCommand({
-			id: "export-html-vault",
-			name: "Export using previous settings",
-			callback: () => {
-				HTMLExporter.export(true);
-			},
-		});
-
-		this.addCommand({
-			id: "export-html-current",
-			name: "Export only current file using previous settings",
-			callback: () => {
-				const file = this.app.workspace.getActiveFile();
-
-				if (!file) {
-					new Notice("No file is currently open!", 5000);
-					return;
-				}
-
-				HTMLExporter.export(true, [file]);
-			},
-		});
-
-		this.addCommand({
-			id: "export-html-setting",
-			name: "Set html export settings",
-			callback: () => {
-				HTMLExporter.export(false);
-			},
-		});
-
-		this.registerEvent(
-			this.app.workspace.on("file-menu", (menu, file) => {
-				menu.addItem((item) => {
-					item.setTitle(i18n.exportAsHTML)
-						.setIcon("download")
-						.setSection("export")
-						.onClick(() => {
-							ExportModal.title =
-								i18n.exportModal.exportAsTitle.format(
-									file.name
-								);
-							if (file instanceof TFile) {
-								HTMLExporter.export(false, [file]);
-							} else if (file instanceof TFolder) {
-								const filesInFolder = this.app.vault
-									.getFiles()
-									.filter((f) =>
-										new Path(
-											f.path
-										).directory.path.startsWith(file.path)
-									);
-								HTMLExporter.export(false, filesInFolder);
-							} else {
-								ExportLog.error(
-									"File is not a TFile or TFolder! Invalid type: " +
-										typeof file +
-										""
-								);
-								new Notice(
-									"File is not a File or Folder! Invalid type: " +
-										typeof file +
-										"",
-									5000
-								);
-							}
-						});
-				});
-			})
-		);
+		//@ts-ignore
+		window.MarkdownRendererAPI = MarkdownRendererAPI;
 	}
 
-	async checkForUpdates(): Promise<{
-		updateAvailable: boolean;
-		latestVersion: string;
-		currentVersion: string;
-		updateNote: string;
-	}> {
-		const currentVersion = this.manifest.version;
+	async exportToHTML() {
+		const notice = new Notice("Starting export...", 0);
 
 		try {
-			let url =
-				"https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/manifest.json?cache=" +
-				Date.now() +
-				"";
-			if (this.manifest.version.endsWith("b"))
-				url =
-					"https://raw.githubusercontent.com/KosmosisDire/obsidian-webpage-export/master/manifest-beta.json?cache=" +
-					Date.now() +
-					"";
-			const manifestResp = await requestUrl(url);
-			if (manifestResp.status != 200)
-				throw new Error("Could not fetch manifest");
-			const manifest = manifestResp.json;
-			const latestVersion = manifest.version ?? currentVersion;
-			const updateAvailable = currentVersion < latestVersion;
-			const updateNote = manifest.updateNote ?? "";
+			// Get all markdown files
+			let files = this.app.vault.getFiles().filter(file => file.path.startsWith("Tests"));
+			notice.setMessage(`Processing ${files.length} files...`);
 
-			HTMLExportPlugin.updateInfo = {
-				updateAvailable: updateAvailable,
-				latestVersion: latestVersion,
-				currentVersion: currentVersion,
-				updateNote: updateNote,
-			};
+			// Process files in parallel
+			const processedFiles = await this.processFiles(files, notice);
 
-			if (updateAvailable)
-				ExportLog.log(
-					`${i18n.updateAvailable}: ${currentVersion} ⟶ ${latestVersion}`
-				);
+			if (processedFiles.length === 0) {
+				return;
+			}
 
-			return HTMLExportPlugin.updateInfo;
-		} catch {
-			ExportLog.log("Could not check for update");
-			HTMLExportPlugin.updateInfo = {
-				updateAvailable: false,
-				latestVersion: currentVersion,
-				currentVersion: currentVersion,
-				updateNote: "",
-			};
-			return HTMLExportPlugin.updateInfo;
+			// Build export structure
+			const exportData = this.buildExportStructure(processedFiles);
+
+			// Save to file
+			notice.setMessage("Saving export...");
+			await this.saveExport(exportData);
+
+			notice.hide();
+			new Notice(`Successfully exported ${processedFiles.length} files!`);
+		} catch (error) {
+			notice.hide();
+			console.error("Export failed:", error);
+			new Notice("Export failed. Check console for details.");
 		}
 	}
 
+	private async processFiles(
+		files: TFile[],
+		notice: Notice
+	): Promise<FileData[]> {
+		const existing = await this.loadExistingExport();
+		const filesToProcess = this.determineFilesToProcess(files, existing);
+
+		if (filesToProcess.length === 0) {
+			notice.hide();
+			new Notice("No files need updating!");
+			return [];
+		}
+
+		notice.setMessage(
+			`Processing ${filesToProcess.length} changed files...`
+		);
+
+		const results: FileData[] = [];
+		let completed = 0;
+
+		await MarkdownRendererAPI.beginBatch();
+
+		let cancelled = false;
+		for (const file of filesToProcess) {
+			try {
+				const fileData = await this.processFile(file);
+				results.push(fileData);
+			} catch (error) {
+				console.error(`Failed to process ${file.path}:`, error);
+			}
+
+			if (MarkdownRendererAPI.checkCancelled())
+			{
+				cancelled = true;
+				break;
+			}
+
+			completed++;
+			const progress = Math.round(
+				(completed / filesToProcess.length) * 100
+			);
+			notice.setMessage(
+				`Processing... ${progress}% (${completed}/${filesToProcess.length})`
+			);
+			ExportLog.setProgress(completed / filesToProcess.length, file.basename, "Completed: " + completed + "/" + filesToProcess.length, "0x2eb947");
+		}
+
+		MarkdownRendererAPI.endBatch();
+
+		if (cancelled)
+		{
+			return [];	
+		}
+
+		// Merge with existing unchanged files
+		if (existing?.files) {
+			for (const [path, data] of Object.entries(existing.files)) {
+				if (!results.find((f) => f.path === path)) {
+					results.push(data);
+				}
+			}
+		}
+
+		return results;
+	}
+
+	private async processFile(file: TFile): Promise<FileData> {
+		const [content, html] = await Promise.all([
+			this.app.vault.read(file),
+			this.renderHTML(file),
+		]);
+
+		const cache = this.app.metadataCache.getFileCache(file);
+		const links = this.extractLinks(file);
+
+		return {
+			path: file.path,
+			modified: file.stat.mtime,
+			exported: Date.now(),
+			frontmatter: cache?.frontmatter || {},
+			content: {
+				markdown: content,
+				html: html,
+			},
+			links: links,
+			elements: {
+				headers:
+					cache?.headings?.map((h) => ({
+						text: h.heading,
+						level: h.level,
+					})) || [],
+				tags: cache?.tags?.map((t) => t.tag) || [],
+				blocks: cache?.blocks ? Object.keys(cache.blocks) : [],
+				lists: cache?.listItems?.length || 0,
+			},
+		};
+	}
+
+	private async renderHTML(file: TFile): Promise<string> {
+		const component = new Component();
+		component.load();
+
+		try {
+			const result = await MarkdownRendererAPI.renderFileToString(file);
+			return result ?? "";
+		} finally {
+			component.unload();
+		}
+	}
+
+	private extractLinks(file: TFile) {
+		const resolvedLinks = this.app.metadataCache.resolvedLinks;
+		const unresolvedLinks = this.app.metadataCache.unresolvedLinks;
+		const cache = this.app.metadataCache.getFileCache(file);
+
+		// Find backlinks
+		const incoming = Object.keys(resolvedLinks).filter(
+			(sourcePath) => resolvedLinks[sourcePath]?.[file.path]
+		);
+
+		return {
+			outgoing: resolvedLinks[file.path] || {},
+			incoming: incoming,
+			unresolved: unresolvedLinks[file.path] || {},
+			embeds: cache?.embeds?.map((e) => e.link) || [],
+		};
+	}
+
+	private buildExportStructure(files: FileData[]): ExportData {
+		// Convert array to path-keyed object
+		const filesMap: Record<string, FileData> = {};
+		files.forEach((file) => {
+			filesMap[file.path] = file;
+		});
+
+		return {
+			export: {
+				version: HTMLExportPlugin.VERSION,
+				timestamp: Date.now(),
+				vault: this.app.vault.getName(),
+				totalFiles: files.length,
+			},
+			files: filesMap,
+			indices: {
+				search: this.buildSearchIndex(files),
+				graph: this.buildGraph(files),
+				tags: this.buildTagIndex(files),
+			},
+		};
+	}
+
+	private buildSearchIndex(files: FileData[]): any {
+		const miniSearch = new MiniSearch({
+			fields: [
+				"content.markdown",
+				"elements.tags",
+				"elements.headers.text",
+			],
+			storeFields: ["path", "modified"],
+			idField: "path",
+			searchOptions: {
+				boost: { "elements.tags": 2 },
+				fuzzy: 0.2,
+			},
+		});
+
+		// Prepare documents for indexing - frontmatter is stored but not indexed
+		const documents = files.map((file) => ({
+			path: file.path,
+			content: file.content,
+			elements: {
+				headers: file.elements.headers,
+				tags: file.elements.tags,
+			},
+		}));
+
+		miniSearch.addAll(documents);
+		return miniSearch.toJSON();
+	}
+
+	private buildGraph(files: FileData[]) {
+		const nodes: Array<{ id: string; group: string }> = [];
+		const edges: Array<{ source: string; target: string; type: string }> =
+			[];
+		const seenNodes = new Set<string>();
+
+		files.forEach((file) => {
+			// Add file node
+			const group = this.getNodeGroup(file);
+			nodes.push({ id: file.path, group });
+			seenNodes.add(file.path);
+
+			// Add edges for outgoing links
+			Object.keys(file.links.outgoing).forEach((target) => {
+				edges.push({
+					source: file.path,
+					target: target,
+					type: "link",
+				});
+
+				// Add target node if not seen
+				if (!seenNodes.has(target)) {
+					nodes.push({ id: target, group: "linked" });
+					seenNodes.add(target);
+				}
+			});
+
+			// Add edges for embeds
+			file.links.embeds.forEach((embed) => {
+				edges.push({
+					source: file.path,
+					target: embed,
+					type: "embed",
+				});
+
+				if (!seenNodes.has(embed)) {
+					nodes.push({ id: embed, group: "embedded" });
+					seenNodes.add(embed);
+				}
+			});
+		});
+
+		return { nodes, edges };
+	}
+
+	private getNodeGroup(file: FileData): string {
+		// Use parsed tags from elements, not frontmatter directly
+		if (file.elements.tags.length > 0) {
+			// Use first tag as group
+			return file.elements.tags[0].replace("#", "");
+		}
+
+		// Otherwise group by folder
+		const folder = path.dirname(file.path);
+		return folder === "." ? "root" : folder.split("/")[0];
+	}
+
+	private buildTagIndex(files: FileData[]): Record<string, string[]> {
+		const tagIndex: Record<string, string[]> = {};
+
+		files.forEach((file) => {
+			const allTags = new Set<string>();
+
+			// Only use tags from elements (which came from Obsidian's cache)
+			// This already includes both frontmatter tags AND inline tags parsed by Obsidian
+			file.elements.tags.forEach((tag) => {
+				allTags.add(tag.replace("#", ""));
+			});
+
+			// Add to index
+			allTags.forEach((tag) => {
+				if (!tagIndex[tag]) {
+					tagIndex[tag] = [];
+				}
+				tagIndex[tag].push(file.path);
+			});
+		});
+
+		return tagIndex;
+	}
+
+	private determineFilesToProcess(
+		files: TFile[],
+		existing: ExportData | null
+	): TFile[] {
+		if (!existing?.files) {
+			return files; // Process all if no existing export
+		}
+
+		return files.filter((file) => {
+			const existingFile = existing.files[file.path];
+
+			// New file
+			if (!existingFile) return true;
+
+			// Modified since export
+			if (file.stat.mtime > existingFile.exported) return true;
+
+			// Check if any backlinks were modified
+			const backlinks = this.extractLinks(file).incoming;
+			for (const backlinkPath of backlinks) {
+				const backlinkFile = this.app.vault.getFileByPath(backlinkPath);
+				if (
+					backlinkFile &&
+					backlinkFile.stat.mtime > existingFile.exported
+				) {
+					return true;
+				}
+			}
+
+			return false;
+		});
+	}
+
+	private async loadExistingExport(): Promise<ExportData | null> {
+		if (!fs.existsSync(HTMLExportPlugin.OUTPUT_PATH)) {
+			return null;
+		}
+
+		try {
+			const content = fs.readFileSync(
+				HTMLExportPlugin.OUTPUT_PATH,
+				"utf8"
+			);
+			return JSON.parse(content);
+		} catch (error) {
+			console.warn("Could not load existing export:", error);
+			return null;
+		}
+	}
+
+	private async saveExport(data: ExportData): Promise<void> {
+		const json = JSON.stringify(data, null, 2);
+		fs.writeFileSync(HTMLExportPlugin.OUTPUT_PATH, json, "utf8");
+
+		console.log(`Export complete:
+			- Total files: ${data.export.totalFiles}
+			- Graph nodes: ${data.indices.graph.nodes.length}
+			- Graph edges: ${data.indices.graph.edges.length}
+			- Tags indexed: ${Object.keys(data.indices.tags).length}
+		`);
+	}
+
 	onunload() {
-		ExportLog.log("unloading webpage-html-export plugin");
+		console.log("Unloading webpage-html-export plugin");
 	}
 }

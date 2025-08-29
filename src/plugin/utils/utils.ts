@@ -1,7 +1,4 @@
 import {  MarkdownView, TextFileView } from 'obsidian';
-import { Path } from './path';
-import { Attachment } from './downloadable';
-import { ExportLog } from 'src/plugin/render-api/render-api';
 
 export namespace Utils
 {
@@ -78,24 +75,6 @@ export namespace Utils
 		mode && await view.setMode(mode);
 	};
 
-	export async function downloadAttachments(files: Attachment[])
-	{
-		ExportLog.addToProgressCap(files.length);
-		ExportLog.progress(0, "Saving files to disk", "...", "var(--color-green)");
-
-		let complete = 0;
-		
-		await Promise.all(files.map(async (file, i) => {
-			try {
-				complete++;
-				ExportLog.progress(1, "Saving files to disk", "Saved: " + file.filename, "var(--color-green)");
-				await file.download();
-			} catch (e) {
-				ExportLog.error(e, "Could not save file: " + file.filename);
-			}
-		}));
-	}
-
 	//export async function  that awaits until a condition is met
 	export async function  waitUntil(condition: () => boolean, timeout: number = 1000, interval: number = 100): Promise<boolean>
 	{
@@ -147,15 +126,6 @@ export namespace Utils
 		}
 
 		return inputString;
-	}
-
-	export async function openPath(path: Path)
-	{
-		if (process.platform === "win32")
-			path = path.backslashified()
-
-		// @ts-ignore
-		await window.electron.remote.shell.openPath(path.path);
 	}
 
 	export function levenshteinDistance(string1: string, string2: string): number

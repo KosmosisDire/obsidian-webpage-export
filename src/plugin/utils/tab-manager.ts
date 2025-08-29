@@ -1,5 +1,4 @@
 import {  PaneType, SplitDirection, TFile, WorkspaceLeaf } from "obsidian";
-import { ExportLog } from "src/plugin/render-api/render-api";
 
 
 export namespace TabManager
@@ -18,12 +17,12 @@ export namespace TabManager
 		{
 			await leaf.openFile(file, undefined).catch((reason) =>
 			{
-				ExportLog.error(reason);
+				console.error("Failed to open file in new tab:", reason);
 			});
 		}
 		catch (error)
 		{
-			ExportLog.error(error);
+			console.error("Failed to open file in new tab:", error);
 		}
 
 		return leaf;
@@ -36,4 +35,3 @@ export namespace TabManager
 		return leaf;
 	}
 }
-

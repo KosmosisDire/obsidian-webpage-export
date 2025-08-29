@@ -13,6 +13,8 @@
 		"strictNullChecks": true,
 		"removeComments": false,
 		"resolveJsonModule": true,
+		"jsx": "preserve",
+		"jsxImportSource": "solid-js",
 		"lib": [
 			"DOM",
 			"ES5",
@@ -23,6 +25,7 @@
 	},
 	"include": [
 		"**/*.ts",
+		"**/*.tsx",
 		"src/assets/**/*.json"
 	],
 }
