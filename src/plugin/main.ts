@@ -36,7 +36,7 @@ export default class HTMLExportPlugin extends Plugin {
 	public Website = Website;
 
 	public async exportDocker() {
-		await HTMLExporter.export(true, undefined, new Path("/output"));
+		await HTMLExporter.exportVault(new Path("/output"), true, false);
 	}
 
 	async onload() {
