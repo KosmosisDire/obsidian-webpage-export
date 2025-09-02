@@ -1,34 +1,5 @@
 import { createSignal, createMemo } from 'solid-js';
-
-export interface FileData {
-    path: string;
-    modified: number;
-    exported: number;
-    frontmatter: any;
-    content: {
-        markdown: string;
-        html: string;
-    };
-    treeOrder: number;
-}
-
-export interface WebsiteData {
-    export: {
-        version: string;
-        timestamp: number;
-        vault: string;
-        totalFiles: number;
-    };
-    files: Record<string, FileData>;
-    indices: {
-        search?: any;
-        graph: {
-            nodes: Array<{ id: string; group: string }>;
-            edges: Array<{ source: string; target: string; type: string }>;
-        };
-        tags: Record<string, string[]>;
-    };
-}
+import { FileData, WebsiteData } from '@shared/types';
 
 class VaultStore {
     private websiteDataSignal = createSignal<WebsiteData | null>(null);

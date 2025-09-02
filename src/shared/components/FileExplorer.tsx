@@ -1,16 +1,23 @@
 import { For, createSignal, createMemo } from 'solid-js';
-import { A, useNavigate } from '@solidjs/router';
-import { vaultStore } from '../data/store';
+import { FileData } from '../types';
+
+interface TreeItem {
+  type: 'file' | 'folder';
+  path?: string;
+  children?: Record<string, TreeItem>;
+}
 
 interface TreeItemProps {
   name: string;
-  item: any;
+  item: TreeItem;
   depth?: number;
+  onFileClick?: (path: string) => void;
+  onFolderClick?: (folderName: string) => void;
+  renderFileLink?: (path: string, displayName: string) => any;
 }
 
-function TreeItem(props: TreeItemProps) {
+function TreeItemComponent(props: TreeItemProps) {
   const [collapsed, setCollapsed] = createSignal(true);
-  const navigate = useNavigate();
   
   const isFolder = () => props.item.type === 'folder';
   const hasChildren = () => isFolder() && props.item.children && Object.keys(props.item.children).length > 0;
@@ -19,10 +26,9 @@ function TreeItem(props: TreeItemProps) {
     if (isFolder()) {
       e.preventDefault();
       setCollapsed(!collapsed());
+      props.onFolderClick?.(props.name);
     } else {
-      // Navigate to the file
-      const htmlPath = props.item.path.replace(/\.md$/, '.html');
-      navigate(`/${htmlPath}`);
+      props.onFileClick?.(props.item.path!);
     }
   };
 
@@ -73,28 +79,36 @@ function TreeItem(props: TreeItemProps) {
           </div>
         </div>
       ) : (
-        <A 
-          href={`/${props.item.path.replace(/\.md$/, '.html')}`}
+        <div
           class="tree-item-self is-clickable nav-file-title"
           data-path={props.item.path}
+          onClick={handleClick}
         >
-          <div class="tree-item-inner nav-file-title-content">
-            {fileName()}
-          </div>
-          {getFileExtension() && getFileExtension() !== 'md' && (
-            <div class="nav-file-tag">{getFileExtension()}</div>
-          )}
-        </A>
+          {props.renderFileLink ? 
+            props.renderFileLink(props.item.path!, fileName()) :
+            <>
+              <div class="tree-item-inner nav-file-title-content">
+                {fileName()}
+              </div>
+              {getFileExtension() && getFileExtension() !== 'md' && (
+                <div class="nav-file-tag">{getFileExtension()}</div>
+              )}
+            </>
+          }
+        </div>
       )}
       
       {hasChildren() && !collapsed() && (
         <div class={`tree-item-children ${isFolder() ? 'nav-folder-children' : 'nav-file-children'}`}>
-          <For each={Object.entries(props.item.children)}>
+          <For each={Object.entries(props.item.children!)}>
             {([childName, childItem]) => (
-              <TreeItem 
+              <TreeItemComponent 
                 name={childName} 
                 item={childItem} 
                 depth={(props.depth || 1) + 1}
+                onFileClick={props.onFileClick}
+                onFolderClick={props.onFolderClick}
+                renderFileLink={props.renderFileLink}
               />
             )}
           </For>
@@ -104,24 +118,48 @@ function TreeItem(props: TreeItemProps) {
   );
 }
 
-export function FileExplorer() {
+interface FileExplorerProps {
+  files: Record<string, FileData>;
+  title?: string;
+  onFileClick?: (path: string) => void;
+  onFolderClick?: (folderName: string) => void;
+  renderFileLink?: (path: string, displayName: string) => any;
+}
+
+export function FileExplorer(props: FileExplorerProps) {
   const [allCollapsed, setAllCollapsed] = createSignal(false);
   
   const fileTree = createMemo(() => {
-    return vaultStore.getFileTree();
+    const tree: Record<string, TreeItem> = {};
+    const fileList = Object.keys(props.files);
+
+    fileList.forEach(filePath => {
+      const parts = filePath.split('/');
+      let current = tree;
+
+      parts.forEach((part, index) => {
+        if (index === parts.length - 1) {
+          current[part] = { type: 'file', path: filePath };
+        } else {
+          if (!current[part]) {
+            current[part] = { type: 'folder', children: {} };
+          }
+          current = current[part].children!;
+        }
+      });
+    });
+
+    return tree;
   });
 
   const toggleCollapseAll = () => {
     setAllCollapsed(!allCollapsed());
-    // This would need to communicate with all TreeItem components
-    // For now, just toggle the state
   };
 
   const sortedEntries = createMemo(() => {
     const tree = fileTree();
     const entries = Object.entries(tree);
     
-    // Sort folders first, then files, both alphabetically
     return entries.sort(([aName, aItem], [bName, bItem]) => {
       const aIsFolder = aItem.type === 'folder';
       const bIsFolder = bItem.type === 'folder';
@@ -136,7 +174,7 @@ export function FileExplorer() {
   return (
     <div id="file-explorer" class="tree-container">
       <div class="feature-header">
-        <div class="feature-title">Development</div>
+        <div class="feature-title">{props.title || 'Files'}</div>
         <button
           class={`clickable-icon nav-action-button tree-collapse-all ${allCollapsed() ? 'is-collapsed' : ''}`}
           aria-label="Collapse All"
@@ -161,7 +199,14 @@ export function FileExplorer() {
       
       <For each={sortedEntries()}>
         {([name, item]) => (
-          <TreeItem name={name} item={item} depth={1} />
+          <TreeItemComponent 
+            name={name} 
+            item={item} 
+            depth={1}
+            onFileClick={props.onFileClick}
+            onFolderClick={props.onFolderClick}
+            renderFileLink={props.renderFileLink}
+          />
         )}
       </For>
     </div>

@@ -7,17 +7,28 @@ import {FileData, ExportData} from "./data";
 
 export default class HTMLExportPlugin extends Plugin {
 	static readonly VERSION = "1.0.0";
+	// static readonly OUTPUT_PATH = path.join(
+	// 	"C:",
+	// 	"Main",
+	// 	"Obsidian",
+	// 	"Development",
+	// 	".obsidian",
+	// 	"plugins",
+	// 	"webpage-html-export",
+	// 	"src",
+	// 	"frontend",
+	// 	"dist",
+	// 	"files.json"
+	// );
+
 	static readonly OUTPUT_PATH = path.join(
 		"C:",
 		"Main",
 		"Obsidian",
-		"Development",
+		"Export Development",
 		".obsidian",
 		"plugins",
 		"webpage-html-export",
-		"src",
-		"frontend",
-		"dist",
 		"files.json"
 	);
 
@@ -36,7 +47,7 @@ export default class HTMLExportPlugin extends Plugin {
 
 		try {
 			// Get all markdown files
-			let files = this.app.vault.getFiles().filter(file => file.path.startsWith("Tests"));
+			let files = this.app.vault.getFiles().filter(file => file.path.startsWith("Tests")).slice(0, 100);
 			notice.setMessage(`Processing ${files.length} files...`);
 
 			// Process files in parallel

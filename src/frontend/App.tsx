@@ -1,12 +1,14 @@
 import { Router, Route, useLocation } from '@solidjs/router';
 import { onMount, createSignal, Show, Suspense, createEffect } from 'solid-js';
+import { A, useNavigate } from '@solidjs/router';
 import { vaultStore } from './data/store';
-import { FileExplorer } from './components/FileExplorer';
-import { DocumentViewer } from './components/DocumentViewer';
+import { FileExplorer } from '@shared/components';
+import { DocumentViewerPage } from './components/DocumentViewerPage';
 
 function Layout(props: any) {
   const [filesReady, setFilesReady] = createSignal(false);
   const location = useLocation();
+  const navigate = useNavigate();
   
   createEffect(() => {
     console.log('Navigation:', location.pathname);
@@ -21,6 +23,23 @@ function Layout(props: any) {
       console.error('Failed to load vault data:', error);
     }
   });
+
+  const handleFileClick = (path: string) => {
+    const htmlPath = path.replace(/\.md$/, '.html');
+    navigate(`/${htmlPath}`);
+  };
+
+  const renderFileLink = (path: string, displayName: string) => {
+    const htmlPath = path.replace(/\.md$/, '.html');
+    return (
+      <A 
+        href={`/${htmlPath}`}
+        class="tree-item-inner nav-file-title-content"
+      >
+        {displayName}
+      </A>
+    );
+  };
   
   return (
     <div id="main" class="mod-windows">
@@ -74,7 +93,12 @@ function Layout(props: any) {
               <div id="left-sidebar-content" class="leaf-content">
                 <Suspense fallback={<div class="loading">Loading files...</div>}>
                   <Show when={filesReady() && !vaultStore.loading}>
-                    <FileExplorer />
+                    <FileExplorer 
+                      files={vaultStore.websiteData?.files || {}}
+                      title="Development"
+                      onFileClick={handleFileClick}
+                      renderFileLink={renderFileLink}
+                    />
                   </Show>
                 </Suspense>
               </div>
@@ -147,37 +171,14 @@ function Layout(props: any) {
 }
 
 function HomePage() {
-  // Load the first file or show a welcome message
-  const homeFile = () => {
-    const files = vaultStore.getFileList();
-    const indexFile = files.find(f => f.toLowerCase().includes('index') || f.toLowerCase().includes('home'));
-    return indexFile || files[0];
-  };
-
-  return (
-    <Show 
-      when={homeFile()} 
-      fallback={
-        <div class="obsidian-document markdown-preview-view">
-          <div class="markdown-preview-sizer markdown-preview-section">
-            <h1>Welcome to your Obsidian Vault</h1>
-            <p>Select a file from the sidebar to view its content.</p>
-          </div>
-        </div>
-      }
-    >
-      {(file) => <DocumentViewer path={file()} />}
-    </Show>
-  );
+  return <DocumentViewerPage />;
 }
 
 export function App() {
   return (
     <Router root={Layout}>
       <Route path="/" component={HomePage} />
-      <Route path="/*path" component={(props) => {
-        return <DocumentViewer path={props.params.path} />;
-      }} />
+      <Route path="/*path" component={() => <DocumentViewerPage />} />
     </Router>
   );
 }

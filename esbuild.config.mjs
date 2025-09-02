@@ -51,6 +51,10 @@ await esbuild.build({
   logLevel: "info",
   sourcemap: prod ? false : 'inline',
   treeShaking: true,
+  plugins: [solidPlugin()],
+  alias: {
+    '@shared': path.resolve('src/shared'),
+  },
   outfile: 'C:\\Main\\Obsidian\\Export Development\\.obsidian\\plugins\\webpage-html-export\\main.js',
 }).catch(() => process.exit(1));
 
@@ -69,6 +73,9 @@ await esbuild.build({
   treeShaking: true,
   outfile: 'src/frontend/dist/main.js',
   plugins: [solidPlugin()],
+  alias: {
+    '@shared': path.resolve('src/shared'),
+  },
   define: {
     'process.env.NODE_ENV': prod ? '"production"' : '"development"',
   },

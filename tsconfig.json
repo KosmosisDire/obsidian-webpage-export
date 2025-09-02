@@ -15,6 +15,10 @@
 		"resolveJsonModule": true,
 		"jsx": "preserve",
 		"jsxImportSource": "solid-js",
+		"paths": {
+			"@shared/*": ["src/shared/*"],
+			"@shared": ["src/shared/index"]
+		},
 		"lib": [
 			"DOM",
 			"ES5",
