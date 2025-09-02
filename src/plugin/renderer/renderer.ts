@@ -3,7 +3,7 @@ import { Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer,
 import { TabManager } from "src/plugin/utils/tab-manager";
 import { DataviewRenderer } from "./dataview-renderer";
 import * as electron from 'electron';
-import { Utils } from "./utils/utils";
+import { Utils } from "../utils/utils";
 const pathModule = require('path');
 
 export namespace MarkdownRendererAPI {

@@ -1,4 +1,4 @@
-FROM node:16-alpine AS Build
+FROM node:16-alpine AS build
 
 # copy the assets and source code
 COPY . /app
@@ -10,7 +10,7 @@ RUN npm install
 # build the app
 RUN npm run build
 
-FROM ubuntu:20.04 AS Run
+FROM ubuntu:20.04 AS run
 
 # Set image parameters
 ARG OBSIDIAN_VERSION=1.6.7
@@ -32,16 +32,16 @@ RUN pip3 install electron-inject
 RUN apt install -y ./obsidian.deb
 
 # Copy build output
-COPY --from=Build /app/main.js /plugin/main.js
-COPY --from=Build /app/styles.css /plugin/styles.css
-COPY --from=Build /app/manifest.json /plugin/manifest.json
+COPY --from=build /app/main.js /plugin/main.js
+COPY --from=build /app/styles.css /plugin/styles.css
+COPY --from=build /app/manifest.json /plugin/manifest.json
 
 # Copy the inject scripts
 COPY docker/inject-enable.js /inject-enable.js
 
 # Copy the run script
 COPY docker/run.sh /run.sh
-RUN chmod +x /run.sh
+RUN sed -i 's/\r$//' /run.sh && chmod +x /run.sh
 
 # Set up the vault
 RUN mkdir -p /root/.config/obsidian
