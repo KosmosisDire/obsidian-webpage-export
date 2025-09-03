@@ -186,6 +186,38 @@ button.html-progress-cancel
 
 /* File picker */
 
+.file-picker .tree-item-checkbox {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    border: 1px solid var(--divider-color);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background-color: var(--background-primary);
+}
+
+.file-picker .tree-item-checkbox.is-checked,
+.file-picker .tree-item.nav-folder.is-selected .tree-item-children .tree-item .tree-item-checkbox {
+    background-color: var(--interactive-accent);
+    border-color: var(--interactive-accent);
+}
+
+.file-picker .checkbox-indicator {
+    color: white;
+    font-size: 10px;
+    font-weight: bold;
+    display: none;
+}
+
+/* Show checkmarks for selected items and children of selected folders */
+.file-picker .tree-item-checkbox.is-checked .checkbox-indicator,
+.file-picker .tree-item.nav-folder.is-selected .tree-item-children .tree-item .checkbox-indicator {
+    display: inline;
+}
+
 .file-picker .tree-icon {
     border: 1px solid transparent;
     margin: 0px 4px 0px 0px;
@@ -243,7 +275,7 @@ button.html-progress-cancel
 	align-items: center !important;
 }
 
-.file-picker .tree-item-self > *:not(.nav-file-tag, .file-checkbox)
+.file-picker .tree-item-self > *:not(.nav-file-tag, .tree-item-checkbox)
 {
 	position: relative !important;
 	margin: 0 !important;
@@ -251,10 +283,6 @@ button.html-progress-cancel
 	translate: none !important;
 }
 
-.file-picker .tree-item-self > .file-checkbox
-{
-	margin-right: 1em;
-}
 
 .file-picker .tree-item-self > .tree-item-inner
 {

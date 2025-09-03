@@ -12,6 +12,9 @@ if you want to view the source, please visit the github repository of this plugi
 */
 `;
 
+// let outputFolder = 'C:\\Main\\Obsidian\\Export Development\\.obsidian\\plugins\\webpage-html-export\\';
+let outputFolder = "C:\\Main\\Obsidian\\Development\\.obsidian\\plugins\\webpage-html-export\\";
+
 const prod = (process.argv[2] === 'production');
 
 // Plugin build
@@ -55,7 +58,7 @@ await esbuild.build({
   alias: {
     '@shared': path.resolve('src/shared'),
   },
-  outfile: 'C:\\Main\\Obsidian\\Export Development\\.obsidian\\plugins\\webpage-html-export\\main.js',
+  outfile: outputFolder + 'main.js'
 }).catch(() => process.exit(1));
 
 // Frontend build with Solid.js
