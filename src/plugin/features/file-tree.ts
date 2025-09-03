@@ -120,9 +120,11 @@ export class FileTree extends Tree
 					if (targetPath.path.endsWith(".excalidraw.md")) targetPath.setExtension("drawing");
 					currentParentNode.originalExtension = file.extensionName;
 					if(!this.keepOriginalExtensions && MarkdownRendererAPI.isConvertable(targetPath.extensionName)) targetPath.setExtension("html");
-				    if (tfile) currentParentNode.title = (await _MarkdownRendererInternal.getTitleForFile(tfile)).title;
-                }
-
+				    if (tfile) {
+						currentParentNode.title = (await _MarkdownRendererInternal.getTitleForFile(tfile)).title;
+						currentParentNode.icon = (await _MarkdownRendererInternal.getIconForFile(tfile)).icon;
+					}
+				}
 				currentParentNode.href = targetPath.path; // This is the output href
 			}
 		}
