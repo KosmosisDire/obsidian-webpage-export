@@ -39,6 +39,10 @@ export default class HTMLExportPlugin extends Plugin {
 		await HTMLExporter.export(true, undefined, new Path("/output"));
 	}
 
+	public async exportVault(path: string) {
+		await HTMLExporter.exportVault(new Path(path), true, false);
+	}
+
 	async onload() {
 		console.log("Loading webpage-html-export plugin");
 		this.checkForUpdates();
