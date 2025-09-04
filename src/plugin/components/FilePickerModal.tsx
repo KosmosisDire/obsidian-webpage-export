@@ -1,11 +1,13 @@
 import { Modal, TFile } from "obsidian";
 import { render } from "solid-js/web";
-import { FilePickerExplorer, FilePickerExplorerRef } from "./FilePickerExplorer";
+import { FilePickerTree } from "@shared/components/FilePickerTreeComponent";
+import { FilePickerTree as FilePickerTreeClass } from "@shared/components/FilePickerTree";
 import { FileData } from "../../shared/types";
 
 export class FilePickerModal extends Modal {
-  private filePickerRef: FilePickerExplorerRef | null = null;
+  private filePickerRef: FilePickerTreeClass | null = null;
   private onFilesSelected: (files: string[]) => void;
+  private cleanup: (() => void) | null = null;
 
   constructor(app: any, files: Record<string, FileData>, onFilesSelected: (files: string[]) => void) {
     super(app);
@@ -31,9 +33,9 @@ export class FilePickerModal extends Modal {
     cancelButton.addClass("mod-cta");
     cancelButton.onclick = () => this.close();
     
-    const selectButton = buttonContainer.createEl("button", { text: "Export Selected" });
-    selectButton.addClass("mod-cta");
-    selectButton.onclick = () => {
+    const exportButton = buttonContainer.createEl("button", { text: "Export Selected" });
+    exportButton.addClass("mod-cta", "mod-warning");
+    exportButton.onclick = () => {
       if (this.filePickerRef) {
         const selectedFiles = this.filePickerRef.getSelectedFiles();
         this.onFilesSelected(selectedFiles);
@@ -41,17 +43,31 @@ export class FilePickerModal extends Modal {
       this.close();
     };
 
-    render(() => 
-      <FilePickerExplorer
-        files={files}
-        title="Files"
-        ref={(ref) => this.filePickerRef = ref}
-      />, 
+    // Store cleanup function for proper disposal
+    this.cleanup = render(
+      () => (
+        <FilePickerTree
+          files={Object.keys(files)}
+          title="Select Files"
+          ref={(ref: FilePickerTreeClass) => this.filePickerRef = ref}
+          sort={true}
+          showFileExtentionTags={true}
+          hideFileExtentionTags={["md"]}
+          startItemsCollapsed={true}
+          class="file-picker"
+        />
+      ), 
       container
     );
   }
 
   onClose() {
+    // Properly dispose of the SolidJS component
+    if (this.cleanup) {
+      this.cleanup();
+      this.cleanup = null;
+    }
     this.contentEl.empty();
+    this.filePickerRef = null;
   }
 }

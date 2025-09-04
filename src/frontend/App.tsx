@@ -2,7 +2,7 @@ import { Router, Route, useLocation } from '@solidjs/router';
 import { onMount, createSignal, Show, Suspense, createEffect } from 'solid-js';
 import { A, useNavigate } from '@solidjs/router';
 import { vaultStore } from './data/store';
-import { FileExplorer } from '@shared/components';
+import { FileTree } from '@shared/components/FileTreeComponent';
 import { DocumentViewerPage } from './components/DocumentViewerPage';
 
 function Layout(props: any) {
@@ -29,18 +29,6 @@ function Layout(props: any) {
     navigate(`/${htmlPath}`);
   };
 
-  const renderFileLink = (path: string, displayName: string) => {
-    const htmlPath = path.replace(/\.md$/, '.html');
-    return (
-      <A 
-        href={`/${htmlPath}`}
-        class="tree-item-inner nav-file-title-content"
-      >
-        {displayName}
-      </A>
-    );
-  };
-  
   return (
     <div id="main" class="mod-windows">
       <div id="main-horizontal">
@@ -93,11 +81,12 @@ function Layout(props: any) {
               <div id="left-sidebar-content" class="leaf-content">
                 <Suspense fallback={<div class="loading">Loading files...</div>}>
                   <Show when={filesReady() && !vaultStore.loading}>
-                    <FileExplorer 
-                      files={vaultStore.websiteData?.files || {}}
+                    <FileTree
+                      files={Object.keys(vaultStore.websiteData?.files || {})}
                       title="Development"
+                      startItemsCollapsed={true}
+                      id="file-explorer"
                       onFileClick={handleFileClick}
-                      renderFileLink={renderFileLink}
                     />
                   </Show>
                 </Suspense>

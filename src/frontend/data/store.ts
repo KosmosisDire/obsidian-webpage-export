@@ -58,11 +58,11 @@ class VaultStore {
                 return;
             }
 
-            // Fallback to loading from files.json
-            console.log('Loading data from files.json');
-            const response = await fetch('./files.json');
+            // Fallback to loading from obsidian-cache.json
+            console.log('Loading data from obsidian-cache.json');
+            const response = await fetch('./obsidian-cache.json');
             if (!response.ok) {
-                throw new Error(`Failed to load files.json: ${response.statusText}`);
+                throw new Error(`Failed to load obsidian-cache.json: ${response.statusText}`);
             }
             
             const data: WebsiteData = await response.json();
