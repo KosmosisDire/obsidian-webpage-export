@@ -9,8 +9,13 @@ console.log('Starting export script...');
 		await this.app.plugins.enablePlugin('webpage-html-export');
 		const plugin = await this.app.plugins.getPlugin('webpage-html-export');
 
-		console.log('Exporting...');
-		await plugin.exportDocker();
+		if (process.env.EXPORT_ENTIRE_VAULT) {
+			console.log('Exporting entire vault...');
+			await plugin.exportVault('/output');
+		} else {
+			console.log('Exporting...');
+			await plugin.exportDocker();
+		}
 
 		console.log('Exported');
 	} finally {
