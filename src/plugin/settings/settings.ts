@@ -122,7 +122,9 @@ export class Settings
 			}
 		};
 
-		return files;
+		let filteredFiles = files.filter((file) => Settings.filePickerBlacklist.every((pattern) => !file.match(new RegExp(pattern))));
+		filteredFiles = filteredFiles.filter((file) => Settings.filePickerWhitelist.every((pattern) => file.match(new RegExp(pattern))));
+		return filteredFiles;
 	}
 
 	static getFilesToExport(): TFile[]
