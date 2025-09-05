@@ -115,7 +115,8 @@ export const language: i18n =
 			info_centralForce: "How much should nodes be attracted to the center? This will make the graph appear more dense and circular.",
 			info_edgePruning: "Edges with a length above this threshold will not be rendered, however they will still contribute to the simulation. This can help large tangled graphs look more organised. Hovering over a node will still display these links.",
 			info_minNodeRadius: "How small should the smallest nodes be? The smaller a node is the less it will attract other nodes.",
-			info_maxNodeRadius: "How large should the largest nodes be? Nodes are sized by how many links they have. The larger a node is the more it will attract other nodes. This can be used to create a good grouping around the most important nodes."
+			info_maxNodeRadius: "How large should the largest nodes be? Nodes are sized by how many links they have. The larger a node is the more it will attract other nodes. This can be used to create a good grouping around the most important nodes.",
+			info_enableTagColors: "Enable coloring of nodes based on their tags.",
 		},
 		search: {
 			title: "Search Bar",

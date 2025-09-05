@@ -17,6 +17,7 @@ if ('function' === typeof importScripts) {
 	let nodeCount = 0;
 	let radii = [];
 	let labels = [];
+	let nodeColors = []; // Array of node colors based on tags
 	let labelFade = [];
 	let labelWidths = [];
 	let pixiLabels = [];
@@ -255,7 +256,6 @@ if ('function' === typeof importScripts) {
 		}
 
 		let opacity = 1 - (hoverFade * 0.5);
-		graphics.beginFill(mixColors(colors.node, colors.background, hoverFade * 0.5), opacity);
 		graphics.lineStyle(0, 0xffffff);
 		for (let i = 0; i < nodeCount; i++) {
 			let screenRadius = getNodeScreenRadius(radii[i]);
@@ -273,11 +273,26 @@ if ('function' === typeof importScripts) {
 
 			if (hoveredNode == i || (lastHoveredNode == i && hoverFade != 0) || (hoveredNode != -1 && attachedToGrabbed.includes(i))) continue;
 
+			// Use tag-based color if available, otherwise use default node color
+			let nodeColor = colors.node;
+			if (nodeColors[i] && nodeColors[i] !== "") {
+				// Convert hex string to number (e.g., "#FF0000" to 0xFF0000)
+				try {
+					nodeColor = parseInt(nodeColors[i].replace("#", ""), 16);
+				} catch (e) {
+					console.log("Error parsing color: " + nodeColors[i]);
+				}
+			}
+			
+			// Apply the same color mixing as before
+			let fillColor = mixColors(nodeColor, colors.background, hoverFade * 0.5);
+			graphics.beginFill(fillColor, opacity);
+			
 			let pos = vecToScreenSpace(getPosition(i));
 			graphics.drawCircle(pos.x, pos.y, screenRadius);
+			
+			graphics.endFill();
 		}
-
-		graphics.endFill();
 
 
 		opacity = hoverFade * 0.7;
@@ -297,22 +312,48 @@ if ('function' === typeof importScripts) {
 		}
 
 		if (hoveredNode != -1 || (lastHoveredNode != -1 && hoverFade != 0)) {
-			graphics.beginFill(mixColors(colors.node, colors.accent, hoverFade * 0.2), 0.9);
 			graphics.lineStyle(0, 0xffffff);
 			for (let i = 0; i < attachedToGrabbed.length; i++) {
 				let point = attachedToGrabbed[i];
+				
+				// Use tag-based color if available, otherwise use default node color
+				let nodeColor = colors.node;
+				if (nodeColors[point] && nodeColors[point] !== "") {
+					try {
+						nodeColor = parseInt(nodeColors[point].replace("#", ""), 16);
+					} catch (e) {
+						console.log("Error parsing color: " + nodeColors[point]);
+					}
+				}
+				
+				// Apply color mixing for connected nodes
+				let fillColor = mixColors(nodeColor, colors.accent, hoverFade * 0.2);
+				graphics.beginFill(fillColor, 0.9);
 
 				let pos = vecToScreenSpace(getPosition(point));
-
 				graphics.drawCircle(pos.x, pos.y, getNodeScreenRadius(radii[point]));
+				graphics.endFill();
+				
 				showLabel(point, Math.max(hoverFade * 0.6, labelFade[point]));
 			}
-			graphics.endFill();
 
 			let index = hoveredNode != -1 ? hoveredNode : lastHoveredNode;
-
+			
+			// Use tag-based color if available, otherwise use default node color
+			let nodeColor = colors.node;
+			if (nodeColors[index] && nodeColors[index] !== "") {
+				try {
+					nodeColor = parseInt(nodeColors[index].replace("#", ""), 16);
+				} catch (e) {
+					console.log("Error parsing color: " + nodeColors[index]);
+				}
+			}
+			
+			// Apply color mixing for hovered node
+			let fillColor = mixColors(nodeColor, colors.accent, hoverFade);
+			
 			let pos = vecToScreenSpace(getPosition(index));
-			graphics.beginFill(mixColors(colors.node, colors.accent, hoverFade), 1);
+			graphics.beginFill(fillColor, 1);
 			graphics.lineStyle(hoverFade, mixColors(invertColor(colors.background, true), colors.accent, 0.5));
 			graphics.drawCircle(pos.x, pos.y, getNodeScreenRadius(radii[index]));
 			graphics.endFill();
@@ -324,12 +365,24 @@ if ('function' === typeof importScripts) {
 
 		updateAttached = false;
 
-		graphics.lineStyle(2, colors.accent);
 		// draw the active node
 		if (activeNode != -1) {
+			// Use tag-based color if available, otherwise use accent color
+			let nodeColor = colors.accent;
+			if (nodeColors[activeNode] && nodeColors[activeNode] !== "") {
+				try {
+					// Use a brighter version of the node color for the active node outline
+					let hexColor = parseInt(nodeColors[activeNode].replace("#", ""), 16);
+					// Mix with accent color to make it stand out
+					nodeColor = mixColors(hexColor, colors.accent, 0.5);
+				} catch (e) {
+					console.log("Error parsing color: " + nodeColors[activeNode]);
+				}
+			}
+			
+			graphics.lineStyle(2, nodeColor);
 			let pos = vecToScreenSpace(getPosition(activeNode));
 			graphics.drawCircle(pos.x, pos.y, getNodeScreenRadius(radii[activeNode]) + 4);
-
 		}
 	}
 
@@ -374,6 +427,7 @@ if ('function' === typeof importScripts) {
 			nodeCount = event.data.nodeCount;
 			radii = event.data.radii;
 			labels = event.data.labels;
+			nodeColors = event.data.nodeColors || []; // Store node colors based on tags
 			linkLength = event.data.linkLength;
 			edgePruning = event.data.edgePruning;
 			positions = new Float32Array(nodeCount);

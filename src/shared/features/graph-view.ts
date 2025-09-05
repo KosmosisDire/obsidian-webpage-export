@@ -6,11 +6,16 @@ import {
 	RelationType,
 } from "./feature-options-base";
 
+export interface TagColorMapping {
+	[tag: string]: string; // tag name -> hex color
+}
+
 export class GraphViewOptions extends InsertedFeatureOptionsWithTitle {
 	showOrphanNodes: boolean = true;
 	showAttachments: boolean = false;
 	allowGlobalGraph: boolean = true;
 	allowExpand: boolean = true;
+	enableTagColors: boolean = true;
 
 	attractionForce: number = 1;
 	linkLength: number = 15;
@@ -19,6 +24,9 @@ export class GraphViewOptions extends InsertedFeatureOptionsWithTitle {
 	edgePruning: number = 100;
 	minNodeRadius: number = 3;
 	maxNodeRadius: number = 7;
+	
+	// Map of tags to colors for graph nodes
+	tagColors: TagColorMapping = {};
 
 	info_showOrphanNodes = new FeatureSettingInfo({
 		show: true,
@@ -63,6 +71,10 @@ export class GraphViewOptions extends InsertedFeatureOptionsWithTitle {
 	info_maxNodeRadius = new FeatureSettingInfo({
 		show: true,
 		description: i18n.settings.graphView.info_maxNodeRadius,
+	});
+	info_enableTagColors = new FeatureSettingInfo({
+		show: true,
+		description: i18n.settings.graphView.info_enableTagColors,
 	});
 
 	constructor() {
