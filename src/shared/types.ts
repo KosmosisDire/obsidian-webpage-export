@@ -7,7 +7,6 @@ export interface FileData {
         markdown: string;
         html: string;
     };
-    // Plugin-specific data - always present in plugin, may be missing in frontend
     links: {
         outgoing: Record<string, number>;
         incoming: string[];
@@ -20,7 +19,6 @@ export interface FileData {
         blocks: string[];
         lists: number;
     };
-    // Frontend-specific data (optional for plugin compatibility)
     treeOrder?: number;
 }
 

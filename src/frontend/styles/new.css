@@ -1,0 +1,10 @@
+
+#left-sidebar .sidebar-collapse-icon
+{
+	scale: -1 1;
+}
+
+.sidebar:not(.is-collapsed) .sidebar-toggle-icon-inner
+{
+	width: 24%;
+}

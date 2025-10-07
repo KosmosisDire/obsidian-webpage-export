@@ -1,11 +1,10 @@
 import { Modal, TFile } from "obsidian";
 import { render } from "solid-js/web";
-import { FilePickerTree } from "@shared/components/FilePickerTreeComponent";
-import { FilePickerTree as FilePickerTreeClass } from "@shared/components/FilePickerTree";
+import { FilePickerTree, FilePickerTreeRef } from "./FilePickerTree";
 import { FileData } from "../../shared/types";
 
 export class FilePickerModal extends Modal {
-  private filePickerRef: FilePickerTreeClass | null = null;
+  private filePickerRef: FilePickerTreeRef | null = null;
   private onFilesSelected: (files: string[]) => void;
   private cleanup: (() => void) | null = null;
 
@@ -49,10 +48,8 @@ export class FilePickerModal extends Modal {
         <FilePickerTree
           files={Object.keys(files)}
           title="Select Files"
-          ref={(ref: FilePickerTreeClass) => this.filePickerRef = ref}
+          ref={(ref: FilePickerTreeRef) => this.filePickerRef = ref}
           sort={true}
-          showFileExtentionTags={true}
-          hideFileExtentionTags={["md"]}
           startItemsCollapsed={true}
           class="file-picker"
         />

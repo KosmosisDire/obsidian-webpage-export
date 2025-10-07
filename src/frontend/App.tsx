@@ -1,18 +1,13 @@
-import { Router, Route, useLocation } from '@solidjs/router';
-import { onMount, createSignal, Show, Suspense, createEffect } from 'solid-js';
-import { A, useNavigate } from '@solidjs/router';
+import { Router, Route } from '@solidjs/router';
+import { onMount, createSignal, Show, Suspense } from 'solid-js';
 import { vaultStore } from './data/store';
-import { FileTree } from '@shared/components/FileTreeComponent';
+import { FileTree } from '@shared/components/FileTree';
 import { DocumentViewerPage } from './components/DocumentViewerPage';
+import { useLocation } from '@solidjs/router';
+import { Path } from '@shared/path';
 
 function Layout(props: any) {
   const [filesReady, setFilesReady] = createSignal(false);
-  const location = useLocation();
-  const navigate = useNavigate();
-  
-  createEffect(() => {
-    console.log('Navigation:', location.pathname);
-  });
   
   onMount(async () => {
     try {
@@ -23,11 +18,6 @@ function Layout(props: any) {
       console.error('Failed to load vault data:', error);
     }
   });
-
-  const handleFileClick = (path: string) => {
-    const htmlPath = path.replace(/\.md$/, '.html');
-    navigate(`/${htmlPath}`);
-  };
 
   return (
     <div id="main" class="mod-windows">
@@ -57,24 +47,7 @@ function Layout(props: any) {
                 </div>
               </div>
               <div class="clickable-icon sidebar-collapse-icon">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="100%"
-                  height="100%"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="svg-icon"
-                >
-                  <path d="M21 3H3C1.89543 3 1 3.89543 1 5V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19V5C23 3.89543 22.1046 3 21 3Z"></path>
-                  <path d="M10 4V20"></path>
-                  <path d="M4 7H7"></path>
-                  <path d="M4 10H7"></path>
-                  <path d="M4 13H7"></path>
-                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon sidebar-toggle-button-icon"><rect x="1" y="2" width="22" height="20" rx="4"></rect><rect x="4" y="5" width="2" height="14" rx="2" fill="currentColor" class="sidebar-toggle-icon-inner"></rect></svg>
               </div>
             </div>
             <div class="sidebar-content-wrapper">
@@ -86,7 +59,6 @@ function Layout(props: any) {
                       title="Development"
                       startItemsCollapsed={true}
                       id="file-explorer"
-                      onFileClick={handleFileClick}
                     />
                   </Show>
                 </Suspense>
@@ -125,24 +97,7 @@ function Layout(props: any) {
                 </label>
               </div>
               <div class="clickable-icon sidebar-collapse-icon">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="100%"
-                  height="100%"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="3"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  class="svg-icon"
-                >
-                  <path d="M21 3H3C1.89543 3 1 3.89543 1 5V19C1 20.1046 1.89543 21 3 21H21C22.1046 21 23 20.1046 23 19V5C23 3.89543 22.1046 3 21 3Z"></path>
-                  <path d="M10 4V20"></path>
-                  <path d="M4 7H7"></path>
-                  <path d="M4 10H7"></path>
-                  <path d="M4 13H7"></path>
-                </svg>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon sidebar-toggle-button-icon"><rect x="1" y="2" width="22" height="20" rx="4"></rect><rect x="4" y="5" width="2" height="14" rx="2" fill="currentColor" class="sidebar-toggle-icon-inner"></rect></svg>
               </div>
             </div>
             <div class="sidebar-content-wrapper">
@@ -162,12 +117,79 @@ function Layout(props: any) {
 function HomePage() {
   return <DocumentViewerPage />;
 }
+interface RouterOptions {
+	urlMapper?: (url: string) => string;
+}
+
+function createCustomRouter(options: RouterOptions = {}) {
+	const { urlMapper } = options;
+	const [currentPath, setCurrentPath] = createSignal(window.location.pathname + window.location.search + window.location.hash);
+	const [clickedHref, setClickedHref] = createSignal<string | null>(null);
+
+	const handlePopState = () => {
+		setCurrentPath(window.location.pathname + window.location.search + window.location.hash);
+		setClickedHref(null);
+	};
+
+	const navigate = (href: string, originalHref?: string) => {
+		setClickedHref(originalHref || href);
+		const mappedHref = urlMapper ? urlMapper(href) : href;
+		setCurrentPath(mappedHref);
+		window.history.pushState({ clickedHref: originalHref || href }, '', mappedHref);
+	};
+
+	const setupRouter = () => {
+		const handleClick = (e: MouseEvent) => {
+			const target = e.target as HTMLElement;
+			const anchor = target.closest('a');
+			
+			if (anchor && anchor.href && !anchor.target) {
+				e.preventDefault();
+				const rawHref = anchor.getAttribute('href');
+				const resolvedHref = anchor.href;
+				navigate(resolvedHref, rawHref ?? undefined);
+			}
+		};
+
+		window.addEventListener('popstate', handlePopState);
+		document.addEventListener('click', handleClick);
+		
+		return () => {
+			window.removeEventListener('popstate', handlePopState);
+			document.removeEventListener('click', handleClick);
+		};
+	};
+
+	return { currentPath, clickedHref, navigate, setupRouter };
+}
+
+function trim(str: string): string {
+	return str.replace(/^\s+|\s+$/g, '');
+}
 
 export function App() {
-  return (
-    <Router root={Layout}>
-      <Route path="/" component={HomePage} />
-      <Route path="/*path" component={() => <DocumentViewerPage />} />
-    </Router>
-  );
+	const urlMapper = (url: string): string =>
+	{
+		var path = new Path(url);
+
+		if (path.isDirectory)
+		{
+			return url + (url.endsWith('/') ? '' : '/') + 'index.html';
+		}
+		
+		var toRoot = Array(path.depth).fill('..').join('/') + "/";
+		url = toRoot + path.fullName;
+		
+		return url;
+	};
+
+	const { currentPath, setupRouter } = createCustomRouter({ urlMapper });
+
+	onMount(setupRouter);
+
+	return (
+		<Layout>
+			<DocumentViewerPage path={currentPath()} />
+		</Layout>
+	);
 }

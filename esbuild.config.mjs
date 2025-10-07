@@ -12,89 +12,124 @@ if you want to view the source, please visit the github repository of this plugi
 */
 `;
 
-let outputFolder = 'C:\\Main\\Obsidian\\Export Development\\.obsidian\\plugins\\webpage-html-export\\';
-// let outputFolder = "C:\\Main\\Obsidian\\Development\\.obsidian\\plugins\\webpage-html-export\\";
+// let outputFolder = 'C:\\Main\\Obsidian\\Export Development\\.obsidian\\plugins\\webpage-html-export\\';
+let outputFolder = "C:\\Main\\Obsidian\\Development\\.obsidian\\plugins\\webpage-html-export\\";
 
 const prod = (process.argv[2] === 'production');
+const dev = !prod;
+
+// Common build options
+const commonOptions = {
+	banner: { js: banner },
+	logLevel: "info",
+	sourcemap: prod ? false : 'inline',
+	treeShaking: true,
+};
 
 // Plugin build
-await esbuild.build({
-  loader: {
-    '.txt.js': 'text',
-    '.txt.css': 'text',
-    '.wasm': 'binary',
-    '.png': 'binary',
-  },
-  banner: {
-    js: banner,
-  },
-  entryPoints: ['src/plugin/main.ts'],
-  bundle: true,
-  tsconfig: 'tsconfig.json',
-  external: [
-    'obsidian',
-    'electron',
-    '@codemirror/autocomplete',
-    '@codemirror/collab',
-    '@codemirror/commands',
-    '@codemirror/language',
-    '@codemirror/lint',
-    '@codemirror/search',
-    '@codemirror/state',
-    '@codemirror/view',
-    '@lezer/common',
-    '@lezer/highlight',
-    '@lezer/lr',
-    'node:buffer',
-    'node:stream',
-    ...builtins
-  ],
-  format: 'cjs',
-  target: 'es2018',
-  logLevel: "info",
-  sourcemap: prod ? false : 'inline',
-  treeShaking: true,
-  plugins: [solidPlugin()],
-  alias: {
-    '@shared': path.resolve('src/shared'),
-  },
-  outfile: outputFolder + 'main.js'
-}).catch(() => process.exit(1));
+const pluginBuildOptions = {
+	...commonOptions,
+	loader: {
+		'.txt.js': 'text',
+		'.txt.css': 'text',
+		'.wasm': 'binary',
+		'.png': 'binary',
+	},
+	entryPoints: ['src/plugin/main.ts'],
+	bundle: true,
+	tsconfig: 'tsconfig.json',
+	external: [
+		'obsidian',
+		'electron',
+		'@codemirror/autocomplete',
+		'@codemirror/collab',
+		'@codemirror/commands',
+		'@codemirror/language',
+		'@codemirror/lint',
+		'@codemirror/search',
+		'@codemirror/state',
+		'@codemirror/view',
+		'@lezer/common',
+		'@lezer/highlight',
+		'@lezer/lr',
+		'node:buffer',
+		'node:stream',
+		...builtins
+	],
+	format: 'cjs',
+	target: 'es2018',
+	plugins: [solidPlugin()],
+	alias: {
+		'@shared': path.resolve('src/shared'),
+	},
+	outfile: outputFolder + 'main.js'
+};
 
-// Frontend build with Solid.js
-await esbuild.build({
-  banner: {
-    js: banner,
-  },
-  entryPoints: ['src/frontend/index.tsx'],
-  bundle: true,
-  format: 'iife',
-  globalName: 'WebpageExport',
-  target: 'es2018',
-  logLevel: "info",
-  sourcemap: prod ? false : 'inline',
-  treeShaking: true,
-  outfile: 'src/frontend/dist/main.js',
-  plugins: [solidPlugin()],
-  alias: {
-    '@shared': path.resolve('src/shared'),
-  },
-  define: {
-    'process.env.NODE_ENV': prod ? '"production"' : '"development"',
-  },
-}).catch(() => process.exit(1));
+// Frontend build options
+const frontendBuildOptions = {
+	...commonOptions,
+	entryPoints: ['src/frontend/index.tsx'],
+	bundle: true,
+	format: 'iife',
+	globalName: 'WebpageExport',
+	target: 'es2018',
+	outfile: 'src/frontend/dist/main.js',
+	plugins: [solidPlugin()],
+	alias: {
+		'@shared': path.resolve('src/shared'),
+	},
+	define: {
+		'process.env.NODE_ENV': prod ? '"production"' : '"development"',
+	},
+};
 
-// Copy HTML and CSS
-if (!fs.existsSync('src/frontend/dist')) {
-  fs.mkdirSync('src/frontend/dist', { recursive: true });
+// Copy files function
+function copyFiles() {
+	if (!fs.existsSync('src/frontend/dist')) {
+		fs.mkdirSync('src/frontend/dist', { recursive: true });
+	}
+	
+	if (!fs.existsSync('src/frontend/dist/styles')) {
+		fs.mkdirSync('src/frontend/dist/styles', { recursive: true });
+	}
+	
+	fs.copyFileSync('src/frontend/index.html', 'src/frontend/dist/index.html');
+	fs.copyFileSync('src/frontend/styles/main.css', 'src/frontend/dist/styles/main.css');
+	fs.copyFileSync('src/frontend/styles/new.css', 'src/frontend/dist/styles/new.css');
 }
 
-// Ensure styles directory exists
-if (!fs.existsSync('src/frontend/dist/styles')) {
-  fs.mkdirSync('src/frontend/dist/styles', { recursive: true });
+if (dev) {
+	// Development mode with watch
+	const pluginCtx = await esbuild.context(pluginBuildOptions);
+	const frontendCtx = await esbuild.context(frontendBuildOptions);
+	
+	await pluginCtx.watch();
+	await frontendCtx.watch();
+	
+	copyFiles();
+	
+	// Watch for HTML/CSS changes
+	fs.watchFile('src/frontend/index.html', () => {
+		copyFiles();
+		console.log('HTML file updated');
+	});
+	
+	fs.watchFile('src/frontend/styles/main.css', () => {
+		copyFiles();
+		console.log('CSS file updated');
+	});
+
+	fs.watchFile('src/frontend/styles/new.css', () => {
+		copyFiles();
+		console.log('CSS file updated');
+	});
+
+	console.log('Watching for changes...');
+} else {
+	// Production build
+	await esbuild.build(pluginBuildOptions).catch(() => process.exit(1));
+	await esbuild.build(frontendBuildOptions).catch(() => process.exit(1));
+	
+	copyFiles();
+	console.log('Frontend build completed');
 }
-
-fs.copyFileSync('src/frontend/index.html', 'src/frontend/dist/index.html');
-fs.copyFileSync('src/frontend/styles/main.css', 'src/frontend/dist/styles/main.css');
-
-console.log('Frontend build completed');

@@ -1,12 +1,10 @@
-import { createMemo, createEffect, Show } from 'solid-js';
+import { createMemo, Show } from 'solid-js';
 import { FileData } from '../types';
 
 interface DocumentViewerProps {
   fileData: FileData | null;
   error?: string | null;
   isLoading?: boolean;
-  onLinkClick?: (href: string) => void;
-  checkDocumentExists?: (path: string) => boolean;
 }
 
 export function DocumentViewer(props: DocumentViewerProps) {
@@ -14,52 +12,6 @@ export function DocumentViewer(props: DocumentViewerProps) {
     if (!props.fileData?.path) return 'Untitled';
     return props.fileData.path.split('/').pop()?.replace(/\.md$/, '') || 'Untitled';
   });
-
-  // Set up link handling after content is rendered
-  createEffect(() => {
-    if (props.fileData) {
-      // Use setTimeout to ensure DOM is updated
-      setTimeout(() => {
-        setupInternalLinks();
-      }, 0);
-    }
-  });
-
-  const setupInternalLinks = () => {
-    // Find all internal links and set up navigation
-    document.querySelectorAll('.obsidian-document a[href]').forEach((link: HTMLAnchorElement) => {
-      const href = link.getAttribute('href');
-      if (!href || href.startsWith('http') || href.startsWith('#')) return;
-      
-      // Remove any existing click handlers
-      const newLink = link.cloneNode(true) as HTMLAnchorElement;
-      link.parentNode?.replaceChild(newLink, link);
-      
-      newLink.addEventListener('click', (e) => {
-        e.preventDefault();
-        
-        let targetPath = href;
-        
-        // Convert to proper path
-        if (targetPath.endsWith('.html')) {
-          targetPath = targetPath.replace(/\.html$/, '.md');
-        }
-        
-        // Call the provided link handler
-        props.onLinkClick?.(targetPath);
-      });
-      
-      // Mark unresolved links
-      let targetPath = href;
-      if (targetPath.endsWith('.html')) {
-        targetPath = targetPath.replace(/\.html$/, '.md');
-      }
-      
-      if (props.checkDocumentExists && !props.checkDocumentExists(targetPath)) {
-        newLink.classList.add('is-unresolved');
-      }
-    });
-  };
 
   return (
     <Show 
