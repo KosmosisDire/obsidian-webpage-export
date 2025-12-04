@@ -9,7 +9,7 @@ fi
 RUST_LOG=debug xvfb-run electron-injector \
   --delay=5000 \
   --script=/export-vault.mjs \
-  obsidian \
+  /opt/obsidian/obsidian \
     --arg=--remote-allow-origins=* \
     --arg=--no-sandbox \
     --arg=--no-xshm \
