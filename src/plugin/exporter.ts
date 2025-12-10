@@ -7,11 +7,11 @@ import {
 	App,
 } from "obsidian";
 import * as fs from "fs";
-import * as path from "path";
 import MiniSearch from "minisearch";
 import { ExportLog, MarkdownRendererAPI } from "./renderer/renderer";
 import { FileData, ExportData } from "./data";
 import { ExportSettings } from "./export-settings";
+import { Path } from "@shared/path";
 
 export function createEmptyFileData(file: TFile): FileData {
 	return {
@@ -105,8 +105,9 @@ export class HTMLExporter {
 
 			// Still need to filter existing files to only include selected ones
 			if (existing?.files) {
-				for (const [path, data] of Object.entries(existing.files)) {
-					if (selectedPaths.has(path)) {
+				for (const [webPath, data] of Object.entries(existing.files)) {
+					// data.path contains the Obsidian path
+					if (selectedPaths.has(data.path)) {
 						results.push(data);
 					}
 				}
@@ -160,10 +161,10 @@ export class HTMLExporter {
 
 		// Merge with existing unchanged files, but only if they were selected for export
 		if (existing?.files) {
-			for (const [path, data] of Object.entries(existing.files)) {
+			for (const [webPath, data] of Object.entries(existing.files)) {
 				if (
-					selectedPaths.has(path) &&
-					!results.find((f) => f.path === path)
+					selectedPaths.has(data.path) &&
+					!results.find((f) => f.path === data.path)
 				) {
 					results.push(data);
 				}
@@ -173,8 +174,28 @@ export class HTMLExporter {
 		return results;
 	}
 
+	private resolveLinks(html: string, sourcePath: string, pathMap: Record<string, string>): string
+	{
+		// Replace all href attributes with transformed links
+		return html.replace(/href=["']([^"']+)["']/g, (_match, href) =>
+		{
+			var splitHref = href.split('#');
+			href = splitHref[0];
+			let hash = splitHref.length > 1 ? '#' + splitHref[1] : '';
+			const transformed = this.transformHref(href, sourcePath, pathMap);
+			return `href="${transformed}${hash}"`;
+		});
+	}
+
+	private transformHref(href: string, sourcePath: string, pathMap: Record<string, string>): string
+	{
+		let transformed = app.metadataCache.getFirstLinkpathDest(href, sourcePath)?.path || href;
+		transformed = pathMap[transformed] || transformed;
+		return transformed;
+	}
+
 	private async processFile(file: TFile): Promise<FileData> {
-		const [content, html] = await Promise.all([
+		let [content, html] = await Promise.all([
 			this.app.vault.read(file),
 			this.renderHTML(file),
 		]);
@@ -236,10 +257,18 @@ export class HTMLExporter {
 	}
 
 	private buildExportStructure(files: FileData[]): ExportData {
-		// Convert array to path-keyed object
+		const filePathMapping = this.buildFilePathMapping(files);
+
 		const filesMap: Record<string, FileData> = {};
-		files.forEach((file) => {
-			filesMap[file.path] = file;
+		files.forEach(async (file) => {
+
+			// resolve links in HTML and convert them to web paths
+			file.content.html = this.resolveLinks(file.content.html, file.path, filePathMapping);
+
+			// Convert files array to path-keyed object using web file names as keys
+			const webFileName = filePathMapping[file.path];
+			filesMap[webFileName] = file;
+
 		});
 
 		return {
@@ -255,7 +284,26 @@ export class HTMLExporter {
 				graph: this.buildGraph(files),
 				tags: this.buildTagIndex(files),
 			},
+			filePathMapping: filePathMapping,
 		};
+	}
+
+	private buildFilePathMapping(files: FileData[]): Record<string, string> {
+		const mapping: Record<string, string> = {};
+
+		files.forEach((file) => {
+			const obsidianPath = new Path(file.path);
+			const webPath = obsidianPath.copy.slugify(true);
+
+			// Convert extension to .html if the file is convertable
+			if (MarkdownRendererAPI.isConvertable(obsidianPath.extension)) {
+				webPath.setExtension(".html");
+			}
+
+			mapping[file.path] = webPath.path;
+		});
+
+		return mapping;
 	}
 
 	private buildSearchIndex(files: FileData[]): any {
@@ -340,8 +388,9 @@ export class HTMLExporter {
 		}
 
 		// Otherwise group by folder
-		const folder = path.dirname(file.path);
-		return folder === "." ? "root" : folder.split("/")[0];
+		const filePath = new Path(file.path);
+		const folder = filePath.directory.path;
+		return folder === "" ? "root" : filePath.directory.split()[0];
 	}
 
 	private buildTagIndex(files: FileData[]): Record<string, string[]> {
@@ -372,12 +421,14 @@ export class HTMLExporter {
 		files: TFile[],
 		existing: ExportData | null
 	): TFile[] {
-		if (!existing?.files) {
+		if (!existing?.files || !existing?.filePathMapping) {
 			return files; // Process all if no existing export
 		}
 
 		return files.filter((file) => {
-			const existingFile = existing.files[file.path];
+			// Look up by web path using the mapping
+			const webPath = existing.filePathMapping[file.path];
+			const existingFile = webPath ? existing.files[webPath] : undefined;
 
 			// New file
 			if (!existingFile) return true;

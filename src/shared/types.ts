@@ -38,6 +38,7 @@ export interface ExportData {
         };
         tags: Record<string, string[]>;
     };
+    filePathMapping: Record<string, string>;
 }
 
 // Alias for frontend compatibility
