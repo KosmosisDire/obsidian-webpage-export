@@ -1115,9 +1115,6 @@ export namespace _MarkdownRendererInternal {
 
 			span.innerHTML = element.innerHTML;
 			element.remove();
-			let embed = span.querySelector(".inline-embed.markdown-embed") as HTMLElement;
-			embed.innerHTML = elParent.innerHTML;
-			elParent.innerHTML = "";
 			elParent.appendChild(span);
 		});
 

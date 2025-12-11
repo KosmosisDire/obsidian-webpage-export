@@ -472,15 +472,8 @@ export class Website
 		}
 		else
 		{
-			const split = src.split("#");
-
-			const hash = split[1]?.trim();
-			const path = split[0];
+			const path = src.split("#")[0];
 			pathString = app.metadataCache.getFirstLinkpathDest(path, exportingFilePath)?.path ?? "";
-			if (hash) 
-			{
-				pathString += "#" + hash;
-			}
 		}
 
 		pathString = pathString ?? "";
