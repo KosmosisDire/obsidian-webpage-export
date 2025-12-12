@@ -72,9 +72,6 @@ h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-i
 	overflow: visible !important;
 }
 
-.markdown-embed-link { opacity: 0; transition: opacity 0.15s; }
-.markdown-embed:hover .markdown-embed-link { opacity: 1; }
-
 /*#endregion  */
 
 /*#region Canvas */
