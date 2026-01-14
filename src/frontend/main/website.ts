@@ -13,6 +13,7 @@ import {
 import { GraphView } from "./graph-view";
 import { Notice } from "./notifications";
 import { Theme } from "./theme";
+import { FrontmatterProperties } from "./frontmatter-properties";
 import { LinkHandler } from "./links";
 import { Shared } from "src/shared/shared";
 import { FilePreviewPopover } from "./link-preview";
@@ -61,6 +62,7 @@ export class ObsidianWebsite {
 	public backlinkList: BacklinkList | undefined = undefined;
 	public tags: Tags | undefined = undefined;
 	public aliases: Aliases | undefined = undefined;
+	public frontmatterProperties: FrontmatterProperties | undefined = undefined;
 
 	public entryPage: string;
 
@@ -169,6 +171,12 @@ export class ObsidianWebsite {
 					!ObsidianSite.metadata.ignoreMetadata &&
 					ObsidianSite.metadata.featureOptions.alias.enabled &&
 					doc.documentType == DocumentType.Markdown;
+				
+	const insertFrontmatterProperties =
+					doc.isMainDocument &&
+					!ObsidianSite.metadata.ignoreMetadata &&
+					ObsidianSite.metadata.featureOptions.frontmatterProperties.enabled &&
+					doc.documentType == DocumentType.Markdown;
 
 				// ------------------ BACKLINKS -----------------
 				if (insertBacklinks) {
@@ -226,6 +234,27 @@ export class ObsidianWebsite {
 					}
 				} else {
 					this.tags?.hide();
+				}
+
+				// ------------------ FRONTMATTER PROPERTIES -----------------
+				if (insertFrontmatterProperties) {
+					const properties = doc.info.frontmatterProperties;
+
+					if (!this.frontmatterProperties) {
+						this.frontmatterProperties = new FrontmatterProperties(properties ?? {});
+					} else {
+						this.frontmatterProperties?.modifyDependencies((d) => {
+							d.properties = properties ?? {};
+						});
+					}
+
+					if (!properties || Object.keys(properties).length === 0) {
+						this.frontmatterProperties?.hide();
+					} else {
+						this.frontmatterProperties?.show();
+					}
+				} else {
+					this.frontmatterProperties?.hide();
 				}
 
 				// ------------------ ALIASES -----------------

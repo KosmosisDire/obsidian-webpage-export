@@ -143,12 +143,18 @@ export interface i18n
 		backlinks: {
 			title: string;
 			description: string;
+			info_placeInRightSidebar: string;
 		},
 		tags: {
 			title: string;
 			description: string;
 			info_showInlineTags: string;
 			info_showFrontmatterTags: string;
+		},
+		frontmatterProperties: {
+			title: string;
+			description: string;
+			info_showFrontmatterProperties: string;
 		},
 		aliases: {
 			title: string;

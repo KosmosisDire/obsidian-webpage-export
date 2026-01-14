@@ -137,13 +137,19 @@ export const language: i18n =
 		},
 		backlinks: {
 			title: "Links de Retorno",
-			description: "Mostra os documentos que fazem referência ao documento atual."
+			description: "Mostra os documentos que fazem referência ao documento atual.",
+			info_placeInRightSidebar: "Colocar backlinks na barra lateral direita em vez do rodapé (aparece abaixo do sumário)."
 		},
 		tags: {
 			title: "Tags",
 			description: "Exibe as tags do documento aberto.",
-			info_showInlineTags: "Mostrar tags definidas dentro do conteúdo no topo da página.",
-			info_showFrontmatterTags: "Mostrar tags definidas no frontmatter no topo da página."
+			info_showInlineTags: "Mostrar tags definidas dentro do documento no topo da página.",
+			info_showFrontmatterTags: "Mostrar tags definidas no frontmatter do documento no topo da página."
+		},
+		frontmatterProperties: {
+			title: "Propriedades",
+			description: "Exibe as propriedades do frontmatter do documento aberto.",
+			info_showFrontmatterProperties: "Mostrar propriedades definidas no frontmatter do documento no topo da página."
 		},
 		aliases: {
 			title: "Apelidos",

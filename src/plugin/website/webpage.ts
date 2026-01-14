@@ -26,6 +26,7 @@ export class WebpageOutputData
 	public allTags: string[] = [];
 	public inlineTags: string[] = [];
 	public frontmatterTags: string[] = [];
+	public frontmatterProperties: {[key: string]: any} = {};
 	public aliases: string[] = [];
 	public backlinks: Webpage[] = [];
 	public headings: {heading: string, level: number, id: string, headingEl: HTMLElement}[] = [];
@@ -96,6 +97,7 @@ export class Webpage extends Attachment
 		output.coverImageURL = this.coverImageURL ?? "";
 		output.allTags = this.allTags;
 		output.frontmatterTags = this.frontmatterTags;
+		output.frontmatterProperties = this.frontmatterProperties;
 		output.aliases = this.aliases;
 		output.backlinks = this.backlinks;
 		output.headings = this.headings;
@@ -279,6 +281,23 @@ export class Webpage extends Attachment
 	{
 		const aliases = this.frontmatter?.aliases ?? [];
 		return aliases;
+	}
+
+	private get frontmatterProperties(): {[key: string]: any}
+	{
+		const allProperties = this.frontmatter || {};
+		const properties: {[key: string]: any} = {};
+		
+		// Exclude common frontmatter fields that have their own displays
+		const excludeKeys = ['title', 'aliases', 'tags', 'cssclasses', 'publish'];
+		
+		for (const [key, value] of Object.entries(allProperties)) {
+			if (!excludeKeys.includes(key.toLowerCase()) && value !== null && value !== undefined) {
+				properties[key] = value;
+			}
+		}
+		
+		return properties;
 	}
 
 	private get description(): string

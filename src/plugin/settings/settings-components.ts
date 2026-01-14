@@ -228,7 +228,12 @@ export function generateSettingsFromObject(obj: any, container: HTMLElement)
 		
 		if (settinginfo.dropdownOptions)
 		{
-			createDropdown(container, name, () => value, (v) => obj[key] = v, settinginfo.dropdownOptions, description);
+			createDropdown(container, name, () => value, (v) => {
+				obj[key] = v;
+				if (typeof obj.afterSettingsChange === 'function') {
+					obj.afterSettingsChange();
+				}
+			}, settinginfo.dropdownOptions, description);
 			continue;
 		}
 
@@ -262,13 +267,28 @@ export function generateSettingsFromObject(obj: any, container: HTMLElement)
 				switch (type)
 				{
 					case "boolean":
-						createToggle(section, name, () => value[i], (v) => obj[key][i] = v, description);
+						createToggle(section, name, () => value[i], (v) => {
+							obj[key][i] = v;
+							if (typeof obj.afterSettingsChange === 'function') {
+								obj.afterSettingsChange();
+							}
+						}, description);
 						break;
 					case "string":
-						createText(section, name, () => value[i], (v) => obj[key][i] = v, description);
+						createText(section, name, () => value[i], (v) => {
+							obj[key][i] = v;
+							if (typeof obj.afterSettingsChange === 'function') {
+								obj.afterSettingsChange();
+							}
+						}, description);
 						break;
 					case "number":
-						createText(section, name, () => value[i].toString(), (v) => obj[key][i] = parseFloat(v), description);
+						createText(section, name, () => value[i].toString(), (v) => {
+							obj[key][i] = parseFloat(v);
+							if (typeof obj.afterSettingsChange === 'function') {
+								obj.afterSettingsChange();
+							}
+						}, description);
 						break;
 					case "object":
 						generateSettingsFromObject(value[i], createSection(section, name, description));
@@ -320,15 +340,30 @@ export function generateSettingsFromObject(obj: any, container: HTMLElement)
 
 		switch (type)
 		{
-			case "boolean":
-				createToggle(container, name, () => value, (v) => obj[key] = v, description);
-				break;
-			case "string":
-				createText(container, name, () => value, (v) => obj[key] = v, description);
-				break;
-			case "number":
-				createText(container, name, () => value.toString(), (v) => obj[key] = parseFloat(v), description);
-				break;
+		case "boolean":
+			createToggle(container, name, () => value, (v) => {
+				obj[key] = v;
+				if (typeof obj.afterSettingsChange === 'function') {
+					obj.afterSettingsChange();
+				}
+			}, description);
+			break;
+		case "string":
+			createText(container, name, () => value, (v) => {
+				obj[key] = v;
+				if (typeof obj.afterSettingsChange === 'function') {
+					obj.afterSettingsChange();
+				}
+			}, description);
+			break;
+		case "number":
+			createText(container, name, () => value.toString(), (v) => {
+				obj[key] = parseFloat(v);
+				if (typeof obj.afterSettingsChange === 'function') {
+					obj.afterSettingsChange();
+				}
+			}, description);
+			break;
 			case "object":
 				generateSettingsFromObject(value, createSection(container, name, description));
 				break;
