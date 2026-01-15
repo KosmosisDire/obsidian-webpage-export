@@ -1,5 +1,5 @@
 import { MarkdownRendererOptions } from "./api-options";
-import { Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, MarkdownPreviewView, loadMermaid, TFile, MarkdownView, View, MarkdownPreviewRenderer, TAbstractFile, TFolder, Setting } from "obsidian";
+import { BlockCache, Component, Notice, WorkspaceLeaf, MarkdownRenderer as ObsidianRenderer, MarkdownPreviewView, loadMermaid, TFile, MarkdownView, View, MarkdownPreviewRenderer, TAbstractFile, TFolder, Setting } from "obsidian";
 import { TabManager } from "src/plugin/utils/tab-manager";
 import * as electron from 'electron';
 import { Settings, SettingsPage } from "src/plugin/settings/settings";
@@ -186,11 +186,37 @@ export namespace _MarkdownRendererInternal {
 
 		const view = renderLeaf.view;
 		const viewType = view.getViewType();
+		// @ts-ignore
+		const preview = view.previewMode;
+		let originalMarkdown = ''
 
 		switch (viewType) {
 			case "markdown":
-				// @ts-ignore
-				const preview = view.previewMode;
+				// Add block link support
+				const fileCache = app.metadataCache.getFileCache(file);
+				originalMarkdown = preview.view.data;
+				if (fileCache?.blocks)
+				{
+					let modifiedMarkdown = originalMarkdown;
+					let lines = modifiedMarkdown.split("\n");
+					// for every block cache, inject a span with an ID for anchor linking
+					for (const blockId in fileCache.blocks)
+					{
+						const block: BlockCache = fileCache.blocks[blockId];
+						const line = block.position.end.line;
+						
+						const regex = new RegExp(`\\s\\^${blockId}$`);
+						if (lines[line] && lines[line].match(regex))
+						{
+							lines[line] = lines[line].replace(regex, "");
+							lines[block.position.start.line] = `<span class="blockid-target" id="blockid-${blockId}"></span>` + lines[block.position.start.line];
+						}
+					}
+					modifiedMarkdown = lines.join("\n");
+					preview.view.setViewData(modifiedMarkdown, true)
+					preview.view.save()
+				}
+
 				html = await renderMarkdownView(preview, options);
 				break;
 			case "kanban":
@@ -205,6 +231,12 @@ export namespace _MarkdownRendererInternal {
 			default:
 				html = await renderGeneric(view, options);
 				break;
+		}
+
+		// Revert the view data to the original markdown after getting the HTML
+		if (originalMarkdown) {
+			preview.view.setViewData(originalMarkdown, false);
+			preview.view.save();
 		}
 
 		if (checkCancelled()) return undefined;
@@ -1585,4 +1617,3 @@ export namespace ExportLog {
 		return _MarkdownRendererInternal.checkCancelled();
 	}
 }
-
