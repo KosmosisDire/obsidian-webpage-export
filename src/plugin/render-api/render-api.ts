@@ -1115,10 +1115,20 @@ export namespace _MarkdownRendererInternal {
 
 			span.innerHTML = element.innerHTML;
 			element.remove();
-			let embed = span.querySelector(".inline-embed.markdown-embed") as HTMLElement;
-			embed.innerHTML = elParent.innerHTML;
-			elParent.innerHTML = "";
 			elParent.appendChild(span);
+		});
+
+		// add href to embed links
+		html.querySelectorAll(".markdown-embed-link").forEach((linkDiv: HTMLElement) => {
+			const embedParent = linkDiv.closest(".internal-embed");
+			const src = embedParent?.getAttribute("src");
+			if (src) {
+				const anchor = batchDocument.body.createEl("a");
+				anchor.className = linkDiv.className;
+				anchor.innerHTML = linkDiv.innerHTML;
+				anchor.setAttribute("href", src);
+				linkDiv.replaceWith(anchor);
+			}
 		});
 
 		// encode all text input values into attributes

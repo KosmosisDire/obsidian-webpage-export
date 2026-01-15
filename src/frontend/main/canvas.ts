@@ -84,12 +84,12 @@ export class CanvasNode
 
 	public get label(): string
 	{
-		return this.labelEl.textContent ?? "";
+		return this.labelEl?.textContent ?? "";
 	}
 
 	public set label(newLabel: string)
 	{
-		this.labelEl.textContent = newLabel;
+		if (this.labelEl) this.labelEl.textContent = newLabel;
 	}
 
 	public get isScrollable(): boolean
@@ -113,7 +113,7 @@ export class CanvasNode
 		this.containerEl = nodeEl.querySelector(".canvas-node-container") as HTMLElement;
 		this.contentEl = nodeEl.querySelector(".canvas-node-content") as HTMLElement;
 
-		if (!this.labelEl || !this.containerEl || !this.contentEl)
+		if (!this.containerEl || !this.contentEl)
 		{
 			console.error("Failed to find all required elements for canvas node", this);
 			return;
