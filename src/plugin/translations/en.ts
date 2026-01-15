@@ -138,13 +138,19 @@ export const language: i18n =
 		},
 		backlinks: {
 			title: "Backlinks",
-			description: "Displays all the documents which link to the currently opened document."
+			description: "Displays all the documents which link to the currently opened document.",
+			info_placeInRightSidebar: "Place backlinks in the right sidebar instead of the footer (appears below table of contents)."
 		},
 		tags: {
 			title: "Tags",
 			description: "Displays the tags for the currently opened document.",
 			info_showInlineTags: "Show tags defined inside the document at the top of the page.",
 			info_showFrontmatterTags: "Show tags defined in the frontmatter of the document at the top of the page."
+		},
+		frontmatterProperties: {
+			title: "Properties",
+			description: "Displays frontmatter properties for the currently opened document.",
+			info_showFrontmatterProperties: "Show properties defined in the frontmatter of the document at the top of the page."
 		},
 		aliases: {
 			title: "Aliases",

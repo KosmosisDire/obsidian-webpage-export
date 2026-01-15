@@ -2,6 +2,7 @@ import { BacklinksOptions } from "src/shared/features/backlinks";
 import { TagsOptions } from "src/shared/features/tags";
 import { AliasesOptions } from "src/shared/features/aliases";
 import { PropertiesOptions } from "src/shared/features/properties";
+import { FrontmatterPropertiesOptions } from "src/shared/features/frontmatter-properties";
 import { FileNavigationOptions } from "src/shared/features/file-navigation";
 import { OutlineOptions } from "src/shared/features/outline";
 import { ThemeToggleOptions } from "src/shared/features/theme-toggle";
@@ -44,6 +45,11 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	 * The options for the tags feature.
 	 */
 	tagOptions: TagsOptions = new TagsOptions();
+
+	/**
+	 * The options for the frontmatter properties feature.
+	 */
+	frontmatterPropertiesOptions: FrontmatterPropertiesOptions = new FrontmatterPropertiesOptions();
 
 	/**
 	 * The options for the aliases feature.

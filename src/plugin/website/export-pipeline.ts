@@ -22,6 +22,7 @@ export class WebsiteExportPipeline
 		pipeline.files = app.vault.getFiles();
 		pipeline.features = [
 			options.tagOptions,
+			options.frontmatterPropertiesOptions,
 			options.aliasOptions,
 			options.searchOptions,
 			options.outlineOptions,

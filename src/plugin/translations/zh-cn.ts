@@ -137,13 +137,19 @@ export const language: i18n =
 		},
 		backlinks: {
 			title: "反向链接",
-			description: "显示链接到当前文档的所有文档。"
+			description: "显示链接到当前文档的所有文档。",
+			info_placeInRightSidebar: "将反向链接放置在右侧边栏而不是页脚中（出现在目录下方）。"
 		},
 		tags: {
 			title: "标签",
 			description: "显示当前打开文档的标签。",
-			info_showInlineTags: "在页面顶部显示文档内定义的标签。",
-			info_showFrontmatterTags: "在页面顶部显示文档前置区域定义的标签。"
+			info_showInlineTags: "在页面顶部显示文档内部定义的标签。",
+			info_showFrontmatterTags: "在页面顶部显示文档frontmatter中定义的标签。"
+		},
+		frontmatterProperties: {
+			title: "属性",
+			description: "显示当前打开文档的frontmatter属性。",
+			info_showFrontmatterProperties: "在页面顶部显示文档frontmatter中定义的属性。"
 		},
 		aliases: {
 			title: "别名",

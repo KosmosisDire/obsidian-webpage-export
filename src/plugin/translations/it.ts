@@ -131,13 +131,19 @@ export const language: i18n =
 		},
 		backlinks: {
 			title: "Collegamenti di ritorno",
-			description: "Mostra tutti i documenti che si collegano al documento attualmente aperto."
+			description: "Mostra tutti i documenti che si collegano al documento attualmente aperto.",
+			info_placeInRightSidebar: "Posiziona i backlinks nella barra laterale destra invece che nel footer (appare sotto l'indice)."
 		},
 		tags: {
 			title: "Etichette",
 			description: "Mostra le etichette del documento attualmente aperto.",
 			info_showInlineTags: "Mostra le etichette definite all'interno del documento in cima alla pagina.",
-			info_showFrontmatterTags: "Mostra le etichette definite nell'intestazione del documento in cima alla pagina."
+			info_showFrontmatterTags: "Mostra le etichette definite nel frontmatter del documento in cima alla pagina."
+		},
+		frontmatterProperties: {
+			title: "Proprietà",
+			description: "Mostra le proprietà del frontmatter per il documento attualmente aperto.",
+			info_showFrontmatterProperties: "Mostra le proprietà definite nel frontmatter del documento in cima alla pagina."
 		},
 		aliases: {
 			title: "Alias",

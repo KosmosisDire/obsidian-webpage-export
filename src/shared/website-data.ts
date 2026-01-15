@@ -11,6 +11,7 @@ import { RssOptions } from "./features/rss";
 import { SearchOptions } from "./features/search";
 import { SidebarOptions } from "./features/sidebar";
 import { TagsOptions } from "./features/tags";
+import { FrontmatterPropertiesOptions } from "./features/frontmatter-properties";
 import { ThemeToggleOptions } from "./features/theme-toggle";
 
 export enum EmojiStyle
@@ -52,6 +53,7 @@ export interface WebpageData extends FileData
 	aliases: string[];
 	inlineTags: string[];
 	frontmatterTags: string[];
+	frontmatterProperties: {[key: string]: any};
 	links: string[];
 	attachments: string[];
 
@@ -75,6 +77,11 @@ export class WebsiteOptions
 	 * The options for the tags feature.
 	 */
 	tags: TagsOptions;
+
+	/**
+	 * The options for the frontmatter properties feature.
+	 */
+	frontmatterProperties: FrontmatterPropertiesOptions;
 
 	/**
 	 * The options for the aliases feature.
@@ -141,6 +148,7 @@ export class WebsiteOptions
 		let data = Object.assign(new WebsiteOptions(), JSON.parse(json));
 		data.backlinks = Object.assign(new BacklinksOptions(), data.backlinks);
 		data.tags = Object.assign(new TagsOptions(), data.tags);
+		data.frontmatterProperties = Object.assign(new FrontmatterPropertiesOptions(), data.frontmatterProperties);
 		data.alias = Object.assign(new AliasesOptions(), data.alias);
 		data.properties = Object.assign(new PropertiesOptions(), data.properties);
 		data.fileNavigation = Object.assign(new FileNavigationOptions(), data.fileNavigation);

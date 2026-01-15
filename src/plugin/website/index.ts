@@ -27,8 +27,8 @@ export class Index
 	private minisearchOptions = 
 	{
 		idField: 'path',
-		fields: ['title', 'aliases', 'headers', 'tags', 'path', 'content'],
-		storeFields: ['title', 'aliases', 'headers', 'tags', 'path'],
+		fields: ['title', 'aliases', 'headers', 'tags', 'frontmatterProperties', 'path', 'content'],
+		storeFields: ['title', 'aliases', 'headers', 'tags', 'frontmatterProperties', 'path'],
 		processTerm: (term:any, _fieldName:any) =>
 			this.stopWords.includes(term) ? null : term.toLowerCase()
 	}
@@ -83,9 +83,10 @@ export class Index
 			if (!this.websiteData.fileInfo) this.websiteData.fileInfo = {};
 			if (!this.websiteData.sourceToTarget) this.websiteData.sourceToTarget = {};
 			this.websiteData.featureOptions = 
-			{
-				backlinks: options.backlinkOptions,
+		{
+			backlinks: options.backlinkOptions,
 				tags: options.tagOptions,
+				frontmatterProperties: options.frontmatterPropertiesOptions,
 				alias: options.aliasOptions,
 				properties: options.propertiesOptions,
 				fileNavigation: options.fileNavigationOptions,
@@ -440,6 +441,7 @@ export class Index
 			webpageInfo.aliases = webpage.outputData.aliases;
 			webpageInfo.inlineTags = webpage.outputData.inlineTags;
 			webpageInfo.frontmatterTags = webpage.outputData.frontmatterTags;
+			webpageInfo.frontmatterProperties = webpage.outputData.frontmatterProperties;
 			webpageInfo.headers = await webpage.outputData.renderedHeadings;
 			webpageInfo.links = webpage.outputData.linksToOtherFiles;
 			webpageInfo.author = webpage.outputData.author;
@@ -499,6 +501,7 @@ export class Index
 			this.minisearch.add({
 				title: webpage.title,
 				aliases: webpage.outputData.aliases,
+				frontmatterProperties: webpage.outputData.frontmatterProperties,
 				headers: headers,
 				tags: webpage.outputData.allTags,
 				path: webpagePath,
