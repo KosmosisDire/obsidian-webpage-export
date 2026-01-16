@@ -76,9 +76,11 @@ class VaultStore {
         }
     }
 
-    getFile(path: string): FileData | null {
+    getFile(path: string): FileData | null
+	{
         const data = this.websiteData;
         if (!data || !data.files) return null;
+		if (path.startsWith('/')) path = path.slice(1);
         return data.files[path] || null;
     }
 

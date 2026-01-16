@@ -1,7 +1,8 @@
 import { createSignal, onCleanup, JSX } from 'solid-js';
+import { showNotice } from './components/Notice';
 
 export interface RouterOptions {
-	urlMapper?: (url: string, fromUrl?: FileUrl) => FileUrl;
+	urlMapper?: (url: string, fromUrl?: FileUrl) => FileUrl | undefined;
 }
 
 export interface RouterContext {
@@ -26,7 +27,7 @@ export class FileUrl
 export function createRouter(options: RouterOptions = {}): RouterContext {
 	const { urlMapper } = options;
 
-	const resolvePath = (path: string, fromPath?: FileUrl): FileUrl => {
+	const resolvePath = (path: string, fromPath?: FileUrl): FileUrl | undefined => {
 		return urlMapper ? urlMapper(path, fromPath) : new FileUrl(path, path);
 	};
 
@@ -43,6 +44,13 @@ export function createRouter(options: RouterOptions = {}): RouterContext {
 	const navigate = (href: string) => {
 		const fromPath = currentPath();
 		const mappedHref = resolvePath(href, fromPath);
+
+		if (!mappedHref) 
+		{
+			showNotice("Unable to navigate to: " + href);
+			return;
+		}
+
 		setCurrentPath(mappedHref);
 		window.history.pushState({ clickedHref: href, fileUrl: mappedHref }, '', mappedHref.webPath);
 	};

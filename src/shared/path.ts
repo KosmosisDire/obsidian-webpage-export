@@ -3,6 +3,8 @@
  * Pure string manipulation without filesystem dependencies
  */
 export class Path {
+	private _sourceString: string = "";
+	private _fullPath: string = "";
 	private _root: string = "";
 	private _dir: string = "";
 	private _parent: string = "";
@@ -10,11 +12,9 @@ export class Path {
 	private _ext: string = "";
 	private _hash: string = "";
 	private _name: string = "";
-	private _fullPath: string = "";
 	private _isDirectory: boolean = false;
 	private _isFile: boolean = false;
 	private _workingDirectory: string;
-	private _sourceString: string = "";
 
 	constructor(path: string, workingDirectory: string = "/") {
 		// Convert backslashes to forward slashes for consistent handling

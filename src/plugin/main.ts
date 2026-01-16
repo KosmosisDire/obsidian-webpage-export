@@ -9,30 +9,30 @@ import path from "path";
 export default class HTMLExportPlugin extends Plugin {
 	private exporter: HTMLExporter;
 
-	// static readonly OUTPUT_PATH = path.join(
-	// 	"C:",
-	// 	"Main",
-	// 	"Obsidian",
-	// 	"Development",
-	// 	".obsidian",
-	// 	"plugins",
-	// 	"webpage-html-export",
-	// 	"src",
-	// 	"frontend",
-	// 	"dist",
-	// 	"obsidian-cache.json"
-	// );
-
 	static readonly OUTPUT_PATH = path.join(
 		"C:",
 		"Main",
-		"Nathan",
-		"obsidian-webpage-export",
+		"Obsidian",
+		"Development",
+		".obsidian",
+		"plugins",
+		"webpage-html-export",
 		"src",
 		"frontend",
 		"dist",
 		"obsidian-cache.json"
 	);
+
+	// static readonly OUTPUT_PATH = path.join(
+	// 	"C:",
+	// 	"Main",
+	// 	"Nathan",
+	// 	"obsidian-webpage-export",
+	// 	"src",
+	// 	"frontend",
+	// 	"dist",
+	// 	"obsidian-cache.json"
+	// );
 
 	async onload() {
 		console.log("Loading webpage-html-export plugin");

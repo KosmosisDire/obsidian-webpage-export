@@ -4,6 +4,7 @@ import { FileTree } from "@shared/components/FileTree";
 import { DocumentViewerPage } from "./components/DocumentViewerPage";
 import { Path } from "@shared/path";
 import { createRouter, Route, FileUrl } from "./router";
+import { NoticeContainer, showNotice } from "./components/Notice";
 
 function Layout(props: any) {
 	const [filesReady, setFilesReady] = createSignal(false);
@@ -184,29 +185,46 @@ function Layout(props: any) {
 }
 
 
-export function App() {
-	var currentPath = new Path(document.querySelector('meta[name="abs-path"]')?.getAttribute("content") || "/");
-	var pathToRoot = new Path(document.querySelector('meta[name="path-to-root"]')?.getAttribute("content") || "./");
-    var currentLocation = new Path(window.location.pathname);
-    var rootPath = currentLocation.join(pathToRoot);
-	
-    const urlMapper = (url: string, fromUrl?: FileUrl): FileUrl => {
+export function App()
+{
+	var startingPath = new Path(document.querySelector('meta[name="abs-path"]')?.getAttribute("content") || "/");
+	var startingPathToRoot = new Path(document.querySelector('meta[name="path-to-root"]')?.getAttribute("content") || "./");
+	var startingWebPath = new Path(window.location.pathname).directory.join(startingPathToRoot).join(startingPath).normalized();
+	var startingFromUrl = new FileUrl(startingWebPath.toString(), startingPath.toString());
+	console.log(startingFromUrl)
+	showNotice("Loaded Page");
+
+    const urlMapper = (url: string, fromUrl?: FileUrl): FileUrl | undefined =>
+	{
+		fromUrl = fromUrl || startingFromUrl;
+		var currentFileData = vaultStore.getFile(fromUrl.vaultPath);
+		console.log(currentFileData);
+		if (!currentFileData)
+		{
+			showNotice("Warning: Current file not found in vault: " + fromUrl.vaultPath, 5000);	
+			
+		}
+
+		var currentLocation = new Path(window.location.pathname);
+		// var rootPath = currentLocation.join(pathToRoot);
+
 		url = url.trim();
         let originalUrl = url;
 		let webPath = url;
         let vaultPath = url;
 		let path = new Path(url);
 
-        console.log(currentLocation.toString(), pathToRoot.toString(), path.toString(), rootPath.toString());
+        // console.log(currentLocation, path, rootPath);
         
         if (path.isDirectory)
         {
+			console.log("Directory path detected, appending index.html");
 			webPath += "index.html";
             vaultPath += "index.html";
             path = path.joinString("index.html");
 		} 
 
-        path = currentLocation.join(pathToRoot).join(path);
+        // path = currentLocation.directory.join(pathToRoot).join(path).normalized() || path;
 		
 
         webPath = path.toString();
@@ -220,6 +238,7 @@ export function App() {
 
 	return (
 		<Layout>
+			<NoticeContainer />
 			<Route
 				router={router}
 				resolver={(path) => <DocumentViewerPage path={path.vaultPath} />}
