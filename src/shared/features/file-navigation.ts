@@ -11,6 +11,8 @@ export class FileNavigationOptions extends FetchedFeatureOptions
 	defaultFileIcon: string = "lucide//file";
 	defaultMediaIcon: string = "lucide//file-image";
 	exposeStartingPath: boolean = true;
+	enableFolderNotesSupport: boolean = false;
+	enableManualSortingSupport: boolean = false;
 	
 	info_showCustomIcons: FeatureSettingInfo = new FeatureSettingInfo(
 	{
@@ -46,6 +48,16 @@ export class FileNavigationOptions extends FetchedFeatureOptions
 	{
 		show: true, 
 		description: i18n.settings.fileNavigation.info_exposeStartingPath
+	});
+	info_enableFolderNotesSupport: FeatureSettingInfo = new FeatureSettingInfo(
+	{
+		show: true, 
+		description: i18n.settings.fileNavigation.info_enableFolderNotesSupport
+	});
+	info_enableManualSortingSupport: FeatureSettingInfo = new FeatureSettingInfo(
+	{
+		show: true, 
+		description: i18n.settings.fileNavigation.info_enableManualSortingSupport
 	});
 
 	constructor()

@@ -194,6 +194,27 @@ export class Website
 				this.fileTree.generateWithItemsClosed = true;
 				this.fileTree.showFileExtentionTags = true;
 				this.fileTree.hideFileExtentionTags = ["md"];
+				this.fileTree.enableFolderNotesSupport = this.exportOptions.fileNavigationOptions.enableFolderNotesSupport ?? false;
+
+				// Load manual sorting order if enabled
+				if (this.exportOptions.fileNavigationOptions.enableManualSortingSupport) {
+					try {
+						const manualSortPath = `${app.vault.configDir}/plugins/manual-sorting/data.json`;
+						if (await app.vault.adapter.exists(manualSortPath)) {
+							const raw = await app.vault.adapter.read(manualSortPath);
+							const manualSortData = JSON.parse(raw);
+							if (manualSortData?.customFileOrder) {
+								this.fileTree.enableManualSortSupport = manualSortData.customFileOrder;
+								ExportLog.log("Manual sorting order loaded successfully");
+							}
+						} else {
+							ExportLog.warning("Manual Sorting plugin data not found at: " + manualSortPath);
+						}
+					} catch (e) {
+						ExportLog.warning("Could not load manual sorting data: " + e);
+					}
+				}
+
 				this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
 				this.fileTree.id = "file-explorer";
 				const tempContainer = document.createElement("div");

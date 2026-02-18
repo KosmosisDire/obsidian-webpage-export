@@ -255,6 +255,10 @@ export class ObsidianWebsite {
 		if (this.isHttp) {
 			let initialPath = this.document.pathname;
 			if (initialPath == "index.html") initialPath = "";
+			// Folder notes support: show clean folder URLs
+			if (initialPath.endsWith("/index.html")) {
+				initialPath = initialPath.slice(0, -"index.html".length);
+			}
 			history.replaceState(
 				{ pathname: initialPath },
 				this.document.title,
@@ -351,6 +355,10 @@ export class ObsidianWebsite {
 		if (this.document && this.isHttp && pushState) {
 			let currentPath = this.document.pathname;
 			if (currentPath == "index.html") currentPath = "";
+			// Folder Note Support: show clean folder URLs (e.g., FolderName/ instead of FolderName/index.html)
+			if (currentPath.endsWith("/index.html")) {
+				currentPath = currentPath.slice(0, -"index.html".length);
+			}
 			history.pushState(
 				{ pathname: currentPath },
 				this.document.title,

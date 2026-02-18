@@ -94,7 +94,9 @@ export const language: i18n =
 			info_defaultFolderIcon: "Ícone usado para pastas. Prefixe com 'lucide//' para usar um ícone do Lucide",
 			info_defaultFileIcon: "Ícone usado para arquivos. Prefixe com 'lucide//' para usar um ícone do Lucide",
 			info_defaultMediaIcon: "Ícone usado para arquivos de mídia. Prefixe com 'lucide//' para usar um ícone do Lucide",
-			info_exposeStartingPath: "Mostrar o arquivo atual na árvore ao carregar a página"
+			info_exposeStartingPath: "Mostrar o arquivo atual na árvore ao carregar a página",
+			info_enableFolderNotesSupport: "Ativar suporte para o plugin Folder notes.",
+			info_enableManualSortingSupport: "Ativar suporte para o plugin Manual Sorting."
 		},
 		outline: {
 			title: "Sumário", 

@@ -1,4 +1,4 @@
-import { FrontMatterCache, TFile } from "obsidian";
+import { FrontMatterCache, TFile, TFolder } from "obsidian";
 import { Path } from "src/plugin/utils/path";
 import { Attachment } from "src/plugin/utils/downloadable";
 import { OutlineTree } from "src/plugin/features/outline-tree";
@@ -75,6 +75,36 @@ export class Webpage extends Attachment
 		this.exportOptions = options;
 		this.source = file;
 		this.website = website;
+
+		// Folder notes support: rename Folder notes to index.html so browsers serve them at folder/
+		// Supports two modes:
+		//   Inside mode:  Projects/Projects.md --> Projects/index.html
+		//   Outside mode: Home/Projects.md alongside Home/Projects/ --> Home/Projects/index.html
+		if (this.exportOptions.fileNavigationOptions.enableFolderNotesSupport) {
+			const fileBasename = file.basename; // without extension
+			const parentFolderName = file.parent?.name;
+
+			// Inside mode: file has the same name as its parent folder
+			if (parentFolderName && fileBasename === parentFolderName) {
+				this.targetPath.setFileName("index");
+			}
+			// Outside mode: a sibling folder with the same name exists
+			else if (file.parent) {
+				const siblingFolderPath = file.parent.isRoot()
+					? fileBasename
+					: file.parent.path + "/" + fileBasename;
+				const siblingFolder = app.vault.getAbstractFileByPath(siblingFolderPath);
+				if (siblingFolder instanceof TFolder) {
+					// Move from Parent folder/foldername.html --> folder/foldername/index.html
+					const currentBase = this.targetPath.basename;
+					const currentParentPath = this.targetPath.parent?.path ?? "";
+					const newPath = currentParentPath
+						? currentParentPath + "/" + currentBase + "/index.html"
+						: currentBase + "/index.html";
+					this.targetPath.reparse(newPath);
+				}
+			}
+		}
 
 		if (this.exportOptions.flattenExportPaths) 
 			this.targetPath.parent = Path.emptyPath;

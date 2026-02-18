@@ -184,13 +184,27 @@ export class TreeItem
 
 		if (this._isCollapsible) 
 		{
-			const clickItem = this.isLink ? this.collapseIconEl ?? this.selfEl : this.selfEl;
-			clickItem.addEventListener("click", (e) =>
-			{
-				this.collapsed = !this.collapsed;
-				e.preventDefault();
-				e.stopPropagation();
-			});
+			// Folder notes support: only the collapse icon toggles expand/collapse without opening note itself.
+			const isFolderNoteFolder = ObsidianSite.metadata?.featureOptions?.fileNavigation?.enableFolderNotesSupport 
+				&& this._isFolder && this._isLink;
+
+			if (isFolderNoteFolder) {
+				this.collapseIconEl?.addEventListener("click", (e) =>
+				{
+					this.collapsed = !this.collapsed;
+					e.preventDefault();
+					e.stopPropagation();
+				});
+			}
+			else {
+				const clickItem = this.isLink ? this.collapseIconEl ?? this.selfEl : this.selfEl;
+				clickItem.addEventListener("click", (e) =>
+				{
+					this.collapsed = !this.collapsed;
+					e.preventDefault();
+					e.stopPropagation();
+				});
+			}
 		}
 
 		this._checkAnyChildrenOpen();
