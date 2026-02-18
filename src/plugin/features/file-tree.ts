@@ -17,6 +17,9 @@ export class FileTree extends Tree
 	/** Remove files that don't match these regexes */
 	public regexWhitelist: string[] = [];
 
+	/** When Folder notes true, (so files with the same name as their parent folder or a folder as sibling) are merged with the same-name folder */
+	public enableFolderNotesSupport: boolean = false;
+
 	public files: Path[];
 	public keepOriginalExtensions: boolean;
 	public sort: boolean;
@@ -120,6 +123,12 @@ export class FileTree extends Tree
 					if (targetPath.path.endsWith(".excalidraw.md")) targetPath.setExtension("drawing");
 					currentParentNode.originalExtension = file.extensionName;
 					if(!this.keepOriginalExtensions && MarkdownRendererAPI.isConvertable(targetPath.extensionName)) targetPath.setExtension("html");
+
+					// Folder notes support: if file basename matches parent folder name, rename to index.html
+					if (this.enableFolderNotesSupport && file.parent && file.basename === file.parent.basename) {
+						targetPath.setFileName("index");
+					}
+
 				    if (tfile) {
 						currentParentNode.title = (await _MarkdownRendererInternal.getTitleForFile(tfile)).title;
 						currentParentNode.icon = (await _MarkdownRendererInternal.getIconForFile(tfile)).icon;
@@ -129,12 +138,79 @@ export class FileTree extends Tree
 			}
 		}
 
+		if (this.enableFolderNotesSupport) {
+			this.mergeFolderNotes(this.children);
+		}
+
 		if (this.sort) 
 		{
 			this.sortAlphabetically(); // Sorts children of 'this' and recursively
 			this.sortByIsFolder();   // Sorts children of 'this' and recursively
 		}
         this.assignTreeOrder(); // Assign treeOrder after all items are structured and sorted
+	}
+
+	/**
+	 * Recursively merge Folder notes into their parent folder.
+	 * Supports two modes:
+	 *   Inside mode:  A child file has the same name as its parent folder (MyFolderNote/MyFolderNote.md)
+	 *   Outside mode: A file and folder are siblings with the same title (MyFolderNote.md alongside MyFolderNote/)
+	 * In both cases, the folder gets the file's href/icon and the file entry is removed from the tree.
+	 */
+	private mergeFolderNotes(children: FileTreeItem[]): void {
+		// Outside mode: find sibling file+folder pairs with the same title
+		const filesToRemove: number[] = [];
+		for (let i = 0; i < children.length; i++) {
+			const child = children[i];
+			if (!child.isFolder) {
+				const siblingFolder = children.find(
+					(c) => c.isFolder && c.title === child.title && c !== child
+				);
+				if (siblingFolder) {
+					// Fix the href: MyFolderNote.md --> MyFolderNote/index.html
+					let href = child.href;
+					if (href) {
+						href = href.replace(/\.html$/, '/index.html');
+					}
+					siblingFolder.href = href;
+					if (child.icon && child.icon.trim() !== "") {
+						siblingFolder.icon = child.icon;
+					}
+					filesToRemove.push(i);
+					if (child.dataRef) {
+						this.pathToItem.delete(child.dataRef);
+					}
+				}
+			}
+		}
+		// Remove merged files in reverse order to preserve indices
+		for (let i = filesToRemove.length - 1; i >= 0; i--) {
+			children.splice(filesToRemove[i], 1);
+		}
+
+		// Inside mode + recurse into child folders
+		for (const child of children) {
+			if (child.isFolder && child.children.length > 0) {
+				// Inside mode: look for a child file matching the folder name
+				const folderName = child.title;
+				const folderNoteIndex = child.children.findIndex(
+					(c) => !c.isFolder && c.title === folderName
+				);
+				if (folderNoteIndex !== -1) {
+					const folderNote = child.children[folderNoteIndex];
+					child.href = folderNote.href;
+					if (folderNote.icon && folderNote.icon.trim() !== "") {
+						child.icon = folderNote.icon;
+					}
+					child.children.splice(folderNoteIndex, 1);
+					if (folderNote.dataRef) {
+						this.pathToItem.delete(folderNote.dataRef);
+					}
+				}
+				// Recurse into subfolders
+				this.mergeFolderNotes(child.children);
+			}
+		}
 	}
 
     private assignTreeOrder(): void {

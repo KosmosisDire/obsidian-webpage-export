@@ -61,7 +61,10 @@ export class LinkHandler
 	{
 		if(url == "" || url == "/" || url == "\\") return "index.html";
 		if(url?.startsWith("#") || url?.startsWith("?")) return (ObsidianSite.document?.pathname?.split("#")[0]?.split("?")[0] ?? "") + (url ?? "");
-		return url?.split("?")[0]?.split("#")[0]?.trim() ?? "";
+		let pathname = url?.split("?")[0]?.split("#")[0]?.trim() ?? "";
+		// Folder notes support: resolve trailing-slash URLs to index.html
+		if (pathname.endsWith("/")) pathname += "index.html";
+		return pathname;
 	}
 
 	public static getHashFromURL(url: string): string

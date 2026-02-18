@@ -194,6 +194,7 @@ export class Website
 				this.fileTree.generateWithItemsClosed = true;
 				this.fileTree.showFileExtentionTags = true;
 				this.fileTree.hideFileExtentionTags = ["md"];
+				this.fileTree.enableFolderNotesSupport = this.exportOptions.fileNavigationOptions.enableFolderNotesSupport ?? false;
 				this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
 				this.fileTree.id = "file-explorer";
 				const tempContainer = document.createElement("div");

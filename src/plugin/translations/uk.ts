@@ -93,7 +93,8 @@ export const language: i18n =
 			info_defaultFolderIcon: "Іконка для папок. Використовуйте префікс \"lucide//\" для використання іконки Lucide",
 			info_defaultFileIcon: "Іконка для файлів. Використовуйте префікс \"lucide//\" для використання іконки Lucide",
 			info_defaultMediaIcon: "Іконка для медіа-файлів. Використовуйте префікс \"lucide//\" для використання іконки Lucide",
-			info_exposeStartingPath: "Показувати поточний файл у дереві файлів при першому завантаженні сторінки"
+			info_exposeStartingPath: "Показувати поточний файл у дереві файлів при першому завантаженні сторінки",
+			info_enableFolderNotesSupport: "Увімкнути підтримку плагіна Folder notes."
 		},
 		outline: {
 			title: "Структура",

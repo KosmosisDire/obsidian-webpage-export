@@ -99,6 +99,7 @@ export interface i18n
 			info_defaultFileIcon: string;
 			info_defaultMediaIcon: string;
 			info_exposeStartingPath: string;
+			info_enableFolderNotesSupport: string;
 		},
 		outline: {
 			title: string;
