@@ -2,7 +2,7 @@ import { Plugin } from "obsidian";
 import { MarkdownRendererAPI } from "./renderer/renderer";
 import { HTMLExporter, createEmptyFileData } from "./exporter";
 import { ExportSettings } from "./export-settings";
-import { FilePickerModal } from "./components/FilePickerModal";
+import { FilePickerModal } from "./components/file-picker-modal";
 import { FileData } from "../shared/types";
 import path from "path";
 

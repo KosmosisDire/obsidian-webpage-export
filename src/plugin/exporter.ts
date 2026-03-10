@@ -4,14 +4,16 @@ import {
 	Plugin,
 	Notice,
 	TFile,
+	TFolder,
 	App,
 } from "obsidian";
 import * as fs from "fs";
 import MiniSearch from "minisearch";
 import { ExportLog, MarkdownRendererAPI } from "./renderer/renderer";
-import { FileData, ExportData } from "./data";
+import { FileData, ExportData } from "@shared/types";
 import { ExportSettings } from "./export-settings";
 import { Path } from "@shared/path";
+import { getIconForFile, getDisplayTitle, collectFolderMetadata } from "./utils/icon-handler";
 
 export function createEmptyFileData(file: TFile): FileData {
 	return {
@@ -72,7 +74,7 @@ export class HTMLExporter {
 			}
 
 			// Build export structure
-			const exportData = this.buildExportStructure(processedFiles);
+			const exportData = await this.buildExportStructure(processedFiles);
 
 			// Save to file
 			notice.setMessage("Saving export...");
@@ -189,7 +191,7 @@ export class HTMLExporter {
 
 	private transformHref(href: string, sourcePath: string, pathMap: Record<string, string>): string
 	{
-		let transformed = app.metadataCache.getFirstLinkpathDest(href, sourcePath)?.path || href;
+		let transformed = this.app.metadataCache.getFirstLinkpathDest(href, sourcePath)?.path || href;
 		transformed = pathMap[transformed] || transformed;
 		return transformed;
 	}
@@ -203,22 +205,55 @@ export class HTMLExporter {
 		const cache = this.app.metadataCache.getFileCache(file);
 		const links = this.extractLinks(file);
 
+		const frontmatter = cache?.frontmatter || {};
+
+		// Resolve icon, then pass through markdown renderer so plugins like Iconize
+		// can convert their identifier strings (e.g. ":BoBxTestTube:") into actual SVGs
+		let icon = getIconForFile(file);
+		if (icon) {
+			icon = await MarkdownRendererAPI.renderMarkdownSimple(icon) ?? icon;
+		}
+
+		// Build headers with unique IDs and rendered HTML
+		const rawHeadings = cache?.headings ?? [];
+		const headerIdCounts = new Map<string, number>();
+		const headers = await Promise.all(
+			rawHeadings.map(async (h) => {
+				// Generate a unique ID using the same algorithm as the frontend postProcess
+				let baseId = h.heading
+					.replaceAll(" ", "_")
+					.replaceAll(":", "")
+					.replaceAll("__", "_");
+				const count = headerIdCounts.get(baseId) ?? 0;
+				headerIdCounts.set(baseId, count + 1);
+				const id = `${baseId}_${count}`;
+
+				// Render inline markdown (bold, italics, links, etc.) to HTML
+				const renderedHtml = await MarkdownRendererAPI.renderMarkdownSimple(h.heading);
+
+				return {
+					text: h.heading,
+					html: renderedHtml || undefined,
+					level: h.level,
+					id,
+				};
+			})
+		);
+
 		return {
 			path: file.path,
 			modified: file.stat.mtime,
 			exported: Date.now(),
-			frontmatter: cache?.frontmatter || {},
+			frontmatter: frontmatter,
+			title: getDisplayTitle(file.basename, frontmatter),
+			icon,
 			content: {
 				markdown: content,
 				html: html,
 			},
 			links: links,
 			elements: {
-				headers:
-					cache?.headings?.map((h) => ({
-						text: h.heading,
-						level: h.level,
-					})) || [],
+				headers,
 				tags: cache?.tags?.map((t) => t.tag) || [],
 				blocks: cache?.blocks ? Object.keys(cache.blocks) : [],
 				lists: cache?.listItems?.length || 0,
@@ -256,20 +291,30 @@ export class HTMLExporter {
 		};
 	}
 
-	private buildExportStructure(files: FileData[]): ExportData {
-		const filePathMapping = this.buildFilePathMapping(files);
+	private async buildExportStructure(files: FileData[]): Promise<ExportData> {
+		// Build a single mapping of all vault paths (files + folders) → web paths
+		const folderSet = new Set<TFolder>();
+		for (const file of files) {
+			let folder = this.app.vault.getAbstractFileByPath(file.path)?.parent;
+			while (folder && folder.path !== "/") {
+				folderSet.add(folder);
+				folder = folder.parent;
+			}
+		}
+
+		const webPathMapping = this.buildWebPathMapping(files, Array.from(folderSet));
 
 		const filesMap: Record<string, FileData> = {};
-		files.forEach(async (file) => {
-
+		files.forEach((file) => {
 			// resolve links in HTML and convert them to web paths
-			file.content.html = this.resolveLinks(file.content.html, file.path, filePathMapping);
+			file.content.html = this.resolveLinks(file.content.html, file.path, webPathMapping);
 
 			// Convert files array to path-keyed object using web file names as keys
-			const webFileName = filePathMapping[file.path];
+			const webFileName = webPathMapping[file.path];
 			filesMap[webFileName] = file;
-
 		});
+
+		const folders = await collectFolderMetadata(Array.from(folderSet), webPathMapping);
 
 		return {
 			export: {
@@ -279,29 +324,37 @@ export class HTMLExporter {
 				totalFiles: files.length,
 			},
 			files: filesMap,
+			folders,
 			indices: {
 				search: this.buildSearchIndex(files),
 				graph: this.buildGraph(files),
 				tags: this.buildTagIndex(files),
 			},
-			filePathMapping: filePathMapping,
+			filePathMapping: webPathMapping,
 		};
 	}
 
-	private buildFilePathMapping(files: FileData[]): Record<string, string> {
+	/**
+	 * Single source of truth for converting vault paths to absolute web paths.
+	 * Maps both file and folder vault paths → /slugified/web/paths.
+	 */
+	private buildWebPathMapping(files: FileData[], folders: TFolder[]): Record<string, string> {
 		const mapping: Record<string, string> = {};
 
-		files.forEach((file) => {
+		for (const file of files) {
 			const obsidianPath = new Path(file.path);
 			const webPath = obsidianPath.copy.slugify(true);
 
-			// Convert extension to .html if the file is convertable
 			if (MarkdownRendererAPI.isConvertable(obsidianPath.extension)) {
 				webPath.setExtension(".html");
 			}
 
-			mapping[file.path] = webPath.path;
-		});
+			mapping[file.path] = "/" + webPath.path;
+		}
+
+		for (const folder of folders) {
+			mapping[folder.path] = "/" + Path.slugify(folder.path);
+		}
 
 		return mapping;
 	}

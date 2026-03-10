@@ -1,0 +1,130 @@
+/* 3rd Party Plugin Support */
+
+/*#region Kanban */
+
+#center-content .kanban-plugin {
+	position: absolute;
+	padding: 0;
+	margin: 0;
+	height: 100%;
+}
+
+#center-content .kanban-plugin {
+	font-family: var(--font-text, var(--default-font));
+	font-size: .875rem;
+	line-height: var(--line-height-tight);
+	width: unset;
+	overflow-y: unset;
+	overflow-wrap: unset;
+	color: unset;
+	user-select: unset;
+	-webkit-user-select: unset;
+}
+
+#center-content .kanban-plugin__item-button-wrapper,
+.kanban-plugin__lane-grip,
+.kanban-plugin__lane-settings-button.clickable-icon,
+.kanban-plugin__item-postfix-button.clickable-icon {
+	display: none;
+}
+
+/*#endregion */
+
+/*#region Excalidraw */
+
+.excalidraw-svg rect,
+.excalidraw-plugin rect {
+	fill: transparent;
+}
+
+/** Preserve mask fill **/
+.excalidraw-plugin mask rect[fill="#fff"],
+.excalidraw-svg mask rect[fill="#fff"],
+.excalidraw-plugin mask rect[fill="#ffffff"],
+.excalidraw-svg mask rect[fill="#ffffff"] {
+	fill: #ffffff;
+}
+
+.excalidraw-plugin mask rect[fill="#000"],
+.excalidraw-svg mask rect[fill="#000"],
+.excalidraw-plugin mask rect[fill="#000000"],
+.excalidraw-svg mask rect[fill="#000000"] {
+	fill: #000000;
+}
+
+body.theme-dark .excalidraw-svg svg.dark,
+body.theme-dark .excalidraw-plugin svg.dark,
+body.theme-light .excalidraw-svg svg.light,
+body.theme-light .excalidraw-plugin svg.light {
+	filter: invert(93%) hue-rotate(180deg);
+}
+
+
+.excalidraw-plugin>svg {
+	width: 100%;
+	height: 100%;
+}
+
+.excalidraw-plugin {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+
+	height: 100%;
+	width: 100%;
+
+	padding: 10px;
+}
+
+/*#endregion  */
+
+/*#region Obsidian Columns Plugin */
+
+.columnParent {
+	display: flex;
+	padding: 15px 20px;
+	flex-wrap: wrap;
+	gap: 20px;
+}
+
+.columnParent {
+	white-space: normal;
+}
+
+.columnChild {
+	flex-grow: 1;
+	flex-basis: 0px;
+}
+
+/*#endregion */
+
+/*#region Banners */
+
+.obsidian-banner .lock-button {
+	display: none;
+}
+
+.obsidian-document:has(.obsidian-banner-wrapper) {
+	padding-top: 0 !important;
+}
+
+/*#endregion */
+
+/*#region Mind Map  */
+
+.obsidian-document:not([data-type='markdown']):has(.mm-mindmap) {
+	overflow-y: none;
+}
+
+.obsidian-document:not([data-type='markdown']) .mm-mindmap {
+	transform: scale(1);
+	translate: -4000px -4000px;
+	top: 70%;
+	left: 50%;
+	position: absolute;
+	overflow: hidden;
+	width: 100vw;
+}
+
+/*#endregion  */

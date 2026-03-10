@@ -1,0 +1,139 @@
+/* Headers - headers.ts */
+
+/*#region Page Title & Icon */
+
+#webpage-icon :is(svg, img) {
+	width: 100%;
+	height: 100%;
+	box-shadow: none !important;
+	border: none !important;
+	border-radius: 0 !important;
+	stroke: currentColor;
+	margin: 0 !important;
+	padding: 0 !important;
+}
+
+#webpage-icon *:has(:is(svg, img)) {
+	display: contents !important;
+}
+
+#webpage-icon:has(:is(svg, img)) {
+	font-size: 40px;
+	width: 40px;
+	height: 40px;
+}
+
+#webpage-icon {
+	font-size: 40px;
+	margin-bottom: 8px;
+	font-family: emoji;
+	width: fit-content;
+}
+
+body.show-inline-title .page-title {
+	font-weight: var(--inline-title-weight);
+	font-size: var(--inline-title-size);
+	font-style: var(--inline-title-style);
+	font-variant: var(--inline-title-variant);
+	font-family: var(--inline-title-font);
+	letter-spacing: -0.015em;
+	color: var(--inline-title-color);
+}
+
+/*#endregion */
+
+/*#region Heading Collapse */
+
+.heading p {
+	margin: 0 !important;
+}
+
+h1 li {
+	translate: calc(0px - var(--list-indent)) 0;
+}
+
+.heading {
+	position: relative;
+}
+
+.heading.is-collapsed::after {
+	content: "..." !important;
+	display: inline-block !important;
+	position: absolute !important;
+	margin: 0 !important;
+	padding: 0 !important;
+	margin-left: 0.3em !important;
+	color: var(--text-muted);
+}
+
+.collapse-icon:not(.list-collapse-indicator) svg.svg-icon {
+	color: var(--nav-collapse-icon-color);
+	width: var(--collapse-arrow-size);
+	height: var(--collapse-arrow-size);
+	transition: transform 100ms ease-in-out 0s;
+	stroke-width: 4px;
+	min-width: 10px;
+	min-height: 10px;
+	max-width: 24px;
+	max-height: 24px;
+}
+
+.heading-collapse-indicator.collapse-icon.is-collapsed>svg {
+	transition: transform 0.1s ease-in-out;
+	transform: rotate(-90deg);
+}
+
+.heading .heading-collapse-indicator {
+	opacity: 0;
+	transition: opacity 0.15s ease-in-out;
+	position: absolute;
+	z-index: 1;
+	padding: 0 !important;
+	padding-left: 2em !important;
+	padding-right: 1em !important;
+	left: -2em !important;
+}
+
+.heading:hover>.heading-collapse-indicator{
+	opacity: 1;
+}
+
+.obsidian-document .heading-collapse-indicator
+{
+    margin-left: calc( 0px - var(--collapse-arrow-size) - 10px) !important;
+    padding: 0px 0px !important;
+}
+
+.markdown-embed .heading-collapse-indicator {
+    translate: -1em 0;
+}
+
+/*#endregion */
+
+/*#region Collapse Indicators (general) */
+
+h1:hover .collapse-indicator, h2:hover .collapse-indicator, h3:hover .collapse-indicator, h4:hover .collapse-indicator, h5:hover .collapse-indicator, h6:hover .collapse-indicator, .collapse-indicator:hover, .is-collapsed .collapse-indicator, .cm-fold-indicator.is-collapsed .collapse-indicator, .cm-gutterElement:hover .collapse-indicator, .cm-gutterElement .is-collapsed .collapse-indicator, .cm-line:hover .cm-fold-indicator .collapse-indicator, .fold-gutter.is-collapsed, .fold-gutter:hover, .metadata-properties-heading:hover .collapse-indicator {
+    opacity: 1;
+	transition: opacity 0.15s ease-in-out;
+}
+
+.collapse-indicator, .fold-gutter
+{
+	opacity: 0;
+	transition: opacity 0.15s ease-in-out;
+}
+
+@media print
+{
+    .collapse-indicator
+    {
+        display: none !important;
+    }
+
+    .is-collapsed > element > .collapse-indicator
+    {
+        display: unset !important;
+    }
+}
+
+/*#endregion */

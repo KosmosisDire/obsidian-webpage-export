@@ -1,0 +1,70 @@
+/* Hover Preview / Popover */
+
+.file-preview.popover.hover-popover .markdown-embed {
+	max-height: unset !important;
+	width: 100% !important;
+	min-width: var(--popover-width);
+	min-height: 8em;
+}
+
+.file-preview.popover.hover-popover {
+	opacity: 1;
+	transition: opacity 0.2s ease-in-out;
+	resize: both;
+	min-width: var(--popover-width);
+	min-height: 8em;
+	height: var(--popover-height);
+	width: var(--popover-width);
+}
+
+.preview-action-container {
+	position: absolute;
+	top: 0;
+	left: 0;
+	padding: 5px;
+	padding-right: 10px;
+	width: 100% !important;
+	display: flex;
+	gap: 5px;
+	z-index: 1000;
+}
+
+.popover-action {
+	display: block;
+	background-color: var(--icon-color);
+	width: var(--icon-size);
+	height: var(--icon-size);
+	mask-size: 100% 100%;
+	mask-position: center;
+	mask-repeat: no-repeat;
+}
+
+.popover-action:hover {
+	background-color: var(--icon-color-hover);
+}
+
+.popover-action:active {
+	background-color: var(--interactive-accent);
+}
+
+.popover-action.drag-handle {
+	margin-right: auto;
+	cursor: move;
+	mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-grip"><circle cx="12" cy="5" r="1"/><circle cx="19" cy="5" r="1"/><circle cx="5" cy="5" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/><circle cx="12" cy="19" r="1"/><circle cx="19" cy="19" r="1"/><circle cx="5" cy="19" r="1"/></svg>');
+}
+
+.popover-action.pin-button {
+	cursor: pointer;
+	mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pin"><path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/></svg>');
+	transition: mask-image 0.3s ease;
+}
+
+.popover-action.pin-button.pinned {
+	background-color: var(--interactive-accent);
+	mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-pin-off"><path d="M12 17v5"/><path d="M15 9.34V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H7.89"/><path d="m2 2 20 20"/><path d="M9 9v1.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h11"/></svg>');
+}
+
+.popover-action.go-to-button {
+	cursor: pointer;
+	mask-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-symlink"><path d="m10 18 3-3-3-3"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M4 11V4a2 2 0 0 1 2-2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h7"/></svg>');
+}

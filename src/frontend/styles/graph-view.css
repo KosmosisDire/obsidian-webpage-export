@@ -1,0 +1,94 @@
+/* Graph View */
+
+.graph-view-wrapper {
+	--graph-view-max-height: 35vh;
+}
+
+#graph-canvas {
+	width: 100%;
+	height: 100%;
+	aspect-ratio: 1;
+	transition: opacity 0.2s ease-in-out;
+}
+
+.graph-view-container.expanded {
+	position: fixed;
+	width: 90%;
+	height: 90%;
+	max-height: unset;
+	right: 5%;
+	top: 5%;
+	background-color: var(--background-secondary);
+	z-index: 100;
+}
+
+body:is(.is-phone, .is-tablet) .graph-view-container.expanded {
+	width: 95%;
+	height: 95%;
+	right: 2.5%;
+	top: 2.5%;
+}
+
+.graph-view-container {
+	position: relative;
+	width: 100%;
+	aspect-ratio: 1;
+	max-height: var(--graph-view-max-height);
+	display: flex;
+	transition: background-color var(--color-fade-speed) ease-in-out;
+	touch-action: none;
+	border: 1px solid var(--modal-border-color);
+	border-radius: var(--modal-radius);
+	overflow: hidden;
+}
+
+.graph-icon {
+	position: absolute;
+	cursor: pointer;
+	color: var(--text-muted);
+	transition: color 0.2s ease-in-out;
+}
+
+.graph-icon svg {
+	width: 20px;
+	height: 20px;
+}
+
+.graph-icon:hover {
+	color: var(--interactive-accent);
+}
+
+.graph-icon.graph-expand {
+	top: 6px;
+	right: 6px;
+}
+
+.graph-icon.graph-global {
+	top: 6px;
+	right: 32px;
+}
+
+
+.graph-view-placeholder {
+	padding: 0;
+	width: 100%;
+	aspect-ratio: 1;
+	max-height: var(--graph-view-max-height);
+	position: relative;
+	flex: none;
+}
+
+.graph-view-placeholder:has(.expanded) {
+	border-radius: var(--modal-radius);
+	border: 1px solid var(--modal-border-color);
+}
+
+.scale-down {
+	transition: transform 0.2s ease-in-out;
+	transform: scale(0.9);
+}
+
+.scale-up {
+	transition: transform 0.2s ease-in-out;
+	transform: scale(1);
+}

@@ -34,3 +34,7 @@ dist
 todo.txt
 vault/
 output/
+
+old-master/
+external.css
+theme.css

@@ -1,0 +1,29 @@
+/* Notice System - notice.ts */
+
+.notice-container {
+	position: fixed;
+	top: 0;
+	right: 0;
+	z-index: 9999;
+	padding: 1rem;
+	pointer-events: none;
+}
+
+.notice
+{
+	opacity: 0;
+	transform: translateX(350px);
+	height: 0;
+	padding: 0 1rem;
+	margin: 0;
+	overflow: hidden;
+	transition: all 0.3s ease;
+}
+
+.notice.notice-visible {
+	opacity: 1;
+	transform: translateX(0);
+	height: auto;
+	padding: 0.75rem 1rem;
+	margin-bottom: 0.5rem;
+}

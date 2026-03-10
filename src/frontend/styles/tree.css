@@ -1,0 +1,88 @@
+/* Tree Components - shared tree/file-tree/outline */
+
+.tree-icon {
+	border: 1px solid transparent;
+	margin: 0px 4px 0px 0px;
+	display: flex;
+	align-self: center;
+}
+
+.tree-icon :is(svg, img) {
+	width: 1em !important;
+	height: 1em !important;
+}
+
+.tree-icon *:has(svg, img) {
+	display: contents !important;
+}
+
+a.tree-item-self.is-clickable {
+	text-decoration: none !important;
+	text-decoration-line: none !important;
+}
+
+.tree-item-inner>p {
+	display: contents !important;
+}
+
+.tree-collapse-all
+{
+	padding: 0.1em;
+	width: 2em;
+	aspect-ratio: 1;
+}
+
+.tree-container .feature-title {
+	flex-grow: 0;
+	margin-right: .5em;
+	font-size: 1.2em;
+	color: var(--text-normal);
+}
+
+.tree-item-children:empty {
+	display: none !important;
+}
+
+.tree-item.filtered-out {
+	display: none;
+}
+
+#outline .tree-item[data-depth="1"]:not(.mod-collapsible)>.tree-item-self {
+	font-weight: 900;
+	font-size: 1.05em;
+}
+
+.tree-item:not(.mod-collapsible)>.tree-item-self
+{
+	padding-left: calc(var(--nav-item-children-margin-start,var(--nav-item-children-margin-left)) - 0.35em);
+}
+
+.tree-item-self {
+	display: flex !important;
+	align-items: center !important;
+}
+
+#file-explorer {
+	padding: 0 !important;
+}
+
+.tree-container {
+	--nav-item-size: 1em;
+	overflow: hidden auto;
+	height: 100%;
+}
+
+.nav-file-title,
+.nav-folder-title {
+	line-height: var(--tree-vertical-spacing) !important;
+}
+
+.nav-folder-children .nav-folder-title-content::before {
+	margin-right: 0.5em;
+}
+
+.tree-item-contents:has(.tree-item-icon) .tree-item-title::before,
+.tree-item-contents:has(.tree-item-icon)::before,
+.tree-item:has(.tree-item-contents > .tree-item-icon)::before {
+	display: none !important;
+}

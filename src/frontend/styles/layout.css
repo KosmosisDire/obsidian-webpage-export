@@ -1,0 +1,205 @@
+/* Layout - layout.ts */
+
+/*#region Main Layout */
+
+body
+{
+    transition: background-color var(--color-fade-speed) ease-in-out;
+}
+
+#navbar:not(:empty)
+{
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0.5em 1em;
+	width: 100%;
+}
+
+#main {
+	display: flex;
+	flex-direction: column;
+	height: 100%;
+	width: 100%;
+	align-items: stretch;
+	justify-content: center;
+}
+
+#main-horizontal {
+    display: flex;
+    flex-direction: row;
+	flex-grow: 1;
+    width: 100%;
+    align-items: stretch;
+    justify-content: center;
+    position: relative;
+}
+
+#center-content
+{
+    flex-basis: 100%;
+    max-width: 100%;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    contain: inline-size;
+}
+
+#document-container
+{
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: opacity 0.2s ease-in-out;
+    contain: inline-size;
+}
+
+.hide
+{
+    opacity: 0 !important;
+    transition: opacity 0.2s ease-in-out;
+    pointer-events: none;
+}
+
+/*#endregion */
+
+/*#region Loading */
+
+.loading-icon {
+	--width: 80px;
+	--height: 80px;
+
+	display: inline-block;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	width: var(--width);
+	height: var(--height);
+
+	opacity: 0;
+	transition: opacity 0.5s ease-in-out;
+	pointer-events: none;
+	z-index: 10;
+}
+
+.loading-icon.show {
+	opacity: 1;
+}
+
+.loading-icon div {
+	position: absolute;
+	top: 33px;
+	width: 13px;
+	height: 13px;
+	border-radius: 50%;
+	background: var(--interactive-accent);
+	animation-timing-function: cubic-bezier(0, 1, 1, 0);
+}
+
+.loading-icon div:nth-child(1) {
+	left: 8px;
+	animation: lds-ellipsis1 0.6s infinite;
+}
+
+.loading-icon div:nth-child(2) {
+	left: 8px;
+	animation: lds-ellipsis2 0.6s infinite;
+}
+
+.loading-icon div:nth-child(3) {
+	left: 32px;
+	animation: lds-ellipsis2 0.6s infinite;
+}
+
+.loading-icon div:nth-child(4) {
+	left: 56px;
+	animation: lds-ellipsis3 0.6s infinite;
+}
+
+.loading-icon:not(.show) div {
+	animation-play-state: paused;
+}
+
+@keyframes lds-ellipsis1 {
+	0% {
+		transform: scale(0);
+	}
+
+	100% {
+		transform: scale(1);
+	}
+}
+
+@keyframes lds-ellipsis3 {
+	0% {
+		transform: scale(1);
+	}
+
+	100% {
+		transform: scale(0);
+	}
+}
+
+@keyframes lds-ellipsis2 {
+	0% {
+		transform: translate(0, 0);
+	}
+
+	100% {
+		transform: translate(24px, 0);
+	}
+}
+
+/*#endregion */
+
+/*#region Phone */
+
+body.is-phone {
+	--collapse-arrow-size: 14px;
+	--tree-vertical-spacing: 0.8em;
+}
+
+/*#endregion */
+
+/*#region Print */
+
+@media print {
+	html body.publish :is(.sidebar, script, style, include) {
+		display: none !important;
+	}
+
+	:root,
+	html body.publish> :is(#main-horizontal, #center-content, #document-container, .obsidian-document):not(script, style, include) {
+		display: contents !important;
+	}
+
+	:root,
+	html body.publish #document-container>.obsidian-document {
+		background-color: transparent !important;
+	}
+
+	body {
+		display: inline !important;
+		background: var(--background-primary);
+	}
+
+	body #document-container>.obsidian-document>.markdown-preview-sizer {
+		padding: 0;
+		margin: 0;
+		padding: var(--file-margins);
+		padding-bottom: 0;
+	}
+
+	html body.publish :is(#center-content, #document-container, .obsidian-document) {
+		margin: 0 !important;
+		padding: 0 !important;
+	}
+}
+
+/*#endregion */

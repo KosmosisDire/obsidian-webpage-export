@@ -13,8 +13,6 @@
 		"strictNullChecks": true,
 		"removeComments": false,
 		"resolveJsonModule": true,
-		"jsx": "preserve",
-		"jsxImportSource": "solid-js",
 		"paths": {
 			"@shared/*": ["src/shared/*"],
 			"@shared": ["src/shared/index"]
@@ -29,7 +27,10 @@
 	},
 	"include": [
 		"**/*.ts",
-		"**/*.tsx",
 		"src/assets/**/*.json"
 	],
+	"exclude": [
+		"node_modules",
+		"old-master"
+	]
 }

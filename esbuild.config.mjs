@@ -3,7 +3,6 @@ import process from "process";
 import builtins from "builtin-modules";
 import fs from "fs";
 import path from "path";
-import { solidPlugin } from "esbuild-plugin-solid";
 
 const banner =
 `/*
@@ -58,7 +57,6 @@ const pluginBuildOptions = {
 	],
 	format: 'cjs',
 	target: 'es2018',
-	plugins: [solidPlugin()],
 	alias: {
 		'@shared': path.resolve('src/shared'),
 	},
@@ -68,13 +66,12 @@ const pluginBuildOptions = {
 // Frontend build options
 const frontendBuildOptions = {
 	...commonOptions,
-	entryPoints: ['src/frontend/index.tsx'],
+	entryPoints: ['src/frontend/index.ts'],
 	bundle: true,
 	format: 'iife',
 	globalName: 'WebpageExport',
 	target: 'es2018',
 	outfile: 'src/frontend/dist/main.js',
-	plugins: [solidPlugin()],
 	alias: {
 		'@shared': path.resolve('src/shared'),
 	},
@@ -83,53 +80,105 @@ const frontendBuildOptions = {
 	},
 };
 
+// CSS files to combine into defer.css (critical structural/layout styles loaded before page display)
+const deferredStyles = [
+	'general.css',
+	'layout.css',
+	'sidebar.css',
+	'document.css',
+];
+
+// CSS files to combine into main.css (loaded async)
+const mainStyles = [
+	'headers.css',
+	'tree.css',
+	'panel.css',
+	'notice.css',
+	'lists.css',
+	'website.css',
+	'popover.css',
+	'canvas.css',
+	'plugin-support.css',
+	'theme-toggle.css',
+	'graph-view.css',
+];
+
+// CSS files copied as-is (not combined)
+const passthroughStyles = [
+	'external.css',
+	'theme.css',
+];
+
+function buildStyles() {
+	const stylesDir = 'src/frontend/styles';
+	const distStylesDir = 'src/frontend/dist/styles';
+
+	const concat = (files) => files
+		.map(f => fs.readFileSync(path.join(stylesDir, f), 'utf-8').trim())
+		.filter(Boolean)
+		.join('\n\n');
+
+	fs.writeFileSync(path.join(distStylesDir, 'defer.css'), concat(deferredStyles));
+	fs.writeFileSync(path.join(distStylesDir, 'main.css'), concat(mainStyles));
+
+	for (const file of passthroughStyles) {
+		const src = path.join(stylesDir, file);
+		if (fs.existsSync(src)) {
+			fs.copyFileSync(src, path.join(distStylesDir, file));
+		}
+	}
+
+	console.log('Styles built: defer.css + main.css');
+}
+
 // Copy files function
 function copyFiles() {
 	if (!fs.existsSync('src/frontend/dist')) {
 		fs.mkdirSync('src/frontend/dist', { recursive: true });
 	}
-	
+
 	if (!fs.existsSync('src/frontend/dist/styles')) {
 		fs.mkdirSync('src/frontend/dist/styles', { recursive: true });
 	}
-	
+
 	fs.copyFileSync('src/frontend/index.html', 'src/frontend/dist/index.html');
-	fs.copyFileSync('src/frontend/styles/main.css', 'src/frontend/dist/styles/main.css');
-	fs.copyFileSync('src/frontend/styles/new.css', 'src/frontend/dist/styles/new.css');
+	buildStyles();
 }
 
 if (dev) {
 	// Development mode with watch
 	const pluginCtx = await esbuild.context(pluginBuildOptions);
 	const frontendCtx = await esbuild.context(frontendBuildOptions);
-	
+
 	await pluginCtx.watch();
 	await frontendCtx.watch();
-	
+
 	copyFiles();
-	
-	// Watch for HTML/CSS changes
+
+	// Watch for HTML changes
 	fs.watchFile('src/frontend/index.html', () => {
 		copyFiles();
 		console.log('HTML file updated');
 	});
-	
-	fs.watchFile('src/frontend/styles/main.css', () => {
-		copyFiles();
-		console.log('CSS file updated');
-	});
 
-	fs.watchFile('src/frontend/styles/new.css', () => {
-		copyFiles();
-		console.log('CSS file updated');
-	});
+	// Watch all CSS source files for changes
+	const allStyleFiles = [...deferredStyles, ...mainStyles, ...passthroughStyles];
+	for (const file of allStyleFiles) {
+		const filePath = path.join('src/frontend/styles', file);
+		if (fs.existsSync(filePath)) {
+			fs.watchFile(filePath, () => {
+				buildStyles();
+				console.log(`CSS updated: ${file}`);
+			});
+		}
+	}
 
 	console.log('Watching for changes...');
 } else {
 	// Production build
 	await esbuild.build(pluginBuildOptions).catch(() => process.exit(1));
 	await esbuild.build(frontendBuildOptions).catch(() => process.exit(1));
-	
+
 	copyFiles();
 	console.log('Frontend build completed');
 }

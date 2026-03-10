@@ -1,0 +1,124 @@
+/* Website / Search - website.ts */
+
+/*#region Search */
+
+#search-results {
+	padding: 1em;
+}
+
+.search-result {
+	display: flex;
+}
+
+.search-result a {
+	padding: calc(var(--tree-vertical-spacing) / 2);
+	border-radius: var(--radius-s);
+	width: 100%;
+	color: var(--nav-item-color);
+	text-decoration: none;
+}
+
+.search-result a:hover {
+	background-color: var(--nav-item-background-hover);
+	text-decoration: underline;
+	color: var(--nav-item-color-active);
+}
+
+.tree-hint-label {
+	font-size: var(--font-smallest);
+	color: var(--text-accent);
+	width: 100%;
+	width: -webkit-fill-available;
+	width: -moz-available;
+	width: fill-available;
+	text-decoration-line: none;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.tree-hint-label.internal-link::before {
+	content: "H";
+	font-size: 1.2em;
+	font-weight: 700;
+	position: relative;
+	display: inline-block;
+	margin-right: 0.5em;
+	translate: 0 0.05em;
+	color: var(--nav-item-color);
+}
+
+.tree-hint-label:hover {
+	text-decoration-line: underline;
+}
+
+.tree-hint-container {
+	width: 100%;
+	padding: var(--nav-item-padding);
+	padding-bottom: 0;
+	padding-top: 0;
+	padding-right: 0;
+	display: flex;
+	flex-direction: column;
+	margin-left: 22px;
+}
+
+/* find hints inside folders with no other folders in them */
+.tree-container .nav-folder:not(:has(.nav-folder)) .nav-file>.tree-link>.tree-hint-container {
+	padding-left: calc(1em * 2);
+}
+
+a.tree-hint-label:hover {
+	text-decoration-line: underline;
+}
+
+.search-mark {
+	margin: 0 !important;
+	padding: 0 !important;
+	scroll-margin: 2em !important;
+}
+
+.search-input-container:has(+ #search-results)>input[type="search"] {
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+}
+
+#search-container {
+	--input-height: 2.6em;
+	flex: 1;
+}
+
+body #search-container::before
+{
+	top: 50%;
+	translate: 0 -50%;
+	left: 0.5em;
+}
+
+input[type=search] {
+	box-shadow: none !important;
+	height: var(--input-height);
+	font-size: 1em;
+	transition: background, background-color, border;
+	transition-duration: var(--color-fade-speed);
+	transition-timing-function: ease-in-out;
+}
+
+.search-input-container {
+	display: flex !important;
+}
+
+.search-input-wrapper {
+	position: relative;
+	width: 100%;
+}
+
+.search-input-container::before {
+	mask-image: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'></circle><line x1='21' y1='21' x2='16.65' y2='16.65'></line></svg>");
+	mask-repeat: no-repeat;
+	top: 50%;
+	transform: translateY(-50%);
+	z-index: 1;
+}
+
+/*#endregion */

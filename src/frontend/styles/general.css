@@ -1,0 +1,157 @@
+/* General / Site-wide Styles */
+
+/*#region Variables */
+
+/* Default variable values */
+body
+{
+    --line-width: 40em;
+    --line-width-adaptive: 40em;
+    --file-line-width: 40em;
+    --sidebar-width: min(20em, 80vw);
+    --collapse-arrow-size: 11px;
+    --tree-vertical-spacing: 1.3em;
+    --sidebar-margin: 12px;
+}
+
+body {
+	--color-fade-speed: 0.2s;
+}
+
+:root body {
+	--line-width: min(40em, calc(100vw - 2em));
+	--line-width-adaptive: min(40em, calc(100vw - 2em));
+	--file-line-width: min(40em, calc(100vw - 2em));
+	--sidebar-width-right: min(30em, 80vw);
+	--sidebar-width-left: min(20em, 80vw)
+}
+
+body {
+	--zoom-factor: 1 !important;
+	--accent-h: 192 !important;
+	--accent-s: 82% !important;
+	--accent-l: 24% !important;
+	--font-interface-override: Inter !important;
+	--font-text-override: Inter !important;
+	--font-print-override: Inter !important;
+	--font-text-size: 16px !important;
+	--indent-size: 4 !important;
+	--banners-height: 300px !important;
+	--banners-mobile-height: 180px !important;
+	--banners-internal-embed-height: 200px !important;
+	--banners-popover-height: 120px !important;
+	--banners-header-font-size: var(--inline-title-size) !important;
+	--banners-icon-font-size: 1.2em !important;
+	--banners-header-transform: translate(0px, 0px)
+}
+
+:root
+{
+    background-color: #202124;
+}
+
+/*#endregion */
+
+/*#region General Overrides */
+
+.node-insert-event
+{
+    animation-duration: unset !important;
+    animation-name: none !important;
+}
+
+hr
+{
+    border: none;
+	border-top: var(--hr-thickness) solid;
+    border-color: var(--hr-color);
+}
+
+:not(h1,h2,h3,h4,h5,h6,li):has(> :is(.math, table))
+{
+    overflow-x: auto !important;
+}
+
+.scroll-highlight
+{
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1000;
+    background-color: hsla(var(--color-accent-hsl),.25);
+    opacity: 0;
+    padding: 1em;
+    inset: 50%;
+    translate: -50% -50%;
+    border-radius: var(--radius-s);
+}
+
+@media print
+{
+    html body > :not(.print)
+    {
+        display: unset !important;
+    }
+}
+
+/*#endregion */
+
+/*#region Misc Hiding */
+
+.mod-header .metadata-container
+{
+	display: none !important;
+}
+
+/*#region Transclusions */
+
+.markdown-embed.internal-embed.inline-embed .markdown-embed-content,
+.markdown-embed.internal-embed.inline-embed .markdown-embed-content .obsidian-document
+{
+	overflow: visible !important;
+}
+
+.markdown-embed-link
+{
+	display: none !important;
+}
+
+/*#endregion  */
+
+/*#region Code Copy */
+
+/* Make code block copy button fade in and out */
+.markdown-rendered pre:not(:hover) > button.copy-code-button
+{
+	display: unset;
+	opacity: 0;
+}
+
+.markdown-rendered pre:hover > button.copy-code-button
+{
+	opacity: 1;
+}
+
+.markdown-rendered pre button.copy-code-button
+{
+	transition: opacity 0.2s ease-in-out, width 0.3s ease-in-out, background-color 0.2s ease-in-out;
+	text-overflow: clip;
+}
+
+.markdown-rendered pre > button.copy-code-button:hover
+{
+	background-color: var(--interactive-normal);
+}
+
+.markdown-rendered pre > button.copy-code-button:active
+{
+	background-color: var(--interactive-hover);
+	box-shadow: var(--input-shadow);
+	transition: none;
+}
+
+/*#endregion */
+
+
+

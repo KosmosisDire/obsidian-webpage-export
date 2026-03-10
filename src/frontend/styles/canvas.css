@@ -1,0 +1,96 @@
+/* Canvas */
+
+.canvas-wrapper:not(.mod-readonly) .canvas-node-content.markdown-embed>.markdown-embed-content>.obsidian-document
+{
+	user-select: text !important;
+}
+
+.canvas-card-menu {
+	display: none;
+	cursor: default !important;
+}
+
+.canvas-controls {
+	display: none;
+	cursor: default !important;
+}
+
+.canvas-background
+{
+	pointer-events: visible !important;
+	cursor: grab !important;
+}
+
+.canvas-background:active
+{
+	cursor: grabbing !important;
+}
+
+.canvas-node-connection-point
+{
+	display: none;
+	cursor: default !important;
+}
+
+.canvas-node-content
+{
+	backface-visibility: visible !important;
+}
+
+.canvas-menu-container {
+	display: none;
+}
+
+.canvas-node-content-blocker
+{
+	cursor: pointer !important;
+}
+
+.canvas-wrapper
+{
+	position: relative;
+	cursor: default !important;
+}
+
+.canvas-node-resizer
+{
+	cursor: default !important;
+}
+
+.canvas-node-container
+{
+	cursor: default !important;
+}
+
+.canvas-node .obsidian-document.is-readable-line-width .markdown-preview-sizer {
+    max-width: 100%;
+    margin-left: unset;
+    margin-right: unset;
+}
+
+body :is(.canvas-node-container, .canvas-wrapper) {
+	cursor: unset !important;
+}
+
+body .canvas-wrapper {
+	max-width: 100% !important;
+}
+
+.canvas {
+	translate: 0 0;
+	scale: 1 1;
+	will-change: translate, scale;
+}
+
+.canvas-node-content-blocker {
+	pointer-events: none;
+}
+
+.canvas.small-scale :is(.canvas-node-label, .canvas-path-label, .obsidian-document) {
+	display: none;
+}
+
+.canvas-empty-embed-action-list
+{
+	display: none !important;
+}
