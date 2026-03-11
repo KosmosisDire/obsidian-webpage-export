@@ -31,7 +31,8 @@ export async function loadSiteData(isHttp: boolean): Promise<boolean> {
 async function fetchSiteData(isHttp: boolean): Promise<WebsiteData | undefined> {
 	if (isHttp) {
 		try {
-			const dataReq = await fetch("obsidian-cache.json");
+			const pathToRoot = document.querySelector("meta[name='path-to-root']")?.getAttribute("content") ?? "./";
+			const dataReq = await fetch(pathToRoot + "obsidian-cache.json");
 			if (dataReq.ok) {
 				return JSON.parse(await dataReq.text()) as WebsiteData;
 			}

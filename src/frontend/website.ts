@@ -150,6 +150,7 @@ export class ObsidianWebsite {
 		let pathname = Path.getRelativePath(this.vaultRoot, currentPage).path;
 		// If we're at the vault root, the relative path will be "." or empty
 		if (pathname === "" || pathname === ".") pathname = "/index.html";
+		else if (!pathname.startsWith("/")) pathname = "/" + pathname;
 
 		this.entryPage = pathname;
 
