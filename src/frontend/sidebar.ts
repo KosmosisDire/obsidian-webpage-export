@@ -47,10 +47,11 @@ export class Sidebar {
 		this.containerEl.classList.toggle("is-collapsed", collapse);
 	}
 
-	private _floating: boolean = false;
-	get floating(): boolean { return this._floating; }
+	get floating(): boolean {
+		return this.containerEl.classList.contains("floating")
+			|| document.body.classList.contains("floating-sidebars");
+	}
 	set floating(v: boolean) {
-		this._floating = v;
 		this.containerEl.classList.toggle("floating", v);
 	}
 
@@ -88,6 +89,7 @@ export class Sidebar {
 		this.collapseWidth = this.minResizeWidth / 4.0;
 
 		this.setupSidebarResize();
+		this.setupSwipeToDismiss();
 	}
 
 	private setupSidebarResize() {
@@ -119,6 +121,127 @@ export class Sidebar {
 		});
 
 		this.resizeHandleEl.addEventListener("dblclick", () => self.resetWidth());
+	}
+
+	private setupSwipeToDismiss() {
+		let startX = 0;
+		let sidebarWidth = 0;
+		let swiping = false;
+		let rejected = false;
+		let moveCount = 0;
+		let startY = 0;
+		let lastX = 0;
+		let lastTime = 0;
+		let maxVelocity = 0;
+		let prevX = 0;
+		let prevTime = 0;
+
+		const velocityThreshold = 0.4; // px/ms — minimum peak velocity to count as a swipe
+		const detectionWindow = 3; // number of move events to check for velocity
+
+		this.containerEl.addEventListener("touchstart", (e) => {
+			if (!this.floating || this._collapsed) return;
+			startX = e.touches[0].clientX;
+			startY = e.touches[0].clientY;
+			lastX = startX;
+			lastTime = e.timeStamp;
+			sidebarWidth = this.containerEl.offsetWidth;
+			swiping = false;
+			rejected = false;
+			moveCount = 0;
+			maxVelocity = 0;
+		}, { passive: true });
+
+		this.containerEl.addEventListener("touchmove", (e) => {
+			if (!this.floating || this._collapsed || sidebarWidth === 0 || rejected) return;
+
+			const currentX = e.touches[0].clientX;
+			const now = e.timeStamp;
+			const dt = now - lastTime;
+
+			// Track velocity during the detection window before allowing any movement
+			if (moveCount < detectionWindow && !swiping) {
+				moveCount++;
+				if (dt > 0) {
+					const instantVelocity = Math.abs(currentX - lastX) / dt;
+					if (instantVelocity >= velocityThreshold) {
+						// Accept early — velocity is high enough
+						const totalDx = Math.abs(currentX - startX);
+						const totalDy = Math.abs(e.touches[0].clientY - startY);
+						if (totalDy > totalDx) {
+							rejected = true;
+							return;
+						}
+						// Fall through to apply movement
+					} else if (moveCount === detectionWindow) {
+						// End of window without hitting threshold
+						rejected = true;
+						return;
+					} else {
+						lastX = currentX;
+						lastTime = now;
+						return;
+					}
+				} else {
+					lastX = currentX;
+					lastTime = now;
+					return;
+				}
+			}
+
+			// Calculate from original touch point so detection window distance is included
+			const dx = currentX - startX;
+			// Left sidebar: swipe left (negative dx). Right sidebar: swipe right (positive dx).
+			const dismiss = this._isLeft ? -dx : dx;
+			if (dismiss <= 0) {
+				// Wrong direction or no movement — reset to full width
+				if (swiping) {
+					this.containerEl.style.removeProperty("min-width");
+					this.containerEl.style.removeProperty("max-width");
+					this.containerEl.style.removeProperty("transition-duration");
+					swiping = false;
+				}
+				return;
+			}
+
+			if (!swiping) {
+				swiping = true;
+				this.containerEl.style.transitionDuration = "0s";
+			}
+
+			// Track recent velocity for release detection
+			prevX = lastX;
+			prevTime = lastTime;
+			lastX = currentX;
+			lastTime = now;
+
+			const clampedWidth = Math.max(0, sidebarWidth - dismiss) + "px";
+			this.containerEl.style.minWidth = clampedWidth;
+			this.containerEl.style.maxWidth = clampedWidth;
+		}, { passive: true });
+
+		const endSwipe = () => {
+			if (!swiping) return;
+			swiping = false;
+
+			const currentWidth = this.containerEl.offsetWidth;
+			const frameDt = lastTime - prevTime;
+			const releaseVelocity = frameDt > 0 ? Math.abs(lastX - prevX) / frameDt : 0;
+
+			// Project where the sidebar would end up given current velocity
+			const projectedWidth = currentWidth - releaseVelocity * 60;
+
+			this.containerEl.style.removeProperty("min-width");
+			this.containerEl.style.removeProperty("max-width");
+			this.containerEl.style.removeProperty("transition-duration");
+
+			if (projectedWidth < sidebarWidth * 0.5) {
+				this.collapsed = true;
+			}
+		};
+
+		this.containerEl.addEventListener("touchend", endSwipe);
+		this.containerEl.addEventListener("touchcancel", endSwipe);
 	}
 
 	resetWidth() {
