@@ -91,7 +91,8 @@ body.floating-sidebars #right-sidebar,
 
 .sidebar-collapse-icon {
     position: fixed;
-    top: var(--sidebar-margin);
+	--collapse-icon-margin: var(--sidebar-margin);
+	top: var(--collapse-icon-margin);
     z-index: 15;
     width: 2.5em;
     height: 2.5em;
@@ -107,9 +108,11 @@ body.floating-sidebars #right-sidebar,
     transition: background-color 0.15s ease-in-out;
 }
 
-body.floating-sidebars .sidebar-collapse-icon {
-    width: 2.5em;
-    height: 2.5em;
+body.floating-sidebars .sidebar-collapse-icon
+{
+	--collapse-icon-margin: calc(var(--sidebar-margin) - 0.25em);
+    width: 3em;
+    height: 3em;
 	padding: 0.25em !important;
 	background-color: var(--background-secondary) !important;
 	opacity: 1 !important;
@@ -121,11 +124,11 @@ body.floating-sidebars .is-collapsed .sidebar-collapse-icon
 }
 
 #left-sidebar .sidebar-collapse-icon {
-    left: var(--sidebar-margin);
+    left: var(--collapse-icon-margin);
 }
 
 #right-sidebar .sidebar-collapse-icon {
-    right: var(--sidebar-margin);
+    right: var(--collapse-icon-margin);
     transform: rotateY(180deg);
 }
 
@@ -239,7 +242,6 @@ body.floating-sidebars .is-collapsed .sidebar-collapse-icon
 /*#region Phone */
 
 body.is-phone .sidebar {
-	font-size: 1.15em;
 	--tree-vertical-spacing: 1.8em;
 	--sidebar-width: 85vw !important;
 }
