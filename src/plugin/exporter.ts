@@ -8,6 +8,7 @@ import {
 	App,
 } from "obsidian";
 import * as fs from "fs";
+import * as path from "path";
 import MiniSearch from "minisearch";
 import { ExportLog, MarkdownRendererAPI } from "./renderer/renderer";
 import { FileData, ExportData } from "@shared/types";
@@ -530,11 +531,71 @@ export class HTMLExporter {
 		const outputPath = settings.outputPath;
 		fs.writeFileSync(outputPath, json, "utf8");
 
+		// Generate an HTML file for each exported file
+		const outputDir = path.dirname(outputPath);
+		this.generateHTMLFiles(data, outputDir);
+
 		console.log(`Export complete:
 			- Total files: ${data.export.totalFiles}
 			- Graph nodes: ${data.indices.graph.nodes.length}
 			- Graph edges: ${data.indices.graph.edges.length}
 			- Tags indexed: ${Object.keys(data.indices.tags).length}
 		`);
+	}
+
+	/**
+	 * Generates an HTML file for each exported file using the index.html template.
+	 * Each file gets its own title and path-to-root calculated from its web path depth.
+	 */
+	private generateHTMLFiles(data: ExportData, outputDir: string): void {
+		const templatePath = path.join(outputDir, "index.html");
+		if (!fs.existsSync(templatePath)) {
+			console.warn("HTML template not found at", templatePath);
+			return;
+		}
+
+		const template = fs.readFileSync(templatePath, "utf8");
+
+		for (const [webPath, fileData] of Object.entries(data.files)) {
+			// webPath is like "/folder/note.html" — strip leading slash for filesystem path
+			const relativePath = webPath.startsWith("/") ? webPath.slice(1) : webPath;
+
+			// Skip index.html itself
+			if (relativePath === "index.html") continue;
+
+			// Calculate path-to-root: count directory depth and go up that many levels
+			const depth = relativePath.split("/").length - 1; // -1 because the file itself isn't a directory
+			const pathToRoot = depth === 0 ? "./" : "../".repeat(depth);
+
+			// Replace title, path-to-root, and resource paths in the template
+			const title = fileData.title || new Path(fileData.path).basename;
+			let html = template.replace(
+				/<title>[^<]*<\/title>/,
+				`<title>${this.escapeHTML(title)}</title>`
+			);
+			html = html.replace(
+				/<meta name="path-to-root" content="[^"]*">/,
+				`<meta name="path-to-root" content="${pathToRoot}">`
+			);
+			// Prepend path-to-root to stylesheet hrefs and script srcs
+			html = html.replace(/href="(styles\/[^"]+)"/g, `href="${pathToRoot}$1"`);
+			html = html.replace(/src="(main\.js)"/g, `src="${pathToRoot}$1"`);
+
+			// Write the HTML file, creating directories as needed
+			const filePath = path.join(outputDir, relativePath);
+			const fileDir = path.dirname(filePath);
+			if (!fs.existsSync(fileDir)) {
+				fs.mkdirSync(fileDir, { recursive: true });
+			}
+			fs.writeFileSync(filePath, html, "utf8");
+		}
+	}
+
+	private escapeHTML(str: string): string {
+		return str
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;");
 	}
 }
