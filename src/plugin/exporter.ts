@@ -12,7 +12,7 @@ import * as path from "path";
 import MiniSearch from "minisearch";
 import { ExportLog, MarkdownRendererAPI } from "./renderer/renderer";
 import { FileData, ExportData } from "@shared/types";
-import { ExportSettings } from "./export-settings";
+import { ExportOptions } from "./export-settings";
 import { Path } from "@shared/path";
 import { getIconForFile, getDisplayTitle, collectFolderMetadata } from "./utils/icon-handler";
 
@@ -54,20 +54,18 @@ export class HTMLExporter {
 
 	async exportToHTML(
 		files: TFile[],
-		settings: ExportSettings
+		options: ExportOptions
 	): Promise<void> {
 		const notice = new Notice("Starting export...", 0);
 
 		try {
 			notice.setMessage(`Processing ${files.length} files...`);
 
-			settings = settings || new ExportSettings();
-
 			// Process files in parallel
 			const processedFiles = await this.processFiles(
 				files,
 				notice,
-				settings
+				options
 			);
 
 			if (processedFiles.length === 0) {
@@ -79,7 +77,7 @@ export class HTMLExporter {
 
 			// Save to file
 			notice.setMessage("Saving export...");
-			await this.saveExport(exportData, settings);
+			await this.saveExport(exportData, options);
 
 			notice.hide();
 			new Notice(`Successfully exported ${processedFiles.length} files!`);
@@ -92,11 +90,11 @@ export class HTMLExporter {
 	private async processFiles(
 		files: TFile[],
 		notice: Notice,
-		settings: ExportSettings
+		options: ExportOptions
 	): Promise<FileData[]> {
-		const existing = settings.forceFullExport
+		const existing = options.forceFullExport
 			? null
-			: await this.loadExistingExport(settings);
+			: await this.loadExistingExport(options);
 		const filesToProcess = this.determineFilesToProcess(files, existing);
 
 		// Create a set of selected file paths for quick lookup
@@ -125,7 +123,7 @@ export class HTMLExporter {
 
 		let completed = 0;
 
-		await MarkdownRendererAPI.beginBatch(settings.rendererOptions);
+		await MarkdownRendererAPI.beginBatch();
 
 		let cancelled = false;
 		for (const file of filesToProcess) {
@@ -507,9 +505,9 @@ export class HTMLExporter {
 	}
 
 	private async loadExistingExport(
-		settings: ExportSettings
+		options: ExportOptions
 	): Promise<ExportData | null> {
-		const outputPath = settings.outputPath;
+		const outputPath = options.outputPath;
 		if (!fs.existsSync(outputPath)) {
 			return null;
 		}
@@ -525,10 +523,10 @@ export class HTMLExporter {
 
 	private async saveExport(
 		data: ExportData,
-		settings: ExportSettings
+		options: ExportOptions
 	): Promise<void> {
 		const json = JSON.stringify(data, null, 2);
-		const outputPath = settings.outputPath;
+		const outputPath = options.outputPath;
 		fs.writeFileSync(outputPath, json, "utf8");
 
 		// Generate an HTML file for each exported file
