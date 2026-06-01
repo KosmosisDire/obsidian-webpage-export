@@ -191,7 +191,7 @@ export class Website
 				this.fileTree = new FileTree(paths, false, true);
 				this.fileTree.makeLinksWebStyle = this.exportOptions.slugifyPaths ?? true;
 				this.fileTree.showNestingIndicator = true;
-				this.fileTree.generateWithItemsClosed = true;
+				this.fileTree.generateWithItemsClosed = this.exportOptions.sidebarOptions.startCollapsed === true;
 				this.fileTree.showFileExtentionTags = true;
 				this.fileTree.hideFileExtentionTags = ["md"];
 				this.fileTree.title = this.exportOptions.siteName ?? app.vault.getName();
