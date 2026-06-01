@@ -75,6 +75,7 @@ export const language: i18n =
 			description: "Contiene altre funzionalità come navigazione file, struttura, cambio tema, vista grafo, ecc.",
 			info_allowResizing: "Permettere o meno il ridimensionamento delle barre laterali",
 			info_allowCollapsing: "Permettere o meno il collasso delle barre laterali",
+			info_startCollapsed: "Le barre laterali devono iniziare compresse?",
 			info_rightDefaultWidth: "Larghezza predefinita della barra laterale destra",
 			info_leftDefaultWidth: "Larghezza predefinita della barra laterale sinistra"
 		},

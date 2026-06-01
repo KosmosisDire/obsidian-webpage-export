@@ -81,6 +81,7 @@ export const language: i18n =
 			description: "包含文件导航、大纲、主题切换、图形视图等所有其他功能。",
 			info_allowResizing: "是否允许用户调整侧边栏的大小",
 			info_allowCollapsing: "是否允许用户折叠侧边栏",
+			info_startCollapsed: "侧边栏是否开始折叠？",
 			info_rightDefaultWidth: "右侧边栏的默认宽度",
 			info_leftDefaultWidth: "左侧边栏的默认宽度"
 		},

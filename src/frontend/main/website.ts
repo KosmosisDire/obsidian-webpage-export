@@ -571,6 +571,7 @@ export class ObsidianWebsite {
 	}
 
 	private lastScreenWidth: number | undefined = undefined;
+	private isInitialResize: boolean = true;
 	private isResizing = false;
 	private checkStillResizingTimeout: NodeJS.Timeout | undefined = undefined;
 	private _deviceSize: string = "large-screen";
@@ -633,6 +634,7 @@ export class ObsidianWebsite {
 		const rightWidth = this.rightSidebar
 			? getLengthInPixels(rightWidthCSS, this.rightSidebar?.containerEl)
 			: 0;
+		const startCollapsed = this.metadata.featureOptions.sidebar?.startCollapsed === true;
 
 		if (
 			widthNowGreaterThan(docWidth + leftWidth + rightWidth) ||
@@ -645,8 +647,9 @@ export class ObsidianWebsite {
 			document.body.classList.toggle("is-tablet", false);
 			document.body.classList.toggle("is-phone", false);
 
-			if (this.leftSidebar) this.leftSidebar.collapsed = false;
-			if (this.rightSidebar) this.rightSidebar.collapsed = false;
+			const sidebarCollapsed = this.isInitialResize ? startCollapsed : false;
+			if (this.leftSidebar) this.leftSidebar.collapsed = sidebarCollapsed;
+			if (this.rightSidebar) this.rightSidebar.collapsed = sidebarCollapsed;
 		} else if (
 			widthNowInRange(
 				docWidth + leftWidth,
@@ -661,7 +664,10 @@ export class ObsidianWebsite {
 			document.body.classList.toggle("is-tablet", false);
 			document.body.classList.toggle("is-phone", false);
 
-			if (
+			if (this.isInitialResize) {
+				if (this.leftSidebar) this.leftSidebar.collapsed = startCollapsed;
+				if (this.rightSidebar) this.rightSidebar.collapsed = startCollapsed;
+			} else if (
 				this.leftSidebar &&
 				this.rightSidebar &&
 				!this.leftSidebar.collapsed
@@ -679,7 +685,10 @@ export class ObsidianWebsite {
 			document.body.classList.toggle("is-tablet", true);
 			document.body.classList.toggle("is-phone", false);
 
-			if (
+			if (this.isInitialResize) {
+				if (this.leftSidebar) this.leftSidebar.collapsed = startCollapsed;
+				if (this.rightSidebar) this.rightSidebar.collapsed = startCollapsed;
+			} else if (
 				this.leftSidebar &&
 				this.rightSidebar &&
 				!this.leftSidebar.collapsed
@@ -696,10 +705,12 @@ export class ObsidianWebsite {
 			document.body.classList.toggle("is-small-screen", false);
 			document.body.classList.toggle("is-tablet", false);
 			document.body.classList.toggle("is-phone", true);
-			if (this.leftSidebar) this.leftSidebar.collapsed = true;
-			if (this.rightSidebar) this.rightSidebar.collapsed = true;
+			const sidebarCollapsed = this.isInitialResize ? startCollapsed : true;
+			if (this.leftSidebar) this.leftSidebar.collapsed = sidebarCollapsed;
+			if (this.rightSidebar) this.rightSidebar.collapsed = sidebarCollapsed;
 		}
 
+		this.isInitialResize = false;
 		this.lastScreenWidth = window.innerWidth;
 
 		if (this.checkStillResizingTimeout != undefined)

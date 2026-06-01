@@ -5,6 +5,7 @@ export class SidebarOptions extends FeatureOptions
 {
 	allowResizing: boolean = true;
 	allowCollapsing: boolean = true;
+	startCollapsed: boolean = false;
 	rightDefaultWidth: string = "20em";
 	leftDefaultWidth: string = "20em";
 
@@ -15,6 +16,10 @@ export class SidebarOptions extends FeatureOptions
 	info_allowCollapsing = new FeatureSettingInfo({
 		show: true,
 		description: i18n.settings.sidebars.info_allowCollapsing
+	});
+	info_startCollapsed = new FeatureSettingInfo({
+		show: true,
+		description: i18n.settings.sidebars.info_startCollapsed
 	});
 	info_rightDefaultWidth = new FeatureSettingInfo({
 		show: true,

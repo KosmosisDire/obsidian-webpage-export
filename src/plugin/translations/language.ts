@@ -86,6 +86,7 @@ export interface i18n
 			description: string;
 			info_allowResizing: string;
 			info_allowCollapsing: string;
+			info_startCollapsed: string;
 			info_rightDefaultWidth: string;
 			info_leftDefaultWidth: string;
 		},

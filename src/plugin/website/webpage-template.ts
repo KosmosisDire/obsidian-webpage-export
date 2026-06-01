@@ -26,6 +26,7 @@ export class WebpageTemplate
 		this.doc = document.implementation.createHTMLDocument();
 
 		const collapseSidebarIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="svg-icon sidebar-toggle-button-icon"><rect x="1" y="2" width="22" height="20" rx="4"></rect><rect x="4" y="5" width="2" height="14" rx="2" fill="currentColor" class="sidebar-toggle-icon-inner"></rect></svg>`;
+		const startCollapsed = this.options.sidebarOptions.startCollapsed;
 		
 		const head = this.doc.head;
 		head.innerHTML = `<meta charset="UTF-8">` + head.innerHTML;
@@ -76,8 +77,8 @@ export class WebpageTemplate
 		let rightSidebarScript = rightSidebar.createEl("script");
 		leftSidebarScript.setAttribute("defer", "");
 		rightSidebarScript.setAttribute("defer", "");
-		leftSidebarScript.innerHTML = `let ls = document.querySelector("#left-sidebar"); ls.classList.toggle("is-collapsed", window.innerWidth < 768); ls.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-left-width"));`;
-		rightSidebarScript.innerHTML = `let rs = document.querySelector("#right-sidebar"); rs.classList.toggle("is-collapsed", window.innerWidth < 768); rs.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-right-width"));`;
+		leftSidebarScript.innerHTML = `let ls = document.querySelector("#left-sidebar"); ls.classList.toggle("is-collapsed", ${startCollapsed}); ls.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-left-width"));`;
+		rightSidebarScript.innerHTML = `let rs = document.querySelector("#right-sidebar"); rs.classList.toggle("is-collapsed", ${startCollapsed}); rs.style.setProperty("--sidebar-width", localStorage.getItem("sidebar-right-width"));`;
 
 		// delete sidebars if they are not needed
 		if (!this.options.sidebarOptions.enabled)
