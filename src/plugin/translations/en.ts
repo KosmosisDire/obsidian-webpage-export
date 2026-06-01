@@ -174,6 +174,10 @@ export const language: i18n =
 			title: "Include CSS from Plugins",
 			description: "Include the CSS from the following plugins in the exported HTML. If plugin features aren't rendering correctly, try adding the plugin to this list. Avoid adding plugins unless you specifically notice a problem, because more CSS will increase the loading time of your page."
 		},
+		includeCssSnippets: {
+			title: "Include CSS snippets",
+			description: "Include the following enabled Obsidian Appearance CSS snippets in the exported HTML."
+		},
 		includeStyleCssIds: {
 			title: "Include Styles with IDs",
 			description: "Include CSS from style tags with the following IDs in the exported HTML"

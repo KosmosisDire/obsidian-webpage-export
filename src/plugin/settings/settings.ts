@@ -297,6 +297,23 @@ export class SettingsPage extends PluginSettingTab
 		});
 
 		new Setting(section)
+			.setName(lang.includeCssSnippets.title)
+			.setDesc(lang.includeCssSnippets.description)
+
+		const enabledCssSnippets = this.getEnabledCssSnippetNames();
+		const cssSnippetsList = new FlowList();
+		cssSnippetsList.generate(section);
+		enabledCssSnippets.forEach((snippet) =>
+		{
+			const isChecked = Settings.exportOptions.includeCssSnippets.contains(snippet);
+
+			cssSnippetsList.addItem(snippet, snippet, isChecked, (value) => {
+				Settings.exportOptions.includeCssSnippets = cssSnippetsList.checkedList;
+				SettingsPage.saveSettings();
+			});
+		});
+
+		new Setting(section)
 			.setName(lang.includePluginCSS.title)
 			.setDesc(lang.includePluginCSS.description)
 
@@ -579,6 +596,13 @@ export class SettingsPage extends PluginSettingTab
 
 		return themeRecord;
 	}
+
+	getEnabledCssSnippetNames(): string[]
+	{
+		// @ts-ignore
+		return app.vault.config?.enabledCssSnippets ?? [];
+	}
+
 	static deepAssign(truth: any, source: any)
 	{
 		if (!source) return;

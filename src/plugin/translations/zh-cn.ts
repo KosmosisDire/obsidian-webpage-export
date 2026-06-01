@@ -173,6 +173,10 @@ export const language: i18n =
 			title: "包含插件的CSS",
 			description: "在导出的HTML中包含以下插件的CSS。如果插件功能未正确呈现，请尝试将插件添加到此列表中。避免无必要添加插件，因为更多的CSS会增加页面的加载时间。"
 		},
+		includeCssSnippets: {
+			title: "包含 CSS 片段",
+			description: "在导出的 HTML 中包含以下已启用的 Obsidian 外观 CSS 片段。"
+		},
 		includeStyleCssIds: {
 			title: "包含特定ID的样式",
 			description: "在导出的HTML中包含带有以下ID的样式标签的CSS。"

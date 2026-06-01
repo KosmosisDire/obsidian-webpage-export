@@ -167,6 +167,10 @@ export const language: i18n =
 			title: "Includi CSS dai plugin",
 			description: "Includi il CSS dei seguenti plugin nell'HTML esportato. Se le funzionalità dei plugin non si visualizzano correttamente, prova ad aggiungere il plugin a questo elenco. Evita di aggiungere plugin se non noti problemi specifici, poiché più CSS aumenterà il tempo di caricamento della pagina."
 		},
+		includeCssSnippets: {
+			title: "Includi CSS dagli snippet",
+			description: "Includi il CSS dei seguenti snippet abilitati nelle impostazioni Aspetto nell'HTML esportato."
+		},
 		includeStyleCssIds: {
 			title: "Includi stili con ID",
 			description: "Includi CSS dai tag di stile con i seguenti ID nell'HTML esportato."

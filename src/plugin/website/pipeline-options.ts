@@ -205,6 +205,11 @@ export class ExportPipelineOptions extends MarkdownRendererOptions
 	includePluginCss: string[] = [];
 
 	/**
+	 * Include enabled Obsidian CSS snippets with these ids.
+	 */
+	includeCssSnippets: string[] = [];
+
+	/**
 	 * Include CSS from the style elements with these ids.
 	 */
 	includeStyleCssIds: string[] = [];
