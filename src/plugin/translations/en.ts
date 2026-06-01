@@ -82,6 +82,7 @@ export const language: i18n =
 			description: "Holds all the other features like the file nav, outline, theme toggle, graph view, etc...",
 			info_allowResizing: "Whether or not to allow the sidebars to be resized",
 			info_allowCollapsing: "Whether or not to allow the sidebars to be collapsed",
+			info_startCollapsed: "Should the sidebars start collapsed?",
 			info_rightDefaultWidth: "The default width of the right sidebar",
 			info_leftDefaultWidth: "The default width of the left sidebar"
 		},

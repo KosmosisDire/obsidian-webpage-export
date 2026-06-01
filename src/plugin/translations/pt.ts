@@ -82,6 +82,7 @@ export const language: i18n =
 			description: "Contém recursos como navegação de arquivos, sumário, alternância de tema, visualização em gráfico etc.",
 			info_allowResizing: "Permitir redimensionamento das barras laterais",
 			info_allowCollapsing: "Permitir recolher as barras laterais",
+			info_startCollapsed: "As barras laterais devem iniciar recolhidas?",
 			info_rightDefaultWidth: "Largura padrão da barra lateral direita",
 			info_leftDefaultWidth: "Largura padrão da barra lateral esquerda"
 		},
