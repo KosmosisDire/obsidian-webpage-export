@@ -23,6 +23,11 @@ export const language: i18n =
 		moreOptions: "Altre opzioni nella pagina delle impostazioni del plugin.",
 		openAfterExport: "Apri dopo l'esportazione",
 		exportButton: "Esporta",
+		siteName: {
+			title: "Nome sito / nome file",
+			description: "Usato come nome del sito esportato e come nome file HTML singolo.",
+			required: "Il nome del sito è obbligatorio prima dell'esportazione."
+		},
 		filePicker: {
 			title: "Seleziona tutti i file nel vault esportato",
 			selectAll: "Seleziona tutto",

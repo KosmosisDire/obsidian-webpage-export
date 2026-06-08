@@ -30,6 +30,12 @@ export interface i18n
 		moreOptions: string;
 		openAfterExport: string;
 		exportButton: string;
+		siteName:
+		{
+			title: string;
+			description: string;
+			required: string;
+		};
 		filePicker: 
 		{
 			title: string;

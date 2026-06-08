@@ -218,6 +218,8 @@ export class ExportModal extends Modal
 		createToggle(contentEl, lang.openAfterExport, () => Settings.openAfterExport, (value) => Settings.openAfterExport = value);
 
 		let exportButton : ButtonComponent | undefined = undefined;
+		let siteNameValue = Settings.exportOptions.siteName;
+		let validSiteName = validateSiteName(siteNameValue) == "";
 
 		function setExportDisabled(disabled: boolean)
 		{
@@ -229,6 +231,41 @@ export class ExportModal extends Modal
 			}
 		}
 
+		const updateExportDisabled = () => setExportDisabled(!this.validPath || !validSiteName);
+
+		function validateSiteName(siteName: string): string
+		{
+			return siteName.trim() == "" ? lang.siteName.required : "";
+		}
+
+		const siteNameSetting = new Setting(contentEl)
+			.setName(lang.siteName.title)
+			.setDesc(lang.siteName.description)
+			.addText((text) => text
+				.setValue(siteNameValue)
+				.onChange(async (value) =>
+				{
+					siteNameValue = value;
+					const error = validateSiteName(value);
+					validSiteName = error == "";
+					siteNameError.setText(error);
+					updateExportDisabled();
+
+					if (validSiteName)
+					{
+						Settings.exportOptions.siteName = value;
+						await SettingsPage.saveSettings();
+					}
+				}));
+		const siteNameError = siteNameSetting.controlEl.createDiv({ cls: 'setting-item-description' });
+		siteNameSetting.controlEl.style.flexDirection = "column";
+		siteNameSetting.controlEl.style.alignItems = "flex-end";
+		siteNameError.style.color = "var(--color-red)";
+		siteNameError.style.textAlign = "right";
+		siteNameError.style.width = "100%";
+		siteNameError.style.minHeight = "1.25em";
+		siteNameError.setText(validateSiteName(siteNameValue));
+
 		const validatePath = (path: Path) => path.validate(
 		{
 			allowEmpty: false,
@@ -239,7 +276,11 @@ export class ExportModal extends Modal
 			requireExists: true
 		});
 
-		const onChangedValidate = (path: Path) => (!validatePath(path).valid) ? setExportDisabled(true) : setExportDisabled(false);
+		const onChangedValidate = (path: Path) =>
+		{
+			this.validPath = validatePath(path).valid;
+			updateExportDisabled();
+		}
 
 		const onChanged = async (path: Path) =>
 		{
@@ -291,9 +332,17 @@ export class ExportModal extends Modal
 		
 		fileInput.addButton((button) => {
 			exportButton = button;
-			setExportDisabled(!this.validPath);
+			updateExportDisabled();
 			button.setButtonText(lang.exportButton).onClick(async () => 
 			{
+				const error = validateSiteName(siteNameValue);
+				if (error != "")
+				{
+					siteNameError.setText(error);
+					updateExportDisabled();
+					return;
+				}
+
 				this.canceled = false;
 				this.close();
 			});

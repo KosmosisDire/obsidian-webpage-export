@@ -25,6 +25,12 @@ export const language: i18n =
 		moreOptions: "更多选项请查看插件设置页面。",
 		openAfterExport: "导出后打开",
 		exportButton: "导出",
+		siteName:
+		{
+			title: "站点名 / 文件名",
+			description: "用作导出站点名称以及单文件 HTML 的文件名。",
+			required: "导出前必须填写站点名。",
+		},
 		filePicker:
 		{
 			title: "选择导出库中的所有文件",

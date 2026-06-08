@@ -6,6 +6,7 @@ import { Website } from "src/plugin/website/website";
 import { ExportLog, MarkdownRendererAPI } from "src/plugin/render-api/render-api";
 import { ExportInfo, ExportModal } from "src/plugin/settings/export-modal";
 import { Webpage } from "./website/webpage";
+import { i18n } from "./translations/language";
 
 export class HTMLExporter
 {
@@ -39,6 +40,12 @@ export class HTMLExporter
 
 		const files = info?.pickedFiles ?? overrideFiles ?? Settings.getFilesToExport();
 		const exportPath = overrideExportPath ?? info?.exportPath ?? new Path(Settings.exportOptions.exportPath);
+		if (Settings.exportOptions.siteName.trim() == "")
+		{
+			new Notice(i18n.exportModal.siteName.required, 5000);
+			ExportLog.error(i18n.exportModal.siteName.required, "Export Failed");
+			return;
+		}
 
 		const website = await HTMLExporter.exportFiles(files, exportPath, true, Settings.deleteOldFiles);
 
@@ -108,6 +115,7 @@ export class HTMLExporter
 		{
 			new Notice("❌ Export Failed: " + e, 5000);
 			ExportLog.error(e, "Export Failed", true);
+			website = undefined;
 		}
 
 		MarkdownRendererAPI.endBatch();

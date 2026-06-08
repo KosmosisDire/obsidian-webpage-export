@@ -25,6 +25,12 @@ export const language: i18n =
 		moreOptions: "Mais opções disponíveis na página de configurações do plugin.",
 		openAfterExport: "Abrir após exportar",
 		exportButton: "Exportar",
+		siteName:
+		{
+			title: "Nome do site / arquivo",
+			description: "Usado como nome do site exportado e como nome do arquivo HTML único.",
+			required: "O nome do site é obrigatório antes de exportar.",
+		},
 		filePicker: 
 		{
 			title: "Selecionar todos os arquivos no cofre exportado",
