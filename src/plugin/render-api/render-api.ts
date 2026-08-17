@@ -154,6 +154,105 @@ export namespace _MarkdownRendererInternal {
 		});
 	}
 
+	const excalidrawPluginId = "obsidian-excalidraw-plugin";
+	// hard cap on how long we wait for all excalidraw embeds of a single page
+	const excalidrawEmbedTimeout = 30000;
+	// give up early once no embed has finished rendering for this long
+	const excalidrawEmbedIdleTimeout = 3000;
+	// hard cap on how long we wait for an excalidraw view to load its scene
+	const excalidrawViewTimeout = 10000;
+
+	function getExcalidrawPlugin(): any | undefined {
+		// @ts-ignore
+		if (!app.plugins?.enabledPlugins?.has(excalidrawPluginId)) return undefined;
+		// @ts-ignore
+		return app.plugins?.plugins?.[excalidrawPluginId];
+	}
+
+	/**
+	 * Excalidraw only turns an embed into an image if it references the whole drawing,
+	 * an area, a group or a frame. Plain block and section references are embedded as
+	 * text instead, so waiting for those to become an image would never succeed.
+	 */
+	function isExcalidrawImageEmbed(src: string): boolean {
+		const reference = src.split("#").slice(1).join("#");
+		if (reference == "" || reference == "^as-image") return true;
+		return /^\^(area|group|frame|clippedframe)=/.test(reference);
+	}
+
+	/**
+	 * Excalidraw renders drawings which are embedded into a note from an async markdown
+	 * post processor, and only then replaces the `.internal-embed` element obsidian
+	 * created with the rendered drawing. Obsidian does not wait for post processors
+	 * before it reports a page as rendered, so unless we wait for these embeds
+	 * separately we can copy the html while the placeholder embeds are still in it,
+	 * which exports the embed element instead of the drawing.
+	 */
+	function getUnrenderedExcalidrawEmbeds(roots: (HTMLElement | undefined)[], sourcePath: string): HTMLElement[] {
+		const excalidraw = getExcalidrawPlugin();
+		if (typeof excalidraw?.isExcalidrawFile != "function") return [];
+
+		const embeds = new Set<HTMLElement>();
+		for (const root of roots) {
+			if (!root) continue;
+			for (const embed of Array.from(root.querySelectorAll(".internal-embed[src]")) as HTMLElement[]) {
+				embeds.add(embed);
+			}
+		}
+
+		return Array.from(embeds).filter((embed) => {
+			// excalidraw replaces the embed with its own element, but in some cases it
+			// fills the embed instead, so also check for the elements it renders into.
+			// Do not check for a plain svg or img here, obsidian puts its own icons
+			// into an embed which is still waiting to be rendered.
+			if (embed.querySelector(".excalidraw-svg, .excalidraw-embedded-img")) return false;
+
+			const src = embed.getAttribute("src") ?? "";
+			if (!isExcalidrawImageEmbed(src)) return false;
+
+			const file = app.metadataCache.getFirstLinkpathDest(src.split("#")[0], sourcePath);
+			if (!file) return false;
+
+			try {
+				return excalidraw.isExcalidrawFile(file);
+			}
+			catch (e) {
+				return false;
+			}
+		});
+	}
+
+	/** Returns whether there was anything to wait for. */
+	async function waitForExcalidrawEmbeds(roots: (HTMLElement | undefined)[], sourcePath: string): Promise<boolean> {
+		let pending = getUnrenderedExcalidrawEmbeds(roots, sourcePath);
+		if (pending.length == 0) return false;
+
+		ExportLog.log(`Waiting for ${pending.length} excalidraw embed(s) to render...`);
+
+		const interval = 20;
+		let waited = 0;
+		let waitedSinceProgress = 0;
+
+		while (pending.length > 0 && waited < excalidrawEmbedTimeout && waitedSinceProgress < excalidrawEmbedIdleTimeout) {
+			await delay(interval);
+			if (checkCancelled()) return true;
+
+			waited += interval;
+			waitedSinceProgress += interval;
+
+			const remaining = getUnrenderedExcalidrawEmbeds(roots, sourcePath);
+			if (remaining.length < pending.length) waitedSinceProgress = 0;
+			pending = remaining;
+		}
+
+		if (pending.length > 0) {
+			const sources = pending.map((embed) => embed.getAttribute("src")).join(", ");
+			ExportLog.warning(sources, `Excalidraw did not finish rendering ${pending.length} embed(s) in ${sourcePath}, they will be exported as empty embeds:`);
+		}
+
+		return true;
+	}
+
 	function failRender(file: TFile | undefined, message: any): undefined {
 		if (checkCancelled()) return undefined;
 
@@ -337,6 +436,10 @@ export namespace _MarkdownRendererInternal {
 
 			// wait for generic plugins
 			await waitUntil(() => !section.el.querySelector("[class^='block-language-']:empty") || checkCancelled(), 500, 1);
+			if (checkCancelled()) return undefined;
+
+			// wait for excalidraw drawings (see getUnrenderedExcalidrawEmbeds)
+			await waitForExcalidrawEmbeds([section.el], preview.file?.path ?? "");
 			if (checkCancelled()) return undefined;
 
 			// convert canvas elements into images here because otherwise they will lose their data when moved
@@ -605,6 +708,26 @@ export namespace _MarkdownRendererInternal {
 		);
 		if (checkCancelled()) return undefined;
 
+		// wait for excalidraw drawings, they are inserted by an async post processor
+		// which obsidian does not wait for before it reports the page as rendered
+		const waitedForExcalidraw = await waitForExcalidrawEmbeds(
+			[previewEl, preview.containerEl],
+			preview.file?.path ?? ""
+		);
+		if (checkCancelled()) return undefined;
+
+		// inserting the drawings grows the document, which can make obsidian unload the
+		// sections that are outside of the viewport again. Their content is not copied
+		// from the preview element, so the page would be exported without them.
+		if (waitedForExcalidraw && sizerEl.children.length < sections.length) {
+			ExportLog.warning(
+				"Sections of " +
+					preview.file.name +
+					" were unloaded while excalidraw was rendering, using fallback!"
+			);
+			return renderMarkdownViewFallback(preview, options);
+		}
+
 		// check for invalid plugin blocks
 		const invalidPluginBlocks = Array.from(
 			preview.containerEl.querySelectorAll(
@@ -754,13 +877,32 @@ export namespace _MarkdownRendererInternal {
 	}
 
 	async function renderExcalidraw(view: any, options: MarkdownRendererOptions): Promise<HTMLElement | undefined> {
-		await delay(500);
+		// the excalidraw view parses the drawing asynchronously after the file was
+		// opened, so the scene is not necessarily there yet. Waiting a fixed amount of
+		// time is not enough for larger drawings. The flags are only checked when the
+		// installed excalidraw version actually exposes them.
+		ExportLog.log("Waiting for excalidraw view to load...");
+		const loaded = await waitUntil(() => {
+			if (checkCancelled()) return true;
+			if (!view.excalidrawData?.scene) return false;
+			if (view.isLoaded === false) return false;
+			if (view.excalidrawData.loaded === false) return false;
+			return true;
+		}, excalidrawViewTimeout, 16);
+		if (checkCancelled()) return undefined;
+
+		if (!loaded) ExportLog.warning("Excalidraw did not finish loading " + (view.file?.name ?? "the drawing") + " in time, it may be exported incomplete.");
+
+		// let the scene settle before reading it
+		await delay(100);
 
 		// @ts-ignore
-		const scene = view.excalidrawData.scene;
+		const scene = view.excalidrawData?.scene;
+		if (!scene) return failRender(view.file, "Excalidraw did not load the scene of this drawing!");
 
 		// @ts-ignore
 		const svg = await view.svg(scene, "", false);
+		if (!svg) return failRender(view.file, "Excalidraw failed to generate an svg for this drawing!");
 
 		// remove rect fill
 		const isLight = !svg.getAttribute("filter");
