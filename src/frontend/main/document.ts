@@ -10,6 +10,7 @@ import { Notice } from "./notifications";
 import { Tags } from "./tags";
 import { Tree } from "./trees";
 import { Aliases } from "./aliases";
+import { initializeCodeCopyButtons } from "./code-blocks";
 
 export class WebpageDocument {
 	public title: string = "";
@@ -196,6 +197,7 @@ export class WebpageDocument {
 	public async postLoadInit(): Promise<WebpageDocument> {
 		this.findElements();
 		this.postProcess();
+		initializeCodeCopyButtons(this.documentEl);
 
 		if (this.isMainDocument || this.isPreview) {
 			this.processHeaders();
